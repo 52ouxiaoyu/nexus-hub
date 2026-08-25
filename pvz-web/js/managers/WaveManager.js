@@ -2,8 +2,8 @@ class WaveManager {
     constructor(game) {
         this.game = game;
         this.timeElapsed = 0;
-        this.nextSpawnTime = 20; // First zombie in 20 seconds
-        this.spawnInterval = 15;
+        this.nextSpawnTime = 25; // First zombie in 25 seconds
+        this.spawnInterval = 20; // 20 seconds before the second zombie
         this.waveCount = 0;
     }
     
@@ -13,7 +13,7 @@ class WaveManager {
         if (this.timeElapsed >= this.nextSpawnTime) {
             this.spawnZombie();
             
-            this.spawnInterval = Math.max(2, this.spawnInterval - 0.2);
+            this.spawnInterval = Math.max(5, this.spawnInterval - 0.5); // Gradually speeds up, minimum 5 seconds
             this.nextSpawnTime = this.timeElapsed + this.spawnInterval;
         }
     }
@@ -21,8 +21,12 @@ class WaveManager {
     spawnZombie() {
         const row = Math.floor(Math.random() * this.game.board.rows);
         
-        // As time passes, higher chance of conehead
-        const coneChance = Math.min(0.5, this.timeElapsed / 300); // Caps at 50% after 5 mins
+        // As time passes, higher chance of conehead, but NO coneheads before 90 seconds!
+        let coneChance = 0;
+        if (this.timeElapsed > 90) {
+            coneChance = Math.min(0.4, (this.timeElapsed - 90) / 400); 
+        }
+        
         const type = Math.random() < coneChance ? 'conehead' : 'normal';
         
         this.game.entities.push(new Zombie(this.game, row, type));
