@@ -24,7 +24,41 @@ class Plant extends Entity {
             this.hp = 300;
             this.element.src = 'assets/images/Plants/CherryBomb/CherryBomb.gif';
             this.yOffset = -15;
-            this.explodeTimer = 1.0; // 1 second to explode
+            this.explodeTimer = 1.0; 
+        } else if (type === 'snowpea') {
+            this.hp = 300;
+            this.fireRate = 1.5;
+            this.fireTimer = 0;
+            this.element.src = 'assets/images/Plants/SnowPea/SnowPea.gif';
+            this.yOffset = -10;
+        } else if (type === 'repeater') {
+            this.hp = 300;
+            this.fireRate = 1.5;
+            this.fireTimer = 0;
+            this.element.src = 'assets/images/Plants/Repeater/Repeater.gif';
+            this.yOffset = -10;
+        } else if (type === 'squash') {
+            this.hp = 300;
+            this.element.src = 'assets/images/Plants/Squash/Squash.gif';
+            this.yOffset = -25;
+            this.state = 'idle'; 
+        } else if (type === 'jalapeno') {
+            this.hp = 300;
+            this.element.src = 'assets/images/Plants/Jalapeno/Jalapeno.gif';
+            this.yOffset = -25;
+            this.explodeTimer = 1.0;
+        } else if (type === 'potatomine') {
+            this.hp = 300;
+            this.element.src = 'assets/images/Plants/PotatoMine/PotatoMineNotReady.gif';
+            this.yOffset = 10;
+            this.armTimer = 15.0; // takes 15s to arm
+            this.isArmed = false;
+        } else if (type === 'chomper') {
+            this.hp = 300;
+            this.element.src = 'assets/images/Plants/Chomper/Chomper.gif';
+            this.yOffset = -25;
+            this.state = 'idle'; // idle, attacking, chewing
+            this.chewTimer = 0;
         }
     }
     
@@ -32,16 +66,17 @@ class Plant extends Entity {
         super.update(deltaTime);
         this.element.style.top = `${this.y + this.yOffset}px`;
         
-        if (this.hp <= 0) {
+        if (this.hp <= 0 && !this.isDead) {
             this.isDead = true;
             this.game.board.grid[this.row][this.col] = null; // Clear from grid
             return;
         }
         
-        if (this.type === 'peashooter') {
+        if (this.isDead) return;
+        
+        if (this.type === 'peashooter' || this.type === 'snowpea' || this.type === 'repeater') {
             this.fireTimer += deltaTime;
             if (this.fireTimer >= this.fireRate) {
-                // Check if there are zombies in the same lane ahead of us
                 const hasZombieAhead = this.game.entities.some(e => 
                     e instanceof Zombie && 
                     e.row === this.row && 
@@ -51,9 +86,17 @@ class Plant extends Entity {
                 
                 if (hasZombieAhead) {
                     this.fireTimer = 0;
-                    this.game.entities.push(new Projectile(this.game, this.x + 20, this.y - 15, this.row));
-                } else {
-                    this.fireTimer = this.fireRate; 
+                    const projType = this.type === 'snowpea' ? 'snowpea' : 'peashooter';
+                    this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15, this.row, projType));
+                    
+                    if (this.type === 'repeater') {
+                        // Fire second pea with a slight delay
+                        setTimeout(() => {
+                            if (!this.isDead) {
+                                this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15, this.row, projType));
+                            }
+                        }, 150);
+                    }
                 }
             }
         } else if (this.type === 'sunflower') {
@@ -74,20 +117,86 @@ class Plant extends Entity {
             if (this.explodeTimer > 0) {
                 this.explodeTimer -= deltaTime;
                 if (this.explodeTimer <= 0) {
-                    this.game.audioManager.play('splat'); // Use splat/explosion
+                    this.game.audioManager.play('splat'); 
                     this.element.src = 'assets/images/Plants/CherryBomb/Boom.gif';
                     
-                    // Kill zombies in 3x3 area (roughly within 120px X and 1 row Y)
                     const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead);
                     for (let z of zombies) {
                         if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 150) {
-                            z.hp = 0;
+                            z.takeDamage(1800);
                         }
                     }
                     
                     setTimeout(() => {
-                        this.hp = 0; // Trigger death
-                    }, 500); // Wait for boom animation
+                        this.hp = 0; 
+                    }, 500); 
+                }
+            }
+        } else if (this.type === 'jalapeno') {
+            if (this.explodeTimer > 0) {
+                this.explodeTimer -= deltaTime;
+                if (this.explodeTimer <= 0) {
+                    this.game.audioManager.play('splat');
+                    this.element.src = 'assets/images/Plants/Jalapeno/JalapenoAttack.gif'; // Or a fire row image
+                    
+                    const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead);
+                    for (let z of zombies) {
+                        if (z.row === this.row) {
+                            z.takeDamage(1800);
+                        }
+                    }
+                    
+                    setTimeout(() => { this.hp = 0; }, 500);
+                }
+            }
+        } else if (this.type === 'squash') {
+            if (this.state === 'idle') {
+                const zombie = this.game.entities.find(e => 
+                    e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 60 && !e.isDead
+                );
+                if (zombie) {
+                    this.state = 'attacking';
+                    this.element.src = 'assets/images/Plants/Squash/SquashAttack.gif';
+                    this.game.audioManager.play('splat');
+                    zombie.takeDamage(1800);
+                    setTimeout(() => { this.hp = 0; }, 500);
+                }
+            }
+        } else if (this.type === 'potatomine') {
+            if (!this.isArmed) {
+                this.armTimer -= deltaTime;
+                if (this.armTimer <= 0) {
+                    this.isArmed = true;
+                    this.element.src = 'assets/images/Plants/PotatoMine/PotatoMine.gif';
+                }
+            } else {
+                const zombie = this.game.entities.find(e => 
+                    e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 40 && !e.isDead
+                );
+                if (zombie) {
+                    this.game.audioManager.play('splat');
+                    this.element.src = 'assets/images/Plants/PotatoMine/PotatoMine_mashed.gif';
+                    zombie.takeDamage(1800);
+                    setTimeout(() => { this.hp = 0; }, 500);
+                }
+            }
+        } else if (this.type === 'chomper') {
+            if (this.state === 'idle') {
+                const zombie = this.game.entities.find(e => 
+                    e instanceof Zombie && e.row === this.row && e.x > this.x && e.x - this.x < 80 && !e.isDead
+                );
+                if (zombie) {
+                    zombie.takeDamage(1800);
+                    this.state = 'chewing';
+                    this.chewTimer = 40.0;
+                    this.element.src = 'assets/images/Plants/Chomper/ChomperDigest.gif';
+                    this.game.audioManager.play('chomp');
+                }
+            } else if (this.state === 'chewing') {
+                this.chewTimer -= deltaTime;
+                if (this.chewTimer <= 0) {
+                    this.state = 'idle';
+                    this.element.src = 'assets/images/Plants/Chomper/Chomper.gif';
                 }
             }
         }

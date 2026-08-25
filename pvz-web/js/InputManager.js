@@ -75,16 +75,23 @@ class InputManager {
         this.dragGhost.style.left = ((x - rect.left) / scale) + 'px';
         this.dragGhost.style.top = ((y - rect.top) / scale) + 'px';
         
-        if (type === 'peashooter') {
-            this.dragGhost.style.backgroundImage = "url('assets/images/Plants/Peashooter/Peashooter.gif')";
-        } else if (type === 'sunflower') {
-            this.dragGhost.style.backgroundImage = "url('assets/images/Plants/SunFlower/SunFlower1.gif')";
-        } else if (type === 'wallnut') {
-            this.dragGhost.style.backgroundImage = "url('assets/images/Plants/WallNut/WallNut.gif')";
-        } else if (type === 'cherrybomb') {
-            this.dragGhost.style.backgroundImage = "url('assets/images/Plants/CherryBomb/CherryBomb.gif')";
-        } else if (type === 'shovel') {
+        if (type === 'shovel') {
             this.dragGhost.style.backgroundImage = "url('assets/images/interface/Shovel/0.gif')";
+        } else {
+            // Mapping for special cases
+            let imgName = type.charAt(0).toUpperCase() + type.slice(1);
+            if (type === 'sunflower') imgName = 'SunFlower/SunFlower1';
+            else if (type === 'wallnut') imgName = 'WallNut/WallNut';
+            else if (type === 'cherrybomb') imgName = 'CherryBomb/CherryBomb';
+            else if (type === 'peashooter') imgName = 'Peashooter/Peashooter';
+            else if (type === 'snowpea') imgName = 'SnowPea/SnowPea';
+            else if (type === 'repeater') imgName = 'Repeater/Repeater';
+            else if (type === 'squash') imgName = 'Squash/Squash';
+            else if (type === 'jalapeno') imgName = 'Jalapeno/Jalapeno';
+            else if (type === 'potatomine') imgName = 'PotatoMine/PotatoMine';
+            else if (type === 'chomper') imgName = 'Chomper/Chomper';
+            
+            this.dragGhost.style.backgroundImage = `url('assets/images/Plants/${imgName}.gif')`;
         }
     }
 }

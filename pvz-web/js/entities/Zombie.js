@@ -12,6 +12,9 @@ class Zombie extends Entity {
         this.eatTarget = null;
         this.yOffset = -30;
         
+        this.isSlowed = false;
+        this.slowTimer = 0;
+        
         if (type === 'normal') {
             this.hp = 200;
             this.maxHp = 200;
@@ -20,18 +23,46 @@ class Zombie extends Entity {
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
         } else if (type === 'conehead') {
-            this.hp = 560; // 370 for cone + 190 for zombie roughly in original
+            this.hp = 560; 
             this.maxHp = 560;
             this.element.src = 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif';
             this.walkSrc = 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif';
             this.attackSrc = 'assets/images/Zombies/ConeheadZombie/ConeheadZombieAttack.gif';
-            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif'; // Fallback to normal die
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+        } else if (type === 'buckethead') {
+            this.hp = 1300; 
+            this.maxHp = 1300;
+            this.element.src = 'assets/images/Zombies/BucketheadZombie/BucketheadZombie.gif';
+            this.walkSrc = 'assets/images/Zombies/BucketheadZombie/BucketheadZombie.gif';
+            this.attackSrc = 'assets/images/Zombies/BucketheadZombie/BucketheadZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+        } else if (type === 'football') {
+            this.hp = 1600; 
+            this.maxHp = 1600;
+            this.speed = 40; // Football is fast
+            this.element.src = 'assets/images/Zombies/FootballZombie/FootballZombie.gif';
+            this.walkSrc = 'assets/images/Zombies/FootballZombie/FootballZombie.gif';
+            this.attackSrc = 'assets/images/Zombies/FootballZombie/Attack.gif';
+            this.dieSrc = 'assets/images/Zombies/FootballZombie/Die.gif';
         }
     }
     
     update(deltaTime) {
         super.update(deltaTime);
         this.element.style.top = `${this.y + this.yOffset}px`;
+        
+        if (this.isSlowed) {
+            this.slowTimer -= deltaTime;
+            if (this.slowTimer <= 0) {
+                this.isSlowed = false;
+                this.element.style.filter = '';
+            } else {
+                this.element.style.filter = 'brightness(50%) sepia(100%) hue-rotate(180deg) saturate(300%)'; // blue tint
+            }
+        }
+        
+        const currentSpeed = this.isSlowed ? this.speed * 0.5 : this.speed;
+        const currentDamage = this.isSlowed ? this.damage * 0.5 : this.damage;
         
         // Handle cone falling off
         if (this.type === 'conehead' && this.hp <= 200 && this.state !== 'DYING') {
@@ -41,16 +72,28 @@ class Zombie extends Entity {
             this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
         }
         
+        // Handle bucket falling off
+        if (this.type === 'buckethead' && this.hp <= 200 && this.state !== 'DYING') {
+            this.type = 'normal';
+            this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
+            this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
+        }
+        
         if (this.hp <= 0 && this.state !== 'DYING') {
             this.state = 'DYING';
             this.element.src = this.dieSrc;
+            if (this.game.score !== undefined) {
+                this.game.score += 10;
+                this.game.updateScore();
+            }
             setTimeout(() => { this.isDead = true; }, 2000); 
         }
         
         if (this.state === 'DYING') return;
         
         if (this.state === 'WALKING') {
-            this.x -= this.speed * deltaTime;
+            this.x -= currentSpeed * deltaTime;
             
             if (this.x < 40) { 
                 this.game.gameOver();
@@ -70,12 +113,13 @@ class Zombie extends Entity {
         } 
         else if (this.state === 'EATING') {
             if (this.eatTarget && !this.eatTarget.isDead) {
-                this.eatTarget.hp -= this.damage * deltaTime;
+                this.eatTarget.hp -= currentDamage * deltaTime;
                 if (!this.chompTimer) this.chompTimer = 0;
                 this.chompTimer -= deltaTime;
+                const chompInterval = this.isSlowed ? 2.0 : 1.0;
                 if (this.chompTimer <= 0) {
                     this.game.audioManager.play('chomp');
-                    this.chompTimer = 1.0; 
+                    this.chompTimer = chompInterval; 
                 }
             } else {
                 this.state = 'WALKING';

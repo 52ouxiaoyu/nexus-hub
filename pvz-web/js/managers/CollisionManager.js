@@ -17,6 +17,12 @@ class CollisionManager {
                     if (p.x + p.radius > z.x - 30 && p.x - p.radius < z.x + 30) {
                         p.isDead = true; 
                         z.takeDamage(p.damage);
+                        
+                        if (p.type === 'snowpea') {
+                            z.isSlowed = true;
+                            z.slowTimer = 10.0;
+                        }
+                        
                         this.game.audioManager.play('splat');
                         break; 
                     }

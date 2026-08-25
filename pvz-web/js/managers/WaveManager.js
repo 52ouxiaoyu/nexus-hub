@@ -21,13 +21,25 @@ class WaveManager {
     spawnZombie() {
         const row = Math.floor(Math.random() * this.game.board.rows);
         
-        // As time passes, higher chance of conehead, but NO coneheads before 90 seconds!
         let coneChance = 0;
-        if (this.timeElapsed > 90) {
-            coneChance = Math.min(0.4, (this.timeElapsed - 90) / 400); 
+        let bucketChance = 0;
+        let footballChance = 0;
+        
+        if (this.timeElapsed > 60) {
+            coneChance = Math.min(0.4, (this.timeElapsed - 60) / 300); 
+        }
+        if (this.timeElapsed > 180) {
+            bucketChance = Math.min(0.3, (this.timeElapsed - 180) / 400);
+        }
+        if (this.timeElapsed > 300) {
+            footballChance = Math.min(0.2, (this.timeElapsed - 300) / 500);
         }
         
-        const type = Math.random() < coneChance ? 'conehead' : 'normal';
+        const r = Math.random();
+        let type = 'normal';
+        if (r < footballChance) type = 'football';
+        else if (r < footballChance + bucketChance) type = 'buckethead';
+        else if (r < footballChance + bucketChance + coneChance) type = 'conehead';
         
         this.game.entities.push(new Zombie(this.game, row, type));
     }

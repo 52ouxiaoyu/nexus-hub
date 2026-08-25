@@ -84,11 +84,23 @@ body {
 
 #seed-bank {
     display: flex;
-    gap: 2px;
+    gap: 5px;
+    flex-grow: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 5px;
     background-image: url('../assets/images/interface/SeedChooser_Background.png');
     background-size: cover;
     padding: 5px 10px;
     border-radius: 5px;
+}
+/* Custom scrollbar for seed bank */
+#seed-bank::-webkit-scrollbar {
+    height: 8px;
+}
+#seed-bank::-webkit-scrollbar-thumb {
+    background-color: #8b5a2b;
+    border-radius: 4px;
 }
 
 .seed-card {

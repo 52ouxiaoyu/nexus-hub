@@ -1,12 +1,17 @@
 class Projectile extends Entity {
-    constructor(game, x, y, row) {
+    constructor(game, x, y, row, type = 'peashooter') {
         super(game, x, y);
         this.row = row;
         this.speed = 300; // pixels per second
         this.damage = 20;
         this.radius = 10;
+        this.type = type;
         
-        this.element.src = 'assets/images/Plants/PB00.gif'; // Assuming this exists or Pea.gif
+        if (type === 'snowpea') {
+            this.element.src = 'assets/images/Plants/PB-10.gif'; // Snow pea image
+        } else {
+            this.element.src = 'assets/images/Plants/PB00.gif'; // Normal pea
+        }
     }
     
     update(deltaTime) {

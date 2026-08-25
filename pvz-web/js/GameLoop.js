@@ -55,8 +55,17 @@ class Game {
         this.skySunTimer = 0;
         this.skySunInterval = 8; 
         
+        this.score = 0;
+        
         this.initUI();
         this.showMenu();
+    }
+    
+    updateScore() {
+        const scoreEl = document.getElementById('score-count');
+        if (scoreEl) {
+            scoreEl.innerText = this.score;
+        }
     }
     
     showMenu() {
@@ -80,17 +89,19 @@ class Game {
             { type: 'sunflower', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/SunFlower.png' },
             { type: 'peashooter', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Peashooter.png' },
             { type: 'wallnut', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/WallNut.png' },
-            { type: 'cherrybomb', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/CherryBomb.png' }
+            { type: 'cherrybomb', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/CherryBomb.png' },
+            { type: 'snowpea', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/SnowPea.png' },
+            { type: 'repeater', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/Repeater.png' },
+            { type: 'squash', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/Squash.png' },
+            { type: 'jalapeno', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/Jalapeno.png' },
+            { type: 'potatomine', cost: 25, cooldown: 30, img: 'assets/images/Card/Plants/PotatoMine.png' },
+            { type: 'chomper', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/Chomper.png' }
         ];
         
-        this.cooldowns = {
-            'sunflower': 0,
-            'peashooter': 0,
-            'wallnut': 0,
-            'cherrybomb': 0
-        };
-        
+        this.cooldowns = {};
         this.seeds.forEach(s => {
+            this.cooldowns[s.type] = 0;
+            
             const card = document.createElement('div');
             card.className = 'seed-card';
             card.dataset.type = s.type;
@@ -120,10 +131,9 @@ class Game {
         
         if (this.sunCount >= seed.cost && this.board.canPlant(row, col)) {
             let plant;
-            if (type === 'peashooter') plant = new Plant(this, 'peashooter');
-            if (type === 'sunflower') plant = new Plant(this, 'sunflower');
-            if (type === 'wallnut') plant = new Plant(this, 'wallnut');
-            if (type === 'cherrybomb') plant = new Plant(this, 'cherrybomb');
+            if (this.seeds.some(s => s.type === type)) {
+                plant = new Plant(this, type);
+            }
             
             if (plant && this.board.addPlant(plant, row, col)) {
                 this.sunCount -= seed.cost;
@@ -176,6 +186,20 @@ class Game {
         wonImg.style.transform = 'translate(-50%, -50%)';
         wonImg.style.zIndex = '1000';
         document.getElementById('game-container').appendChild(wonImg);
+        
+        // Add Score overlay
+        const scoreDiv = document.createElement('div');
+        scoreDiv.innerText = `Final Score: ${this.score}`;
+        scoreDiv.style.position = 'absolute';
+        scoreDiv.style.top = '70%';
+        scoreDiv.style.left = '50%';
+        scoreDiv.style.transform = 'translate(-50%, -50%)';
+        scoreDiv.style.color = 'white';
+        scoreDiv.style.fontSize = '40px';
+        scoreDiv.style.fontWeight = 'bold';
+        scoreDiv.style.textShadow = '2px 2px 4px black';
+        scoreDiv.style.zIndex = '1001';
+        document.getElementById('game-container').appendChild(scoreDiv);
     }
     
     loop(timestamp) {
