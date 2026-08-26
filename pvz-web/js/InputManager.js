@@ -101,7 +101,7 @@ class InputManager {
             else if (type === 'doomshroom') imgName = 'DoomShroom/DoomShroom';
             else if (type === 'splitpea') imgName = 'SplitPea/SplitPea';
             else if (type === 'gatlingpea') imgName = 'GatlingPea/GatlingPea';
-            else if (type === 'twinsunflower') imgName = 'TwinSunflower/TwinSunflower';
+            else if (type === 'twinsunflower') imgName = 'TwinSunflower/TwinSunflower1';
             else if (type === 'torchwood') imgName = 'Torchwood/Torchwood';
             else if (type === 'garlic') imgName = 'Garlic/Garlic';
             
