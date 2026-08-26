@@ -89,7 +89,7 @@ class Game {
         
         this.seeds.forEach(s => {
             const card = document.createElement('div');
-            card.className = 'seed-card';
+            card.className = 'chooser-card';
             card.style.backgroundImage = `url('${s.img}')`;
             // Add a tick or dim when selected
             card.onclick = () => {

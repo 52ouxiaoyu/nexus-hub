@@ -112,8 +112,8 @@ body {
     cursor: pointer;
     position: relative;
     overflow: hidden;
-    background-size: 100% 100%;
-    background-position: center;
+    background-size: 100px 120px;
+    background-position: -15px 0;
     box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
     border-radius: 4px;
 }
@@ -161,4 +161,20 @@ body {
     pointer-events: none;
     transform: translate(-50%, -50%);
     z-index: 100;
+}
+
+.chooser-card {
+    width: 100px;
+    height: 60px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    background-size: 100px 120px;
+    background-position: top left;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+    border-radius: 4px;
+    transition: transform 0.1s;
+}
+.chooser-card:hover {
+    transform: scale(1.05);
 }
