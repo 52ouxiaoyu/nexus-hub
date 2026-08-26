@@ -17,7 +17,7 @@ class Projectile extends Entity {
             this.element.src = 'assets/images/Plants/FumeShroomBullet.gif';
             this.speed = 400; // Moves faster but dies early
         } else if (type === 'firepea') {
-            this.element.src = 'assets/images/Plants/PB01.gif';
+            this.element.src = 'assets/images/Plants/PB10.gif';
             this.damage = 40; // Double damage
         } else if (type === 'backpea') {
             this.element.src = 'assets/images/Plants/PB00.gif';

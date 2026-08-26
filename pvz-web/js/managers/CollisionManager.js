@@ -52,7 +52,7 @@ class CollisionManager {
                         } else {
                             p.type = 'firepea';
                             p.damage = 40;
-                            p.element.src = 'assets/images/Plants/PB01.gif';
+                            p.element.src = 'assets/images/Plants/PB10.gif';
                         }
                         break;
                     }

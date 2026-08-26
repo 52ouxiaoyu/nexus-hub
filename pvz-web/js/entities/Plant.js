@@ -122,7 +122,7 @@ class Plant extends Entity {
             this.hp = 300;
             this.sunRate = 24.0;
             this.sunTimer = 0;
-            this.element.src = 'assets/images/Plants/TwinSunflower/TwinSunflower.gif';
+            this.element.src = 'assets/images/Plants/TwinSunflower/TwinSunflower1.gif';
         } else if (type === 'torchwood') {
             this.hp = 300;
             this.element.src = 'assets/images/Plants/Torchwood/Torchwood.gif';
@@ -267,9 +267,9 @@ class Plant extends Entity {
             const name = this.type === 'wallnut' ? 'Wallnut_cracked' : 'TallnutCracked';
             
             if (this.hp < maxHp * 0.33 && this.element.src.indexOf(name + '2') === -1) {
-                // this.element.src = `assets/images/Plants/${path}/${name}2.gif`;
+                this.element.src = `assets/images/Plants/${path}/${name}2.gif`;
             } else if (this.hp < maxHp * 0.66 && this.element.src.indexOf(name + '1') === -1 && this.hp >= maxHp * 0.33) {
-                // this.element.src = `assets/images/Plants/${path}/${name}1.gif`;
+                this.element.src = `assets/images/Plants/${path}/${name}1.gif`;
             }
         } else if (this.type === 'spikeweed') {
             this.damageTimer += deltaTime;

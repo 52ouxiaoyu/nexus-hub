@@ -101,6 +101,7 @@ class Zombie extends Entity {
             
             const plant = this.game.entities.find(e => 
                 e instanceof Plant && 
+                e.type !== 'spikeweed' &&
                 e.row === this.row && 
                 Math.abs(e.x - this.x) < 40 
             );
@@ -113,13 +114,38 @@ class Zombie extends Entity {
         } 
         else if (this.state === 'EATING') {
             if (this.eatTarget && !this.eatTarget.isDead) {
-                this.eatTarget.hp -= currentDamage * deltaTime;
-                if (!this.chompTimer) this.chompTimer = 0;
-                this.chompTimer -= deltaTime;
-                const chompInterval = this.isSlowed ? 2.0 : 1.0;
-                if (this.chompTimer <= 0) {
-                    this.game.audioManager.play('chomp');
-                    this.chompTimer = chompInterval; 
+                if (this.eatTarget.type === 'garlic') {
+                    // Bite garlic and switch row!
+                    this.eatTarget.hp -= 20; // single bite damage
+                    this.game.audioManager.play('chomp'); // disgusted sound ideally
+                    
+                    // Switch row up or down randomly (if possible)
+                    const canGoUp = this.row > 0;
+                    const canGoDown = this.row < this.game.board.rows - 1;
+                    
+                    if (canGoUp && canGoDown) {
+                        this.row += Math.random() < 0.5 ? -1 : 1;
+                    } else if (canGoUp) {
+                        this.row -= 1;
+                    } else if (canGoDown) {
+                        this.row += 1;
+                    }
+                    
+                    // Update visually
+                    this.y = this.game.board.offsetY + this.row * this.game.board.cellHeight + this.game.board.cellHeight / 2 - 20;
+                    
+                    this.state = 'WALKING';
+                    this.eatTarget = null;
+                    this.element.src = this.walkSrc;
+                } else {
+                    this.eatTarget.hp -= currentDamage * deltaTime;
+                    if (!this.chompTimer) this.chompTimer = 0;
+                    this.chompTimer -= deltaTime;
+                    const chompInterval = this.isSlowed ? 2.0 : 1.0;
+                    if (this.chompTimer <= 0) {
+                        this.game.audioManager.play('chomp');
+                        this.chompTimer = chompInterval; 
+                    }
                 }
             } else {
                 this.state = 'WALKING';
