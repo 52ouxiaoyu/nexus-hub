@@ -129,8 +129,16 @@ class Game {
         });
         
         btnRock.onclick = () => {
+            this.audioManager.play('btn');
             chooser.style.display = 'none';
             this.startGame();
+        };
+
+        const btnBack = document.getElementById('btn-back');
+        btnBack.onclick = () => {
+            this.audioManager.play('btn');
+            chooser.style.display = 'none';
+            document.getElementById('start-menu').style.display = 'block';
         };
     }
     

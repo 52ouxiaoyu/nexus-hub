@@ -24,6 +24,7 @@ class WaveManager {
         let coneChance = 0, bucketChance = 0, footballChance = 0;
         let poleChance = 0, newsChance = 0, screenChance = 0;
         let danceChance = 0, jackChance = 0, zomboniChance = 0, impChance = 0;
+        let bossChance = 0;
         
         if (this.timeElapsed > 60) coneChance = Math.min(0.2, (this.timeElapsed - 60) / 300); 
         if (this.timeElapsed > 120) poleChance = Math.min(0.15, (this.timeElapsed - 120) / 400);
@@ -35,12 +36,14 @@ class WaveManager {
         if (this.timeElapsed > 480) jackChance = Math.min(0.1, (this.timeElapsed - 480) / 500);
         if (this.timeElapsed > 540) zomboniChance = Math.min(0.05, (this.timeElapsed - 540) / 600);
         if (this.timeElapsed > 600) impChance = Math.min(0.1, (this.timeElapsed - 600) / 500);
+        if (this.timeElapsed > 600) bossChance = Math.min(0.05, (this.timeElapsed - 600) / 1000); // Rare boss spawn
         
         const r = Math.random();
         let type = 'normal';
         let acc = 0;
         
-        if (r < (acc += zomboniChance)) type = 'zomboni';
+        if (r < (acc += bossChance)) type = 'lgboss';
+        else if (r < (acc += zomboniChance)) type = 'zomboni';
         else if (r < (acc += footballChance)) type = 'football';
         else if (r < (acc += danceChance)) type = 'dancing';
         else if (r < (acc += jackChance)) type = 'jackinthebox';

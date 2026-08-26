@@ -30,14 +30,15 @@
         </div>
         
         <!-- Seed Chooser UI -->
-        <div id="seed-chooser" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); z-index: 1500; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <div style="background-image: url('assets/images/interface/SeedChooser_Background.png'); background-size: cover; padding: 20px; border-radius: 10px; border: 3px solid #6b4a2b; width: 600px;">
-                <h2 style="color: white; text-align: center; margin-bottom: 10px; text-shadow: 2px 2px 2px black;">Choose Your Plants (<span id="chooser-count">0</span>/10)</h2>
-                <div id="chooser-grid" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; max-height: 300px; overflow-y: auto;">
+        <div id="seed-chooser" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 1500; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="background-color: #6b4a2b; padding: 25px; border-radius: 15px; border: 4px solid #3c2a11; box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.8); width: 650px;">
+                <h2 style="color: #f5deb3; text-align: center; margin-bottom: 15px; text-shadow: 2px 2px 2px black; font-family: monospace; font-size: 24px;">Choose Your Plants (<span id="chooser-count">0</span>/10)</h2>
+                <div id="chooser-grid" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 25px; max-height: 350px; overflow-y: auto; background-color: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; box-shadow: inset 0 0 10px black;">
                     <!-- Seeds will be injected here -->
                 </div>
-                <div style="text-align: center;">
-                    <button id="btn-lets-rock" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 30px; font-size: 20px; font-weight: bold; color: white; cursor: pointer; border-radius: 10px; opacity: 0.5; text-shadow: 1px 1px 2px black;" disabled>Let's Rock!</button>
+                <div style="display: flex; justify-content: center; gap: 20px;">
+                    <button id="btn-back" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 30px; font-size: 18px; font-family: monospace; font-weight: bold; color: white; cursor: pointer; border-radius: 10px; text-shadow: 1px 1px 2px black;">Return</button>
+                    <button id="btn-lets-rock" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 40px; font-size: 20px; font-family: monospace; font-weight: bold; color: white; cursor: pointer; border-radius: 10px; opacity: 0.5; text-shadow: 1px 1px 2px black;" disabled>Let's Rock!</button>
                 </div>
             </div>
         </div>
@@ -45,7 +46,7 @@
         <!-- Start Menu -->
         <div id="start-menu" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 2000; cursor: pointer; transition: transform 0.2s;">
             <img src="assets/images/interface/Logo.png" style="position: absolute; top: 8%; left: 50%; transform: translateX(-50%); width: 60%; height: auto; pointer-events: none;">
-            <div style="position: absolute; bottom: 10px; right: 15px; color: rgba(255,255,255,0.7); font-size: 14px; font-family: monospace; z-index: 2001; text-shadow: 1px 1px 2px black;">v1.3.1 (Build 2621)</div>
+            <div style="position: absolute; bottom: 10px; right: 15px; color: rgba(255,255,255,0.7); font-size: 14px; font-family: monospace; z-index: 2001; text-shadow: 1px 1px 2px black;">v1.3.2 (Build 2622)</div>
         </div>
     </div>
 

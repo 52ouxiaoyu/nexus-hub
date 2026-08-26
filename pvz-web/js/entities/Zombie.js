@@ -106,6 +106,14 @@ class Zombie extends Entity {
             this.walkSrc = 'assets/images/Zombies/Zomboni/1.gif';
             this.attackSrc = 'assets/images/Zombies/Zomboni/1.gif'; // crushes, doesn't attack
             this.dieSrc = 'assets/images/Zombies/Zomboni/BoomDie.gif';
+        } else if (type === 'lgboss') {
+            this.hp = 5000; this.maxHp = 5000;
+            this.speed = 10;
+            this.element.src = 'assets/images/Zombies/LGBOSS/1.gif';
+            this.walkSrc = 'assets/images/Zombies/LGBOSS/1.gif';
+            this.attackSrc = 'assets/images/Zombies/LGBOSS/2.gif'; // Assuming 2 is attack
+            this.dieSrc = 'assets/images/Zombies/LGBOSS/BoomDie.gif'; // Or 5.gif? 0.gif is probably idle
+            this.yOffset = -80; // Assuming it's huge
         }
     }
     
