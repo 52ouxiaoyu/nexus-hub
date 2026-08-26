@@ -84,6 +84,48 @@ class Plant extends Entity {
             this.hp = 400;
             this.element.src = 'assets/images/Plants/Garlic/Garlic.gif';
             this.yOffset = -10;
+        } else if (type === 'fumeshroom') {
+            this.hp = 300;
+            this.fireRate = 1.5;
+            this.fireTimer = 0;
+            this.element.src = 'assets/images/Plants/FumeShroom/FumeShroom.gif';
+        } else if (type === 'sunshroom') {
+            this.hp = 300;
+            this.sunRate = 24.0;
+            this.sunTimer = 0;
+            this.element.src = 'assets/images/Plants/SunShroom/SunShroom.gif';
+        } else if (type === 'scaredyshroom') {
+            this.hp = 300;
+            this.fireRate = 1.5;
+            this.fireTimer = 0;
+            this.element.src = 'assets/images/Plants/ScaredyShroom/ScaredyShroom.gif';
+            this.isHiding = false;
+        } else if (type === 'iceshroom') {
+            this.hp = 300;
+            this.explodeTimer = 1.0;
+            this.element.src = 'assets/images/Plants/IceShroom/IceShroom.gif';
+        } else if (type === 'doomshroom') {
+            this.hp = 300;
+            this.explodeTimer = 1.0;
+            this.element.src = 'assets/images/Plants/DoomShroom/DoomShroom.gif';
+        } else if (type === 'splitpea') {
+            this.hp = 300;
+            this.fireRate = 1.5;
+            this.fireTimer = 0;
+            this.element.src = 'assets/images/Plants/SplitPea/SplitPea.gif';
+        } else if (type === 'gatlingpea') {
+            this.hp = 300;
+            this.fireRate = 1.5;
+            this.fireTimer = 0;
+            this.element.src = 'assets/images/Plants/GatlingPea/GatlingPea.gif';
+        } else if (type === 'twinsunflower') {
+            this.hp = 300;
+            this.sunRate = 24.0;
+            this.sunTimer = 0;
+            this.element.src = 'assets/images/Plants/TwinSunflower/TwinSunflower.gif';
+        } else if (type === 'torchwood') {
+            this.hp = 300;
+            this.element.src = 'assets/images/Plants/Torchwood/Torchwood.gif';
         }
     }
     
@@ -99,29 +141,54 @@ class Plant extends Entity {
         
         if (this.isDead) return;
         
-        if (this.type === 'peashooter' || this.type === 'snowpea' || this.type === 'repeater' || this.type === 'puffshroom' || this.type === 'threepeater') {
+        if (['peashooter', 'snowpea', 'repeater', 'puffshroom', 'threepeater', 'fumeshroom', 'gatlingpea', 'splitpea', 'scaredyshroom'].includes(this.type)) {
+            
+            // Handle Scaredy-shroom hiding
+            if (this.type === 'scaredyshroom') {
+                const zombieNear = this.game.entities.some(e => 
+                    e instanceof Zombie && e.row === this.row && !e.isDead && e.x - this.x > -40 && e.x - this.x < 120
+                );
+                if (zombieNear && !this.isHiding) {
+                    this.isHiding = true;
+                    this.element.src = 'assets/images/Plants/ScaredyShroom/ScaredyShroomSleep.gif';
+                    this.yOffset = 15;
+                } else if (!zombieNear && this.isHiding) {
+                    this.isHiding = false;
+                    this.element.src = 'assets/images/Plants/ScaredyShroom/ScaredyShroom.gif';
+                    this.yOffset = 0;
+                }
+                if (this.isHiding) return;
+            }
+            
             this.fireTimer += deltaTime;
             if (this.fireTimer >= this.fireRate) {
-                const maxRange = this.type === 'puffshroom' ? 240 : 9999;
+                const maxRange = this.type === 'puffshroom' || this.type === 'fumeshroom' ? 300 : 9999;
                 
-                const hasZombieAhead = this.game.entities.some(e => {
-                    if (!(e instanceof Zombie) || e.isDead || e.x <= this.x || e.x - this.x > maxRange) return false;
+                let hasZombieAhead = this.game.entities.some(e => {
+                    if (!(e instanceof Zombie) || e.isDead) return false;
                     if (this.type === 'threepeater') {
-                        return Math.abs(e.row - this.row) <= 1; // Checks 3 rows
+                        return Math.abs(e.row - this.row) <= 1 && e.x > this.x;
                     } else {
-                        return e.row === this.row;
+                        return e.row === this.row && e.x > this.x && e.x - this.x <= maxRange;
                     }
                 });
                 
-                if (hasZombieAhead) {
+                let hasZombieBehind = false;
+                if (this.type === 'splitpea') {
+                    hasZombieBehind = this.game.entities.some(e => 
+                        e instanceof Zombie && !e.isDead && e.row === this.row && e.x < this.x
+                    );
+                }
+                
+                if (hasZombieAhead || hasZombieBehind) {
                     this.fireTimer = 0;
                     
                     let projType = 'peashooter';
                     if (this.type === 'snowpea') projType = 'snowpea';
                     if (this.type === 'puffshroom') projType = 'puffshroom';
+                    if (this.type === 'fumeshroom') projType = 'fumeshroom';
                     
-                    if (this.type === 'threepeater') {
-                        // Fire 3 rows
+                    if (this.type === 'threepeater' && hasZombieAhead) {
                         for (let dRow = -1; dRow <= 1; dRow++) {
                             const tRow = this.row + dRow;
                             if (tRow >= 0 && tRow < this.game.board.rows) {
@@ -129,24 +196,70 @@ class Plant extends Entity {
                             }
                         }
                     } else {
-                        this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15, this.row, projType));
+                        // Forward shot
+                        if (hasZombieAhead) {
+                            this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15, this.row, projType));
+                            
+                            const repeatCount = this.type === 'gatlingpea' ? 4 : (this.type === 'repeater' ? 2 : 1);
+                            for (let i = 1; i < repeatCount; i++) {
+                                setTimeout(() => {
+                                    if (!this.isDead) {
+                                        this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15, this.row, projType));
+                                    }
+                                }, 150 * i);
+                            }
+                        }
                         
-                        if (this.type === 'repeater') {
+                        // Backward shot
+                        if (hasZombieBehind && this.type === 'splitpea') {
+                            this.game.entities.push(new Projectile(this.game, this.x - 30, this.y - 15, this.row, 'backpea'));
                             setTimeout(() => {
                                 if (!this.isDead) {
-                                    this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15, this.row, projType));
+                                    this.game.entities.push(new Projectile(this.game, this.x - 30, this.y - 15, this.row, 'backpea'));
                                 }
                             }, 150);
                         }
                     }
                 }
             }
-        } else if (this.type === 'sunflower') {
+        } else if (this.type === 'sunflower' || this.type === 'sunshroom' || this.type === 'twinsunflower') {
             this.sunTimer += deltaTime;
             if (this.sunTimer >= this.sunRate) {
                 this.sunTimer = 0;
                 const targetY = this.y + 20;
                 this.game.entities.push(new Sun(this.game, this.x, this.y - 20, targetY));
+                
+                if (this.type === 'twinsunflower') {
+                    // Spawn a second sun slightly offset
+                    setTimeout(() => {
+                        if (!this.isDead) this.game.entities.push(new Sun(this.game, this.x + 20, this.y - 20, targetY));
+                    }, 500);
+                }
+            }
+        } else if (this.type === 'iceshroom') {
+            this.explodeTimer -= deltaTime;
+            if (this.explodeTimer <= 0) {
+                this.game.audioManager.play('splat');
+                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead);
+                for (let z of zombies) {
+                    z.isSlowed = true;
+                    z.slowTimer = 10.0;
+                    z.takeDamage(20); // slight damage
+                }
+                this.hp = 0;
+            }
+        } else if (this.type === 'doomshroom') {
+            this.explodeTimer -= deltaTime;
+            if (this.explodeTimer <= 0) {
+                this.game.audioManager.play('splat');
+                this.element.src = 'assets/images/Plants/DoomShroom/Boom.gif'; // Assuming boom exists or just flash
+                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead);
+                for (let z of zombies) {
+                    if (Math.abs(z.row - this.row) <= 2 && Math.abs(z.x - this.x) < 300) {
+                        z.takeDamage(1800);
+                    }
+                }
+                setTimeout(() => { this.hp = 0; }, 500);
             }
         } else if (this.type === 'wallnut' || this.type === 'tallnut') {
             const maxHp = this.type === 'wallnut' ? 4000 : 8000;

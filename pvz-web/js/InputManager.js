@@ -94,6 +94,15 @@ class InputManager {
             else if (type === 'puffshroom') imgName = 'PuffShroom/PuffShroom';
             else if (type === 'spikeweed') imgName = 'Spikeweed/Spikeweed';
             else if (type === 'threepeater') imgName = 'Threepeater/Threepeater';
+            else if (type === 'fumeshroom') imgName = 'FumeShroom/FumeShroom';
+            else if (type === 'sunshroom') imgName = 'SunShroom/SunShroom';
+            else if (type === 'scaredyshroom') imgName = 'ScaredyShroom/ScaredyShroom';
+            else if (type === 'iceshroom') imgName = 'IceShroom/IceShroom';
+            else if (type === 'doomshroom') imgName = 'DoomShroom/DoomShroom';
+            else if (type === 'splitpea') imgName = 'SplitPea/SplitPea';
+            else if (type === 'gatlingpea') imgName = 'GatlingPea/GatlingPea';
+            else if (type === 'twinsunflower') imgName = 'TwinSunflower/TwinSunflower';
+            else if (type === 'torchwood') imgName = 'Torchwood/Torchwood';
             else if (type === 'garlic') imgName = 'Garlic/Garlic';
             
             this.dragGhost.style.backgroundImage = `url('assets/images/Plants/${imgName}.gif')`;
