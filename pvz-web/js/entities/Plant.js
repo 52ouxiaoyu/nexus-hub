@@ -40,7 +40,7 @@ class Plant extends Entity {
         } else if (type === 'squash') {
             this.hp = 300;
             this.element.src = 'assets/images/Plants/Squash/Squash.gif';
-            this.yOffset = -25;
+            this.yOffset = -75;
             this.state = 'idle'; 
         } else if (type === 'jalapeno') {
             this.hp = 300;

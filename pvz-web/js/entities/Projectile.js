@@ -14,7 +14,7 @@ class Projectile extends Entity {
         } else if (type === 'puffshroom') {
             this.element.src = 'assets/images/Plants/ShroomBullet.gif';
         } else if (type === 'fumeshroom') {
-            this.element.src = 'assets/images/Plants/FumeShroomBullet.gif';
+            this.element.src = 'assets/images/Plants/ShroomBullet.gif'; // Fallback for sprite sheet
             this.speed = 400; // Moves faster but dies early
         } else if (type === 'firepea') {
             this.element.src = 'assets/images/Plants/PB10.gif';
