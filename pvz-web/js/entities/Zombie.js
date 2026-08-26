@@ -16,34 +16,96 @@ class Zombie extends Entity {
         this.slowTimer = 0;
         
         if (type === 'normal') {
-            this.hp = 200;
-            this.maxHp = 200;
+            this.hp = 200; this.maxHp = 200;
             this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+        } else if (type === 'flag') {
+            this.hp = 200; this.maxHp = 200;
+            this.element.src = 'assets/images/Zombies/FlagZombie/FlagZombie.gif';
+            this.walkSrc = 'assets/images/Zombies/FlagZombie/FlagZombie.gif';
+            this.attackSrc = 'assets/images/Zombies/FlagZombie/FlagZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
         } else if (type === 'conehead') {
-            this.hp = 560; 
-            this.maxHp = 560;
+            this.hp = 560; this.maxHp = 560;
             this.element.src = 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif';
             this.walkSrc = 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif';
             this.attackSrc = 'assets/images/Zombies/ConeheadZombie/ConeheadZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
         } else if (type === 'buckethead') {
-            this.hp = 1300; 
-            this.maxHp = 1300;
+            this.hp = 1300; this.maxHp = 1300;
             this.element.src = 'assets/images/Zombies/BucketheadZombie/BucketheadZombie.gif';
             this.walkSrc = 'assets/images/Zombies/BucketheadZombie/BucketheadZombie.gif';
             this.attackSrc = 'assets/images/Zombies/BucketheadZombie/BucketheadZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+        } else if (type === 'polevaulting') {
+            this.hp = 500; this.maxHp = 500;
+            this.speed = 45; // Fast initially
+            this.hasVaulted = false;
+            this.element.src = 'assets/images/Zombies/PoleVaultingZombie/PoleVaultingZombie.gif';
+            this.walkSrc = 'assets/images/Zombies/PoleVaultingZombie/PoleVaultingZombie.gif';
+            this.attackSrc = 'assets/images/Zombies/PoleVaultingZombie/PoleVaultingZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/PoleVaultingZombie/PoleVaultingZombieDie.gif';
+            this.yOffset = -50;
+        } else if (type === 'newspaper') {
+            this.hp = 300; this.maxHp = 300;
+            this.element.src = 'assets/images/Zombies/NewspaperZombie/HeadWalk1.gif';
+            this.walkSrc = 'assets/images/Zombies/NewspaperZombie/HeadWalk1.gif';
+            this.attackSrc = 'assets/images/Zombies/NewspaperZombie/HeadAttack1.gif';
+            this.dieSrc = 'assets/images/Zombies/NewspaperZombie/Die.gif';
+            this.hasLostNewspaper = false;
+        } else if (type === 'screendoor') {
+            this.hp = 1300; this.maxHp = 1300;
+            this.element.src = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombie.gif';
+            this.walkSrc = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombie.gif';
+            this.attackSrc = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
         } else if (type === 'football') {
-            this.hp = 1600; 
-            this.maxHp = 1600;
-            this.speed = 40; // Football is fast
+            this.hp = 1600; this.maxHp = 1600;
+            this.speed = 40; 
             this.element.src = 'assets/images/Zombies/FootballZombie/FootballZombie.gif';
             this.walkSrc = 'assets/images/Zombies/FootballZombie/FootballZombie.gif';
             this.attackSrc = 'assets/images/Zombies/FootballZombie/Attack.gif';
             this.dieSrc = 'assets/images/Zombies/FootballZombie/Die.gif';
+        } else if (type === 'dancing') {
+            this.hp = 500; this.maxHp = 500;
+            this.summonTimer = 5.0; // Summons backups periodically
+            this.element.src = 'assets/images/Zombies/DancingZombie/DancingZombie.gif';
+            this.walkSrc = 'assets/images/Zombies/DancingZombie/DancingZombie.gif';
+            this.attackSrc = 'assets/images/Zombies/DancingZombie/Attack.gif';
+            this.dieSrc = 'assets/images/Zombies/DancingZombie/Die.gif';
+            this.yOffset = -40;
+        } else if (type === 'backup') {
+            this.hp = 200; this.maxHp = 200;
+            this.element.src = 'assets/images/Zombies/BackupDancer/BackupDancer.gif';
+            this.walkSrc = 'assets/images/Zombies/BackupDancer/BackupDancer.gif';
+            this.attackSrc = 'assets/images/Zombies/BackupDancer/Attack.gif';
+            this.dieSrc = 'assets/images/Zombies/BackupDancer/Die.gif';
+            this.yOffset = -40;
+        } else if (type === 'jackinthebox') {
+            this.hp = 500; this.maxHp = 500;
+            this.speed = 35; // fast
+            this.explodeTimer = Math.random() * 5 + 5; 
+            this.element.src = 'assets/images/Zombies/JackinTheBoxZombie/Walk.gif';
+            this.walkSrc = 'assets/images/Zombies/JackinTheBoxZombie/Walk.gif';
+            this.attackSrc = 'assets/images/Zombies/JackinTheBoxZombie/Attack.gif';
+            this.dieSrc = 'assets/images/Zombies/JackinTheBoxZombie/Die.gif';
+        } else if (type === 'imp') {
+            this.hp = 100; this.maxHp = 100;
+            this.speed = 35; // fast
+            this.element.src = 'assets/images/Zombies/Imp/Zombie.gif'; 
+            this.walkSrc = 'assets/images/Zombies/Imp/Zombie.gif';
+            this.attackSrc = 'assets/images/Zombies/Imp/ZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Imp/ZombieDie.gif';
+            this.yOffset = -10;
+        } else if (type === 'zomboni') {
+            this.hp = 1300; this.maxHp = 1300;
+            this.speed = 15;
+            this.element.src = 'assets/images/Zombies/Zomboni/1.gif';
+            this.walkSrc = 'assets/images/Zombies/Zomboni/1.gif';
+            this.attackSrc = 'assets/images/Zombies/Zomboni/1.gif'; // crushes, doesn't attack
+            this.dieSrc = 'assets/images/Zombies/Zomboni/BoomDie.gif';
         }
     }
     
@@ -80,6 +142,69 @@ class Zombie extends Entity {
             this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
         }
         
+        // Handle newspaper falling off
+        if (this.type === 'newspaper' && this.hp <= 150 && !this.hasLostNewspaper && this.state !== 'DYING') {
+            this.hasLostNewspaper = true;
+            this.speed = 45; // Gets very angry and fast
+            this.walkSrc = 'assets/images/Zombies/NewspaperZombie/HeadWalk0.gif';
+            this.attackSrc = 'assets/images/Zombies/NewspaperZombie/HeadAttack0.gif';
+            this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
+        }
+
+        // Handle screendoor falling off
+        if (this.type === 'screendoor' && this.hp <= 200 && this.state !== 'DYING') {
+            this.type = 'normal';
+            this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
+            this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
+        }
+
+        // Handle jack-in-the-box explosion
+        if (this.type === 'jackinthebox' && this.state !== 'DYING') {
+            this.explodeTimer -= deltaTime;
+            if (this.explodeTimer <= 0) {
+                // Explode!
+                this.hp = 0;
+                this.element.src = 'assets/images/Zombies/JackinTheBoxZombie/Boom.gif';
+                this.element.style.zIndex = 3000;
+                this.element.style.transform = 'translate(-50%, -80%)'; // Move boom up a bit
+                
+                // Kill plants in 3x3 area
+                const plants = this.game.entities.filter(e => e instanceof Plant && !e.isDead);
+                for (let p of plants) {
+                    if (Math.abs(p.row - this.row) <= 1 && Math.abs(p.x - this.x) < 150) {
+                        p.hp = 0;
+                    }
+                }
+                setTimeout(() => { this.isDead = true; }, 1000);
+                return;
+            }
+        }
+
+        // Handle Dancing Zombie summon
+        if (this.type === 'dancing' && this.state !== 'DYING') {
+            this.summonTimer -= deltaTime;
+            if (this.summonTimer <= 0) {
+                this.summonTimer = 10.0; // Summon every 10s
+                
+                // Spawn backups
+                const positions = [
+                    {r: this.row - 1, dx: 0},
+                    {r: this.row + 1, dx: 0},
+                    {r: this.row, dx: -80},
+                    {r: this.row, dx: 80}
+                ];
+                
+                for (let pos of positions) {
+                    if (pos.r >= 0 && pos.r < this.game.board.rows) {
+                        const zombieY = this.game.board.offsetY + pos.r * this.game.board.cellHeight + this.game.board.cellHeight / 2 - 20;
+                        const backup = new Zombie(this.game, this.x + pos.dx, zombieY, pos.r, 'backup');
+                        this.game.entities.push(backup);
+                    }
+                }
+            }
+        }
+        
         if (this.hp <= 0 && this.state !== 'DYING') {
             this.state = 'DYING';
             this.element.src = this.dieSrc;
@@ -107,11 +232,32 @@ class Zombie extends Entity {
             );
             
             if (plant && !plant.isDead && plant.type !== 'crater') {
-                this.state = 'EATING';
-                this.eatTarget = plant;
-                this.element.src = this.attackSrc;
+                if (this.type === 'polevaulting' && !this.hasVaulted && plant.type !== 'tallnut') {
+                    // Jump over it!
+                    this.hasVaulted = true;
+                    this.state = 'JUMPING';
+                    this.jumpTimer = 1.0; // 1 second jump
+                    this.element.src = 'assets/images/Zombies/PoleVaultingZombie/PoleVaultingZombieJump.gif';
+                    this.jumpTargetX = plant.x - 80; // land behind plant
+                } else if (this.type === 'zomboni') {
+                    // Crush it!
+                    plant.hp = 0;
+                } else {
+                    this.state = 'EATING';
+                    this.eatTarget = plant;
+                    this.element.src = this.attackSrc;
+                }
             }
-        } 
+        } else if (this.state === 'JUMPING') {
+            this.jumpTimer -= deltaTime;
+            this.x += (this.jumpTargetX - this.x) * (deltaTime / this.jumpTimer); // smoothly move to target
+            
+            if (this.jumpTimer <= 0) {
+                this.state = 'WALKING';
+                this.speed = 20; // walk slow after jump
+                this.element.src = this.walkSrc;
+            }
+        }
         else if (this.state === 'EATING') {
             if (this.eatTarget && !this.eatTarget.isDead) {
                 if (this.eatTarget.type === 'garlic') {

@@ -21,25 +21,35 @@ class WaveManager {
     spawnZombie() {
         const row = Math.floor(Math.random() * this.game.board.rows);
         
-        let coneChance = 0;
-        let bucketChance = 0;
-        let footballChance = 0;
+        let coneChance = 0, bucketChance = 0, footballChance = 0;
+        let poleChance = 0, newsChance = 0, screenChance = 0;
+        let danceChance = 0, jackChance = 0, zomboniChance = 0, impChance = 0;
         
-        if (this.timeElapsed > 60) {
-            coneChance = Math.min(0.4, (this.timeElapsed - 60) / 300); 
-        }
-        if (this.timeElapsed > 180) {
-            bucketChance = Math.min(0.3, (this.timeElapsed - 180) / 400);
-        }
-        if (this.timeElapsed > 300) {
-            footballChance = Math.min(0.2, (this.timeElapsed - 300) / 500);
-        }
+        if (this.timeElapsed > 60) coneChance = Math.min(0.2, (this.timeElapsed - 60) / 300); 
+        if (this.timeElapsed > 120) poleChance = Math.min(0.15, (this.timeElapsed - 120) / 400);
+        if (this.timeElapsed > 180) bucketChance = Math.min(0.15, (this.timeElapsed - 180) / 400);
+        if (this.timeElapsed > 240) newsChance = Math.min(0.15, (this.timeElapsed - 240) / 400);
+        if (this.timeElapsed > 300) screenChance = Math.min(0.15, (this.timeElapsed - 300) / 400);
+        if (this.timeElapsed > 360) footballChance = Math.min(0.1, (this.timeElapsed - 360) / 500);
+        if (this.timeElapsed > 420) danceChance = Math.min(0.1, (this.timeElapsed - 420) / 500);
+        if (this.timeElapsed > 480) jackChance = Math.min(0.1, (this.timeElapsed - 480) / 500);
+        if (this.timeElapsed > 540) zomboniChance = Math.min(0.05, (this.timeElapsed - 540) / 600);
+        if (this.timeElapsed > 600) impChance = Math.min(0.1, (this.timeElapsed - 600) / 500);
         
         const r = Math.random();
         let type = 'normal';
-        if (r < footballChance) type = 'football';
-        else if (r < footballChance + bucketChance) type = 'buckethead';
-        else if (r < footballChance + bucketChance + coneChance) type = 'conehead';
+        let acc = 0;
+        
+        if (r < (acc += zomboniChance)) type = 'zomboni';
+        else if (r < (acc += footballChance)) type = 'football';
+        else if (r < (acc += danceChance)) type = 'dancing';
+        else if (r < (acc += jackChance)) type = 'jackinthebox';
+        else if (r < (acc += screenChance)) type = 'screendoor';
+        else if (r < (acc += bucketChance)) type = 'buckethead';
+        else if (r < (acc += poleChance)) type = 'polevaulting';
+        else if (r < (acc += newsChance)) type = 'newspaper';
+        else if (r < (acc += impChance)) type = 'imp';
+        else if (r < (acc += coneChance)) type = 'conehead';
         
         this.game.entities.push(new Zombie(this.game, row, type));
     }
