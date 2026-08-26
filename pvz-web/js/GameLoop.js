@@ -34,6 +34,7 @@ class AudioManager {
 
 class Game {
     constructor() {
+        this.container = document.getElementById('game-container');
         this.entityLayer = document.getElementById('entity-layer');
         
         this.lastTime = 0;
@@ -147,7 +148,10 @@ class Game {
         seedBank.innerHTML = ''; // clear
         this.cooldowns = {};
         
-        this.selectedSeeds.forEach(s => {
+        // Setup random events
+        this.eventTimer = 45; // First event after 45s
+        
+        this.selectedSeeds.forEach((s, i) => {
             this.cooldowns[s.type] = 0;
             const card = document.createElement('div');
             card.className = 'seed-card';
@@ -304,6 +308,14 @@ class Game {
         this.waveManager.update(deltaTime);
         this.collisionManager.update();
         
+        if (this.eventTimer > 0) {
+            this.eventTimer -= deltaTime;
+            if (this.eventTimer <= 0) {
+                this.eventTimer = 45 + Math.random() * 30; // 45 to 75 seconds
+                this.triggerRandomEvent();
+            }
+        }
+        
         // Update cooldowns
         let uiNeedsUpdate = false;
         for (let type in this.cooldowns) {
@@ -348,6 +360,132 @@ class Game {
                 e.element.style.zIndex = z;
             }
         });
+    }
+
+    showAnnouncement(text, color) {
+        if (!this.announcementUI) {
+            this.announcementUI = document.createElement('div');
+            this.announcementUI.style.position = 'absolute';
+            this.announcementUI.style.top = '30%';
+            this.announcementUI.style.left = '50%';
+            this.announcementUI.style.transform = 'translate(-50%, -50%)';
+            this.announcementUI.style.fontSize = '60px';
+            this.announcementUI.style.fontWeight = 'bold';
+            this.announcementUI.style.textShadow = '4px 4px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000';
+            this.announcementUI.style.zIndex = '5000';
+            this.announcementUI.style.pointerEvents = 'none';
+            this.announcementUI.style.opacity = '0';
+            this.announcementUI.style.transition = 'opacity 0.5s';
+            this.container.appendChild(this.announcementUI);
+        }
+        this.announcementUI.innerText = text;
+        this.announcementUI.style.color = color || 'white';
+        this.announcementUI.style.opacity = '1';
+        
+        if (this.announcementTimeout) clearTimeout(this.announcementTimeout);
+        this.announcementTimeout = setTimeout(() => {
+            this.announcementUI.style.opacity = '0';
+        }, 4000);
+    }
+
+    triggerRandomEvent() {
+        const events = ['meteor', 'sunburst', 'wind', 'ambush'];
+        const ev = events[Math.floor(Math.random() * events.length)];
+        
+        if (ev === 'meteor') {
+            this.showAnnouncement('⚠️ 警告：天降陨石！', '#ff4444');
+            const r = Math.floor(Math.random() * this.board.rows);
+            const c = 2 + Math.floor(Math.random() * 6); // Col 2 to 7
+            const x = this.board.offsetX + c * this.board.cellWidth + this.board.cellWidth/2;
+            const y = this.board.offsetY + r * this.board.cellHeight + this.board.cellHeight/2;
+            
+            const target = document.createElement('div');
+            target.style.position = 'absolute';
+            target.style.left = `${x - 50}px`;
+            target.style.top = `${y - 50}px`;
+            target.style.width = '100px';
+            target.style.height = '100px';
+            target.style.border = '6px dashed red';
+            target.style.borderRadius = '50%';
+            target.style.zIndex = '3000';
+            target.style.boxShadow = '0 0 20px red, inset 0 0 20px red';
+            this.entityLayer.appendChild(target);
+            
+            let toggle = true;
+            const flashInt = setInterval(() => {
+                target.style.opacity = toggle ? '0.2' : '1';
+                toggle = !toggle;
+            }, 200);
+            
+            setTimeout(() => {
+                clearInterval(flashInt);
+                if (target.parentNode) target.parentNode.removeChild(target);
+                this.audioManager.play('splat');
+                
+                const boom = document.createElement('img');
+                boom.src = 'assets/images/Plants/DoomShroom/Boom.png';
+                boom.style.position = 'absolute';
+                boom.style.left = `${x}px`;
+                boom.style.top = `${y}px`;
+                boom.style.transform = 'translate(-50%, -80%)';
+                boom.style.zIndex = '3000';
+                this.entityLayer.appendChild(boom);
+                setTimeout(() => { if (boom.parentNode) boom.parentNode.removeChild(boom); }, 1000);
+                
+                const craterEntity = new Plant(this, x, y, r, c, 'crater');
+                craterEntity.hp = 99999;
+                craterEntity.element.src = 'assets/images/Plants/DoomShroom/crater11.png';
+                craterEntity.element.style.zIndex = 10;
+                this.entities.push(craterEntity);
+                setTimeout(() => { craterEntity.hp = 0; }, 30000); 
+                
+                const victims = this.entities.filter(e => Math.abs(e.x - x) < 100 && Math.abs(e.y - y) < 100);
+                for (let v of victims) {
+                    if (v !== craterEntity && !(v instanceof Sun) && !(v instanceof Projectile)) {
+                        v.hp = 0;
+                    }
+                }
+            }, 3000);
+            
+        } else if (ev === 'sunburst') {
+            this.showAnnouncement('✨ 奇迹：阳光普照！', '#ffd700');
+            for (let i = 0; i < 15; i++) {
+                setTimeout(() => {
+                    const sun = new Sun(this, 100 + Math.random() * 700, 0);
+                    this.entities.push(sun);
+                }, i * 200);
+            }
+        } else if (ev === 'wind') {
+            this.showAnnouncement('🌪️ 危机：狂风呼啸！', '#88ccff');
+            const zombies = this.entities.filter(e => e instanceof Zombie && !e.isDead);
+            for (let z of zombies) {
+                z.x += 150; 
+                if (z.x > 900) z.x = 900; 
+            }
+            const plants = this.entities.filter(e => e instanceof Plant && !e.isDead && e.type !== 'crater');
+            if (plants.length > 0) {
+                for(let i=0; i<2; i++) {
+                    if (plants.length > 0) {
+                        const idx = Math.floor(Math.random() * plants.length);
+                        plants[idx].hp = 0;
+                        plants.splice(idx, 1);
+                    }
+                }
+            }
+        } else if (ev === 'ambush') {
+            this.showAnnouncement('🧟 突袭：地道僵尸！', '#88ff88');
+            for (let i = 0; i < 4; i++) {
+                setTimeout(() => {
+                    const r = Math.floor(Math.random() * this.board.rows);
+                    const zombie = new Zombie(this, r, 'normal');
+                    zombie.x = 400 + Math.random() * 300; 
+                    zombie.element.style.clipPath = 'inset(100% 0 0 0)';
+                    zombie.element.style.transition = 'clip-path 1s linear';
+                    this.entities.push(zombie);
+                    setTimeout(() => { zombie.element.style.clipPath = 'inset(0 0 0 0)'; }, 50);
+                }, i * 500);
+            }
+        }
     }
 }
 
