@@ -111,8 +111,8 @@ body {
     cursor: pointer;
     position: relative;
     overflow: hidden;
-    background-size: 65px 78px;
-    background-position: 0 0;
+    background-size: 100% 200%;
+    background-position: top;
     box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
     border-radius: 4px;
 }
@@ -165,13 +165,11 @@ body {
 .chooser-card {
     width: 100px;
     height: 60px;
+    background-size: 100% 200%;
+    background-position: top;
     cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    background-size: 100px 120px;
-    background-position: top left;
-    box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
-    border-radius: 4px;
+    border-radius: 5px;
+    border: 2px solid transparent;
     transition: transform 0.1s;
 }
 .chooser-card:hover {
