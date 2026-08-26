@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=2">
 </head>
 <body>
     <div id="game-container">
@@ -27,10 +27,24 @@
             </div>
             <div id="drag-ghost" style="display: none;"></div>
         </div>
+        
+        <!-- Seed Chooser UI -->
+        <div id="seed-chooser" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); z-index: 1500; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="background-image: url('assets/images/interface/SeedChooser_Background.png'); background-size: cover; padding: 20px; border-radius: 10px; border: 3px solid #6b4a2b; width: 600px;">
+                <h2 style="color: white; text-align: center; margin-bottom: 10px; text-shadow: 2px 2px 2px black;">Choose Your Plants (<span id="chooser-count">0</span>/10)</h2>
+                <div id="chooser-grid" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; max-height: 300px; overflow-y: auto;">
+                    <!-- Seeds will be injected here -->
+                </div>
+                <div style="text-align: center;">
+                    <button id="btn-lets-rock" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 30px; font-size: 20px; font-weight: bold; color: white; cursor: pointer; border-radius: 10px; opacity: 0.5; text-shadow: 1px 1px 2px black;" disabled>Let's Rock!</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Start Menu -->
         <div id="start-menu" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 2000; cursor: pointer; transition: transform 0.2s;">
             <img src="assets/images/interface/Logo.png" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none;">
-            <div style="position: absolute; bottom: 10px; right: 15px; color: rgba(255,255,255,0.7); font-size: 14px; font-family: monospace; z-index: 2001; text-shadow: 1px 1px 2px black;">v1.1.0 (Build 2608)</div>
+            <div style="position: absolute; bottom: 10px; right: 15px; color: rgba(255,255,255,0.7); font-size: 14px; font-family: monospace; z-index: 2001; text-shadow: 1px 1px 2px black;">v1.2.0 (Build 2609)</div>
         </div>
     </div>
 

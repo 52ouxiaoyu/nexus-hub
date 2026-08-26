@@ -73,35 +73,62 @@ class Game {
         
         menu.onclick = () => {
             menu.style.display = 'none';
-            this.state = 'PLAYING';
-            this.audioManager.play('bgm');
-            this.lastTime = performance.now();
-            requestAnimationFrame((t) => this.loop(t));
+            this.showSeedChooser();
         };
     }
 
-    
-    initUI() {
-        const seedBank = document.getElementById('seed-bank');
+    showSeedChooser() {
+        const chooser = document.getElementById('seed-chooser');
+        const grid = document.getElementById('chooser-grid');
+        const countSpan = document.getElementById('chooser-count');
+        const btnRock = document.getElementById('btn-lets-rock');
         
-        // Added cooldown in seconds
-        this.seeds = [
-            { type: 'sunflower', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/SunFlower.png' },
-            { type: 'peashooter', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Peashooter.png' },
-            { type: 'wallnut', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/WallNut.png' },
-            { type: 'cherrybomb', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/CherryBomb.png' },
-            { type: 'snowpea', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/SnowPea.png' },
-            { type: 'repeater', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/Repeater.png' },
-            { type: 'squash', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/Squash.png' },
-            { type: 'jalapeno', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/Jalapeno.png' },
-            { type: 'potatomine', cost: 25, cooldown: 30, img: 'assets/images/Card/Plants/PotatoMine.png' },
-            { type: 'chomper', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/Chomper.png' }
-        ];
+        chooser.style.display = 'flex';
+        this.selectedSeeds = []; // Will store the selected seed objects
+        grid.innerHTML = '';
         
-        this.cooldowns = {};
         this.seeds.forEach(s => {
+            const card = document.createElement('div');
+            card.className = 'seed-card';
+            card.style.backgroundImage = `url('${s.img}')`;
+            // Add a tick or dim when selected
+            card.onclick = () => {
+                const index = this.selectedSeeds.indexOf(s);
+                if (index > -1) {
+                    this.selectedSeeds.splice(index, 1);
+                    card.style.filter = 'none';
+                } else {
+                    if (this.selectedSeeds.length < 10) {
+                        this.selectedSeeds.push(s);
+                        card.style.filter = 'brightness(50%)'; // Dim to show selected
+                    }
+                }
+                
+                countSpan.innerText = this.selectedSeeds.length;
+                if (this.selectedSeeds.length > 0) {
+                    btnRock.disabled = false;
+                    btnRock.style.opacity = '1';
+                } else {
+                    btnRock.disabled = true;
+                    btnRock.style.opacity = '0.5';
+                }
+            };
+            grid.appendChild(card);
+        });
+        
+        btnRock.onclick = () => {
+            chooser.style.display = 'none';
+            this.startGame();
+        };
+    }
+    
+    startGame() {
+        const seedBank = document.getElementById('seed-bank');
+        seedBank.innerHTML = ''; // clear
+        this.cooldowns = {};
+        
+        this.selectedSeeds.forEach(s => {
             this.cooldowns[s.type] = 0;
-            
             const card = document.createElement('div');
             card.className = 'seed-card';
             card.dataset.type = s.type;
@@ -115,6 +142,32 @@ class Game {
         });
         
         this.updateUI();
+        this.state = 'PLAYING';
+        this.audioManager.play('bgm');
+        this.lastTime = performance.now();
+        requestAnimationFrame((t) => this.loop(t));
+    }
+    
+    initUI() {
+        // Just define the seeds, don't populate the top bar yet
+        this.seeds = [
+            { type: 'sunflower', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/SunFlower.png' },
+            { type: 'peashooter', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Peashooter.png' },
+            { type: 'wallnut', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/WallNut.png' },
+            { type: 'cherrybomb', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/CherryBomb.png' },
+            { type: 'snowpea', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/SnowPea.png' },
+            { type: 'repeater', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/Repeater.png' },
+            { type: 'squash', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/Squash.png' },
+            { type: 'jalapeno', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/Jalapeno.png' },
+            { type: 'potatomine', cost: 25, cooldown: 30, img: 'assets/images/Card/Plants/PotatoMine.png' },
+            { type: 'chomper', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/Chomper.png' },
+            { type: 'tallnut', cost: 125, cooldown: 30, img: 'assets/images/Card/Plants/TallNut.png' },
+            { type: 'puffshroom', cost: 0, cooldown: 7.5, img: 'assets/images/Card/Plants/PuffShroom.png' },
+            { type: 'spikeweed', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikeweed.png' },
+            { type: 'threepeater', cost: 325, cooldown: 7.5, img: 'assets/images/Card/Plants/Threepeater.png' },
+            { type: 'garlic', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/Garlic.png' }
+        ];
+        // The top bar will be populated in startGame() after selection
     }
     
     addSun(amount) {
@@ -146,7 +199,7 @@ class Game {
     }
     
     updateUI() {
-        const cards = document.querySelectorAll('.seed-card');
+        const cards = document.querySelectorAll('#seed-bank .seed-card');
         cards.forEach(card => {
             const type = card.dataset.type;
             const cost = parseInt(card.dataset.cost);

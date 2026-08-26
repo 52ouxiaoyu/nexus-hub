@@ -9,6 +9,8 @@ class Projectile extends Entity {
         
         if (type === 'snowpea') {
             this.element.src = 'assets/images/Plants/PB-10.gif'; // Snow pea image
+        } else if (type === 'puffshroom') {
+            this.element.src = 'assets/images/Plants/ShroomBullet.gif'; // Puff-shroom spore
         } else {
             this.element.src = 'assets/images/Plants/PB00.gif'; // Normal pea
         }

@@ -59,6 +59,31 @@ class Plant extends Entity {
             this.yOffset = -25;
             this.state = 'idle'; // idle, attacking, chewing
             this.chewTimer = 0;
+        } else if (type === 'tallnut') {
+            this.hp = 8000;
+            this.element.src = 'assets/images/Plants/TallNut/TallNut.gif';
+            this.yOffset = -20;
+        } else if (type === 'puffshroom') {
+            this.hp = 300;
+            this.fireRate = 1.5;
+            this.fireTimer = 0;
+            this.element.src = 'assets/images/Plants/PuffShroom/PuffShroom.gif';
+            this.yOffset = 0;
+        } else if (type === 'spikeweed') {
+            this.hp = 300; // Can't be eaten by normal zombies usually, but for now 300
+            this.element.src = 'assets/images/Plants/Spikeweed/Spikeweed.gif';
+            this.yOffset = 25;
+            this.damageTimer = 0;
+        } else if (type === 'threepeater') {
+            this.hp = 300;
+            this.fireRate = 1.5;
+            this.fireTimer = 0;
+            this.element.src = 'assets/images/Plants/Threepeater/Threepeater.gif';
+            this.yOffset = -15;
+        } else if (type === 'garlic') {
+            this.hp = 400;
+            this.element.src = 'assets/images/Plants/Garlic/Garlic.gif';
+            this.yOffset = -10;
         }
     }
     
@@ -74,28 +99,45 @@ class Plant extends Entity {
         
         if (this.isDead) return;
         
-        if (this.type === 'peashooter' || this.type === 'snowpea' || this.type === 'repeater') {
+        if (this.type === 'peashooter' || this.type === 'snowpea' || this.type === 'repeater' || this.type === 'puffshroom' || this.type === 'threepeater') {
             this.fireTimer += deltaTime;
             if (this.fireTimer >= this.fireRate) {
-                const hasZombieAhead = this.game.entities.some(e => 
-                    e instanceof Zombie && 
-                    e.row === this.row && 
-                    e.x > this.x && 
-                    !e.isDead
-                );
+                const maxRange = this.type === 'puffshroom' ? 240 : 9999;
+                
+                const hasZombieAhead = this.game.entities.some(e => {
+                    if (!(e instanceof Zombie) || e.isDead || e.x <= this.x || e.x - this.x > maxRange) return false;
+                    if (this.type === 'threepeater') {
+                        return Math.abs(e.row - this.row) <= 1; // Checks 3 rows
+                    } else {
+                        return e.row === this.row;
+                    }
+                });
                 
                 if (hasZombieAhead) {
                     this.fireTimer = 0;
-                    const projType = this.type === 'snowpea' ? 'snowpea' : 'peashooter';
-                    this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15, this.row, projType));
                     
-                    if (this.type === 'repeater') {
-                        // Fire second pea with a slight delay
-                        setTimeout(() => {
-                            if (!this.isDead) {
-                                this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15, this.row, projType));
+                    let projType = 'peashooter';
+                    if (this.type === 'snowpea') projType = 'snowpea';
+                    if (this.type === 'puffshroom') projType = 'puffshroom';
+                    
+                    if (this.type === 'threepeater') {
+                        // Fire 3 rows
+                        for (let dRow = -1; dRow <= 1; dRow++) {
+                            const tRow = this.row + dRow;
+                            if (tRow >= 0 && tRow < this.game.board.rows) {
+                                this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15 + dRow * this.game.board.cellHeight, tRow, projType));
                             }
-                        }, 150);
+                        }
+                    } else {
+                        this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15, this.row, projType));
+                        
+                        if (this.type === 'repeater') {
+                            setTimeout(() => {
+                                if (!this.isDead) {
+                                    this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15, this.row, projType));
+                                }
+                            }, 150);
+                        }
                     }
                 }
             }
@@ -106,12 +148,29 @@ class Plant extends Entity {
                 const targetY = this.y + 20;
                 this.game.entities.push(new Sun(this.game, this.x, this.y - 20, targetY));
             }
-        } else if (this.type === 'wallnut') {
-            if (this.hp < 1333 && this.element.src.indexOf('Wallnut_cracked2') === -1) {
-                // Not perfectly smooth without proper preloading, but works
-                // this.element.src = 'assets/images/Plants/WallNut/Wallnut_cracked2.gif';
-            } else if (this.hp < 2666 && this.element.src.indexOf('Wallnut_cracked1') === -1 && this.hp >= 1333) {
-                // this.element.src = 'assets/images/Plants/WallNut/Wallnut_cracked1.gif';
+        } else if (this.type === 'wallnut' || this.type === 'tallnut') {
+            const maxHp = this.type === 'wallnut' ? 4000 : 8000;
+            const path = this.type === 'wallnut' ? 'WallNut' : 'TallNut';
+            const name = this.type === 'wallnut' ? 'Wallnut_cracked' : 'TallnutCracked';
+            
+            if (this.hp < maxHp * 0.33 && this.element.src.indexOf(name + '2') === -1) {
+                // this.element.src = `assets/images/Plants/${path}/${name}2.gif`;
+            } else if (this.hp < maxHp * 0.66 && this.element.src.indexOf(name + '1') === -1 && this.hp >= maxHp * 0.33) {
+                // this.element.src = `assets/images/Plants/${path}/${name}1.gif`;
+            }
+        } else if (this.type === 'spikeweed') {
+            this.damageTimer += deltaTime;
+            if (this.damageTimer >= 1.0) { // Deal damage every 1s
+                this.damageTimer = 0;
+                const zombies = this.game.entities.filter(e => 
+                    e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 40 && !e.isDead
+                );
+                if (zombies.length > 0) {
+                    this.game.audioManager.play('splat'); // Or a spikeweed sound
+                    for (let z of zombies) {
+                        z.takeDamage(40); // small damage over time
+                    }
+                }
             }
         } else if (this.type === 'cherrybomb') {
             if (this.explodeTimer > 0) {
@@ -155,10 +214,40 @@ class Plant extends Entity {
                     e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 60 && !e.isDead
                 );
                 if (zombie) {
-                    this.state = 'attacking';
-                    this.element.src = 'assets/images/Plants/Squash/SquashAttack.gif';
+                    this.state = 'jumping';
+                    this.jumpTimer = 0;
+                    this.targetZombie = zombie;
+                    this.startX = this.x;
+                }
+            } else if (this.state === 'jumping') {
+                this.jumpTimer += deltaTime;
+                const jumpDuration = 0.4; // 0.4 seconds jump
+                
+                if (this.jumpTimer < jumpDuration) {
+                    // Parabola jump
+                    const progress = this.jumpTimer / jumpDuration; 
+                    const jumpY = Math.sin(progress * Math.PI) * 50; // 50px height (reduced so it doesn't visually cross rows)
+                    this.yOffset = -25 - jumpY;
+                    
+                    // Move towards the zombie's X
+                    if (this.targetZombie && !this.targetZombie.isDead) {
+                        this.x = this.startX + (this.targetZombie.x - this.startX) * progress;
+                    }
+                    this.element.src = 'assets/images/Plants/Squash/SquashAttack.gif'; 
+                } else {
+                    this.state = 'crushing';
+                    this.yOffset = -25;
+                    this.element.style.top = `${this.y + this.yOffset}px`; // Force immediate update
                     this.game.audioManager.play('splat');
-                    zombie.takeDamage(1800);
+                    
+                    // Deal damage
+                    const zombies = this.game.entities.filter(e => 
+                        e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 60 && !e.isDead
+                    );
+                    for (let z of zombies) {
+                        z.takeDamage(1800);
+                    }
+                    
                     setTimeout(() => { this.hp = 0; }, 500);
                 }
             }
@@ -183,7 +272,7 @@ class Plant extends Entity {
         } else if (this.type === 'chomper') {
             if (this.state === 'idle') {
                 const zombie = this.game.entities.find(e => 
-                    e instanceof Zombie && e.row === this.row && e.x > this.x && e.x - this.x < 80 && !e.isDead
+                    e instanceof Zombie && e.row === this.row && e.x > this.x && e.x - this.x < 140 && !e.isDead
                 );
                 if (zombie) {
                     zombie.takeDamage(1800);

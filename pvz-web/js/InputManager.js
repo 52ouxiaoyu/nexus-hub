@@ -90,6 +90,11 @@ class InputManager {
             else if (type === 'jalapeno') imgName = 'Jalapeno/Jalapeno';
             else if (type === 'potatomine') imgName = 'PotatoMine/PotatoMine';
             else if (type === 'chomper') imgName = 'Chomper/Chomper';
+            else if (type === 'tallnut') imgName = 'TallNut/TallNut';
+            else if (type === 'puffshroom') imgName = 'PuffShroom/PuffShroom';
+            else if (type === 'spikeweed') imgName = 'Spikeweed/Spikeweed';
+            else if (type === 'threepeater') imgName = 'Threepeater/Threepeater';
+            else if (type === 'garlic') imgName = 'Garlic/Garlic';
             
             this.dragGhost.style.backgroundImage = `url('assets/images/Plants/${imgName}.gif')`;
         }

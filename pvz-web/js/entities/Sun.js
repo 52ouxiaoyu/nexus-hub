@@ -45,6 +45,9 @@ class Sun extends Entity {
         } 
         else if (this.state === 'GROUND') {
             this.lifeTime += deltaTime;
+            if (this.lifeTime >= 0.5) { // Auto collect after 0.5 seconds on ground
+                this.collect();
+            }
             if (this.lifeTime >= this.maxLife) {
                 this.isDead = true;
             }
