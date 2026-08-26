@@ -2,7 +2,7 @@ class EventManager {
     constructor(game) {
         this.game = game;
         this.events = [
-            { msg: '⚠️ 警告：天降陨石！', color: '#ff4444', exec: g => {
+            { msg: '⚠️ 警告：天降陨石！', color: '#ff4444', minScore: 300, exec: g => {
                 const r = Math.floor(Math.random() * g.board.rows);
                 const c = 2 + Math.floor(Math.random() * 6);
                 const x = g.board.offsetX + c * g.board.cellWidth + g.board.cellWidth/2;
@@ -22,7 +22,7 @@ class EventManager {
                     g.entities.filter(e => Math.abs(e.x-x)<100 && Math.abs(e.y-y)<100 && e!==crater && !e.isProjectile).forEach(e => e.hp=0);
                 }, 3000);
             }},
-            { msg: '🌪️ 危机：狂风呼啸！', color: '#88ccff', exec: g => {
+            { msg: '🌪️ 危机：狂风呼啸！', color: '#88ccff', minScore: 200, exec: g => {
                 g.entities.filter(e => e instanceof Zombie && !e.isDead).forEach(z => { z.x = Math.min(900, z.x + 150); });
                 const p = g.entities.filter(e => e instanceof Plant && !e.isDead && e.type!=='crater');
                 for(let i=0; i<2; i++) { if(p.length>0) { const idx=Math.floor(Math.random()*p.length); p[idx].hp=0; p.splice(idx,1); } }
@@ -30,7 +30,7 @@ class EventManager {
             { msg: '✨ 奇迹：阳光普照！', color: '#ffd700', exec: g => {
                 for(let i=0; i<15; i++) setTimeout(() => g.entities.push(new Sun(g, 100+Math.random()*700, 0)), i*200);
             }},
-            { msg: '🧟 突袭：地道僵尸！', color: '#88ff88', exec: g => {
+            { msg: '🧟 突袭：地道僵尸！', color: '#88ff88', minScore: 200, exec: g => {
                 for(let i=0; i<4; i++) setTimeout(() => {
                     const z = new Zombie(g, Math.floor(Math.random()*g.board.rows), 'normal');
                     z.x = 400 + Math.random()*300; z.element.style.clipPath = 'inset(100% 0 0 0)'; z.element.style.transition = 'clip-path 1s';
@@ -41,7 +41,7 @@ class EventManager {
                 for(let k in g.cooldowns) g.cooldowns[k] = 0; g.updateUI();
             }},
             { msg: '💰 暴富：天降横财！', color: '#ffd700', exec: g => { g.sunCount += 300; g.updateUI(); }},
-            { msg: '📉 破产：阳光税！', color: '#ffaaaa', exec: g => { g.sunCount = Math.max(0, g.sunCount - 200); g.updateUI(); }},
+            { msg: '📉 破产：阳光税！', color: '#ffaaaa', minScore: 100, exec: g => { g.sunCount = Math.max(0, g.sunCount - 200); g.updateUI(); }},
             { msg: '🌍 震动：超级地震！', color: '#ff8800', exec: g => {
                 g.container.style.animation = 'shake 0.5s infinite';
                 if(!document.getElementById('shake-style')) {
@@ -73,17 +73,17 @@ class EventManager {
             { msg: '🐜 缩小：迷你僵尸！', color: '#ffaaaa', exec: g => {
                 g.entities.filter(e => e instanceof Zombie).forEach(z => { z.element.style.transform += ' scale(0.5)'; z.hp = Math.max(1, z.hp/2); });
             }},
-            { msg: '🦖 巨化：变异僵尸！', color: '#ff4444', exec: g => {
+            { msg: '🦖 巨化：变异僵尸！', color: '#ff4444', minScore: 500, exec: g => {
                 const z = g.entities.find(e => e instanceof Zombie && !e.isDead);
                 if(z) { z.element.style.transform += ' scale(1.8)'; z.hp *= 3; z.damage *= 2; }
             }},
-            { msg: '🌑 黑暗：断电了！', color: '#555555', exec: g => {
+            { msg: '🌑 黑暗：断电了！', color: '#555555', minScore: 150, exec: g => {
                 const overlay = document.createElement('div');
                 overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:black;z-index:4000;opacity:0.95;pointer-events:none;transition:opacity 0.5s;';
                 g.container.appendChild(overlay);
                 setTimeout(() => { overlay.style.opacity = '0'; setTimeout(()=>overlay.remove(), 500); }, 3500);
             }},
-            { msg: '☁️ 迷雾：视线受阻！', color: '#dddddd', exec: g => {
+            { msg: '☁️ 迷雾：视线受阻！', color: '#dddddd', minScore: 100, exec: g => {
                 const overlay = document.createElement('div');
                 overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:white;z-index:4000;opacity:0.8;pointer-events:none;transition:opacity 1s;';
                 g.container.appendChild(overlay);
@@ -96,13 +96,13 @@ class EventManager {
                 const z = g.entities.filter(e => e instanceof Zombie); z.forEach(e => e.isSlowed = true);
                 setTimeout(() => z.forEach(e => e.isSlowed = false), 6000);
             }},
-            { msg: '💖 治愈：僵尸医疗！', color: '#ffaaaa', exec: g => {
+            { msg: '💖 治愈：僵尸医疗！', color: '#ffaaaa', minScore: 200, exec: g => {
                 g.entities.filter(e => e instanceof Zombie).forEach(z => z.hp += 200);
             }},
             { msg: '🍀 生机：植物逢春！', color: '#aaffaa', exec: g => {
                 g.entities.filter(e => e instanceof Plant).forEach(p => p.hp += 300);
             }},
-            { msg: '👻 灵异：隐身术！', color: '#aaaaaa', exec: g => {
+            { msg: '👻 灵异：隐身术！', color: '#aaaaaa', minScore: 200, exec: g => {
                 const z = g.entities.filter(e => e instanceof Zombie); z.forEach(e => e.element.style.opacity = '0.15');
                 setTimeout(() => z.forEach(e => {if(e.element) e.element.style.opacity = '1'}), 5000);
             }},
@@ -118,11 +118,11 @@ class EventManager {
             { msg: '🛡️ 破甲：防具剥落！', color: '#aaffff', exec: g => {
                 g.entities.filter(e => e instanceof Zombie).forEach(z => { if(z.type==='conehead'||z.type==='buckethead'||z.type==='screendoor') z.hp=150; });
             }},
-            { msg: '⭕ 麦田：怪圈现象！', color: '#aaff44', exec: g => {
+            { msg: '⭕ 麦田：怪圈现象！', color: '#aaff44', minScore: 300, exec: g => {
                 const p = g.entities.filter(e => e instanceof Plant && !e.isDead);
                 for(let i=0; i<3; i++) { if(p.length>0) { const idx=Math.floor(Math.random()*p.length); p[idx].hp=0; p.splice(idx,1); } }
             }},
-            { msg: '🌱 变异：植物叛变！', color: '#ff44aa', exec: g => {
+            { msg: '🌱 变异：植物叛变！', color: '#ff44aa', minScore: 400, exec: g => {
                 const p = g.entities.filter(e => e instanceof Plant && !e.isDead && e.type!=='crater');
                 if(p.length > 0) {
                     const target = p[Math.floor(Math.random()*p.length)];
@@ -133,13 +133,13 @@ class EventManager {
             { msg: '🌧️ 腐蚀：酸雨降临！', color: '#44ff44', exec: g => {
                 g.entities.filter(e => e instanceof Zombie).forEach(z => z.hp -= 100);
             }},
-            { msg: '🔥 旱灾：阳光蒸发！', color: '#ff6622', exec: g => {
+            { msg: '🔥 旱灾：阳光蒸发！', color: '#ff6622', minScore: 100, exec: g => {
                 g.entities.filter(e => e instanceof Sun).forEach(s => s.hp = 0);
             }},
             { msg: '🌦️ 太阳雨：疯狂掉落！', color: '#ffff44', exec: g => {
                 for(let i=0; i<30; i++) setTimeout(() => g.entities.push(new Sun(g, 100+Math.random()*700, 0)), i*100);
             }},
-            { msg: '👿 空投：小鬼雨！', color: '#884488', exec: g => {
+            { msg: '👿 空投：小鬼雨！', color: '#884488', minScore: 300, exec: g => {
                 for(let i=0; i<3; i++) setTimeout(() => {
                     const z = new Zombie(g, Math.floor(Math.random()*g.board.rows), 'imp');
                     z.x = 200 + Math.random()*400; z.yOffset = -500;
@@ -181,13 +181,13 @@ class EventManager {
                     g.entities.push(new Plant(g, x, y, r, c, 'puffshroom'));
                 }
             }},
-            { msg: '🚀 闪现：前锋突进！', color: '#ff8844', exec: g => {
+            { msg: '🚀 闪现：前锋突进！', color: '#ff8844', minScore: 300, exec: g => {
                 g.entities.filter(e => e instanceof Zombie).forEach(z => { z.x = Math.max(100, z.x - 150); });
             }},
             { msg: '🍃 一阵寂寞的风吹过...', color: '#666666', exec: g => {
                 // Troll event, nothing happens
             }},
-            { msg: '🔄 乾坤大挪移！', color: '#ff00ff', exec: g => {
+            { msg: '🔄 乾坤大挪移！', color: '#ff00ff', minScore: 200, exec: g => {
                 const z = g.entities.filter(e => e instanceof Zombie && !e.isDead);
                 if(z.length >= 2) {
                     const z1 = z[Math.floor(Math.random()*z.length)];
@@ -202,7 +202,8 @@ class EventManager {
     }
     
     trigger() {
-        const ev = this.events[Math.floor(Math.random() * this.events.length)];
+        const validEvents = this.events.filter(ev => !ev.minScore || this.game.score >= ev.minScore);
+        const ev = validEvents[Math.floor(Math.random() * validEvents.length)];
         this.game.showAnnouncement(ev.msg, ev.color);
         try { ev.exec(this.game); } catch(e) { console.error('Event Error:', e); }
     }
