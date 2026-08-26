@@ -2207,9 +2207,12 @@ class Game {
                     this.revivePlayer(deadP);
                 }
                 
-                if (this.input.isDown(deadP.controls.rescue) && this.input.isDown(aliveP.controls.rescue)) {
+                if (this.input.isDown(deadP.controls.rescue) && !deadP.respawning) {
                     if (aliveP.lives > 0) {
                         aliveP.lives--;
+                        let scoreCost = Math.floor(deadP.score / 2);
+                        deadP.score -= scoreCost;
+                        aliveP.score += scoreCost;
                         this.updateHUD();
                         this.respawnPlayer(deadP);
                         this.showFloatingText('借命成功!', aliveP.x + aliveP.width/2, aliveP.y - 10, '#0f0');
@@ -2245,7 +2248,7 @@ class Game {
                 else if (this.weather === 'LIGHTNING') { if (this.lightningFlash > 0) { this.ctx.fillStyle = `rgba(255, 255, 255, ${this.lightningFlash/10})`; this.ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE); } }
                 this.ctx.restore();
             }
-            this.players.forEach(p => { try { if(p.alive) { p.draw(this.ctx); if (p.aiActive) { this.ctx.save(); this.ctx.fillStyle = 'rgba(0,0,0,0.7)'; this.ctx.beginPath(); this.ctx.arc(p.x + 30, p.y - 12, 14, 0, Math.PI * 2); this.ctx.fill(); this.ctx.fillStyle = '#0f0'; this.ctx.font = 'bold 12px Arial'; this.ctx.textAlign = 'center'; this.ctx.fillText('AI', p.x + 30, p.y - 8); this.ctx.restore(); } } else { const otherP = this.players.find(o => o.id !== p.id); if (p.lives === 0 && otherP && otherP.alive && otherP.lives > 0) { this.ctx.save(); this.ctx.fillStyle = '#0f0'; this.ctx.font = 'bold 12px Arial'; this.ctx.textAlign = 'center'; this.ctx.shadowBlur = 4; this.ctx.shadowColor = '#000'; const key = p.id === 1 ? 'U键' : '9键'; this.ctx.fillText(`双人同按 ${key} 借命`, p.x + 30, p.y + 30); this.ctx.restore(); } } } catch(e) {} }); 
+            this.players.forEach(p => { try { if(p.alive) { p.draw(this.ctx); if (p.aiActive) { this.ctx.save(); this.ctx.fillStyle = 'rgba(0,0,0,0.7)'; this.ctx.beginPath(); this.ctx.arc(p.x + 30, p.y - 12, 14, 0, Math.PI * 2); this.ctx.fill(); this.ctx.fillStyle = '#0f0'; this.ctx.font = 'bold 12px Arial'; this.ctx.textAlign = 'center'; this.ctx.fillText('AI', p.x + 30, p.y - 8); this.ctx.restore(); } } else { const otherP = this.players.find(o => o.id !== p.id); if (p.lives === 0 && !p.respawning && otherP && otherP.alive && otherP.lives > 0) { this.ctx.save(); this.ctx.fillStyle = '#0f0'; this.ctx.font = 'bold 12px Arial'; this.ctx.textAlign = 'center'; this.ctx.shadowBlur = 4; this.ctx.shadowColor = '#000'; const key = p.id === 1 ? 'U键' : '9键'; this.ctx.fillText(`按 ${key} 借命(-50%分)`, p.x + 30, p.y + 30); this.ctx.restore(); } } } catch(e) {} });
             this.enemies.forEach(e => { try { e.draw(this.ctx); } catch(e) {} }); 
             this.bullets.forEach(b => { try { b.draw(this.ctx); } catch(e) {} }); 
             this.effects.forEach(e => { try { e.draw(this.ctx); } catch(e) {} }); 
