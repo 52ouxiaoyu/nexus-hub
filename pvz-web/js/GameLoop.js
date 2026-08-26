@@ -79,6 +79,15 @@ class Game {
         if (scoreEl) {
             scoreEl.innerText = this.score;
         }
+        
+        // Trigger event on milestone
+        if (this.scoreMilestones && this.scoreMilestones.length > 0) {
+            if (this.score >= this.scoreMilestones[0]) {
+                this.scoreMilestones.shift(); // Remove the reached milestone
+                this.eventTimer = 120 + Math.random() * 60; // Reset time-based timer so they don't overlap
+                this.triggerRandomEvent();
+            }
+        }
     }
     
     showMenu() {
@@ -148,8 +157,9 @@ class Game {
         seedBank.innerHTML = ''; // clear
         this.cooldowns = {};
         
-        // Setup random events
-        this.eventTimer = 45; // First event after 45s
+        // Setup random events (Delay time-based events, favor score-based)
+        this.eventTimer = 150 + Math.random() * 60; // First time-based event between 2.5 to 3.5 minutes
+        this.scoreMilestones = [100, 300, 500, 800, 1200, 1800, 2500, 3500, 5000]; // Events trigger specifically at these scores
         
         this.selectedSeeds.forEach((s, i) => {
             this.cooldowns[s.type] = 0;
@@ -311,7 +321,7 @@ class Game {
         if (this.eventTimer > 0) {
             this.eventTimer -= deltaTime;
             if (this.eventTimer <= 0) {
-                this.eventTimer = 45 + Math.random() * 30; // 45 to 75 seconds
+                this.eventTimer = 120 + Math.random() * 60; // 2 to 3 minutes
                 this.triggerRandomEvent();
             }
         }
