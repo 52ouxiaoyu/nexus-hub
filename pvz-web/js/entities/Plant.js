@@ -330,7 +330,9 @@ class Plant extends Entity {
                 this.explodeTimer -= deltaTime;
                 if (this.explodeTimer <= 0) {
                     this.game.audioManager.play('splat');
-                    this.element.src = 'assets/images/Plants/Jalapeno/JalapenoAttack.gif'; // Or a fire row image
+                    this.element.src = 'assets/images/Plants/Jalapeno/JalapenoAttack.gif'; 
+                    this.x = 450; // Center the fire on the board
+                    this.element.style.left = '450px';
                     
                     const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead);
                     for (let z of zombies) {
@@ -397,23 +399,35 @@ class Plant extends Entity {
                     e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 40 && !e.isDead
                 );
                 if (zombie) {
-                    this.game.audioManager.play('splat');
-                    this.element.src = 'assets/images/Plants/PotatoMine/PotatoMine_mashed.gif';
-                    zombie.takeDamage(1800);
-                    setTimeout(() => { this.hp = 0; }, 500);
+                    this.game.audioManager.play('splat'); // Needs potatomine sound
+                    zombie.hp = 0; // Instant kill
+                    this.element.src = 'assets/images/Plants/PotatoMine/ExplosionSpudow.gif';
+                    this.element.style.zIndex = 3000;
+                    setTimeout(() => {
+                        this.element.src = 'assets/images/Plants/PotatoMine/PotatoMine_mashed.gif';
+                        this.element.style.zIndex = 10;
+                    }, 500); // SPUDOW lasts half a second
+                    setTimeout(() => { this.hp = 0; }, 2000); // Leave mashed sprite for a bit
                 }
             }
         } else if (this.type === 'chomper') {
             if (this.state === 'idle') {
-                const zombie = this.game.entities.find(e => 
-                    e instanceof Zombie && e.row === this.row && e.x > this.x && e.x - this.x < 140 && !e.isDead
+                const zombieNear = this.game.entities.find(e => 
+                    e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 140 && !e.isDead && e.type !== 'crater'
                 );
-                if (zombie) {
-                    zombie.takeDamage(1800);
-                    this.state = 'chewing';
-                    this.chewTimer = 40.0;
-                    this.element.src = 'assets/images/Plants/Chomper/ChomperDigest.gif';
+                if (zombieNear) {
+                    this.state = 'biting';
+                    this.chewTimer = 0.5; // half second bite animation
+                    zombieNear.hp = 0; // instant kill
+                    this.element.src = 'assets/images/Plants/Chomper/ChomperAttack.gif';
                     this.game.audioManager.play('chomp');
+                }
+            } else if (this.state === 'biting') {
+                this.chewTimer -= deltaTime;
+                if (this.chewTimer <= 0) {
+                    this.state = 'chewing';
+                    this.chewTimer = 40.0; // 40 seconds chew
+                    this.element.src = 'assets/images/Plants/Chomper/ChomperDigest.gif';
                 }
             } else if (this.state === 'chewing') {
                 this.chewTimer -= deltaTime;
