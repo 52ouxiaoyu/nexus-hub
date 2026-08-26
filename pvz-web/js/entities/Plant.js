@@ -249,17 +249,38 @@ class Plant extends Entity {
                 this.hp = 0;
             }
         } else if (this.type === 'doomshroom') {
-            this.explodeTimer -= deltaTime;
-            if (this.explodeTimer <= 0) {
-                this.game.audioManager.play('splat');
-                this.element.src = 'assets/images/Plants/DoomShroom/Boom.gif'; // Assuming boom exists or just flash
-                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead);
-                for (let z of zombies) {
-                    if (Math.abs(z.row - this.row) <= 2 && Math.abs(z.x - this.x) < 300) {
-                        z.takeDamage(1800);
-                    }
+            if (this.state === 'idle') {
+                this.explodeTimer -= deltaTime;
+                if (this.explodeTimer <= 0) {
+                    this.state = 'swelling';
+                    this.element.src = 'assets/images/Plants/DoomShroom/BeginBoom.gif';
+                    this.game.audioManager.play('plant'); // some sound
+                    setTimeout(() => {
+                        this.state = 'exploding';
+                        this.game.audioManager.play('splat'); // ideally an explosion sound
+                        this.element.src = 'assets/images/Plants/DoomShroom/Boom.png';
+                        this.element.style.zIndex = 3000; // Put boom on top
+                        this.element.style.transform = 'translate(-50%, -80%)'; // Move boom up a bit
+                        
+                        // Deal damage
+                        const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead);
+                        for (let z of zombies) {
+                            if (Math.abs(z.row - this.row) <= 2 && Math.abs(z.x - this.x) < 300) {
+                                z.takeDamage(1800);
+                            }
+                        }
+                        
+                        setTimeout(() => {
+                            this.type = 'crater';
+                            this.element.src = 'assets/images/Plants/DoomShroom/crater11.png';
+                            this.element.style.zIndex = 10; // crater stays on bottom
+                            this.element.style.transform = 'translate(-50%, -50%)'; // Reset transform
+                            
+                            // We can just leave the crater visual indefinitely, or kill it after a long time
+                            setTimeout(() => { this.hp = 0; }, 30000); // 30 seconds crater
+                        }, 1000); // Boom lasts 1 sec
+                    }, 1000); // Swell lasts 1 sec
                 }
-                setTimeout(() => { this.hp = 0; }, 500);
             }
         } else if (this.type === 'wallnut' || this.type === 'tallnut') {
             const maxHp = this.type === 'wallnut' ? 4000 : 8000;

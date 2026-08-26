@@ -57,12 +57,12 @@ class Zombie extends Entity {
                 this.isSlowed = false;
                 this.element.style.filter = '';
             } else {
-                this.element.style.filter = 'brightness(50%) sepia(100%) hue-rotate(180deg) saturate(300%)'; // blue tint
+                this.element.style.filter = 'brightness(70%) sepia(100%) hue-rotate(190deg) saturate(500%)'; // strong blue tint
             }
         }
         
-        const currentSpeed = this.isSlowed ? this.speed * 0.5 : this.speed;
-        const currentDamage = this.isSlowed ? this.damage * 0.5 : this.damage;
+        const currentSpeed = this.isSlowed ? this.speed * 0.3 : this.speed; // 70% slow!
+        const currentDamage = this.isSlowed ? this.damage * 0.3 : this.damage;
         
         // Handle cone falling off
         if (this.type === 'conehead' && this.hp <= 200 && this.state !== 'DYING') {
@@ -106,7 +106,7 @@ class Zombie extends Entity {
                 Math.abs(e.x - this.x) < 40 
             );
             
-            if (plant && !plant.isDead) {
+            if (plant && !plant.isDead && plant.type !== 'crater') {
                 this.state = 'EATING';
                 this.eatTarget = plant;
                 this.element.src = this.attackSrc;
@@ -118,6 +118,32 @@ class Zombie extends Entity {
                     // Bite garlic and switch row!
                     this.eatTarget.hp -= 20; // single bite damage
                     this.game.audioManager.play('chomp'); // disgusted sound ideally
+                    
+                    // Show text bubble!
+                    const textBubble = document.createElement('div');
+                    textBubble.innerText = '可恶的区钥丁！';
+                    textBubble.style.position = 'absolute';
+                    textBubble.style.color = '#ff0000';
+                    textBubble.style.fontWeight = 'bold';
+                    textBubble.style.fontSize = '24px';
+                    textBubble.style.textShadow = '2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff';
+                    textBubble.style.pointerEvents = 'none';
+                    textBubble.style.zIndex = '4000';
+                    textBubble.style.whiteSpace = 'nowrap';
+                    textBubble.style.left = `${this.x - 30}px`;
+                    textBubble.style.top = `${this.y - 60}px`;
+                    textBubble.style.transition = 'top 2s ease-out, opacity 2s ease-out';
+                    
+                    this.game.uiLayer.appendChild(textBubble);
+                    
+                    setTimeout(() => {
+                        textBubble.style.top = `${this.y - 120}px`;
+                        textBubble.style.opacity = '0';
+                    }, 50);
+                    
+                    setTimeout(() => {
+                        if (textBubble.parentNode) textBubble.parentNode.removeChild(textBubble);
+                    }, 2000);
                     
                     // Switch row up or down randomly (if possible)
                     const canGoUp = this.row > 0;
@@ -141,7 +167,7 @@ class Zombie extends Entity {
                     this.eatTarget.hp -= currentDamage * deltaTime;
                     if (!this.chompTimer) this.chompTimer = 0;
                     this.chompTimer -= deltaTime;
-                    const chompInterval = this.isSlowed ? 2.0 : 1.0;
+                    const chompInterval = this.isSlowed ? 3.0 : 1.0;
                     if (this.chompTimer <= 0) {
                         this.game.audioManager.play('chomp');
                         this.chompTimer = chompInterval; 
