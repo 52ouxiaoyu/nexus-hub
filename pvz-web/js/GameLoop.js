@@ -56,9 +56,21 @@ class Game {
         this.skySunInterval = 8; 
         
         this.score = 0;
+        this.cooldowns = {}; // Stores cooldown timers for plants
+        this.gameSpeed = 1;
         
         this.initUI();
         this.showMenu();
+        
+        const speedBtn = document.getElementById('btn-speed');
+        if (speedBtn) {
+            speedBtn.addEventListener('click', () => {
+                if (this.gameSpeed === 1) this.gameSpeed = 2;
+                else if (this.gameSpeed === 2) this.gameSpeed = 5;
+                else this.gameSpeed = 1;
+                speedBtn.innerText = `Speed: ${this.gameSpeed}x`;
+            });
+        }
     }
     
     updateScore() {
@@ -273,7 +285,9 @@ class Game {
         const dt = Math.min(deltaTime, 0.1); 
         
         if (this.state === 'PLAYING') {
-            this.update(dt);
+            for (let i = 0; i < this.gameSpeed; i++) {
+                this.update(dt);
+            }
             requestAnimationFrame((t) => this.loop(t));
         }
     }

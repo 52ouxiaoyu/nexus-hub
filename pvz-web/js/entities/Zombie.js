@@ -280,7 +280,7 @@ class Zombie extends Entity {
                     textBubble.style.top = `${this.y - 60}px`;
                     textBubble.style.transition = 'top 2s ease-out, opacity 2s ease-out';
                     
-                    this.game.uiLayer.appendChild(textBubble);
+                    this.game.container.appendChild(textBubble);
                     
                     setTimeout(() => {
                         textBubble.style.top = `${this.y - 120}px`;
