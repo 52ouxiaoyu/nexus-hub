@@ -365,7 +365,7 @@
             <div class="logo-subtitle">Next-Generation HTML5 Gaming Experience</div>
             <div class="stats">
                 <div class="stat">
-                    <div class="stat-value">5</div>
+                    <div class="stat-value" id="total-games">6</div>
                     <div class="stat-label">款游戏 (Games)</div>
                 </div>
                 <div class="stat">
@@ -523,6 +523,7 @@
         function renderGames() {
             const stats = getDisplayStats();
             const grid = document.getElementById('games-grid');
+            document.getElementById('total-games').innerText = games.length;
             const sortedGames = [...games].sort((a, b) => (stats[b.id]?.plays || 0) - (stats[a.id]?.plays || 0));
 
             grid.innerHTML = sortedGames.map(game => {
