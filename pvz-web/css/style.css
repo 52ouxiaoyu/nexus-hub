@@ -106,13 +106,13 @@ body {
 }
 
 .seed-card {
-    width: 50px;
-    height: 60px;
+    width: 65px;
+    height: 39px;
     cursor: pointer;
     position: relative;
     overflow: hidden;
-    background-size: 100px 120px;
-    background-position: -15px 0;
+    background-size: 65px 78px;
+    background-position: 0 0;
     box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
     border-radius: 4px;
 }
