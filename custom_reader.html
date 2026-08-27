@@ -169,7 +169,13 @@
         <div id="game-screen" class="screen">
             <div class="top-bar">
                 <button onclick="exitGame()">🔙 退出并保存进度</button>
-                <div class="progress-text" id="progress">1 / 10</div>
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <label style="cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text-muted);">
+                        <input type="checkbox" id="allow-skip-checkbox" onchange="updateNextButtonState()">
+                        <span>自由跳过 (不强制通关)</span>
+                    </label>
+                    <div class="progress-text" id="progress">1 / 10</div>
+                </div>
             </div>
             <div class="card">
                 <div class="en-text" id="en-text"></div>
@@ -408,6 +414,21 @@ ${text}`;
             initDashboard();
         }
 
+        function updateNextButtonState() {
+            const nextBtn = document.getElementById('next-btn');
+            if (!nextBtn) return;
+            const allowSkipBox = document.getElementById('allow-skip-checkbox');
+            const allowSkip = allowSkipBox ? allowSkipBox.checked : false;
+            
+            if (currentIndex >= unlockedIndex && !allowSkip) {
+                nextBtn.style.opacity = '0.5';
+                nextBtn.style.cursor = 'not-allowed';
+            } else {
+                nextBtn.style.opacity = '1';
+                nextBtn.style.cursor = 'pointer';
+            }
+        }
+
         function renderItem() {
             if(!currentArticle) return;
             
@@ -420,18 +441,14 @@ ${text}`;
             document.getElementById('zh-text').innerText = item.zh;
             document.getElementById('feedback').innerText = '';
             
-            const nextBtn = document.getElementById('next-btn');
-            if (currentIndex >= unlockedIndex) {
-                nextBtn.style.opacity = '0.5';
-                nextBtn.style.cursor = 'not-allowed';
-            } else {
-                nextBtn.style.opacity = '1';
-                nextBtn.style.cursor = 'pointer';
-            }
+            updateNextButtonState();
         }
 
         function nextItem() {
-            if (currentIndex >= unlockedIndex) {
+            const allowSkipBox = document.getElementById('allow-skip-checkbox');
+            const allowSkip = allowSkipBox ? allowSkipBox.checked : false;
+            
+            if (currentIndex >= unlockedIndex && !allowSkip) {
                 const fb = document.getElementById('feedback');
                 fb.innerText = '🔒 严格通关模式：请使用【智能跟读】读对本句后，才能解锁下一句！';
                 fb.className = 'error';
@@ -440,6 +457,12 @@ ${text}`;
                 return;
             }
             if(currentIndex < currentArticle.items.length - 1) {
+                if (allowSkip && currentIndex >= unlockedIndex) {
+                    // Automatically unlock if they are skipping ahead
+                    unlockedIndex = currentIndex + 1;
+                    const unlockedKey = `cr_unlocked_${currentUser}_${currentArticle.id}`;
+                    localStorage.setItem(unlockedKey, unlockedIndex);
+                }
                 currentIndex++;
                 renderItem();
             }
