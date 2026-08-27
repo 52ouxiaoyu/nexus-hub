@@ -839,37 +839,48 @@ class Player {
             }
         }
 
-        let w = this.weapon;
-        this.cooldown = w.cd;
+        this.cooldown = this.weapon.cd;
         
-        if (w.isShockwave) {
-            shockwaves.push(new Shockwave(this.x, this.y, w.color || '#00ffff', w.damage, w.radius, this.id));
-            audio.shootShotgun();
-            screenShake = 2;
-            return;
-        }
-
-        let baseAngle = Math.atan2(this.facing.y, this.facing.x);
-        let count = w.count;
-        let spread = w.spread;
+        let activeWeapons = [];
+        activeWeapons.push(this.weapon);
+        if (this.weaponLevel > 4) activeWeapons.push(this.weapons[4]);
+        if (this.weaponLevel > 9) activeWeapons.push(this.weapons[9]);
+        if (this.weaponLevel > 14) activeWeapons.push(this.weapons[14]);
+        if (this.weaponLevel > 19) activeWeapons.push(this.weapons[19]);
+        if (this.weaponLevel > 24) activeWeapons.push(this.weapons[24]);
         
-        let startAngle = count === 1 ? baseAngle : baseAngle - spread/2;
-        let angleStep = count === 1 ? 0 : spread / (count - 1);
+        activeWeapons = [...new Set(activeWeapons)]; // Deduplicate just in case
         
-        for(let i = 0; i < count; i++) {
-            let angle = startAngle + i * angleStep;
-            let b = new Bullet(this.x, this.y, Math.cos(angle), Math.sin(angle), w.speed, w.damage, w.color || '#fff', w.pierce, this.id, w.isHoming);
-            
-            if(!w.color) {
-                if(this.weaponLevel >= 29) b.color = '#00ffcc';
-                else if(count >= 5) b.color = '#00ff00';
-                else if(w.pierce) b.color = '#00ffff';
+        activeWeapons.forEach(w => {
+            if (w.isShockwave) {
+                shockwaves.push(new Shockwave(this.x, this.y, w.color || '#00ffff', w.damage, w.radius, this.id));
+                audio.shootShotgun();
+                screenShake = 2;
+                return;
             }
+
+            let baseAngle = Math.atan2(this.facing.y, this.facing.x);
+            let count = w.count;
+            let spread = w.spread;
             
-            b.size = w.size || (w.pierce ? 5 : 4);
-            if(w.isHoming) b.size = 6;
-            bullets.push(b);
-        }
+            let startAngle = count === 1 ? baseAngle : baseAngle - spread/2;
+            let angleStep = count === 1 ? 0 : spread / (count - 1);
+            
+            for(let i = 0; i < count; i++) {
+                let angle = startAngle + i * angleStep;
+                let b = new Bullet(this.x, this.y, Math.cos(angle), Math.sin(angle), w.speed, w.damage, w.color || '#fff', w.pierce, this.id, w.isHoming);
+                
+                if(!w.color) {
+                    if(this.weaponLevel >= 29) b.color = '#00ffcc';
+                    else if(count >= 5) b.color = '#00ff00';
+                    else if(w.pierce) b.color = '#00ffff';
+                }
+                
+                b.size = w.size || (w.pierce ? 5 : 4);
+                if(w.isHoming) b.size = 6;
+                bullets.push(b);
+            }
+        });
         audio.shootPistol();
     }
 
