@@ -176,6 +176,10 @@
                         <option value="5">5 句 / 页</option>
                     </select>
                     <label style="cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text-muted);">
+                        <input type="checkbox" id="show-zh-checkbox" onchange="toggleZh()">
+                        <span>显示中文</span>
+                    </label>
+                    <label style="cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text-muted);">
                         <input type="checkbox" id="allow-skip-checkbox" onchange="updateNextButtonState()">
                         <span>自由跳过 (不强制通关)</span>
                     </label>
@@ -398,12 +402,19 @@ ${text}`;
 
         // --- GAME ENGINE ---
         let sentencesPerPage = parseInt(localStorage.getItem('cr_per_page') || '1', 10);
+        let showZh = localStorage.getItem('cr_show_zh') !== 'false'; // Default to true
 
         function changePerPage() {
             sentencesPerPage = parseInt(document.getElementById('per-page-select').value, 10);
             localStorage.setItem('cr_per_page', sentencesPerPage);
             currentIndex = Math.floor(currentIndex / sentencesPerPage) * sentencesPerPage;
             renderItem();
+        }
+
+        function toggleZh() {
+            showZh = document.getElementById('show-zh-checkbox').checked;
+            localStorage.setItem('cr_show_zh', showZh);
+            document.getElementById('zh-text').style.display = showZh ? 'block' : 'none';
         }
 
         function startGame(articleId) {
@@ -422,6 +433,10 @@ ${text}`;
             const perPageSelect = document.getElementById('per-page-select');
             if (perPageSelect) perPageSelect.value = sentencesPerPage;
             currentIndex = Math.floor(currentIndex / sentencesPerPage) * sentencesPerPage;
+
+            const zhCheckbox = document.getElementById('show-zh-checkbox');
+            if (zhCheckbox) zhCheckbox.checked = showZh;
+            document.getElementById('zh-text').style.display = showZh ? 'block' : 'none';
 
             switchScreen('game-screen');
             renderItem();
