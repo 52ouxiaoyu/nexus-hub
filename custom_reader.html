@@ -170,6 +170,11 @@
             <div class="top-bar">
                 <button onclick="exitGame()">🔙 退出并保存进度</button>
                 <div style="display: flex; align-items: center; gap: 16px;">
+                    <select id="per-page-select" onchange="changePerPage()" style="background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--card-border); padding: 4px 8px; border-radius: 6px; outline: none; cursor: pointer;">
+                        <option value="1">1 句 / 页</option>
+                        <option value="3">3 句 / 页</option>
+                        <option value="5">5 句 / 页</option>
+                    </select>
                     <label style="cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text-muted);">
                         <input type="checkbox" id="allow-skip-checkbox" onchange="updateNextButtonState()">
                         <span>自由跳过 (不强制通关)</span>
@@ -392,6 +397,15 @@ ${text}`;
         }
 
         // --- GAME ENGINE ---
+        let sentencesPerPage = parseInt(localStorage.getItem('cr_per_page') || '1', 10);
+
+        function changePerPage() {
+            sentencesPerPage = parseInt(document.getElementById('per-page-select').value, 10);
+            localStorage.setItem('cr_per_page', sentencesPerPage);
+            currentIndex = Math.floor(currentIndex / sentencesPerPage) * sentencesPerPage;
+            renderItem();
+        }
+
         function startGame(articleId) {
             currentArticle = customArticles.find(a => a.id === articleId);
             if(!currentArticle) return;
@@ -404,6 +418,10 @@ ${text}`;
             
             if (currentIndex > unlockedIndex) currentIndex = unlockedIndex;
             if (currentIndex >= currentArticle.items.length) currentIndex = 0;
+
+            const perPageSelect = document.getElementById('per-page-select');
+            if (perPageSelect) perPageSelect.value = sentencesPerPage;
+            currentIndex = Math.floor(currentIndex / sentencesPerPage) * sentencesPerPage;
 
             switchScreen('game-screen');
             renderItem();
@@ -420,7 +438,9 @@ ${text}`;
             const allowSkipBox = document.getElementById('allow-skip-checkbox');
             const allowSkip = allowSkipBox ? allowSkipBox.checked : false;
             
-            if (currentIndex >= unlockedIndex && !allowSkip) {
+            const endIdx = Math.min(currentIndex + sentencesPerPage, currentArticle.items.length);
+
+            if (endIdx > unlockedIndex && !allowSkip) {
                 nextBtn.style.opacity = '0.5';
                 nextBtn.style.cursor = 'not-allowed';
             } else {
@@ -435,10 +455,12 @@ ${text}`;
             const progressKey = `cr_progress_${currentUser}_${currentArticle.id}`;
             localStorage.setItem(progressKey, currentIndex);
 
-            const item = currentArticle.items[currentIndex];
-            document.getElementById('progress').innerText = `${currentIndex + 1} / ${currentArticle.items.length}`;
-            document.getElementById('en-text').innerText = item.en;
-            document.getElementById('zh-text').innerText = item.zh;
+            const endIdx = Math.min(currentIndex + sentencesPerPage, currentArticle.items.length);
+            const slice = currentArticle.items.slice(currentIndex, endIdx);
+
+            document.getElementById('progress').innerText = `${endIdx} / ${currentArticle.items.length}`;
+            document.getElementById('en-text').innerText = slice.map(i => i.en).join(' ');
+            document.getElementById('zh-text').innerHTML = slice.map(i => i.zh).join('<br><br>');
             document.getElementById('feedback').innerText = '';
             
             updateNextButtonState();
@@ -448,29 +470,36 @@ ${text}`;
             const allowSkipBox = document.getElementById('allow-skip-checkbox');
             const allowSkip = allowSkipBox ? allowSkipBox.checked : false;
             
-            if (currentIndex >= unlockedIndex && !allowSkip) {
+            const endIdx = Math.min(currentIndex + sentencesPerPage, currentArticle.items.length);
+
+            if (endIdx > unlockedIndex && !allowSkip) {
                 const fb = document.getElementById('feedback');
-                fb.innerText = '🔒 严格通关模式：请使用【智能跟读】读对本句后，才能解锁下一句！';
+                fb.innerText = '🔒 严格通关模式：请使用【智能跟读】读对本页后，才能解锁下一页！';
                 fb.className = 'error';
                 fb.style.animation = 'none';
                 setTimeout(() => fb.style.animation = 'pulse 0.3s 2', 10);
                 return;
             }
-            if(currentIndex < currentArticle.items.length - 1) {
-                if (allowSkip && currentIndex >= unlockedIndex) {
-                    // Automatically unlock if they are skipping ahead
-                    unlockedIndex = currentIndex + 1;
-                    const unlockedKey = `cr_unlocked_${currentUser}_${currentArticle.id}`;
-                    localStorage.setItem(unlockedKey, unlockedIndex);
-                }
-                currentIndex++;
+            
+            if (allowSkip && endIdx > unlockedIndex) {
+                unlockedIndex = endIdx;
+                const unlockedKey = `cr_unlocked_${currentUser}_${currentArticle.id}`;
+                localStorage.setItem(unlockedKey, unlockedIndex);
+            }
+
+            if(currentIndex + sentencesPerPage < currentArticle.items.length) {
+                currentIndex += sentencesPerPage;
                 renderItem();
+            } else if (allowSkip) {
+                const fb = document.getElementById('feedback');
+                fb.innerText = '🎉 已经是最后一页了！';
+                fb.className = 'success';
             }
         }
 
         function prevItem() {
             if(currentIndex > 0) {
-                currentIndex--;
+                currentIndex = Math.max(0, currentIndex - sentencesPerPage);
                 renderItem();
             }
         }
@@ -504,7 +533,10 @@ ${text}`;
             }
             if(synth.speaking) synth.cancel();
             
-            const text = currentArticle.items[currentIndex].en;
+            const endIdx = Math.min(currentIndex + sentencesPerPage, currentArticle.items.length);
+            const slice = currentArticle.items.slice(currentIndex, endIdx);
+            const text = slice.map(i => i.en).join(' ');
+            
             const utter = new SpeechSynthesisUtterance(text);
             utter.lang = 'en-US';
             utter.rate = 0.85;
@@ -540,7 +572,11 @@ ${text}`;
         if(recognition) {
             recognition.onresult = (event) => {
                 const speechResult = event.results[0][0].transcript.toLowerCase();
-                const targetText = currentArticle.items[currentIndex].en.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+                const endIdx = Math.min(currentIndex + sentencesPerPage, currentArticle.items.length);
+                const slice = currentArticle.items.slice(currentIndex, endIdx);
+                const combinedEn = slice.map(i => i.en).join(' ');
+                
+                const targetText = combinedEn.toLowerCase().replace(/[^a-z0-9\s]/g, '');
                 const spokenClean = speechResult.replace(/[^a-z0-9\s]/g, '');
                 
                 const fb = document.getElementById('feedback');
@@ -548,8 +584,8 @@ ${text}`;
                     fb.innerText = '🌟 Perfect! 发音非常标准！';
                     fb.className = 'success';
                     
-                    if (currentIndex >= unlockedIndex) {
-                        unlockedIndex = currentIndex + 1;
+                    if (endIdx > unlockedIndex) {
+                        unlockedIndex = endIdx;
                         const unlockedKey = `cr_unlocked_${currentUser}_${currentArticle.id}`;
                         localStorage.setItem(unlockedKey, unlockedIndex);
                     }
