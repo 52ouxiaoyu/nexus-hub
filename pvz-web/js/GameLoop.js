@@ -296,6 +296,88 @@ class Game {
         scoreDiv.style.textShadow = '2px 2px 4px black';
         scoreDiv.style.zIndex = '1001';
         document.getElementById('game-container').appendChild(scoreDiv);
+        
+        // Add Replay Button
+        const replayBtn = document.createElement('button');
+        replayBtn.innerText = 'Death Replay';
+        replayBtn.style.position = 'absolute';
+        replayBtn.style.top = '80%';
+        replayBtn.style.left = '40%';
+        replayBtn.style.transform = 'translate(-50%, -50%)';
+        replayBtn.style.fontSize = '24px';
+        replayBtn.style.padding = '10px 20px';
+        replayBtn.style.zIndex = '1002';
+        replayBtn.style.cursor = 'pointer';
+        
+        // Add Restart Button
+        const restartBtn = document.createElement('button');
+        restartBtn.innerText = 'Restart';
+        restartBtn.style.position = 'absolute';
+        restartBtn.style.top = '80%';
+        restartBtn.style.left = '60%';
+        restartBtn.style.transform = 'translate(-50%, -50%)';
+        restartBtn.style.fontSize = '24px';
+        restartBtn.style.padding = '10px 20px';
+        restartBtn.style.zIndex = '1002';
+        restartBtn.style.cursor = 'pointer';
+
+        replayBtn.onclick = () => {
+            wonImg.style.display = 'none';
+            scoreDiv.style.display = 'none';
+            replayBtn.style.display = 'none';
+            restartBtn.style.display = 'none';
+            this.playReplay();
+        };
+        restartBtn.onclick = () => {
+            location.reload();
+        };
+        
+        document.getElementById('game-container').appendChild(replayBtn);
+        document.getElementById('game-container').appendChild(restartBtn);
+    }
+    
+    playReplay() {
+        if (!this.history || this.history.length === 0) return;
+        
+        this.showAnnouncement('DEATH REPLAY', 'red');
+        
+        // Clear all live entities
+        this.entities.forEach(e => {
+            if (e.element && e.element.parentNode) {
+                e.element.parentNode.removeChild(e.element);
+            }
+        });
+        
+        let frameIndex = 0;
+        const replayLoop = () => {
+            if (frameIndex >= this.history.length) {
+                setTimeout(() => {
+                    this.showAnnouncement('END OF REPLAY', 'white');
+                }, 500);
+                return;
+            }
+            
+            const frame = this.history[frameIndex];
+            this.entityLayer.innerHTML = '';
+            
+            frame.forEach(state => {
+                const img = document.createElement('img');
+                img.className = 'entity';
+                img.src = state.src;
+                img.style.left = state.left;
+                img.style.top = state.top;
+                img.style.zIndex = state.zIndex;
+                img.style.filter = state.filter;
+                img.style.pointerEvents = 'none';
+                img.style.position = 'absolute';
+                this.entityLayer.appendChild(img);
+            });
+            
+            frameIndex++;
+            requestAnimationFrame(replayLoop);
+        };
+        
+        requestAnimationFrame(replayLoop);
     }
     
     loop(timestamp) {
@@ -370,6 +452,19 @@ class Game {
                 e.element.style.zIndex = z;
             }
         });
+
+        // Record history for replay
+        if (!this.history) this.history = [];
+        this.history.push(this.entities.map(e => ({
+            src: e.element.src,
+            left: e.element.style.left,
+            top: e.element.style.top,
+            zIndex: e.element.style.zIndex,
+            filter: e.element.style.filter
+        })));
+        if (this.history.length > 180) { // Keep last 3 seconds at ~60fps
+            this.history.shift();
+        }
     }
 
     showAnnouncement(text, color) {
