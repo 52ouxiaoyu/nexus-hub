@@ -206,7 +206,9 @@ class Zombie extends Entity {
                 for (let pos of positions) {
                     if (pos.r >= 0 && pos.r < this.game.board.rows) {
                         const zombieY = this.game.board.offsetY + pos.r * this.game.board.cellHeight + this.game.board.cellHeight / 2 - 20;
-                        const backup = new Zombie(this.game, this.x + pos.dx, zombieY, pos.r, 'backup');
+                        const backup = new Zombie(this.game, pos.r, 'backup');
+                        backup.x = Math.max(40, this.x + pos.dx); // prevent spawning behind game over line
+                        backup.y = zombieY;
                         this.game.entities.push(backup);
                     }
                 }
@@ -245,8 +247,10 @@ class Zombie extends Entity {
                     this.hasVaulted = true;
                     this.state = 'JUMPING';
                     this.jumpTimer = 1.0; // 1 second jump
+                    this.jumpDuration = 1.0;
+                    this.jumpStartX = this.x;
                     this.element.src = 'assets/images/Zombies/PoleVaultingZombie/PoleVaultingZombieJump.gif';
-                    this.jumpTargetX = plant.x - 80; // land behind plant
+                    this.jumpTargetX = Math.max(40, plant.x - 80); // land behind plant but not past game over line
                 } else if (this.type === 'zomboni') {
                     // Crush it!
                     plant.hp = 0;
@@ -258,7 +262,8 @@ class Zombie extends Entity {
             }
         } else if (this.state === 'JUMPING') {
             this.jumpTimer -= deltaTime;
-            this.x += (this.jumpTargetX - this.x) * (deltaTime / this.jumpTimer); // smoothly move to target
+            const progress = 1 - (this.jumpTimer / this.jumpDuration);
+            this.x = this.jumpStartX + (this.jumpTargetX - this.jumpStartX) * Math.min(1, Math.max(0, progress)); // smoothly move to target without overshooting
             
             if (this.jumpTimer <= 0) {
                 this.state = 'WALKING';
