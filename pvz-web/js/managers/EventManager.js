@@ -46,7 +46,7 @@ class EventManager {
                 g.container.style.animation = 'shake 0.5s infinite';
                 if(!document.getElementById('shake-style')) {
                     const style = document.createElement('style'); style.id='shake-style';
-                    style.innerHTML = `@keyframes shake { 0%{transform:translate(2px,2px)} 25%{transform:translate(-2px,-2px)} 50%{transform:translate(2px,-2px)} 75%{transform:translate(-2px,2px)} 100%{transform:translate(2px,2px)} }`;
+                    style.innerHTML = `@keyframes shake { 0%{margin-top:2px;margin-left:2px} 25%{margin-top:-2px;margin-left:-2px} 50%{margin-top:2px;margin-left:-2px} 75%{margin-top:-2px;margin-left:2px} 100%{margin-top:2px;margin-left:2px} }`;
                     document.head.appendChild(style);
                 }
                 setTimeout(() => g.container.style.animation = '', 3000);
@@ -57,14 +57,7 @@ class EventManager {
                 let i = 0; const intv = setInterval(() => { g.container.style.backgroundColor = colors[i++%colors.length]; }, 200);
                 setTimeout(() => { clearInterval(intv); g.container.style.backgroundColor = ''; }, 4000);
             }},
-            { msg: '🙃 混乱：倒立洗头！', color: '#ffffff', exec: g => {
-                g.container.style.transition = 'transform 1s'; g.container.style.transform = 'rotate(180deg)';
-                setTimeout(() => g.container.style.transform = 'none', 5000);
-            }},
-            { msg: '🪞 幻觉：镜像世界！', color: '#aaaaff', exec: g => {
-                g.container.style.transition = 'transform 1s'; g.container.style.transform = 'scaleX(-1)';
-                setTimeout(() => g.container.style.transform = 'none', 5000);
-            }},
+
             { msg: '🚶 迷惑：太空漫步！', color: '#cccccc', exec: g => {
                 const zombies = g.entities.filter(e => e instanceof Zombie);
                 zombies.forEach(z => z.speed = -30);
