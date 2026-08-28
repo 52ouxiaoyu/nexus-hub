@@ -394,13 +394,22 @@ class Plant extends Entity {
                     this.isArmed = true;
                     this.element.src = 'assets/images/Plants/PotatoMine/PotatoMine.gif';
                 }
-            } else {
-                const zombie = this.game.entities.find(e => 
+            } else if (!this.hasExploded) {
+                const zombieNear = this.game.entities.some(e => 
                     e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 40 && !e.isDead
                 );
-                if (zombie) {
+                if (zombieNear) {
+                    this.hasExploded = true; // Prevent multiple triggers
                     this.game.audioManager.play('splat'); // Needs potatomine sound
-                    zombie.hp = 0; // Instant kill
+                    
+                    // Damage all zombies in a small radius
+                    const zombies = this.game.entities.filter(e => 
+                        e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 60 && !e.isDead
+                    );
+                    for (let z of zombies) {
+                        z.takeDamage(1800);
+                    }
+                    
                     this.element.src = 'assets/images/Plants/PotatoMine/ExplosionSpudow.gif';
                     this.element.style.zIndex = 3000;
                     setTimeout(() => {
