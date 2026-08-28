@@ -185,7 +185,7 @@ class Plant extends Entity {
                     
                     let projType = 'peashooter';
                     if (this.type === 'snowpea') projType = 'snowpea';
-                    if (this.type === 'puffshroom') projType = 'puffshroom';
+                    if (this.type === 'puffshroom' || this.type === 'scaredyshroom') projType = 'puffshroom';
                     if (this.type === 'fumeshroom') projType = 'fumeshroom';
                     
                     if (this.type === 'threepeater' && hasZombieAhead) {
