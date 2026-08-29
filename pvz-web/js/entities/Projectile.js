@@ -51,7 +51,7 @@ class Projectile extends Entity {
     
     update(deltaTime) {
         super.update(deltaTime);
-        if (this.type === 'cattail' && this.targetZombie && !this.targetZombie.isDead) {
+        if (this.type === 'cattail' && this.targetZombie && !this.targetZombie.isDead && this.targetZombie.state !== 'DYING') {
             let dx = this.targetZombie.x + 40 - this.x;
             let dy = this.targetZombie.y + 50 - this.y;
             let dist = Math.hypot(dx, dy);
@@ -70,7 +70,7 @@ class Projectile extends Entity {
             
             // Gloom-shroom projectile collision
             if (this.type === 'gloom_puff') {
-                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead);
+                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                 for (let z of zombies) {
                     let dx = z.x + 40 - this.x;
                     let dy = z.y + 50 - this.y;

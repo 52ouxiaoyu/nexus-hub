@@ -8,7 +8,7 @@ class CollisionManager {
         // Plant/Zombie collision is handled by Zombie walking logic.
         
         const projectiles = this.game.entities.filter(e => e instanceof Projectile && !e.isDead);
-        const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead);
+        const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
         
         for (let p of projectiles) {
             for (let z of zombies) {

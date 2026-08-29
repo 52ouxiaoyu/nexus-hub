@@ -379,7 +379,7 @@ class Plant extends Entity {
             // Handle Scaredy-shroom hiding
             if (this.hasTrait('scaredyshroom')) {
                 const zombieNear = this.game.entities.some(e => 
-                    e instanceof Zombie && e.row === this.row && !e.isDead && e.x - this.x > -40 && e.x - this.x < 120
+                    e instanceof Zombie && e.row === this.row && !e.isDead && e.state !== 'DYING' && e.x - this.x > -40 && e.x - this.x < 120
                 );
                 if (zombieNear && !this.isHiding) {
                     this.isHiding = true;
@@ -402,7 +402,7 @@ class Plant extends Entity {
                 const maxRange = (this.hasTrait('puffshroom') || this.hasTrait('fumeshroom')) ? 300 : 9999;
                 
                 let hasZombieAhead = this.game.entities.some(e => {
-                    if (!(e instanceof Zombie) || e.isDead) return false;
+                    if (!(e instanceof Zombie) || e.isDead || e.state === 'DYING') return false;
                     if (this.hasTrait('threepeater')) {
                         return Math.abs(e.row - this.row) <= 1 && e.x > this.x;
                     } else {
@@ -419,7 +419,7 @@ class Plant extends Entity {
                 
                 let cattailTarget = null;
                 if (this.hasTrait('cattail')) {
-                    cattailTarget = this.game.entities.find(e => e instanceof Zombie && !e.isDead);
+                    cattailTarget = this.game.entities.find(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                 }
                 
                 if (hasZombieAhead || hasZombieBehind || cattailTarget) {
@@ -518,7 +518,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                 this.game.audioManager.play('splat');
                 this.triggerBombFusion();
                 
-                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead);
+                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                 for (let z of zombies) {
                     if (this.hasTrait('cherrybomb') && this.hasTrait('snowpea')) {
                         if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 100) {
@@ -553,7 +553,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
             if (this.explodeTimer <= 0) {
                 this.game.audioManager.play('splat');
                 this.triggerBombFusion();
-                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead);
+                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                 for (let z of zombies) {
                     z.isSlowed = true;
                     z.slowTimer = 10.0;
@@ -577,7 +577,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                         this.element.style.transform = 'translate(-50%, -80%)'; // Move boom up a bit
                         
                         // Deal damage
-                        const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead);
+                        const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                         for (let z of zombies) {
                             z.takeDamage(9999); // Full screen nuke
                         }
@@ -629,7 +629,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
             this.fireTimer += deltaTime;
             if (this.fireTimer >= 1.5) {
                 const zombies = this.game.entities.filter(e => 
-                    e instanceof Zombie && !e.isDead && Math.abs(e.row - this.row) <= 1 && Math.abs(e.x - this.x) <= 150
+                    e instanceof Zombie && !e.isDead && e.state !== 'DYING' && Math.abs(e.row - this.row) <= 1 && Math.abs(e.x - this.x) <= 150
                 );
                 if (zombies.length > 0) {
                     this.fireTimer = 0;
@@ -651,7 +651,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
         } else if (this.hasTrait('squash')) {
             if (this.state === 'idle') {
                 const zombie = this.game.entities.find(e => 
-                    e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 60 && !e.isDead
+                    e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 60 && !e.isDead && e.state !== 'DYING'
                 );
                 if (zombie) {
                     this.state = 'jumping';
@@ -682,7 +682,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     
                     // Deal damage
                     const zombies = this.game.entities.filter(e => 
-                        e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 60 && !e.isDead
+                        e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 60 && !e.isDead && e.state !== 'DYING'
                     );
                     for (let z of zombies) {
                         z.takeDamage(1800);
@@ -711,7 +711,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     
                     // Damage all zombies in a small radius
                     const zombies = this.game.entities.filter(e => 
-                        e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 60 && !e.isDead
+                        e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 60 && !e.isDead && e.state !== 'DYING'
                     );
                     for (let z of zombies) {
                         z.takeDamage(1800);
