@@ -200,20 +200,23 @@ class Plant extends Entity {
                 this.fusionOverlay.style.zIndex = '1';
                 
                 if (type === 'fusion_frostbomb') {
-                    // Cherrybomb colored blue
-                    this.element.src = s2.src; // cherrybomb
+                    this.element.src = s2.src;
                     this.element.style.filter = 'hue-rotate(180deg) saturate(1.5)';
-                    this.fusionOverlay.style.display = 'none'; // hide overlay
+                    this.fusionOverlay.style.display = 'none';
                 } else if (type === 'fusion_sporemine') {
-                    // Potatomine with puffshroom top
-                    this.element.src = s2.src; // potatomine
-                    this.fusionOverlay.src = s1.src; // puffshroom
-                    this.fusionOverlay.style.transform = 'translate(0px, -15px) scale(0.7)';
+                    this.element.src = s2.src;
+                    this.fusionOverlay.src = s1.src;
+                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 50%, 0 50%)';
+                    // Puffshroom cap placed exactly on top of Potato mine
+                    this.fusionOverlay.style.transform = 'translate(0px, -25px) scale(0.9)';
+                    this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_spikynut') {
-                    // Wallnut with chomper hat
-                    this.element.src = s2.src; // wallnut
-                    this.fusionOverlay.src = s1.src; // chomper
-                    this.fusionOverlay.style.transform = 'translate(-5px, -25px) scale(0.6)';
+                    this.element.src = s2.src;
+                    this.fusionOverlay.src = s1.src;
+                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 60%, 0 60%)'; 
+                    // Chomper head worn as a large hat on Wallnut. Chomper is big, so scale down slightly and move up
+                    this.fusionOverlay.style.transform = 'translate(0px, -30px) scale(0.85)';
+                    this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_snownut') {
                     // Wallnut colored ice blue
                     this.element.src = s2.src; // wallnut
@@ -242,6 +245,11 @@ class Plant extends Entity {
 
         super.update(deltaTime);
         this.element.style.top = `${this.y + this.yOffset}px`;
+        
+        if (this.fusionOverlay) {
+            this.fusionOverlay.style.left = `${this.x}px`;
+            this.fusionOverlay.style.top = `${this.y + this.yOffset}px`;
+        }
         
         if (this.hp <= 0 && !this.isDead) {
             this.isDead = true;
