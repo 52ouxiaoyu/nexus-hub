@@ -17,8 +17,23 @@ class EventManager {
                     const boom = document.createElement('img'); boom.src = 'assets/images/Plants/DoomShroom/Boom.png';
                     boom.style.cssText = `position:absolute; left:${x}px; top:${y}px; transform:translate(-50%,-80%); z-index:3000;`;
                     g.entityLayer.appendChild(boom); setTimeout(()=>boom.remove(), 1000);
-                    const crater = new Plant(g, x, y, r, c, 'crater'); crater.hp = 99999; crater.element.src='assets/images/Plants/DoomShroom/crater11.png'; crater.element.style.zIndex=10;
-                    g.entities.push(crater); setTimeout(()=>crater.hp=0, 30000);
+                    
+                    const crater = new Plant(g, 'crater'); 
+                    crater.x = x; crater.y = y; crater.row = r; crater.col = c;
+                    crater.hp = 99999; 
+                    crater.element.src='assets/images/Plants/DoomShroom/crater11.png'; 
+                    crater.element.style.zIndex=10;
+                    g.entities.push(crater); 
+                    
+                    // Remove existing plant in grid and replace with crater
+                    if (g.board.grid[r][c]) g.board.grid[r][c].hp = 0;
+                    g.board.grid[r][c] = crater;
+                    
+                    setTimeout(() => { 
+                        crater.hp=0; 
+                        if(g.board.grid[r][c] === crater) g.board.grid[r][c] = null;
+                    }, 30000);
+                    
                     g.entities.filter(e => Math.abs(e.x-x)<100 && Math.abs(e.y-y)<100 && e!==crater && !e.isProjectile).forEach(e => e.hp=0);
                 }, 3000);
             }},
