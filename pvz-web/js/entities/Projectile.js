@@ -16,13 +16,10 @@ class Projectile extends Entity {
             this.element.src = 'assets/images/Plants/ShroomBullet.gif';
             this.damage = 40;
         } else if (type === 'melon') {
-            this.element.src = 'assets/images/Plants/Cactus/Projectile32.png';
-            this.element.style.transform = 'scale(1.5)';
+            this.element.src = 'https://static.wikia.nocookie.net/plantsvszombies/images/1/13/Melon.png';
             this.damage = 60;
         } else if (type === 'wintermelon') {
-            this.element.src = 'assets/images/Plants/Cactus/Projectile32.png';
-            this.element.style.transform = 'scale(1.5)';
-            this.element.style.filter = 'hue-rotate(180deg) saturate(1.5) brightness(1.2)';
+            this.element.src = 'https://static.wikia.nocookie.net/plantsvszombies/images/f/f6/WinterMelon.png';
             this.damage = 60;
         } else if (type === 'cattail') {
             this.element.src = 'assets/images/Plants/Cactus/Projectile32.png';

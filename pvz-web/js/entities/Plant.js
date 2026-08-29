@@ -143,12 +143,12 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/Cactus/Cactus.gif';
+            stat.src = 'https://static.wikia.nocookie.net/plantsvszombies/images/c/c5/Melon-pult.gif';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/Cactus/Cactus.gif';
+            stat.src = 'https://static.wikia.nocookie.net/plantsvszombies/images/3/36/Winter_Melon_anim.gif';
         }
         
 
