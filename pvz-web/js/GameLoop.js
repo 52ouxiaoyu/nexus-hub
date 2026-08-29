@@ -275,8 +275,36 @@ class Game {
         recipes.forEach(r => {
             let li = document.createElement('li');
             li.style.borderBottom = '1px dashed #ccc';
-            li.style.padding = '5px 0';
-            li.innerText = `${this.getPlantName(r.a)} + ${this.getPlantName(r.b)} = ${r.result}`;
+            li.style.padding = '10px 0';
+            li.style.display = 'flex';
+            li.style.alignItems = 'center';
+            li.style.justifyContent = 'space-between';
+            
+            const getImg = (t) => {
+                const map = {
+                    'peashooter': 'assets/images/Plants/Peashooter/Peashooter.gif',
+                    'sunflower': 'assets/images/Plants/SunFlower/SunFlower1.gif',
+                    'wallnut': 'assets/images/Plants/WallNut/WallNut.gif',
+                    'snowpea': 'assets/images/Plants/SnowPea/SnowPea.gif',
+                    'cherrybomb': 'assets/images/Plants/CherryBomb/CherryBomb.gif',
+                    'puffshroom': 'assets/images/Plants/PuffShroom/PuffShroom.gif',
+                    'potatomine': 'assets/images/Plants/PotatoMine/PotatoMine.gif',
+                    'chomper': 'assets/images/Plants/Chomper/Chomper.gif'
+                };
+                return map[t] || '';
+            };
+            
+            li.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px; width: 40%;">
+                    <img src="${getImg(r.a)}" style="height: 50px;"> 
+                    <span style="font-weight: bold; font-size: 20px;">+</span> 
+                    <img src="${getImg(r.b)}" style="height: 50px;">
+                </div>
+                <div style="width: 10%; text-align: center; font-size: 24px; font-weight: bold;">=</div>
+                <div style="width: 50%; text-align: right; font-weight: bold; color: #822; font-size: 16px;">
+                    ${r.result}
+                </div>
+            `;
             list.appendChild(li);
         });
         
