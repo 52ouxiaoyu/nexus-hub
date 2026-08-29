@@ -236,13 +236,13 @@ class Zombie extends Entity {
             
             const plant = this.game.entities.find(e => 
                 e instanceof Plant && 
-                e.type !== 'spikeweed' &&
+                (!e.hasTrait || !e.hasTrait('spikeweed')) &&
                 e.row === this.row && 
                 Math.abs(e.x - this.x) < 40 
             );
             
             if (plant && !plant.isDead && plant.type !== 'crater') {
-                if (this.type === 'polevaulting' && !this.hasVaulted && plant.type !== 'tallnut') {
+                if (this.type === 'polevaulting' && !this.hasVaulted && (!plant.hasTrait || !plant.hasTrait('tallnut'))) {
                     // Jump over it!
                     this.hasVaulted = true;
                     this.state = 'JUMPING';
