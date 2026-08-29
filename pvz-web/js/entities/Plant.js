@@ -232,6 +232,14 @@ class Plant extends Entity {
                     this.element.src = s2.src; // wallnut
                     this.element.style.filter = 'hue-rotate(180deg) saturate(1.5) brightness(1.2)';
                     this.fusionOverlay.style.display = 'none'; // hide overlay
+                } else if (type === 'fusion_cherrybomb_peashooter') {
+                    this.element.src = s2.src; // peashooter
+                    this.element.style.filter = 'hue-rotate(-45deg) saturate(2.0)';
+                    this.fusionOverlay.style.display = 'none';
+                } else if (type === 'fusion_doomshroom_sunflower') {
+                    this.element.src = s2.src; // sunflower
+                    this.element.style.filter = 'grayscale(0.8) brightness(0.6) sepia(1) hue-rotate(240deg) saturate(3)';
+                    this.fusionOverlay.style.display = 'none';
                 }
                 
                 this.game.entityLayer.appendChild(this.fusionOverlay);
@@ -263,6 +271,32 @@ class Plant extends Entity {
         
         if (this.hp <= 0 && !this.isDead) {
             this.isDead = true;
+            
+            if (this.type === 'fusion_cherrybomb_peashooter' || this.type === 'fusion_doomshroom_sunflower') {
+                let boom = document.createElement('img');
+                boom.src = 'assets/images/Plants/CherryBomb/Boom.gif';
+                if (this.type === 'fusion_doomshroom_sunflower') {
+                    boom.style.filter = 'hue-rotate(270deg) invert(1)';
+                    for (let zombie of this.game.zombies) {
+                        if (Math.abs(zombie.col - this.col) <= 2 && Math.abs(zombie.row - this.row) <= 2) {
+                            zombie.takeDamage(1800);
+                        }
+                    }
+                } else {
+                    for (let zombie of this.game.zombies) {
+                        if (Math.abs(zombie.col - this.col) <= 1 && Math.abs(zombie.row - this.row) <= 1) {
+                            zombie.takeDamage(1800);
+                        }
+                    }
+                }
+                boom.style.position = 'absolute';
+                boom.style.left = (this.element.offsetLeft - 80) + 'px';
+                boom.style.top = (this.element.offsetTop - 80) + 'px';
+                boom.style.zIndex = '100';
+                this.game.container.appendChild(boom);
+                setTimeout(() => boom.remove(), 1000);
+            }
+            
             if (this.game.board.grid[this.row] && this.game.board.grid[this.row][this.col] === this) {
                 this.game.board.grid[this.row][this.col] = null; // Clear from grid
             }
