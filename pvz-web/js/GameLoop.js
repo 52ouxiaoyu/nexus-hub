@@ -439,6 +439,25 @@ class Game {
         if (this.sunCount < seed.cost) return;
 
         let existingPlant = this.board.grid[row][col];
+        
+        // Bomb planting exception: allow planting cherrybomb on snowpea
+        if (existingPlant && type === 'cherrybomb' && existingPlant.type === 'snowpea') {
+            this.sunCount -= seed.cost;
+            this.sunCountElement.innerText = this.sunCount;
+            this.cooldowns[type] = seed.cooldown; // Start cooldown
+            this.updateUI();
+            this.audioManager.play('plant');
+            
+            let plant = new Plant(this, type);
+            plant.row = row;
+            plant.col = col;
+            plant.x = 250 + col * 80 + 40;
+            plant.y = 100 + row * 100 + 50;
+            plant.fusionTarget = existingPlant; // Mark it!
+            this.entities.push(plant); // Add to entities but NOT to board grid!
+            return;
+        }
+
         if (this.board.canPlant(row, col)) {
             let plant = new Plant(this, type);
             if (this.board.addPlant(plant, row, col)) {
