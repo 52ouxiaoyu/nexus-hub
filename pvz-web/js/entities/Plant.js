@@ -219,9 +219,8 @@ class Plant extends Entity {
                 } else if (type === 'fusion_sporemine') {
                     this.element.src = s2.src;
                     this.fusionOverlay.src = s1.src;
-                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 50%, 0 50%)';
-                    // Puffshroom cap placed exactly on top of Potato mine
-                    this.fusionOverlay.style.transform = 'translate(0px, -25px) scale(0.9)';
+                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 85%, 0 85%)'; // Show the face!
+                    this.fusionOverlay.style.transform = 'translate(0px, -30px) scale(0.9)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_spikynut') {
                     this.element.src = s2.src;
@@ -555,7 +554,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     this.isArmed = true;
                     this.element.src = 'assets/images/Plants/PotatoMine/PotatoMine.gif';
                     if (this.type === 'fusion_sporemine' && this.fusionOverlay) {
-                        this.fusionOverlay.style.transform = 'translate(0px, -35px) scale(0.9)';
+                        this.fusionOverlay.style.transform = 'translate(0px, -45px) scale(0.9)';
                     }
                 }
             } else if (!this.hasExploded) {
