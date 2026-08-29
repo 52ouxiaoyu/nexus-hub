@@ -22,7 +22,7 @@ class InputManager {
                     this.isShovelSelected = false;
                     this.game.isGloveActive = false;
                     if(document.getElementById('glove-bank')) document.getElementById('glove-bank').style.background = 'rgba(0,0,0,0.5)';
-                    if(this.game.gloveSource) { this.game.gloveSource.element.style.filter = ''; this.game.gloveSource = null; }
+                    if(this.game.gloveSource) { this.game.gloveSource.element.style.display = 'block'; if (this.game.gloveSource.fusionOverlay) this.game.gloveSource.fusionOverlay.style.display = 'block'; this.game.isGloveDragging = false; this.game.gloveSource = null; }
                     this.game.container.style.cursor = 'default';
                     this.updateDragGhost(e.clientX, e.clientY, type);
                     this.game.audioManager.play('btn');
@@ -35,14 +35,14 @@ class InputManager {
             this.selectedSeed = null;
             this.game.isGloveActive = false;
             if(document.getElementById('glove-bank')) document.getElementById('glove-bank').style.background = 'rgba(0,0,0,0.5)';
-            if(this.game.gloveSource) { this.game.gloveSource.element.style.filter = ''; this.game.gloveSource = null; }
+            if(this.game.gloveSource) { this.game.gloveSource.element.style.display = 'block'; if (this.game.gloveSource.fusionOverlay) this.game.gloveSource.fusionOverlay.style.display = 'block'; this.game.isGloveDragging = false; this.game.gloveSource = null; }
             this.game.container.style.cursor = 'default';
             this.updateDragGhost(e.clientX, e.clientY, 'shovel');
             this.game.audioManager.play('btn');
         });
         
         document.addEventListener('mousemove', (e) => {
-            if (this.selectedSeed || this.isShovelSelected) {
+            if (this.selectedSeed || this.isShovelSelected || this.game.isGloveDragging) {
                 const rect = this.container.getBoundingClientRect();
                 const scale = window.gameScale || 1;
                 const mouseX = (e.clientX - rect.left) / scale;

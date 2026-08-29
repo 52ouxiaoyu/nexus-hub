@@ -249,12 +249,20 @@ class Game {
         
         gloveBtn.addEventListener('click', () => {
             this.isGloveActive = !this.isGloveActive;
+            this.isGloveDragging = false;
             if (this.isGloveActive) {
                 if (this.inputManager) {
                     this.inputManager.selectedSeed = null;
                     this.inputManager.isShovelSelected = false;
                     this.inputManager.dragGhost.style.display = 'none';
                 }
+            } else {
+                // Cancel dragging if active
+                if (this.gloveSource) {
+                    this.gloveSource.element.style.display = 'block';
+                    if (this.gloveSource.fusionOverlay) this.gloveSource.fusionOverlay.style.display = 'block';
+                }
+                if (this.inputManager) this.inputManager.dragGhost.style.display = 'none';
             }
             this.gloveSource = null;
             this.container.style.cursor = this.isGloveActive ? 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\' style=\'font-size:24px\'><text y=\'24\'>🧤</text></svg>"), auto' : 'default';
@@ -322,32 +330,48 @@ class Game {
         
         const plant = this.board.grid[row][col];
         if (!plant) {
-            // Clicked empty space, cancel glove
+            // Clicked empty space, cancel drag but keep glove active maybe? Or cancel all.
             this.isGloveActive = false;
+            this.isGloveDragging = false;
             document.getElementById('glove-bank').style.background = 'rgba(0,0,0,0.5)';
             this.container.style.cursor = 'default';
+            if (this.inputManager) this.inputManager.dragGhost.style.display = 'none';
             if (this.gloveSource) {
-                this.gloveSource.element.style.filter = '';
+                this.gloveSource.element.style.display = 'block';
+                if (this.gloveSource.fusionOverlay) this.gloveSource.fusionOverlay.style.display = 'block';
             }
             this.gloveSource = null;
             return true;
         }
         
         if (!this.gloveSource) {
+            // Pick up the first plant
             this.gloveSource = plant;
-            plant.element.style.filter = 'brightness(1.5) drop-shadow(0 0 10px #0f0)';
+            this.isGloveDragging = true;
+            plant.element.style.display = 'none';
+            if (plant.fusionOverlay) plant.fusionOverlay.style.display = 'none';
+            
+            // Set drag ghost image to this plant
+            if (this.inputManager) {
+                this.inputManager.dragGhost.style.display = 'block';
+                this.inputManager.dragGhost.style.backgroundImage = `url('${plant.element.src}')`;
+                // Manually trigger move to put ghost at cursor immediately
+            }
         } else {
             if (this.gloveSource === plant) {
                 // Cancel selection
-                plant.element.style.filter = '';
+                plant.element.style.display = 'block';
+                if (plant.fusionOverlay) plant.fusionOverlay.style.display = 'block';
                 this.gloveSource = null;
+                this.isGloveDragging = false;
+                if (this.inputManager) this.inputManager.dragGhost.style.display = 'none';
                 return true;
             }
             
             // Try to fuse
             const fusionType = this.getFusionResult(this.gloveSource.type, plant.type);
             if (fusionType) {
-                this.gloveSource.element.style.filter = ''; // Reset filter before dying
+                this.gloveSource.element.style.display = 'block'; // Reset display before dying to ensure cleanup
                 this.gloveSource.hp = 0; // kill source
                 plant.hp = 0; // kill target
                 
@@ -360,13 +384,16 @@ class Game {
                     this.showAnnouncement(`融合成功：${this.getPlantName(fusionType)}!`, '#ff00ff');
                 }
             } else {
-                this.gloveSource.element.style.filter = '';
+                this.gloveSource.element.style.display = 'block';
+                if (this.gloveSource.fusionOverlay) this.gloveSource.fusionOverlay.style.display = 'block';
                 this.showAnnouncement('这两种植物无法融合', '#ff0000');
             }
             
             this.isGloveActive = false;
+            this.isGloveDragging = false;
             document.getElementById('glove-bank').style.background = 'rgba(0,0,0,0.5)';
             this.container.style.cursor = 'default';
+            if (this.inputManager) this.inputManager.dragGhost.style.display = 'none';
             this.gloveSource = null;
         }
         return true;
@@ -405,22 +432,8 @@ class Game {
         if (this.sunCount < seed.cost) return;
 
         let existingPlant = this.board.grid[row][col];
-        let fusionType = null;
-        if (this.fusionMode && existingPlant && existingPlant.type !== 'crater') {
-            fusionType = this.getFusionResult(existingPlant.type, type);
-        }
-
-        if (this.board.canPlant(row, col) || fusionType) {
-            let plantTypeToCreate = fusionType ? fusionType : type;
-            let plant = new Plant(this, plantTypeToCreate);
-            
-            if (fusionType) {
-                existingPlant.hp = 0;
-                this.board.grid[row][col] = null; // force clear to allow addPlant
-                if (this.audioManager) this.audioManager.play('btn'); // fusion sound
-                this.showAnnouncement(`融合成功：${this.getPlantName(fusionType)}!`, '#ff00ff');
-            }
-            
+        if (this.board.canPlant(row, col)) {
+            let plant = new Plant(this, type);
             if (this.board.addPlant(plant, row, col)) {
                 this.sunCount -= seed.cost;
                 this.sunCountElement.innerText = this.sunCount;
