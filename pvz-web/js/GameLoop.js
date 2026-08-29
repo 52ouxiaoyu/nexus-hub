@@ -258,7 +258,7 @@ class Game {
         });
         
         const recipes = [
-            { a: 'peashooter', b: 'peashooter', result: '双发豌豆', img: 'assets/images/Plants/RepeaterPea/RepeaterPea.gif', css: false },
+            { a: 'peashooter', b: 'peashooter', result: '双发豌豆', img: 'assets/images/Plants/Repeater/Repeater.gif', css: false },
             { a: 'peashooter', b: 'repeater', result: '三线射手', img: 'assets/images/Plants/Threepeater/Threepeater.gif', css: false },
             { a: 'repeater', b: 'repeater', result: '机枪射手', img: 'assets/images/Plants/GatlingPea/GatlingPea.gif', css: false },
             { a: 'sunflower', b: 'sunflower', result: '双子向日葵', img: 'assets/images/Plants/TwinSunflower/TwinSunflower1.gif', css: false },
@@ -298,7 +298,7 @@ class Game {
                     'puffshroom': 'assets/images/Plants/PuffShroom/PuffShroom.gif',
                     'potatomine': 'assets/images/Plants/PotatoMine/PotatoMine.gif',
                     'chomper': 'assets/images/Plants/Chomper/Chomper.gif',
-                    'repeater': 'assets/images/Plants/RepeaterPea/RepeaterPea.gif',
+                    'repeater': 'assets/images/Plants/Repeater/Repeater.gif',
                     'iceshroom': 'assets/images/Plants/IceShroom/IceShroom.gif',
                     'squash': 'assets/images/Plants/Squash/Squash.gif',
                     'doomshroom': 'assets/images/Plants/DoomShroom/DoomShroom.gif',
@@ -422,12 +422,20 @@ class Game {
             doomshroom: '毁灭菇', spikeweed: '地刺', threepeater: '三线射手', splitpea: '裂荚射手',
             gatlingpea: '机枪射手', twinsunflower: '双子向日葵', torchwood: '火炬树桩', garlic: '大蒜',
             fusion_peaflower: '豌豆向日葵', fusion_nutshooter: '坚果射手', fusion_frostbomb: '寒冰炸弹',
-            fusion_sporemine: '孢子地雷', fusion_spikynut: '尖刺坚果', fusion_snownut: '寒冰坚果'
+            fusion_sporemine: '孢子地雷', fusion_spikynut: '尖刺坚果', fusion_snownut: '寒冰坚果',
+            fusion_cherrybomb_peashooter: '樱桃射手', fusion_doomshroom_sunflower: '毁灭向日葵'
         };
         return names[type] || type;
     }
 
     getFusionResult(plantA, plantB) {
+        if (plantA === 'peashooter' && plantB === 'peashooter') return 'repeater';
+        if (plantA === 'repeater' && plantB === 'peashooter') return 'threepeater';
+        if (plantA === 'peashooter' && plantB === 'repeater') return 'threepeater';
+        if (plantA === 'repeater' && plantB === 'repeater') return 'gatlingpea';
+        if (plantA === 'sunflower' && plantB === 'sunflower') return 'twinsunflower';
+        if (plantA === 'puffshroom' && plantB === 'puffshroom') return 'fumeshroom';
+        
         const set = new Set([plantA, plantB]);
         if (set.has('peashooter') && set.has('sunflower')) return 'fusion_peaflower';
         if (set.has('wallnut') && set.has('peashooter')) return 'fusion_nutshooter';
@@ -435,6 +443,11 @@ class Game {
         if (set.has('puffshroom') && set.has('potatomine')) return 'fusion_sporemine';
         if (set.has('wallnut') && set.has('chomper')) return 'fusion_spikynut';
         if (set.has('wallnut') && set.has('snowpea')) return 'fusion_snownut';
+        if (set.has('peashooter') && set.has('iceshroom')) return 'snowpea';
+        if (set.has('peashooter') && set.has('squash')) return 'splitpea';
+        if (set.has('puffshroom') && set.has('sunflower')) return 'sunshroom';
+        if (set.has('puffshroom') && set.has('peashooter')) return 'scaredyshroom';
+        if (set.has('wallnut') && set.has('jalapeno')) return 'torchwood';
         return null;
     }
     
