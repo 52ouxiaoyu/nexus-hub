@@ -168,14 +168,18 @@ class Plant extends Entity {
             
             this.element.src = s1.src;
             
-            // Add secondary image
+            // CSS Frankenstein Stitching
+            this.element.style.clipPath = 'polygon(0 40%, 100% 40%, 100% 100%, 0 100%)'; // Base plant gets bottom 60%
+            
             this.fusionOverlay = document.createElement('img');
             this.fusionOverlay.src = s2.src;
             this.fusionOverlay.style.position = 'absolute';
             this.fusionOverlay.style.pointerEvents = 'none';
-            this.fusionOverlay.style.transform = 'scale(0.6)';
-            this.fusionOverlay.style.opacity = '0.85';
+            this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 40%, 0 40%)'; // Secondary plant gets top 40%
             this.fusionOverlay.style.zIndex = '1';
+            // add a cool glowing filter to indicate fusion
+            this.element.style.filter = 'drop-shadow(0px 0px 5px #ff00ff)';
+            this.fusionOverlay.style.filter = 'drop-shadow(0px 0px 5px #ff00ff)';
             this.game.entityLayer.appendChild(this.fusionOverlay);
             
         } else {
