@@ -179,13 +179,14 @@ class Plant extends Entity {
             this.game.entityLayer.appendChild(this.fusionOverlay);
             
         } else {
-        } else {
             this.traits = [type];
             const s = getStats(type);
             Object.assign(this, s);
             this.element.src = s.src;
         }
-        hasTrait(trait) {
+    }
+
+    hasTrait(trait) {
         if (this.type === trait) return true;
         if (this.traits && this.traits.includes(trait)) return true;
         return false;
