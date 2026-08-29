@@ -1,5 +1,5 @@
 class Projectile extends Entity {
-    constructor(game, x, y, row, type = 'peashooter', targetZombie = null, vx = None, vy = None) {
+    constructor(game, x, y, row, type = 'peashooter', targetZombie = null, vx = null, vy = null) {
         super(game, x, y);
         this.targetZombie = targetZombie;
         this.row = row;
