@@ -25,7 +25,7 @@ class Projectile extends Entity {
         } else if (type === 'wintermelon') {
             this.element.src = 'assets/images/Plants/MelonPult/Melon.gif';
             this.element.style.transform = 'scale(1.0)';
-            this.element.style.filter = 'hue-rotate(200deg) saturate(1.5) brightness(1.2)';
+            this.element.style.filter = 'sepia(1) hue-rotate(180deg) saturate(2) brightness(1.2)';
             this.damage = 60;
         } else if (type === 'cattail') {
             this.element.src = 'assets/images/Plants/Cactus/Projectile32.png';
@@ -87,6 +87,11 @@ class Projectile extends Entity {
             }
         } else {
             this.x += this.speed * deltaTime;
+        }
+        
+        if (this.maxDistance) {
+            const dist = Math.hypot(this.x - this.startX, this.y - this.startY);
+            if (dist >= this.maxDistance) this.isDead = true;
         }
         
         if (this.type === 'fumeshroom' && Math.abs(this.x - this.startX) > 300) {

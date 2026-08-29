@@ -280,6 +280,9 @@ class Plant extends Entity {
             const s = getStats(type);
             Object.assign(this, s);
             this.element.src = s.src;
+            if (this.hasTrait('wintermelon')) {
+                this.element.style.filter = 'sepia(1) hue-rotate(180deg) saturate(2) brightness(1.2)';
+            }
         }
     }
 
@@ -631,8 +634,16 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                 if (zombies.length > 0) {
                     this.fireTimer = 0;
                     this.game.audioManager.play('splat');
-                    for (let z of zombies) {
-                        z.takeDamage(40); // 2x fumeshroom damage
+                    // Spawn 8 projectiles in all directions
+                    const dirs = [
+                        {vx: 1, vy: 0}, {vx: 1, vy: 1}, {vx: 0, vy: 1}, {vx: -1, vy: 1},
+                        {vx: -1, vy: 0}, {vx: -1, vy: -1}, {vx: 0, vy: -1}, {vx: 1, vy: -1}
+                    ];
+                    for (let d of dirs) {
+                        const len = Math.sqrt(d.vx*d.vx + d.vy*d.vy);
+                        const p = new Projectile(this.game, this.x + 10, this.y - 15, this.row, 'gloom_puff', null, d.vx/len, d.vy/len);
+                        p.maxDistance = 150;
+                        this.game.entities.push(p);
                     }
                 }
             }
