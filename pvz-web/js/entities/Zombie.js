@@ -324,6 +324,15 @@ class Zombie extends Entity {
                     this.element.src = this.walkSrc;
                 } else {
                     this.eatTarget.hp -= currentDamage * deltaTime;
+                    
+                    if (this.eatTarget.isSpiky) {
+                        this.hp -= 20 * deltaTime; // reflect damage
+                    }
+                    if (this.eatTarget.isFrosty && !this.isSlowed) {
+                        this.isSlowed = true;
+                        this.slowTimer = 10.0;
+                    }
+                    
                     if (!this.chompTimer) this.chompTimer = 0;
                     this.chompTimer -= deltaTime;
                     const chompInterval = this.isSlowed ? 3.0 : 1.0;

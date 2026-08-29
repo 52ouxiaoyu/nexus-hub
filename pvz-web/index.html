@@ -44,16 +44,23 @@
         </div>
 
         <!-- Start Menu -->
-        <div id="start-menu" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 2000; cursor: pointer; transition: transform 0.2s;">
+        <div id="start-menu" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 2000; transition: transform 0.2s;">
             <img src="assets/images/interface/Logo.png" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none;">
             <div style="position: absolute; bottom: 10px; right: 15px; color: rgba(255,255,255,0.7); font-size: 14px; font-family: monospace; z-index: 2001; text-shadow: 1px 1px 2px black;">v1.5.2 (Build 2642)</div>
+            
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; gap: 20px; z-index: 2002;">
+                <button id="btn-adventure" style="background-color: #4CAF50; border: 4px solid #2E7D32; color: white; padding: 15px 40px; font-size: 28px; font-family: monospace; font-weight: bold; border-radius: 30px; cursor: pointer; text-shadow: 2px 2px 4px #000; box-shadow: 0 10px 20px rgba(0,0,0,0.5); transition: transform 0.1s;">经典冒险模式</button>
+                <button id="btn-fusion" style="background-color: #9C27B0; border: 4px solid #6A1B9A; color: white; padding: 15px 40px; font-size: 28px; font-family: monospace; font-weight: bold; border-radius: 30px; cursor: pointer; text-shadow: 2px 2px 4px #000; box-shadow: 0 10px 20px rgba(0,0,0,0.5); transition: transform 0.1s;">🔬 融合进化版 🧬</button>
+            </div>
         </div>
     </div>
 
     <!-- Scripts -->
     <script>
-        document.getElementById('start-menu').onmouseover = function() { this.style.transform = 'scale(1.02)'; };
-        document.getElementById('start-menu').onmouseout = function() { this.style.transform = 'scale(1)'; };
+        document.getElementById('btn-adventure').onmouseover = function() { this.style.transform = 'scale(1.05)'; };
+        document.getElementById('btn-adventure').onmouseout = function() { this.style.transform = 'scale(1)'; };
+        document.getElementById('btn-fusion').onmouseover = function() { this.style.transform = 'scale(1.05)'; };
+        document.getElementById('btn-fusion').onmouseout = function() { this.style.transform = 'scale(1)'; };
         
         function resizeGame() {
             const container = document.getElementById('game-container');

@@ -92,9 +92,20 @@ class Game {
     
     showMenu() {
         const menu = document.getElementById('start-menu');
+        const btnAdv = document.getElementById('btn-adventure');
+        const btnFusion = document.getElementById('btn-fusion');
         
-        menu.onclick = () => {
+        btnAdv.onclick = () => {
+            this.audioManager.play('btn');
             menu.style.display = 'none';
+            this.fusionMode = false;
+            this.showSeedChooser();
+        };
+        
+        btnFusion.onclick = () => {
+            this.audioManager.play('btn');
+            menu.style.display = 'none';
+            this.fusionMode = true;
             this.showSeedChooser();
         };
     }
@@ -219,19 +230,42 @@ class Game {
         this.updateUI();
     }
     
+    getFusionResult(plantA, plantB) {
+        const set = new Set([plantA, plantB]);
+        if (set.has('peashooter') && set.has('sunflower')) return 'peaflower';
+        if (set.has('wallnut') && set.has('peashooter')) return 'nutshooter';
+        if (set.has('snowpea') && set.has('cherrybomb')) return 'frostbomb';
+        if (set.has('puffshroom') && set.has('potatomine')) return 'sporemine';
+        if (set.has('wallnut') && set.has('chomper')) return 'spikynut';
+        if (set.has('wallnut') && set.has('snowpea')) return 'snownut';
+        return null;
+    }
+    
     tryPlanting(type, row, col) {
         if (this.cooldowns[type] > 0) return; // Still cooling down
         
         const seed = this.seeds.find(s => s.type === type);
         if (!seed) return;
-        
-        if (this.sunCount >= seed.cost && this.board.canPlant(row, col)) {
-            let plant;
-            if (this.seeds.some(s => s.type === type)) {
-                plant = new Plant(this, type);
+        if (this.sunCount < seed.cost) return;
+
+        let existingPlant = this.board.grid[row][col];
+        let fusionType = null;
+        if (this.fusionMode && existingPlant && existingPlant.type !== 'crater') {
+            fusionType = this.getFusionResult(existingPlant.type, type);
+        }
+
+        if (this.board.canPlant(row, col) || fusionType) {
+            let plantTypeToCreate = fusionType ? fusionType : type;
+            let plant = new Plant(this, plantTypeToCreate);
+            
+            if (fusionType) {
+                existingPlant.hp = 0;
+                this.board.grid[row][col] = null; // force clear to allow addPlant
+                if (this.audioManager) this.audioManager.play('btn'); // fusion sound
+                this.showAnnouncement(`融合成功：${fusionType}!`, '#ff00ff');
             }
             
-            if (plant && this.board.addPlant(plant, row, col)) {
+            if (this.board.addPlant(plant, row, col)) {
                 this.sunCount -= seed.cost;
                 this.sunCountElement.innerText = this.sunCount;
                 this.cooldowns[type] = seed.cooldown; // Start cooldown
