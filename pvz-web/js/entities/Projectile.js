@@ -11,6 +11,18 @@ class Projectile extends Entity {
         
         if (type === 'snowpea') {
             this.element.src = 'assets/images/Plants/PB-10.gif';
+        } else if (type === 'scaredyshroom') {
+            this.element.src = 'assets/images/Plants/ShroomBullet.gif';
+            this.damage = 40;
+        } else if (type === 'melon') {
+            this.element.src = 'assets/images/Plants/Cactus/Projectile32.png';
+            this.element.style.transform = 'scale(1.5)';
+            this.damage = 60;
+        } else if (type === 'wintermelon') {
+            this.element.src = 'assets/images/Plants/Cactus/Projectile32.png';
+            this.element.style.transform = 'scale(1.5)';
+            this.element.style.filter = 'hue-rotate(180deg) saturate(1.5) brightness(1.2)';
+            this.damage = 60;
         } else if (type === 'puffshroom') {
             this.element.src = 'assets/images/Plants/ShroomBullet.gif';
         } else if (type === 'fumeshroom') {

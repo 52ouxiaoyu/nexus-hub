@@ -98,6 +98,8 @@ class Plant extends Entity {
             stat.sunRate = 24.0;
             stat.sunTimer = 0;
             stat.src = 'assets/images/Plants/SunShroom/SunShroom.gif';
+            stat.growthTimer = 0;
+            stat.sunCountDrop = 1;
         } else if (type === 'scaredyshroom') {
             stat.hp = 300;
             stat.fireRate = 1.5;
@@ -190,11 +192,13 @@ class Plant extends Entity {
                 this.element.style.transform = 'scale(1.2)';
             } else {
                 // Bespoke CSS Assembly for Fusions without custom sprites
-                this.fusionOverlay = document.createElement('img');
-                this.fusionOverlay.src = s2.src;
-                this.fusionOverlay.style.position = 'absolute';
-                this.fusionOverlay.style.pointerEvents = 'none';
-                this.fusionOverlay.style.zIndex = '1';
+                if (s2.src) {
+                    this.fusionOverlay = document.createElement('img');
+                    this.fusionOverlay.src = s2.src;
+                    this.fusionOverlay.style.position = 'absolute';
+                    this.fusionOverlay.style.pointerEvents = 'none';
+                    this.fusionOverlay.style.zIndex = '1';
+                }
                 
                 if (type === 'fusion_peaflower') {
                     this.element.src = s2.src;
@@ -308,7 +312,7 @@ class Plant extends Entity {
         
         if (this.isDead) return;
         
-        if ((this.hasTrait('peashooter') || this.hasTrait('snowpea') || this.hasTrait('repeater') || this.hasTrait('puffshroom') || this.hasTrait('threepeater') || this.hasTrait('fumeshroom') || this.hasTrait('gatlingpea') || this.hasTrait('splitpea') || this.hasTrait('scaredyshroom'))) {
+        if ((this.hasTrait('peashooter') || this.hasTrait('snowpea') || this.hasTrait('repeater') || this.hasTrait('puffshroom') || this.hasTrait('threepeater') || this.hasTrait('fumeshroom') || this.hasTrait('gatlingpea') || this.hasTrait('splitpea') || this.hasTrait('scaredyshroom') || this.hasTrait('melonpult') || this.hasTrait('wintermelon'))) {
             
             // Handle Scaredy-shroom hiding
             if (this.hasTrait('scaredyshroom')) {
@@ -356,8 +360,11 @@ class Plant extends Entity {
                     
                     let projType = 'peashooter';
                     if (this.hasTrait('snowpea')) projType = 'snowpea';
-                    if (this.hasTrait('puffshroom') || this.hasTrait('scaredyshroom')) projType = 'puffshroom';
+                    if (this.hasTrait('puffshroom')) projType = 'puffshroom';
+                    if (this.hasTrait('scaredyshroom')) projType = 'scaredyshroom';
                     if (this.hasTrait('fumeshroom')) projType = 'fumeshroom';
+                    if (this.hasTrait('melonpult')) projType = 'melon';
+                    if (this.hasTrait('wintermelon')) projType = 'wintermelon';
                     
                     if (this.hasTrait('threepeater') && hasZombieAhead) {
                         for (let dRow = -1; dRow <= 1; dRow++) {
@@ -418,13 +425,22 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                         if (!this.isDead) this.game.entities.push(new Sun(this.game, this.x + 20, this.y - 20, targetY));
                     }, 500);
                 }
+                
+                if (this.hasTrait('sunshroom') && this.sunCountDrop > 1) {
+                    for (let i = 1; i < this.sunCountDrop; i++) {
+                        setTimeout(() => {
+                            if (!this.isDead) this.game.entities.push(new Sun(this.game, this.x + (Math.random()*40-20), this.y - 20, targetY));
+                        }, i * 300);
+                    }
+                }
             }
         } else if (this.hasTrait('cherrybomb') || this.hasTrait('jalapeno')) {
             if (!this.hasExploded) {
                 this.explodeTimer -= deltaTime;
                 if (this.explodeTimer <= 0) {
                     this.hasExploded = true;
-                this.game.audioManager.play('splat'); // Needs explosion sound
+                this.game.audioManager.play('splat');
+                this.triggerBombFusion();
                 
                 const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead);
                 for (let z of zombies) {
@@ -453,17 +469,6 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     this.element.style.transform = 'translate(-50%, -50%) scaleX(3)';
                 }
                 
-                if (this.fusionTarget && !this.fusionTarget.isDead) {
-                    let targetRow = this.fusionTarget.row;
-                    let targetCol = this.fusionTarget.col;
-                    this.fusionTarget.hp = 0; // kill base plant
-                    
-                    setTimeout(() => {
-                        let newPlant = new Plant(this.game, 'fusion_frostbomb');
-                        this.game.board.addPlant(newPlant, targetRow, targetCol);
-                    }, 500);
-                }
-                
                 setTimeout(() => { this.hp = 0; }, 500);
                 }
             }
@@ -471,6 +476,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
             this.explodeTimer -= deltaTime;
             if (this.explodeTimer <= 0) {
                 this.game.audioManager.play('splat');
+                this.triggerBombFusion();
                 const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead);
                 for (let z of zombies) {
                     z.isSlowed = true;
@@ -488,7 +494,8 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     this.game.audioManager.play('plant'); // some sound
                     setTimeout(() => {
                         this.state = 'exploding';
-                        this.game.audioManager.play('splat'); // ideally an explosion sound
+                        this.game.audioManager.play('splat');
+                        this.triggerBombFusion();
                         this.element.src = 'assets/images/Plants/DoomShroom/Boom.png';
                         this.element.style.zIndex = 3000; // Put boom on top
                         this.element.style.transform = 'translate(-50%, -80%)'; // Move boom up a bit
