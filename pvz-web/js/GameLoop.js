@@ -439,7 +439,8 @@ class Game {
             fusion_peaflower: '豌豆向日葵', fusion_nutshooter: '坚果射手', fusion_frostbomb: '寒冰炸弹',
             fusion_sporemine: '孢子地雷', fusion_spikynut: '地刺坚果', fusion_snownut: '寒冰坚果',
             fusion_cherrybomb_peashooter: '樱桃射手', fusion_doomshroom_sunflower: '毁灭向日葵',
-            fusion_spikerock_tallnut: '钢地刺高坚果'
+            fusion_spikerock_tallnut: '钢地刺高坚果',
+            fusion_melon_cattail: '西瓜猫尾草', fusion_wintermelon_cattail: '冰西瓜猫尾草'
         };
         return names[type] || type;
     }
@@ -465,6 +466,8 @@ class Game {
         if (set.has('peashooter') && set.has('squash')) return 'splitpea';
         if (set.has('melonpult') && set.has('iceshroom')) return 'wintermelon';
         if (set.has('repeater') && set.has('spikeweed')) return 'cattail';
+        if (set.has('melonpult') && set.has('cattail')) return 'fusion_melon_cattail';
+        if (set.has('wintermelon') && set.has('cattail')) return 'fusion_wintermelon_cattail';
         if (set.has('puffshroom') && set.has('sunflower')) return 'sunshroom';
         if (plantA === 'fumeshroom' && plantB === 'fumeshroom') return 'gloomshroom';
         if (plantA === 'spikeweed' && plantB === 'spikeweed') return 'spikerock';

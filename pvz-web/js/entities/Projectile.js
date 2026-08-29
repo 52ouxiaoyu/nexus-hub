@@ -32,6 +32,17 @@ class Projectile extends Entity {
             this.element.style.transform = 'scale(0.8)';
             this.damage = 20;
             this.speed = 400;
+        } else if (type === 'cattail_melon') {
+            this.element.src = 'assets/images/Plants/MelonPult/Melon.gif';
+            this.element.style.transform = 'scale(0.8)';
+            this.damage = 60;
+            this.speed = 400;
+        } else if (type === 'cattail_wintermelon') {
+            this.element.src = 'assets/images/Plants/MelonPult/Melon.gif';
+            this.element.style.transform = 'scale(0.8)';
+            this.element.style.filter = 'sepia(1) hue-rotate(180deg) saturate(2) brightness(1.2)';
+            this.damage = 60;
+            this.speed = 400;
         } else if (type === 'puffshroom' || type === 'gloom_puff') {
             this.element.src = 'assets/images/Plants/ShroomBullet.gif';
             if (type === 'gloom_puff') this.damage = 40;
@@ -51,16 +62,60 @@ class Projectile extends Entity {
     
     update(deltaTime) {
         super.update(deltaTime);
-        if (this.type === 'cattail' && this.targetZombie && !this.targetZombie.isDead && this.targetZombie.state !== 'DYING') {
-            let dx = this.targetZombie.x + 40 - this.x;
-            let dy = this.targetZombie.y + 50 - this.y;
-            let dist = Math.hypot(dx, dy);
-            if (dist > 0) {
-                this.x += (dx / dist) * this.speed * deltaTime;
-                this.y += (dy / dist) * this.speed * deltaTime;
+        if (this.type === 'cattail' || this.type === 'cattail_melon' || this.type === 'cattail_wintermelon') {
+            if (this.targetZombie && !this.targetZombie.isDead && this.targetZombie.state !== 'DYING') {
+                let dx = this.targetZombie.x + 40 - this.x;
+                let dy = this.targetZombie.y + 50 - this.y;
+                let dist = Math.hypot(dx, dy);
+                if (dist > 0) {
+                    this.vx = (dx / dist) * this.speed;
+                    this.vy = (dy / dist) * this.speed;
+                    this.x += this.vx * deltaTime;
+                    this.y += this.vy * deltaTime;
+                }
+            } else {
+                // Target is dead or missing, keep flying in last known direction or forward
+                if (!this.vx) this.vx = this.speed;
+                if (!this.vy) this.vy = 0;
+                this.x += this.vx * deltaTime;
+                this.y += this.vy * deltaTime;
+                
+                // Also check if it randomly hits another zombie while flying blindly
+                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+                for (let z of zombies) {
+                    let dx = z.x + 40 - this.x;
+                    let dy = z.y + 50 - this.y;
+                    if (Math.hypot(dx, dy) < 40) {
+                        this.targetZombie = z; // found a new target!
+                        break;
+                    }
+                }
             }
+            
+            let dx = this.targetZombie ? this.targetZombie.x + 40 - this.x : 1000;
+            let dy = this.targetZombie ? this.targetZombie.y + 50 - this.y : 1000;
+            let dist = Math.hypot(dx, dy);
+            
             if (dist < 30) {
                  this.targetZombie.takeDamage(this.damage);
+                 if (this.type === 'cattail_melon' || this.type === 'cattail_wintermelon') {
+                     // Splash damage in 3x3 area
+                     const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+                     for (let z of zombies) {
+                         if (z !== this.targetZombie && Math.abs(z.row - this.targetZombie.row) <= 1 && Math.abs(z.x - this.targetZombie.x) < 150) {
+                             z.takeDamage(this.damage / 2); // splash damage is half
+                             if (this.type === 'cattail_wintermelon') {
+                                 z.isSlowed = true;
+                                 z.slowTimer = 10.0;
+                             }
+                         }
+                     }
+                     if (this.type === 'cattail_wintermelon') {
+                         this.targetZombie.isSlowed = true;
+                         this.targetZombie.slowTimer = 10.0;
+                     }
+                     this.game.audioManager.play('splat');
+                 }
                  this.isDead = true;
                  return;
             }

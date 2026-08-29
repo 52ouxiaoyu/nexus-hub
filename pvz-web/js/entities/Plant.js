@@ -174,6 +174,8 @@ class Plant extends Entity {
             else if (type === 'fusion_sporemine') { p1 = 'puffshroom'; p2 = 'potatomine'; }
             else if (type === 'fusion_spikynut') { p1 = 'spikeweed'; p2 = 'wallnut'; }
             else if (type === 'fusion_snownut') { p1 = 'snowpea'; p2 = 'wallnut'; }
+            else if (type === 'fusion_melon_cattail') { p1 = 'melonpult'; p2 = 'cattail'; }
+            else if (type === 'fusion_wintermelon_cattail') { p1 = 'wintermelon'; p2 = 'cattail'; }
             else {
                 const parts = type.split('_');
                 p1 = parts[1];
@@ -278,6 +280,14 @@ class Plant extends Entity {
                     this.element.src = s2.src; // sunflower
                     this.element.style.filter = 'grayscale(0.8) brightness(0.6) sepia(1) hue-rotate(240deg) saturate(3)';
                     this.fusionOverlay.style.display = 'none';
+                } else if (type === 'fusion_melon_cattail' || type === 'fusion_wintermelon_cattail') {
+                    this.element.src = s2.src; // cattail
+                    this.fusionOverlay.src = s1.src; // melon
+                    this.fusionOverlay.style.clipPath = 'none';
+                    this.fusionOverlay.style.transform = 'translate(-5px, -30px) scale(0.7)'; // put on top of cattail head
+                    if (type === 'fusion_wintermelon_cattail') {
+                        this.fusionOverlay.style.filter = 'sepia(1) hue-rotate(180deg) saturate(2) brightness(1.2)';
+                    }
                 }
                 
                 this.game.entityLayer.appendChild(this.fusionOverlay);
@@ -443,8 +453,12 @@ class Plant extends Entity {
                     if (this.hasTrait('scaredyshroom')) projType = 'scaredyshroom';
                     if (this.hasTrait('fumeshroom')) projType = 'fumeshroom';
                     if (this.hasTrait('melonpult')) projType = 'melon';
-                    if (this.hasTrait('wintermelon') || this.hasTrait('cattail')) projType = 'wintermelon';
-                    if (this.hasTrait('cattail')) projType = 'cattail';
+                    if (this.hasTrait('wintermelon')) projType = 'wintermelon';
+                    if (this.hasTrait('cattail')) {
+                         if (this.hasTrait('wintermelon')) projType = 'cattail_wintermelon';
+                         else if (this.hasTrait('melonpult')) projType = 'cattail_melon';
+                         else projType = 'cattail';
+                    }
                     
                     if (this.hasTrait('threepeater') && hasZombieAhead) {
                         for (let dRow = -1; dRow <= 1; dRow++) {
