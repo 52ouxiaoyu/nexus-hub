@@ -172,7 +172,7 @@ class Plant extends Entity {
             else if (type === 'fusion_nutshooter') { p1 = 'peashooter'; p2 = 'wallnut'; }
             else if (type === 'fusion_frostbomb') { p1 = 'snowpea'; p2 = 'cherrybomb'; }
             else if (type === 'fusion_sporemine') { p1 = 'puffshroom'; p2 = 'potatomine'; }
-            else if (type === 'fusion_spikynut') { p1 = 'chomper'; p2 = 'wallnut'; }
+            else if (type === 'fusion_spikynut') { p1 = 'spikeweed'; p2 = 'wallnut'; }
             else if (type === 'fusion_snownut') { p1 = 'snowpea'; p2 = 'wallnut'; }
             else {
                 const parts = type.split('_');
@@ -251,12 +251,20 @@ class Plant extends Entity {
                     this.fusionOverlay.style.transform = 'translate(0px, -30px) scale(0.9)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_spikynut') {
-                    this.element.src = s2.src;
-                    this.fusionOverlay.src = s1.src;
-                    // Chomper has a huge head/jaw, keep almost all of it
-                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 85%, 0 85%)'; 
-                    this.fusionOverlay.style.transform = 'translate(0px, -25px) scale(0.9)';
-                    this.fusionOverlay.style.transformOrigin = 'center center';
+                    this.yOffset = s2.yOffset; // use wallnut's offset for the main body
+                    this.element.src = s2.src; // wallnut
+                    this.fusionOverlay.src = s1.src; // spikeweed
+                    this.fusionOverlay.style.clipPath = 'none'; // show full spikeweed
+                    // Spikeweed needs to be placed at the bottom of the wallnut
+                    // Wallnut is at -15, Spikeweed normally at 25. Difference is 40.
+                    this.fusionOverlay.style.transform = 'translate(0px, 40px)';
+                } else if (type === 'fusion_spikerock_tallnut') {
+                    this.yOffset = s2.yOffset; // use tallnut's offset
+                    this.element.src = s2.src; // tallnut
+                    this.fusionOverlay.src = s1.src; // spikerock
+                    this.fusionOverlay.style.clipPath = 'none'; // show full spikerock
+                    // Tallnut is at -20, Spikerock normally at 20. Difference is 40.
+                    this.fusionOverlay.style.transform = 'translate(0px, 40px)';
                 } else if (type === 'fusion_snownut') {
                     // Wallnut colored ice blue
                     this.element.src = s2.src; // wallnut
