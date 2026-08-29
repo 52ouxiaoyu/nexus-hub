@@ -238,22 +238,22 @@ class Game {
             potatomine: '土豆地雷', chomper: '大嘴花', tallnut: '高坚果', puffshroom: '小喷菇',
             fumeshroom: '大喷菇', sunshroom: '阳光菇', scaredyshroom: '胆小菇', iceshroom: '寒冰菇',
             doomshroom: '毁灭菇', spikeweed: '地刺', threepeater: '三线射手', splitpea: '裂荚射手',
-            gatlingpea: '机枪射手', twinsunflower: '双子向日葵', torchwood: '火炬树桩', garlic: '大蒜'
+            gatlingpea: '机枪射手', twinsunflower: '双子向日葵', torchwood: '火炬树桩', garlic: '大蒜',
+            fusion_peaflower: '豌豆向日葵', fusion_nutshooter: '坚果射手', fusion_frostbomb: '冰霜樱桃炸弹',
+            fusion_sporemine: '孢子地雷', fusion_spikynut: '尖刺坚果', fusion_snownut: '寒冰坚果'
         };
-        if (type.startsWith('fusion_')) {
-            const parts = type.split('_');
-            return (names[parts[1]] || parts[1]) + '·' + (names[parts[2]] || parts[2]);
-        }
         return names[type] || type;
     }
 
     getFusionResult(plantA, plantB) {
-        if (plantA === 'crater' || plantB === 'crater') return null;
-        if (plantA === plantB) return null; // No fusing with itself
-        
-        // Sort alphabetically to ensure consistent fusion type name
-        const arr = [plantA, plantB].sort();
-        return `fusion_${arr[0]}_${arr[1]}`;
+        const set = new Set([plantA, plantB]);
+        if (set.has('peashooter') && set.has('sunflower')) return 'fusion_peaflower';
+        if (set.has('wallnut') && set.has('peashooter')) return 'fusion_nutshooter';
+        if (set.has('snowpea') && set.has('cherrybomb')) return 'fusion_frostbomb';
+        if (set.has('puffshroom') && set.has('potatomine')) return 'fusion_sporemine';
+        if (set.has('wallnut') && set.has('chomper')) return 'fusion_spikynut';
+        if (set.has('wallnut') && set.has('snowpea')) return 'fusion_snownut';
+        return null;
     }
     
     tryPlanting(type, row, col) {

@@ -137,11 +137,22 @@ class Plant extends Entity {
             return stat;
         };
         
+
         if (type.startsWith('fusion_')) {
-            const parts = type.split('_');
-            const p1 = parts[1];
-            const p2 = parts[2];
+            let p1, p2;
+            if (type === 'fusion_peaflower') { p1 = 'peashooter'; p2 = 'sunflower'; }
+            else if (type === 'fusion_nutshooter') { p1 = 'peashooter'; p2 = 'wallnut'; }
+            else if (type === 'fusion_frostbomb') { p1 = 'snowpea'; p2 = 'cherrybomb'; }
+            else if (type === 'fusion_sporemine') { p1 = 'puffshroom'; p2 = 'potatomine'; }
+            else if (type === 'fusion_spikynut') { p1 = 'chomper'; p2 = 'wallnut'; }
+            else if (type === 'fusion_snownut') { p1 = 'snowpea'; p2 = 'wallnut'; }
+            else {
+                const parts = type.split('_');
+                p1 = parts[1];
+                p2 = parts[2];
+            }
             this.traits = [p1, p2];
+
             
             const s1 = getStats(p1);
             const s2 = getStats(p2);
@@ -168,19 +179,33 @@ class Plant extends Entity {
             
             this.element.src = s1.src;
             
-            // CSS Frankenstein Stitching
-            this.element.style.clipPath = 'polygon(0 40%, 100% 40%, 100% 100%, 0 100%)'; // Base plant gets bottom 60%
+            // Visuals
+            const customImages = {
+                'fusion_peaflower': 'assets/images/Plants/Fusions/peaflower.png',
+                'fusion_nutshooter': 'assets/images/Plants/Fusions/nutshooter.png'
+            };
             
-            this.fusionOverlay = document.createElement('img');
-            this.fusionOverlay.src = s2.src;
-            this.fusionOverlay.style.position = 'absolute';
-            this.fusionOverlay.style.pointerEvents = 'none';
-            this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 40%, 0 40%)'; // Secondary plant gets top 40%
-            this.fusionOverlay.style.zIndex = '1';
-            // add a cool glowing filter to indicate fusion
-            this.element.style.filter = 'drop-shadow(0px 0px 5px #ff00ff)';
-            this.fusionOverlay.style.filter = 'drop-shadow(0px 0px 5px #ff00ff)';
-            this.game.entityLayer.appendChild(this.fusionOverlay);
+            if (customImages[type]) {
+                // Use custom single sprite!
+                this.element.src = customImages[type];
+                this.element.style.width = '70px';
+                this.element.style.height = '70px';
+                this.element.style.objectFit = 'contain';
+                this.element.style.transform = 'scale(1.2)';
+            } else {
+                // CSS Frankenstein Stitching for others
+                this.element.style.clipPath = 'polygon(0 40%, 100% 40%, 100% 100%, 0 100%)'; // Base plant gets bottom 60%
+                
+                this.fusionOverlay = document.createElement('img');
+                this.fusionOverlay.src = s2.src;
+                this.fusionOverlay.style.position = 'absolute';
+                this.fusionOverlay.style.pointerEvents = 'none';
+                this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 40%, 0 40%)'; // Secondary plant gets top 40%
+                this.fusionOverlay.style.zIndex = '1';
+                this.element.style.filter = 'drop-shadow(0px 0px 5px #ff00ff)';
+                this.fusionOverlay.style.filter = 'drop-shadow(0px 0px 5px #ff00ff)';
+                this.game.entityLayer.appendChild(this.fusionOverlay);
+            }
             
         } else {
             this.traits = [type];
