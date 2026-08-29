@@ -293,12 +293,14 @@ class Plant extends Entity {
                     this.element.src = 'assets/images/Plants/ScaredyShroom/ScaredyShroom.gif';
                     this.yOffset = 0;
                 }
-                if (this.isHiding) return;
             }
             
-            if (this.hasTrait('potatomine') && !this.isArmed) return;
+            let skipShooting = false;
+            if (this.hasTrait('scaredyshroom') && this.isHiding) skipShooting = true;
+            if (this.hasTrait('potatomine') && !this.isArmed) skipShooting = true;
             
-            this.fireTimer += deltaTime;
+            if (!skipShooting) {
+                this.fireTimer += deltaTime;
             if (this.fireTimer >= this.fireRate) {
                 const maxRange = (this.hasTrait('puffshroom') || this.hasTrait('fumeshroom')) ? 300 : 9999;
                 
@@ -361,6 +363,7 @@ class Plant extends Entity {
                 }
             }
         }
+            }
         
         if ((this.hasTrait('sunflower') || this.hasTrait('sunshroom') || this.hasTrait('twinsunflower'))) {
             this.sunTimer += deltaTime;
@@ -574,6 +577,9 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                 if (this.armTimer <= 0) {
                     this.isArmed = true;
                     this.element.src = 'assets/images/Plants/PotatoMine/PotatoMine.gif';
+                    if (this.type === 'fusion_sporemine' && this.fusionOverlay) {
+                        this.fusionOverlay.style.transform = 'translate(0px, -35px) scale(0.9)';
+                    }
                 }
             } else if (!this.hasExploded) {
                 const zombieNear = this.game.entities.some(e => 
