@@ -235,6 +235,8 @@ class Game {
         const gloveBtn = document.getElementById('glove-bank');
         this.isGloveActive = false;
         this.gloveSource = null;
+        if (this._fusionUIInit) return;
+        this._fusionUIInit = true;
         
         gloveBtn.addEventListener('click', () => {
             this.isGloveActive = !this.isGloveActive;
