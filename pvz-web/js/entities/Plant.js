@@ -130,6 +130,12 @@ class Plant extends Entity {
             stat.sunRate = 24.0;
             stat.sunTimer = 0;
             stat.src = 'assets/images/Plants/TwinSunflower/TwinSunflower1.gif';
+        } else if (type === 'cattail') {
+            stat.hp = 300;
+            stat.fireRate = 0.5;
+            stat.fireTimer = 0;
+            stat.src = 'assets/images/Plants/Cattail/Cattail.gif';
+            stat.yOffset = -20;
         } else if (type === 'torchwood') {
             stat.hp = 300;
             stat.src = 'assets/images/Plants/Torchwood/Torchwood.gif';
@@ -322,7 +328,7 @@ class Plant extends Entity {
         
         if (this.isDead) return;
         
-        if ((this.hasTrait('peashooter') || this.hasTrait('snowpea') || this.hasTrait('repeater') || this.hasTrait('puffshroom') || this.hasTrait('threepeater') || this.hasTrait('fumeshroom') || this.hasTrait('gatlingpea') || this.hasTrait('splitpea') || this.hasTrait('scaredyshroom') || this.hasTrait('melonpult') || this.hasTrait('wintermelon'))) {
+        if ((this.hasTrait('peashooter') || this.hasTrait('snowpea') || this.hasTrait('repeater') || this.hasTrait('puffshroom') || this.hasTrait('threepeater') || this.hasTrait('fumeshroom') || this.hasTrait('gatlingpea') || this.hasTrait('splitpea') || this.hasTrait('scaredyshroom') || this.hasTrait('melonpult') || this.hasTrait('wintermelon') || this.hasTrait('cattail'))) {
             
             // Handle Scaredy-shroom hiding
             if (this.hasTrait('scaredyshroom')) {
@@ -365,7 +371,12 @@ class Plant extends Entity {
                     );
                 }
                 
-                if (hasZombieAhead || hasZombieBehind) {
+                let cattailTarget = null;
+                if (this.hasTrait('cattail')) {
+                    cattailTarget = this.game.entities.find(e => e instanceof Zombie && !e.isDead);
+                }
+                
+                if (hasZombieAhead || hasZombieBehind || cattailTarget) {
                     this.fireTimer = 0;
                     
                     let projType = 'peashooter';
@@ -374,7 +385,8 @@ class Plant extends Entity {
                     if (this.hasTrait('scaredyshroom')) projType = 'scaredyshroom';
                     if (this.hasTrait('fumeshroom')) projType = 'fumeshroom';
                     if (this.hasTrait('melonpult')) projType = 'melon';
-                    if (this.hasTrait('wintermelon')) projType = 'wintermelon';
+                    if (this.hasTrait('wintermelon') || this.hasTrait('cattail')) projType = 'wintermelon';
+                    if (this.hasTrait('cattail')) projType = 'cattail';
                     
                     if (this.hasTrait('threepeater') && hasZombieAhead) {
                         for (let dRow = -1; dRow <= 1; dRow++) {
@@ -385,14 +397,15 @@ class Plant extends Entity {
                         }
                     } else {
                         // Forward shot
-                        if (hasZombieAhead) {
-                            this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15, this.row, projType));
+                        if (hasZombieAhead || cattailTarget) {
+                            let target = this.hasTrait('cattail') ? cattailTarget : null;
+                            this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15, this.row, projType, target));
                             
-                            const repeatCount = this.hasTrait('gatlingpea') ? 4 : (this.hasTrait('repeater') ? 2 : 1);
+                            const repeatCount = this.hasTrait('gatlingpea') ? 4 : ((this.hasTrait('repeater') || this.hasTrait('cattail')) ? 2 : 1);
                             for (let i = 1; i < repeatCount; i++) {
                                 setTimeout(() => {
                                     if (!this.isDead) {
-                                        this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15, this.row, projType));
+                                        this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15, this.row, projType, target));
                                     }
                                 }, 150 * i);
                             }

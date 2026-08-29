@@ -1,6 +1,7 @@
 class Projectile extends Entity {
-    constructor(game, x, y, row, type = 'peashooter') {
+    constructor(game, x, y, row, type = 'peashooter', targetZombie = null) {
         super(game, x, y);
+        this.targetZombie = targetZombie;
         this.row = row;
         this.speed = 300; // pixels per second
         this.damage = 20;
@@ -23,6 +24,11 @@ class Projectile extends Entity {
             this.element.style.transform = 'scale(1.5)';
             this.element.style.filter = 'hue-rotate(180deg) saturate(1.5) brightness(1.2)';
             this.damage = 60;
+        } else if (type === 'cattail') {
+            this.element.src = 'assets/images/Plants/Cactus/Projectile32.png';
+            this.element.style.transform = 'scale(0.8)';
+            this.damage = 20;
+            this.speed = 400;
         } else if (type === 'puffshroom') {
             this.element.src = 'assets/images/Plants/ShroomBullet.gif';
         } else if (type === 'fumeshroom') {
@@ -41,7 +47,22 @@ class Projectile extends Entity {
     
     update(deltaTime) {
         super.update(deltaTime);
-        this.x += this.speed * deltaTime;
+        if (this.type === 'cattail' && this.targetZombie && !this.targetZombie.isDead) {
+            let dx = this.targetZombie.x + 40 - this.x;
+            let dy = this.targetZombie.y + 50 - this.y;
+            let dist = Math.hypot(dx, dy);
+            if (dist > 0) {
+                this.x += (dx / dist) * this.speed * deltaTime;
+                this.y += (dy / dist) * this.speed * deltaTime;
+            }
+            if (dist < 30) {
+                 this.targetZombie.takeDamage(this.damage);
+                 this.isDead = true;
+                 return;
+            }
+        } else {
+            this.x += this.speed * deltaTime;
+        }
         
         if (this.type === 'fumeshroom' && Math.abs(this.x - this.startX) > 300) {
             this.isDead = true;
