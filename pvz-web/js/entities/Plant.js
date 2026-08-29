@@ -107,6 +107,7 @@ class Plant extends Entity {
         } else if (type === 'doomshroom') {
             this.hp = 300;
             this.explodeTimer = 1.0;
+            this.state = 'idle';
             this.element.src = 'assets/images/Plants/DoomShroom/DoomShroom.gif';
         } else if (type === 'splitpea') {
             this.hp = 300;
@@ -265,9 +266,7 @@ class Plant extends Entity {
                         // Deal damage
                         const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead);
                         for (let z of zombies) {
-                            if (Math.abs(z.row - this.row) <= 2 && Math.abs(z.x - this.x) < 300) {
-                                z.takeDamage(1800);
-                            }
+                            z.takeDamage(9999); // Full screen nuke
                         }
                         
                         setTimeout(() => {
