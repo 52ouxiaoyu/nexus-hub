@@ -91,6 +91,36 @@ class Zombie extends Entity {
             this.walkSrc = 'assets/images/Zombies/JackinTheBoxZombie/Walk.gif';
             this.attackSrc = 'assets/images/Zombies/JackinTheBoxZombie/Attack.gif';
             this.dieSrc = 'assets/images/Zombies/JackinTheBoxZombie/Die.gif';
+        } else if (type === 'ladder') {
+            this.hp = 500; this.maxHp = 500;
+            this.speed = 30; // fast
+            this.hasLadder = true;
+            this.element.src = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombie.gif';
+            this.walkSrc = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombie.gif';
+            this.attackSrc = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this.element.style.filter = 'sepia(1) hue-rotate(20deg) saturate(2)'; // give a wooden tint
+        } else if (type === 'pogo') {
+            this.hp = 340; this.maxHp = 340;
+            this.speed = 35; // fast
+            this.element.src = 'assets/images/Zombies/PoleVaultingZombie/PoleVaultingZombie.gif';
+            this.walkSrc = 'assets/images/Zombies/PoleVaultingZombie/PoleVaultingZombie.gif';
+            this.attackSrc = 'assets/images/Zombies/PoleVaultingZombie/PoleVaultingZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/PoleVaultingZombie/PoleVaultingZombieDie.gif';
+            this.element.style.filter = 'hue-rotate(90deg)'; // green tint
+            this.yOffset = -50;
+        } else if (type === 'gargantuar') {
+            this.hp = 4000; this.maxHp = 4000;
+            this.speed = 10; // slow
+            this.hasThrownImps = false;
+            this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this.yOffset = -80;
+            this.element.style.transform = 'scale(2.5)';
+            this.element.style.transformOrigin = 'bottom center';
+            this.element.style.filter = 'brightness(0.8) contrast(1.2)';
         } else if (type === 'imp') {
             this.hp = 100; this.maxHp = 100;
             this.speed = 35; // fast
@@ -227,6 +257,16 @@ class Zombie extends Entity {
         
         if (this.state === 'DYING') return;
         
+        // Gargantuar throw imps logic
+        if (this.type === 'gargantuar' && this.hp < 2000 && !this.hasThrownImps) {
+            this.hasThrownImps = true;
+            for (let i = 0; i < 2; i++) {
+                let imp = new Zombie(this.game, this.row, 'imp');
+                imp.x = Math.max(100, this.x - 150 - (i * 40));
+                this.game.entities.push(imp);
+            }
+        }
+
         if (this.state === 'WALKING') {
             this.x -= currentSpeed * deltaTime;
             
@@ -238,22 +278,57 @@ class Zombie extends Entity {
                 e instanceof Plant && 
                 (!e.hasTrait || !e.hasTrait('spikeweed')) &&
                 e.row === this.row && 
-                Math.abs(e.x - this.x) < 40 
+                Math.abs(e.x - this.x) < 40 &&
+                !e.isDead && e.type !== 'crater'
             );
             
-            if (plant && !plant.isDead && plant.type !== 'crater') {
-                if (this.type === 'polevaulting' && !this.hasVaulted && (!plant.hasTrait || !plant.hasTrait('tallnut'))) {
+            if (plant) {
+                // Ignore plants with ladders (except gargantuar and zomboni who smash it)
+                if (plant.hasLadder && this.type !== 'gargantuar' && this.type !== 'zomboni') {
+                    // Just walk past it!
+                } else if (this.type === 'pogo') {
+                    // Pogo jumps over all plants directly!
+                } else if (this.type === 'ladder' && this.hasLadder && (plant.hasTrait('wallnut') || plant.hasTrait('tallnut'))) {
+                    // Place ladder
+                    this.hasLadder = false;
+                    plant.hasLadder = true;
+                    this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
+                    this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
+                    this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
+                    this.element.style.filter = '';
+                    
+                    // Create visual ladder on plant
+                    let ladderImg = document.createElement('img');
+                    ladderImg.src = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombie.gif'; // using screen door as mock ladder
+                    ladderImg.style.position = 'absolute';
+                    ladderImg.style.left = '0';
+                    ladderImg.style.top = '0';
+                    ladderImg.style.width = '100%';
+                    ladderImg.style.height = '100%';
+                    ladderImg.style.filter = 'sepia(1) hue-rotate(20deg) saturate(2)';
+                    ladderImg.style.clipPath = 'polygon(50% 0, 100% 0, 100% 100%, 50% 100%)'; // just show half of it as a ladder
+                    plant.element.parentNode.appendChild(ladderImg);
+                    plant.ladderOverlay = ladderImg; // keep reference to clean up on death
+                    
+                } else if (this.type === 'polevaulting' && !this.hasVaulted && (!plant.hasTrait || !plant.hasTrait('tallnut'))) {
                     // Jump over it!
                     this.hasVaulted = true;
                     this.state = 'JUMPING';
-                    this.jumpTimer = 1.0; // 1 second jump
+                    this.jumpTimer = 1.0; 
                     this.jumpDuration = 1.0;
                     this.jumpStartX = this.x;
                     this.element.src = 'assets/images/Zombies/PoleVaultingZombie/PoleVaultingZombieJump.gif';
-                    this.jumpTargetX = Math.max(40, plant.x - 80); // land behind plant but not past game over line
-                } else if (this.type === 'zomboni') {
-                    // Crush it!
-                    plant.hp = 0;
+                    this.jumpTargetX = Math.max(40, plant.x - 80); 
+                } else if (this.type === 'zomboni' || this.type === 'gargantuar') {
+                    // Crush it! (Gargantuar smashes instantly when entering eating, let's just make it stop and eat, but it instantly kills in EATING logic)
+                    if (this.type === 'zomboni') {
+                        plant.hp = 0;
+                    } else {
+                        this.state = 'EATING';
+                        this.eatTarget = plant;
+                        this.element.src = this.attackSrc;
+                        this.smashTimer = 1.0; // Gargantuar takes 1 second to smash
+                    }
                 } else {
                     this.state = 'EATING';
                     this.eatTarget = plant;
@@ -323,7 +398,17 @@ class Zombie extends Entity {
                     this.eatTarget = null;
                     this.element.src = this.walkSrc;
                 } else {
-                    this.eatTarget.hp -= currentDamage * deltaTime;
+                    if (this.type === 'gargantuar') {
+                        if (!this.smashTimer) this.smashTimer = 1.0;
+                        this.smashTimer -= deltaTime;
+                        if (this.smashTimer <= 0) {
+                            this.eatTarget.hp = 0; // instantly kill
+                            this.game.audioManager.play('splat');
+                            this.smashTimer = 1.0;
+                        }
+                    } else {
+                        this.eatTarget.hp -= currentDamage * deltaTime;
+                    }
                     
                     if (this.eatTarget.hasTrait && (this.eatTarget.hasTrait('spikeweed') || this.eatTarget.hasTrait('chomper'))) {
                         this.hp -= 20 * deltaTime; // reflect damage

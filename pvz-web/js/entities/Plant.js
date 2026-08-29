@@ -378,6 +378,9 @@ class Plant extends Entity {
             if (this.fusionOverlay && this.fusionOverlay.parentNode) {
                 this.fusionOverlay.parentNode.removeChild(this.fusionOverlay);
             }
+            if (this.ladderOverlay && this.ladderOverlay.parentNode) {
+                this.ladderOverlay.parentNode.removeChild(this.ladderOverlay);
+            }
             return;
         }
         
