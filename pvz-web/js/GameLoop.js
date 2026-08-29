@@ -270,8 +270,8 @@ class Game {
         });
         
         const recipes = [
-            { a: 'peashooter', b: 'sunflower', result: '豌豆向日葵', img: 'assets/images/Plants/Fusions/peaflower.png', css: false },
-            { a: 'peashooter', b: 'wallnut', result: '坚果射手', img: 'assets/images/Plants/Fusions/nutshooter.png', css: false },
+            { a: 'peashooter', b: 'sunflower', result: '豌豆向日葵', base: 'assets/images/Plants/SunFlower/SunFlower1.gif', over: 'assets/images/Plants/Peashooter/Peashooter.gif', overClip: 'polygon(30% 0%, 100% 0%, 100% 45%, 30% 45%)', overTransform: 'translate(-2px, -8px) scale(0.9)' },
+            { a: 'peashooter', b: 'wallnut', result: '坚果射手', base: 'assets/images/Plants/WallNut/WallNut.gif', over: 'assets/images/Plants/Peashooter/Peashooter.gif', overClip: 'polygon(30% 0%, 100% 0%, 100% 45%, 30% 45%)', overTransform: 'translate(10px, 5px) scale(0.9)' },
             { a: 'snowpea', b: 'cherrybomb', result: '冰霜樱桃炸弹', img: 'assets/images/Plants/CherryBomb/CherryBomb.gif', filter: 'hue-rotate(180deg) saturate(1.5)', css: false },
             { a: 'puffshroom', b: 'potatomine', result: '孢子地雷', base: 'assets/images/Plants/PotatoMine/PotatoMine.gif', over: 'assets/images/Plants/PuffShroom/PuffShroom.gif', overClip: 'polygon(0 0, 100% 0, 100% 50%, 0 50%)', overTransform: 'translate(0px, -25px) scale(0.9)' },
             { a: 'chomper', b: 'wallnut', result: '尖刺坚果', base: 'assets/images/Plants/WallNut/WallNut.gif', over: 'assets/images/Plants/Chomper/Chomper.gif', overClip: 'polygon(0 0, 100% 0, 100% 60%, 0 60%)', overTransform: 'translate(0px, -30px) scale(0.85)' },
