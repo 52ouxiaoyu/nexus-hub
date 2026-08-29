@@ -280,7 +280,9 @@ class Game {
             { a: 'melonpult', b: 'iceshroom', result: '冰西瓜投手', img: 'assets/images/Plants/MelonPult/MelonPult.gif', filter: 'hue-rotate(200deg) saturate(1.5) brightness(1.2)', css: false },
             { a: 'repeater', b: 'spikeweed', result: '猫尾草', img: 'assets/images/Plants/Cattail/Cattail.gif', css: false },
             { a: 'fumeshroom', b: 'fumeshroom', result: '忧郁菇', img: 'assets/images/Plants/GloomShroom/GloomShroom.gif', css: false },
-            { a: 'spikeweed', b: 'spikeweed', result: '钢地刺', img: 'assets/images/Plants/Spikerock/Spikerock.gif', css: false }
+            { a: 'spikeweed', b: 'spikeweed', result: '钢地刺', img: 'assets/images/Plants/Spikerock/Spikerock.gif', css: false },
+            { a: 'spikeweed', b: 'wallnut', result: '尖刺坚果', img: 'assets/images/Plants/WallNut/WallNut.gif', css: false },
+            { a: 'spikerock', b: 'tallnut', result: '钢刺高坚果', img: 'assets/images/Plants/TallNut/TallNut.gif', css: false }
         ];
         
         const list = document.getElementById('recipe-list');
@@ -393,7 +395,8 @@ class Game {
             }
             
             // Try to fuse
-            const fusionType = this.getFusionResult(this.gloveSource.type, plant.type);
+            let fusionType = null;
+            try { fusionType = this.getFusionResult(this.gloveSource.type, plant.type); } catch(e) { console.error(e); }
             if (fusionType) {
                 this.gloveSource.element.style.display = 'block'; // Reset display before dying to ensure cleanup
                 this.gloveSource.hp = 0; // kill source
@@ -402,11 +405,13 @@ class Game {
                 this.board.grid[this.gloveSource.row][this.gloveSource.col] = null;
                 this.board.grid[row][col] = null;
                 
-                let newPlant = new Plant(this, fusionType);
-                if (this.board.addPlant(newPlant, row, col)) {
-                    if (this.audioManager) this.audioManager.play('btn');
-                    this.showAnnouncement(`融合成功：${this.getPlantName(fusionType)}!`, '#ff00ff');
-                }
+                try {
+                    let newPlant = new Plant(this, fusionType);
+                    if (this.board.addPlant(newPlant, row, col)) {
+                        if (this.audioManager) this.audioManager.play('btn');
+                        this.showAnnouncement(`融合成功：${this.getPlantName(fusionType)}!`, '#ff00ff');
+                    }
+                } catch(e) { console.error(e); }
             } else {
                 this.gloveSource.element.style.display = 'block';
                 if (this.gloveSource.fusionOverlay) this.gloveSource.fusionOverlay.style.display = 'block';
@@ -433,7 +438,8 @@ class Game {
             gatlingpea: '机枪射手', twinsunflower: '双子向日葵', torchwood: '火炬树桩', garlic: '大蒜',
             fusion_peaflower: '豌豆向日葵', fusion_nutshooter: '坚果射手', fusion_frostbomb: '寒冰炸弹',
             fusion_sporemine: '孢子地雷', fusion_spikynut: '尖刺坚果', fusion_snownut: '寒冰坚果',
-            fusion_cherrybomb_peashooter: '樱桃射手', fusion_doomshroom_sunflower: '毁灭向日葵'
+            fusion_cherrybomb_peashooter: '樱桃射手', fusion_doomshroom_sunflower: '毁灭向日葵',
+            fusion_spikerock_tallnut: '钢刺高坚果'
         };
         return names[type] || type;
     }
@@ -448,10 +454,12 @@ class Game {
         
         const set = new Set([plantA, plantB]);
         if (set.has('peashooter') && set.has('sunflower')) return 'fusion_peaflower';
+        if (set.has('spikeweed') && set.has('wallnut')) return 'fusion_spikynut';
+        if (set.has('spikerock') && set.has('tallnut')) return 'fusion_spikerock_tallnut';
         if (set.has('wallnut') && set.has('peashooter')) return 'fusion_nutshooter';
         if (set.has('snowpea') && set.has('cherrybomb')) return 'fusion_frostbomb';
         if (set.has('puffshroom') && set.has('potatomine')) return 'fusion_sporemine';
-        if (set.has('wallnut') && set.has('chomper')) return 'fusion_spikynut';
+
         if (set.has('wallnut') && set.has('snowpea')) return 'fusion_snownut';
         if (set.has('peashooter') && set.has('iceshroom')) return 'snowpea';
         if (set.has('peashooter') && set.has('squash')) return 'splitpea';

@@ -305,13 +305,17 @@ class Plant extends Entity {
             if (pos.row >= 0 && pos.row < this.game.board.rows && pos.col >= 0 && pos.col < this.game.board.cols) {
                 const targetPlant = this.game.board.grid[pos.row][pos.col];
                 if (targetPlant && !targetPlant.isDead && targetPlant !== this) {
-                    const fusionResult = this.game.getFusionResult(this.type, targetPlant.type);
-                    if (fusionResult) {
-                        targetPlant.hp = 0;
-                        this.game.board.grid[pos.row][pos.col] = null;
-                        let newPlant = new Plant(this.game, fusionResult);
-                        this.game.board.addPlant(newPlant, pos.row, pos.col);
-                        this.game.showAnnouncement(`爆炸融合成功：${this.game.getPlantName(fusionResult)}!`, '#ff00ff');
+                    try {
+                        const fusionResult = this.game.getFusionResult(this.type, targetPlant.type);
+                        if (fusionResult) {
+                            targetPlant.hp = 0;
+                            this.game.board.grid[pos.row][pos.col] = null;
+                            let newPlant = new Plant(this.game, fusionResult);
+                            this.game.board.addPlant(newPlant, pos.row, pos.col);
+                            this.game.showAnnouncement(`爆炸融合成功：${this.game.getPlantName(fusionResult)}!`, '#ff00ff');
+                        }
+                    } catch (e) {
+                        console.error("Fusion error", e);
                     }
                 }
             }
@@ -580,7 +584,9 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     }, 1000); // Swell lasts 1 sec
                 }
             }
-        } else if (this.hasTrait('wallnut') || this.hasTrait('tallnut')) {
+        }
+        
+        if (this.hasTrait('wallnut') || this.hasTrait('tallnut')) {
             const maxHp = this.hasTrait('wallnut') ? 4000 : 8000;
             const path = this.hasTrait('wallnut') ? 'WallNut' : 'TallNut';
             const name = this.hasTrait('wallnut') ? 'Wallnut_cracked' : 'TallnutCracked';
@@ -590,7 +596,9 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
             } else if (this.hp < maxHp * 0.66 && this.element.src.indexOf(name + '1') === -1 && this.hp >= maxHp * 0.33) {
                 this.element.src = `assets/images/Plants/${path}/${name}1.gif`;
             }
-        } else if (this.hasTrait('spikeweed') || this.hasTrait('spikerock')) {
+        }
+        
+        if (this.hasTrait('spikeweed') || this.hasTrait('spikerock')) {
             this.damageTimer += deltaTime;
             if (this.damageTimer >= 1.0) { // Deal damage every 1s
                 this.damageTimer = 0;
@@ -605,7 +613,9 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     }
                 }
             }
-        } else if (this.hasTrait('gloomshroom')) {
+        }
+        
+        if (this.hasTrait('gloomshroom')) {
             this.fireTimer += deltaTime;
             if (this.fireTimer >= 1.5) {
                 const zombies = this.game.entities.filter(e => 
