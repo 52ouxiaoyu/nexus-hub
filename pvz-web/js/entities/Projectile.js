@@ -1,13 +1,16 @@
 class Projectile extends Entity {
-    constructor(game, x, y, row, type = 'peashooter', targetZombie = null) {
+    constructor(game, x, y, row, type = 'peashooter', targetZombie = null, vx = None, vy = None) {
         super(game, x, y);
         this.targetZombie = targetZombie;
         this.row = row;
+        this.vx = vx;
+        this.vy = vy;
         this.speed = 300; // pixels per second
         this.damage = 20;
         this.radius = 10;
         this.type = type;
         this.startX = x;
+        this.startY = y;
         this.hitZombies = new Set(); // For piercing projectiles
         
         if (type === 'snowpea') {
@@ -29,8 +32,9 @@ class Projectile extends Entity {
             this.element.style.transform = 'scale(0.8)';
             this.damage = 20;
             this.speed = 400;
-        } else if (type === 'puffshroom') {
+        } else if (type === 'puffshroom' || type === 'gloom_puff') {
             this.element.src = 'assets/images/Plants/ShroomBullet.gif';
+            if (type === 'gloom_puff') this.damage = 40;
         } else if (type === 'fumeshroom') {
             this.element.src = 'assets/images/Plants/ShroomBullet.gif'; // Fallback for sprite sheet
             this.speed = 400; // Moves faster but dies early
@@ -59,6 +63,27 @@ class Projectile extends Entity {
                  this.targetZombie.takeDamage(this.damage);
                  this.isDead = true;
                  return;
+            }
+        } else if (this.vx !== undefined && this.vy !== undefined && this.vx !== null && this.vy !== null) {
+            this.x += this.vx * deltaTime;
+            this.y += this.vy * deltaTime;
+            
+            // Gloom-shroom projectile collision
+            if (this.type === 'gloom_puff') {
+                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead);
+                for (let z of zombies) {
+                    let dx = z.x + 40 - this.x;
+                    let dy = z.y + 50 - this.y;
+                    if (Math.hypot(dx, dy) < 40) {
+                        z.takeDamage(this.damage);
+                        this.isDead = true;
+                        break;
+                    }
+                }
+                // Range limit (1.5 cells)
+                if (Math.hypot(this.x - this.startX, this.y - this.startY) > 120) {
+                    this.isDead = true;
+                }
             }
         } else {
             this.x += this.speed * deltaTime;

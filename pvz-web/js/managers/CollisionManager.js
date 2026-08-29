@@ -12,7 +12,7 @@ class CollisionManager {
         
         for (let p of projectiles) {
             for (let z of zombies) {
-                if (p.row === z.row && p.type !== 'cattail') {
+                if (p.row === z.row && p.type !== 'cattail' && p.type !== 'gloom_puff') {
                     if (p.x + p.radius > z.x - 30 && p.x - p.radius < z.x + 30) {
                         if (p.type === 'fumeshroom') {
                             if (!p.hitZombies.has(z)) {
