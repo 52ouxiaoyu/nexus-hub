@@ -743,10 +743,10 @@ class Game {
         if (!this.announcementUI) {
             this.announcementUI = document.createElement('div');
             this.announcementUI.style.position = 'absolute';
-            this.announcementUI.style.top = '30%';
+            this.announcementUI.style.bottom = '10%';
             this.announcementUI.style.left = '50%';
-            this.announcementUI.style.transform = 'translate(-50%, -50%)';
-            this.announcementUI.style.fontSize = '60px';
+            this.announcementUI.style.transform = 'translate(-50%, 0)';
+            this.announcementUI.style.fontSize = '24px';
             this.announcementUI.style.fontWeight = 'bold';
             this.announcementUI.style.textShadow = '4px 4px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000';
             this.announcementUI.style.zIndex = '5000';
