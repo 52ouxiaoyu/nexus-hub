@@ -469,6 +469,13 @@ class Plant extends Entity {
         }
             }
         
+        if (this.hasTrait('sunshroom')) {
+            this.growthTimer += deltaTime;
+            if (this.growthTimer >= 10.0 && this.sunCountDrop < 4) {
+                this.sunCountDrop++;
+                this.growthTimer = 0;
+            }
+        }
         if ((this.hasTrait('sunflower') || this.hasTrait('sunshroom') || this.hasTrait('twinsunflower'))) {
             this.sunTimer += deltaTime;
             if (this.sunTimer >= this.sunRate) {
@@ -479,8 +486,8 @@ class Plant extends Entity {
 let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || this.hasTrait('repeater');
                 let sunValue = isHybridSun ? 15 : 25;
                 let sun = new Sun(this.game, this.x, this.y - 20, targetY);
+                sun.value = sunValue;
                 if (isHybridSun) {
-                    sun.value = 15;
                     sun.element.style.transform = 'scale(0.6)';
                 }
                 this.game.entities.push(sun);
