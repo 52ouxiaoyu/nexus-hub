@@ -197,20 +197,18 @@ class Plant extends Entity {
                 this.fusionOverlay.style.zIndex = '1';
                 
                 if (type === 'fusion_peaflower') {
-                    // Sunflower body, Peashooter snout on the face
                     this.element.src = s2.src;
                     this.fusionOverlay.src = s1.src;
-                    // Clip out just the Peashooter head/snout (roughly top 40%, right 60%)
-                    this.fusionOverlay.style.clipPath = 'polygon(30% 0%, 100% 0%, 100% 45%, 30% 45%)';
-                    this.fusionOverlay.style.transform = 'translate(-2px, -8px) scale(0.9)';
+                    // Keep the entire Peashooter head (remove just the stem)
+                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 65%, 0 65%)';
+                    this.fusionOverlay.style.transform = 'translate(0px, -20px) scale(1.0)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_nutshooter') {
-                    // Wallnut body, Peashooter snout on the face
                     this.element.src = s2.src;
                     this.fusionOverlay.src = s1.src;
-                    // Same clip path for the snout
-                    this.fusionOverlay.style.clipPath = 'polygon(30% 0%, 100% 0%, 100% 45%, 30% 45%)';
-                    this.fusionOverlay.style.transform = 'translate(10px, 5px) scale(0.9)';
+                    // Keep the entire Peashooter head
+                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 65%, 0 65%)';
+                    this.fusionOverlay.style.transform = 'translate(5px, -15px) scale(1.0)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_frostbomb') {
                     this.element.src = s2.src;
@@ -225,9 +223,9 @@ class Plant extends Entity {
                 } else if (type === 'fusion_spikynut') {
                     this.element.src = s2.src;
                     this.fusionOverlay.src = s1.src;
-                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 60%, 0 60%)'; 
-                    // Chomper head worn as a large hat on Wallnut. Chomper is big, so scale down slightly and move up
-                    this.fusionOverlay.style.transform = 'translate(0px, -30px) scale(0.85)';
+                    // Chomper has a huge head/jaw, keep almost all of it
+                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 85%, 0 85%)'; 
+                    this.fusionOverlay.style.transform = 'translate(0px, -25px) scale(0.9)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_snownut') {
                     // Wallnut colored ice blue
