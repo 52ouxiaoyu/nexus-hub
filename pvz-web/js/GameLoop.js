@@ -230,15 +230,30 @@ class Game {
         this.updateUI();
     }
     
+
+    getPlantName(type) {
+        const names = {
+            sunflower: '向日葵', peashooter: '豌豆射手', wallnut: '坚果墙', cherrybomb: '樱桃炸弹',
+            snowpea: '寒冰射手', repeater: '双发射手', squash: '窝瓜', jalapeno: '火爆辣椒',
+            potatomine: '土豆地雷', chomper: '大嘴花', tallnut: '高坚果', puffshroom: '小喷菇',
+            fumeshroom: '大喷菇', sunshroom: '阳光菇', scaredyshroom: '胆小菇', iceshroom: '寒冰菇',
+            doomshroom: '毁灭菇', spikeweed: '地刺', threepeater: '三线射手', splitpea: '裂荚射手',
+            gatlingpea: '机枪射手', twinsunflower: '双子向日葵', torchwood: '火炬树桩', garlic: '大蒜'
+        };
+        if (type.startsWith('fusion_')) {
+            const parts = type.split('_');
+            return (names[parts[1]] || parts[1]) + '·' + (names[parts[2]] || parts[2]);
+        }
+        return names[type] || type;
+    }
+
     getFusionResult(plantA, plantB) {
-        const set = new Set([plantA, plantB]);
-        if (set.has('peashooter') && set.has('sunflower')) return 'peaflower';
-        if (set.has('wallnut') && set.has('peashooter')) return 'nutshooter';
-        if (set.has('snowpea') && set.has('cherrybomb')) return 'frostbomb';
-        if (set.has('puffshroom') && set.has('potatomine')) return 'sporemine';
-        if (set.has('wallnut') && set.has('chomper')) return 'spikynut';
-        if (set.has('wallnut') && set.has('snowpea')) return 'snownut';
-        return null;
+        if (plantA === 'crater' || plantB === 'crater') return null;
+        if (plantA === plantB) return null; // No fusing with itself
+        
+        // Sort alphabetically to ensure consistent fusion type name
+        const arr = [plantA, plantB].sort();
+        return `fusion_${arr[0]}_${arr[1]}`;
     }
     
     tryPlanting(type, row, col) {
@@ -262,7 +277,7 @@ class Game {
                 existingPlant.hp = 0;
                 this.board.grid[row][col] = null; // force clear to allow addPlant
                 if (this.audioManager) this.audioManager.play('btn'); // fusion sound
-                this.showAnnouncement(`融合成功：${fusionType}!`, '#ff00ff');
+                this.showAnnouncement(`融合成功：${this.getPlantName(fusionType)}!`, '#ff00ff');
             }
             
             if (this.board.addPlant(plant, row, col)) {

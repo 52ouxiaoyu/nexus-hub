@@ -325,10 +325,10 @@ class Zombie extends Entity {
                 } else {
                     this.eatTarget.hp -= currentDamage * deltaTime;
                     
-                    if (this.eatTarget.isSpiky) {
+                    if (this.eatTarget.hasTrait && (this.eatTarget.hasTrait('spikeweed') || this.eatTarget.hasTrait('chomper'))) {
                         this.hp -= 20 * deltaTime; // reflect damage
                     }
-                    if (this.eatTarget.isFrosty && !this.isSlowed) {
+                    if (this.eatTarget.hasTrait && this.eatTarget.hasTrait('snowpea') && !this.isSlowed) {
                         this.isSlowed = true;
                         this.slowTimer = 10.0;
                     }
