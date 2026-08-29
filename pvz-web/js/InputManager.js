@@ -20,6 +20,10 @@ class InputManager {
                 if (this.game.sunCount >= cost) {
                     this.selectedSeed = type;
                     this.isShovelSelected = false;
+                    this.game.isGloveActive = false;
+                    if(document.getElementById('glove-bank')) document.getElementById('glove-bank').style.background = 'rgba(0,0,0,0.5)';
+                    if(this.game.gloveSource) { this.game.gloveSource.element.style.filter = ''; this.game.gloveSource = null; }
+                    this.game.container.style.cursor = 'default';
                     this.updateDragGhost(e.clientX, e.clientY, type);
                     this.game.audioManager.play('btn');
                 }
@@ -29,6 +33,10 @@ class InputManager {
         document.getElementById('shovel').addEventListener('mousedown', (e) => {
             this.isShovelSelected = true;
             this.selectedSeed = null;
+            this.game.isGloveActive = false;
+            if(document.getElementById('glove-bank')) document.getElementById('glove-bank').style.background = 'rgba(0,0,0,0.5)';
+            if(this.game.gloveSource) { this.game.gloveSource.element.style.filter = ''; this.game.gloveSource = null; }
+            this.game.container.style.cursor = 'default';
             this.updateDragGhost(e.clientX, e.clientY, 'shovel');
             this.game.audioManager.play('btn');
         });
@@ -45,6 +53,17 @@ class InputManager {
         });
         
         this.container.addEventListener('mouseup', (e) => {
+            if (this.game.isGloveActive) {
+                const rect = this.container.getBoundingClientRect();
+                const scale = window.gameScale || 1;
+                const mouseX = (e.clientX - rect.left) / scale;
+                const mouseY = (e.clientY - rect.top) / scale;
+                const gridPos = this.game.board.getGridPos(mouseX, mouseY);
+                if (gridPos) {
+                    this.game.tryGloveInteraction(gridPos.row, gridPos.col);
+                }
+                return;
+            }
             if (this.selectedSeed || this.isShovelSelected) {
                 const rect = this.container.getBoundingClientRect();
                 const scale = window.gameScale || 1;
