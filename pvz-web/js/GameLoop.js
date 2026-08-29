@@ -278,7 +278,9 @@ class Game {
             { a: 'peashooter', b: 'cherrybomb', result: '樱桃射手', img: 'assets/images/Plants/Peashooter/Peashooter.gif', filter: 'hue-rotate(-45deg) saturate(2.0)', css: false },
             { a: 'sunflower', b: 'doomshroom', result: '毁灭向日葵', img: 'assets/images/Plants/SunFlower/SunFlower1.gif', filter: 'grayscale(0.8) brightness(0.6) sepia(1) hue-rotate(240deg) saturate(3)', css: false },
             { a: 'melonpult', b: 'iceshroom', result: '冰西瓜投手', img: 'assets/images/Plants/MelonPult/MelonPult.gif', filter: 'hue-rotate(200deg) saturate(1.5) brightness(1.2)', css: false },
-            { a: 'repeater', b: 'spikeweed', result: '猫尾草', img: 'assets/images/Plants/Cattail/Cattail.gif', css: false }
+            { a: 'repeater', b: 'spikeweed', result: '猫尾草', img: 'assets/images/Plants/Cattail/Cattail.gif', css: false },
+            { a: 'fumeshroom', b: 'fumeshroom', result: '忧郁菇', img: 'assets/images/Plants/GloomShroom/GloomShroom.gif', css: false },
+            { a: 'spikeweed', b: 'spikeweed', result: '钢地刺', img: 'assets/images/Plants/Spikerock/Spikerock.gif', css: false }
         ];
         
         const list = document.getElementById('recipe-list');
@@ -308,7 +310,9 @@ class Game {
                     'jalapeno': 'assets/images/Plants/Jalapeno/Jalapeno.gif',
                     'melonpult': 'assets/images/Plants/MelonPult/MelonPult.gif',
                     'wintermelon': 'assets/images/Plants/MelonPult/MelonPult.gif',
-                    'cattail': 'assets/images/Plants/Cattail/Cattail.gif'
+                    'cattail': 'assets/images/Plants/Cattail/Cattail.gif',
+                    'gloomshroom': 'assets/images/Plants/GloomShroom/GloomShroom.gif',
+                    'spikerock': 'assets/images/Plants/Spikerock/Spikerock.gif'
                 };
                 return map[t] || '';
             };
@@ -454,6 +458,8 @@ class Game {
         if (set.has('melonpult') && set.has('iceshroom')) return 'wintermelon';
         if (set.has('repeater') && set.has('spikeweed')) return 'cattail';
         if (set.has('puffshroom') && set.has('sunflower')) return 'sunshroom';
+        if (plantA === 'fumeshroom' && plantB === 'fumeshroom') return 'gloomshroom';
+        if (plantA === 'spikeweed' && plantB === 'spikeweed') return 'spikerock';
         if (set.has('puffshroom') && set.has('peashooter')) return 'scaredyshroom';
         if (set.has('wallnut') && set.has('jalapeno')) return 'torchwood';
         return null;

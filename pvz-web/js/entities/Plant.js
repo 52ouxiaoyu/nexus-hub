@@ -93,6 +93,16 @@ class Plant extends Entity {
             stat.fireRate = 1.5;
             stat.fireTimer = 0;
             stat.src = 'assets/images/Plants/FumeShroom/FumeShroom.gif';
+        } else if (type === 'gloomshroom') {
+            stat.hp = 300;
+            stat.fireRate = 1.5;
+            stat.fireTimer = 0;
+            stat.src = 'assets/images/Plants/GloomShroom/GloomShroom.gif';
+            stat.yOffset = -10;
+        } else if (type === 'spikerock') {
+            stat.hp = 1200;
+            stat.src = 'assets/images/Plants/Spikerock/Spikerock.gif';
+            stat.yOffset = 20;
         } else if (type === 'sunshroom') {
             stat.hp = 300;
             stat.sunRate = 24.0;
@@ -277,6 +287,35 @@ class Plant extends Entity {
         if (this.type === trait) return true;
         if (this.traits && this.traits.includes(trait)) return true;
         return false;
+    }
+    
+    triggerBombFusion() {
+        const fusions = [ {row: this.row, col: this.col} ];
+        
+        if (this.hasTrait('cherrybomb') || this.hasTrait('iceshroom')) {
+            for (let r = -1; r <= 1; r++) {
+                for (let c = -1; c <= 1; c++) {
+                    if (r === 0 && c === 0) continue;
+                    fusions.push({ row: this.row + r, col: this.col + c });
+                }
+            }
+        }
+        
+        for (let pos of fusions) {
+            if (pos.row >= 0 && pos.row < this.game.board.rows && pos.col >= 0 && pos.col < this.game.board.cols) {
+                const targetPlant = this.game.board.grid[pos.row][pos.col];
+                if (targetPlant && !targetPlant.isDead && targetPlant !== this) {
+                    const fusionResult = this.game.getFusionResult(this.type, targetPlant.type);
+                    if (fusionResult) {
+                        targetPlant.hp = 0;
+                        this.game.board.grid[pos.row][pos.col] = null;
+                        let newPlant = new Plant(this.game, fusionResult);
+                        this.game.board.addPlant(newPlant, pos.row, pos.col);
+                        this.game.showAnnouncement(`爆炸融合成功：${this.game.getPlantName(fusionResult)}!`, '#ff00ff');
+                    }
+                }
+            }
+        }
     }
     
     update(deltaTime) {
@@ -551,7 +590,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
             } else if (this.hp < maxHp * 0.66 && this.element.src.indexOf(name + '1') === -1 && this.hp >= maxHp * 0.33) {
                 this.element.src = `assets/images/Plants/${path}/${name}1.gif`;
             }
-        } else if (this.hasTrait('spikeweed')) {
+        } else if (this.hasTrait('spikeweed') || this.hasTrait('spikerock')) {
             this.damageTimer += deltaTime;
             if (this.damageTimer >= 1.0) { // Deal damage every 1s
                 this.damageTimer = 0;
@@ -561,7 +600,22 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                 if (zombies.length > 0) {
                     this.game.audioManager.play('splat'); // Or a spikeweed sound
                     for (let z of zombies) {
-                        z.takeDamage(40); // small damage over time
+                        const dmg = this.hasTrait('spikerock') ? 160 : 40;
+                        z.takeDamage(dmg); 
+                    }
+                }
+            }
+        } else if (this.hasTrait('gloomshroom')) {
+            this.fireTimer += deltaTime;
+            if (this.fireTimer >= 1.5) {
+                const zombies = this.game.entities.filter(e => 
+                    e instanceof Zombie && !e.isDead && Math.abs(e.row - this.row) <= 1 && Math.abs(e.x - this.x) <= 150
+                );
+                if (zombies.length > 0) {
+                    this.fireTimer = 0;
+                    this.game.audioManager.play('splat');
+                    for (let z of zombies) {
+                        z.takeDamage(40); // 2x fumeshroom damage
                     }
                 }
             }
