@@ -168,6 +168,15 @@ class Game {
         seedBank.innerHTML = ''; // clear
         this.cooldowns = {};
         
+        if (this.fusionMode) {
+            document.getElementById('glove-bank').style.display = 'flex';
+            document.getElementById('recipe-book-btn').style.display = 'flex';
+            this.initFusionUI();
+        } else {
+            document.getElementById('glove-bank').style.display = 'none';
+            document.getElementById('recipe-book-btn').style.display = 'none';
+        }
+        
         // Setup random events (Delay time-based events, favor score-based)
         this.eventTimer = 150 + Math.random() * 60; // First time-based event between 2.5 to 3.5 minutes
         this.scoreMilestones = [100, 300, 500, 800, 1200, 1800, 2500, 3500, 5000]; // Events trigger specifically at these scores
