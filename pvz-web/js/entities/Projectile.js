@@ -17,11 +17,11 @@ class Projectile extends Entity {
             this.damage = 40;
         } else if (type === 'melon') {
             this.element.src = 'assets/images/Plants/MelonPult/Melon.gif';
-            this.element.style.transform = 'scale(0.5)';
+            this.element.style.transform = 'scale(1.0)';
             this.damage = 60;
         } else if (type === 'wintermelon') {
             this.element.src = 'assets/images/Plants/MelonPult/Melon.gif';
-            this.element.style.transform = 'scale(0.5)';
+            this.element.style.transform = 'scale(1.0)';
             this.element.style.filter = 'hue-rotate(200deg) saturate(1.5) brightness(1.2)';
             this.damage = 60;
         } else if (type === 'cattail') {
