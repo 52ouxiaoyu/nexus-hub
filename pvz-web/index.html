@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1788090720">
+    <link rel="stylesheet" href="css/style.css?v=1788091009">
 </head>
 <body>
     <div id="game-container">
@@ -69,12 +69,12 @@
             <img src="assets/images/interface/Logo.png" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none;">
             <div id="start-version" style="position: absolute; bottom: 10px; right: 15px; color: rgba(255,255,255,0.7); font-size: 14px; font-family: monospace; z-index: 2001; text-shadow: 1px 1px 2px black;">加载版本号...</div>
             
-            <!-- 玩家名字（WELCOME BACK 下方深棕色框内） -->
-            <div id="player-name" style="position: absolute; left: 14px; top: 188px; width: 70px; text-align: center; color: #f5e6c8; font-family: Impact, 'Arial Black', 'STHeiti', sans-serif; font-size: 19px; letter-spacing: 2px; z-index: 2002; text-shadow: 2px 2px 0 #3a2a10, 1px 1px 0 #000;">区耀丁</div>
+            <!-- 玩家名字（木牌 WELCOME BACK 与 IF THIS IS NOT YOU 之间的深色区） -->
+            <div id="player-name" style="position: absolute; left: 100px; top: 228px; width: 160px; text-align: center; color: #f5e6c8; font-family: Impact, 'Arial Black', 'STHeiti', sans-serif; font-size: 22px; letter-spacing: 4px; z-index: 2002; text-shadow: 2px 2px 0 #2a1a08, 1px 1px 0 #000;">区耀丁</div>
             
-            <div style="position: absolute; left: 355px; top: 152px; display: flex; flex-direction: column; gap: 4px; z-index: 2002;">
-                <button id="btn-adventure" style="width: 280px; background: linear-gradient(#6ab04c, #3d8b2f); border: 3px solid #2E7D32; color: white; padding: 8px 10px; font-size: 22px; font-family: Impact, 'Arial Black', 'STHeiti', sans-serif; font-weight: bold; border-radius: 10px; cursor: pointer; text-shadow: 2px 2px 3px #000; box-shadow: 0 4px 8px rgba(0,0,0,0.6); transition: transform 0.1s;">经典冒险</button>
-                <button id="btn-fusion" style="width: 280px; background: linear-gradient(#ab4fc4, #7a2f96); border: 3px solid #6A1B9A; color: white; padding: 8px 10px; font-size: 22px; font-family: Impact, 'Arial Black', 'STHeiti', sans-serif; font-weight: bold; border-radius: 10px; cursor: pointer; text-shadow: 2px 2px 3px #000; box-shadow: 0 4px 8px rgba(0,0,0,0.6); transition: transform 0.1s;">融合进化</button>
+            <div style="position: absolute; left: 300px; top: 152px; display: flex; flex-direction: column; gap: 12px; z-index: 2002;">
+                <button id="btn-adventure" style="width: 350px; background: linear-gradient(#a8a8b8, #6c6c80); border: 3px solid #4a4a5c; color: #111; padding: 10px 12px; font-size: 24px; font-family: Impact, 'Arial Black', 'STHeiti', sans-serif; font-weight: bold; border-radius: 14px; cursor: pointer; text-shadow: 1px 1px 0 rgba(255,255,255,0.35); box-shadow: 0 4px 8px rgba(0,0,0,0.55), inset 0 2px 3px rgba(255,255,255,0.25); transition: transform 0.1s;">经典冒险</button>
+                <button id="btn-fusion" style="width: 350px; background: linear-gradient(#a8a8b8, #6c6c80); border: 3px solid #4a4a5c; color: #111; padding: 10px 12px; font-size: 24px; font-family: Impact, 'Arial Black', 'STHeiti', sans-serif; font-weight: bold; border-radius: 14px; cursor: pointer; text-shadow: 1px 1px 0 rgba(255,255,255,0.35); box-shadow: 0 4px 8px rgba(0,0,0,0.55), inset 0 2px 3px rgba(255,255,255,0.25); transition: transform 0.1s;">融合进化</button>
             </div>
         </div>
     </div>
@@ -122,16 +122,16 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1788090720"></script>
-    <script src="js/Board.js?v=1788090720"></script>
-    <script src="js/entities/Entity.js?v=1788090720"></script>
-    <script src="js/entities/Plant.js?v=1788090720"></script>
-    <script src="js/entities/Zombie.js?v=1788090720"></script>
-    <script src="js/entities/Projectile.js?v=1788090720"></script>
-    <script src="js/entities/Sun.js?v=1788090720"></script>
-    <script src="js/managers/WaveManager.js?v=1788090720"></script>
-    <script src="js/managers/CollisionManager.js?v=1788090720"></script>
-    <script src="js/managers/EventManager.js?v=1788090720"></script>
-    <script src="js/GameLoop.js?v=1788090720"></script>
+    <script src="js/InputManager.js?v=1788091009"></script>
+    <script src="js/Board.js?v=1788091009"></script>
+    <script src="js/entities/Entity.js?v=1788091009"></script>
+    <script src="js/entities/Plant.js?v=1788091009"></script>
+    <script src="js/entities/Zombie.js?v=1788091009"></script>
+    <script src="js/entities/Projectile.js?v=1788091009"></script>
+    <script src="js/entities/Sun.js?v=1788091009"></script>
+    <script src="js/managers/WaveManager.js?v=1788091009"></script>
+    <script src="js/managers/CollisionManager.js?v=1788091009"></script>
+    <script src="js/managers/EventManager.js?v=1788091009"></script>
+    <script src="js/GameLoop.js?v=1788091009"></script>
 </body>
 </html>
