@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1788090189">
+    <link rel="stylesheet" href="css/style.css?v=1788090720">
 </head>
 <body>
     <div id="game-container">
@@ -69,9 +69,12 @@
             <img src="assets/images/interface/Logo.png" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none;">
             <div id="start-version" style="position: absolute; bottom: 10px; right: 15px; color: rgba(255,255,255,0.7); font-size: 14px; font-family: monospace; z-index: 2001; text-shadow: 1px 1px 2px black;">加载版本号...</div>
             
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; gap: 20px; z-index: 2002;">
-                <button id="btn-adventure" style="background-color: #4CAF50; border: 4px solid #2E7D32; color: white; padding: 15px 40px; font-size: 28px; font-family: monospace; font-weight: bold; border-radius: 30px; cursor: pointer; text-shadow: 2px 2px 4px #000; box-shadow: 0 10px 20px rgba(0,0,0,0.5); transition: transform 0.1s;">经典冒险模式</button>
-                <button id="btn-fusion" style="background-color: #9C27B0; border: 4px solid #6A1B9A; color: white; padding: 15px 40px; font-size: 28px; font-family: monospace; font-weight: bold; border-radius: 30px; cursor: pointer; text-shadow: 2px 2px 4px #000; box-shadow: 0 10px 20px rgba(0,0,0,0.5); transition: transform 0.1s;">🔬 融合进化版 🧬</button>
+            <!-- 玩家名字（WELCOME BACK 下方深棕色框内） -->
+            <div id="player-name" style="position: absolute; left: 14px; top: 188px; width: 70px; text-align: center; color: #f5e6c8; font-family: Impact, 'Arial Black', 'STHeiti', sans-serif; font-size: 19px; letter-spacing: 2px; z-index: 2002; text-shadow: 2px 2px 0 #3a2a10, 1px 1px 0 #000;">区耀丁</div>
+            
+            <div style="position: absolute; left: 355px; top: 152px; display: flex; flex-direction: column; gap: 4px; z-index: 2002;">
+                <button id="btn-adventure" style="width: 280px; background: linear-gradient(#6ab04c, #3d8b2f); border: 3px solid #2E7D32; color: white; padding: 8px 10px; font-size: 22px; font-family: Impact, 'Arial Black', 'STHeiti', sans-serif; font-weight: bold; border-radius: 10px; cursor: pointer; text-shadow: 2px 2px 3px #000; box-shadow: 0 4px 8px rgba(0,0,0,0.6); transition: transform 0.1s;">经典冒险</button>
+                <button id="btn-fusion" style="width: 280px; background: linear-gradient(#ab4fc4, #7a2f96); border: 3px solid #6A1B9A; color: white; padding: 8px 10px; font-size: 22px; font-family: Impact, 'Arial Black', 'STHeiti', sans-serif; font-weight: bold; border-radius: 10px; cursor: pointer; text-shadow: 2px 2px 3px #000; box-shadow: 0 4px 8px rgba(0,0,0,0.6); transition: transform 0.1s;">融合进化</button>
             </div>
         </div>
     </div>
@@ -119,16 +122,16 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1788090189"></script>
-    <script src="js/Board.js?v=1788090189"></script>
-    <script src="js/entities/Entity.js?v=1788090189"></script>
-    <script src="js/entities/Plant.js?v=1788090189"></script>
-    <script src="js/entities/Zombie.js?v=1788090189"></script>
-    <script src="js/entities/Projectile.js?v=1788090189"></script>
-    <script src="js/entities/Sun.js?v=1788090189"></script>
-    <script src="js/managers/WaveManager.js?v=1788090189"></script>
-    <script src="js/managers/CollisionManager.js?v=1788090189"></script>
-    <script src="js/managers/EventManager.js?v=1788090189"></script>
-    <script src="js/GameLoop.js?v=1788090189"></script>
+    <script src="js/InputManager.js?v=1788090720"></script>
+    <script src="js/Board.js?v=1788090720"></script>
+    <script src="js/entities/Entity.js?v=1788090720"></script>
+    <script src="js/entities/Plant.js?v=1788090720"></script>
+    <script src="js/entities/Zombie.js?v=1788090720"></script>
+    <script src="js/entities/Projectile.js?v=1788090720"></script>
+    <script src="js/entities/Sun.js?v=1788090720"></script>
+    <script src="js/managers/WaveManager.js?v=1788090720"></script>
+    <script src="js/managers/CollisionManager.js?v=1788090720"></script>
+    <script src="js/managers/EventManager.js?v=1788090720"></script>
+    <script src="js/GameLoop.js?v=1788090720"></script>
 </body>
 </html>
