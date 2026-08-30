@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1788091801">
+    <link rel="stylesheet" href="css/style.css?v=1788092443">
 </head>
 <body>
     <div id="game-container">
@@ -69,12 +69,12 @@
             <img src="assets/images/interface/Logo.png" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none;">
             <div id="start-version" style="position: absolute; bottom: 10px; right: 15px; color: rgba(255,255,255,0.7); font-size: 14px; font-family: monospace; z-index: 2001; text-shadow: 1px 1px 2px black;">加载版本号...</div>
             
-            <!-- 玩家名字（木牌 WELCOME BACK 正下方深棕色窄条带，红圈位置） -->
-            <div id="player-name" style="position: absolute; left: 60px; top: 148px; width: 180px; text-align: center; color: #f5e6c8; font-family: Impact, 'Arial Black', 'STHeiti', sans-serif; font-size: 21px; letter-spacing: 5px; z-index: 2002; text-shadow: 2px 2px 0 #2a1a08, 1px 1px 0 #000;">区耀丁</div>
+            <!-- 玩家名字（木牌 WELCOME BACK 正下方红圈位置） -->
+            <div id="player-name" style="position: absolute; left: 50px; top: 140px; width: 200px; text-align: center; color: #f5e6c8; font-family: Impact, 'Arial Black', 'STHeiti', sans-serif; font-size: 22px; letter-spacing: 4px; z-index: 2002; text-shadow: 2px 2px 0 #2a1a08, 1px 1px 0 #000;">区耀丁</div>
             
-            <div style="position: absolute; left: 300px; top: 150px; display: flex; flex-direction: column; gap: 10px; z-index: 2002;">
-                <button id="btn-adventure" style="width: 280px; height: 72px; background: linear-gradient(rgb(120,120,145) 0%, rgb(82,82,105) 50%, rgb(95,95,118) 100%); border: 3px solid #3a3a4c; border-top-left-radius: 140px; border-top-right-radius: 140px; border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; color: #111; font-size: 22px; font-family: Impact, 'Arial Black', serif; font-weight: bold; letter-spacing: 2px; cursor: pointer; text-shadow: 1px 1px 0 rgba(255,255,255,0.25); box-shadow: 0 4px 8px rgba(0,0,0,0.6), inset 0 3px 6px rgba(0,0,0,0.35), inset 0 -2px 4px rgba(255,255,255,0.15); transition: transform 0.1s;">经典冒险</button>
-                <button id="btn-fusion" style="width: 280px; height: 72px; background: linear-gradient(rgb(120,120,145) 0%, rgb(82,82,105) 50%, rgb(95,95,118) 100%); border: 3px solid #3a3a4c; border-top-left-radius: 140px; border-top-right-radius: 140px; border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; color: #111; font-size: 22px; font-family: Impact, 'Arial Black', serif; font-weight: bold; letter-spacing: 2px; cursor: pointer; text-shadow: 1px 1px 0 rgba(255,255,255,0.25); box-shadow: 0 4px 8px rgba(0,0,0,0.6), inset 0 3px 6px rgba(0,0,0,0.35), inset 0 -2px 4px rgba(255,255,255,0.15); transition: transform 0.1s;">融合进化</button>
+            <div style="position: absolute; left: 220px; top: 60px; display: flex; flex-direction: column; gap: 18px; z-index: 2003;">
+                <button id="btn-adventure" style="width: 500px; height: 95px; background: linear-gradient(rgb(95,95,118) 0%, rgb(72,72,92) 50%, rgb(82,82,105) 100%); border: 4px solid #383848; border-top-left-radius: 250px; border-top-right-radius: 250px; border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; color: #0a0a0a; font-size: 28px; font-family: Impact, 'Arial Black', serif; font-weight: bold; letter-spacing: 3px; cursor: pointer; text-shadow: 1px 1px 0 rgba(220,220,230,0.4); box-shadow: 0 5px 10px rgba(0,0,0,0.6), inset 0 4px 8px rgba(0,0,0,0.4), inset 0 -3px 6px rgba(200,200,210,0.15); transition: transform 0.1s;">经典冒险</button>
+                <button id="btn-fusion" style="width: 500px; height: 95px; background: linear-gradient(rgb(95,95,118) 0%, rgb(72,72,92) 50%, rgb(82,82,105) 100%); border: 4px solid #383848; border-top-left-radius: 250px; border-top-right-radius: 250px; border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; color: #0a0a0a; font-size: 28px; font-family: Impact, 'Arial Black', serif; font-weight: bold; letter-spacing: 3px; cursor: pointer; text-shadow: 1px 1px 0 rgba(220,220,230,0.4); box-shadow: 0 5px 10px rgba(0,0,0,0.6), inset 0 4px 8px rgba(0,0,0,0.4), inset 0 -3px 6px rgba(200,200,210,0.15); transition: transform 0.1s;">融合进化</button>
             </div>
         </div>
     </div>
@@ -122,16 +122,16 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1788091801"></script>
-    <script src="js/Board.js?v=1788091801"></script>
-    <script src="js/entities/Entity.js?v=1788091801"></script>
-    <script src="js/entities/Plant.js?v=1788091801"></script>
-    <script src="js/entities/Zombie.js?v=1788091801"></script>
-    <script src="js/entities/Projectile.js?v=1788091801"></script>
-    <script src="js/entities/Sun.js?v=1788091801"></script>
-    <script src="js/managers/WaveManager.js?v=1788091801"></script>
-    <script src="js/managers/CollisionManager.js?v=1788091801"></script>
-    <script src="js/managers/EventManager.js?v=1788091801"></script>
-    <script src="js/GameLoop.js?v=1788091801"></script>
+    <script src="js/InputManager.js?v=1788092443"></script>
+    <script src="js/Board.js?v=1788092443"></script>
+    <script src="js/entities/Entity.js?v=1788092443"></script>
+    <script src="js/entities/Plant.js?v=1788092443"></script>
+    <script src="js/entities/Zombie.js?v=1788092443"></script>
+    <script src="js/entities/Projectile.js?v=1788092443"></script>
+    <script src="js/entities/Sun.js?v=1788092443"></script>
+    <script src="js/managers/WaveManager.js?v=1788092443"></script>
+    <script src="js/managers/CollisionManager.js?v=1788092443"></script>
+    <script src="js/managers/EventManager.js?v=1788092443"></script>
+    <script src="js/GameLoop.js?v=1788092443"></script>
 </body>
 </html>
