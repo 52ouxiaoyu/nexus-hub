@@ -126,8 +126,13 @@ class InputManager {
             else if (type === 'melonpult') imgName = 'MelonPult/MelonPult';
             else if (type === 'wintermelon') imgName = 'WinterMelon/WinterMelon';
             else if (type === 'cattail') imgName = 'Cattail/Cattail';
-            
-            this.dragGhost.style.backgroundImage = `url('assets/images/Plants/${imgName}.gif?v=1788065463')`;
+
+            // Melon / Winter Melon 图是 PNG，其他植物是 GIF
+            const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon';
+            const url = isMelonSprite
+                ? `assets/images/Plants/${imgName}.png`
+                : `assets/images/Plants/${imgName}.gif`;
+            this.dragGhost.style.backgroundImage = `url('${url}')`;
         }
     }
 }

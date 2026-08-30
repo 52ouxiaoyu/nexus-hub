@@ -153,12 +153,12 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.gif?v=1788065463';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.gif?v=1788065463';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png';
         }
         
 
