@@ -145,7 +145,7 @@ class Plant extends Entity {
             stat.fireRate = 0.5;
             stat.fireTimer = 0;
             stat.src = 'assets/images/Plants/Cattail/Cattail.gif';
-            stat.yOffset = -20;
+            stat.yOffset = 0;
         } else if (type === 'torchwood') {
             stat.hp = 300;
             stat.src = 'assets/images/Plants/Torchwood/Torchwood.gif';
@@ -153,12 +153,12 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788081974';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788088286';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788081974';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788088286';
         }
         
 
