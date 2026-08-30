@@ -127,7 +127,7 @@ class InputManager {
             else if (type === 'wintermelon') imgName = 'WinterMelon/WinterMelon';
             else if (type === 'cattail') imgName = 'Cattail/Cattail';
             
-            this.dragGhost.style.backgroundImage = `url('assets/images/Plants/${imgName}.gif?v=1788042000')`;
+            this.dragGhost.style.backgroundImage = `url('assets/images/Plants/${imgName}.gif?v=1788065463')`;
         }
     }
 }
