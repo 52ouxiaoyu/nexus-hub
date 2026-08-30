@@ -153,12 +153,12 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.gif';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.gif?v=1788042000';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.gif';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.gif?v=1788042000';
         }
         
 
@@ -285,9 +285,6 @@ class Plant extends Entity {
                     this.fusionOverlay.src = s1.src; // melon
                     this.fusionOverlay.style.clipPath = 'none';
                     this.fusionOverlay.style.transform = 'translate(-5px, -30px) scale(0.7)'; // put on top of cattail head
-                    if (type === 'fusion_wintermelon_cattail') {
-                        this.fusionOverlay.style.filter = 'sepia(1) hue-rotate(180deg) saturate(2) brightness(1.2)';
-                    }
                 }
                 
                 this.game.entityLayer.appendChild(this.fusionOverlay);
@@ -298,9 +295,6 @@ class Plant extends Entity {
             const s = getStats(type);
             Object.assign(this, s);
             this.element.src = s.src;
-            if (this.hasTrait('wintermelon')) {
-                this.element.style.filter = 'sepia(1) hue-rotate(180deg) saturate(2) brightness(1.2)';
-            }
         }
         this.maxHp = this.hp;
     }

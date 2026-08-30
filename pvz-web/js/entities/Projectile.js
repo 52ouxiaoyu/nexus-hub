@@ -19,15 +19,14 @@ class Projectile extends Entity {
             this.element.src = 'assets/images/Plants/ShroomBullet.gif';
             this.damage = 40;
         } else if (type === 'melon') {
-            this.element.src = 'assets/images/Plants/MelonPult/Melon.gif';
+            this.element.src = 'assets/images/Plants/MelonPult/Melon.gif?v=1788042000';
             this.element.style.transform = 'scale(1.0)';
             this.element.style.borderRadius = '50%';
             this.damage = 60;
         } else if (type === 'wintermelon') {
-            this.element.src = 'assets/images/Plants/MelonPult/Melon.gif';
+            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon.gif?v=1788042000';
             this.element.style.transform = 'scale(1.0)';
             this.element.style.borderRadius = '50%';
-            this.element.style.filter = 'sepia(1) hue-rotate(180deg) saturate(2) brightness(1.2)';
             this.damage = 60;
         } else if (type === 'cattail') {
             this.element.src = 'assets/images/Plants/Cactus/Projectile32.png';
@@ -35,16 +34,15 @@ class Projectile extends Entity {
             this.damage = 20;
             this.speed = 400;
         } else if (type === 'cattail_melon') {
-            this.element.src = 'assets/images/Plants/MelonPult/Melon.gif';
+            this.element.src = 'assets/images/Plants/MelonPult/Melon_small.gif?v=1788042000';
             this.element.style.transform = 'scale(0.8)';
             this.element.style.borderRadius = '50%';
             this.damage = 60;
             this.speed = 400;
         } else if (type === 'cattail_wintermelon') {
-            this.element.src = 'assets/images/Plants/MelonPult/Melon.gif';
+            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon_small.gif?v=1788042000';
             this.element.style.transform = 'scale(0.8)';
             this.element.style.borderRadius = '50%';
-            this.element.style.filter = 'sepia(1) hue-rotate(180deg) saturate(2) brightness(1.2)';
             this.damage = 60;
             this.speed = 400;
         } else if (type === 'puffshroom' || type === 'gloom_puff') {

@@ -277,7 +277,7 @@ class Game {
             { a: 'snowpea', b: 'wallnut', result: '寒冰坚果', img: 'assets/images/Plants/WallNut/WallNut.gif', filter: 'hue-rotate(180deg) saturate(1.5) brightness(1.2)', css: false },
             { a: 'peashooter', b: 'cherrybomb', result: '樱桃射手', img: 'assets/images/Plants/Peashooter/Peashooter.gif', filter: 'hue-rotate(-45deg) saturate(2.0)', css: false },
             { a: 'sunflower', b: 'doomshroom', result: '毁灭向日葵', img: 'assets/images/Plants/SunFlower/SunFlower1.gif', filter: 'grayscale(0.8) brightness(0.6) sepia(1) hue-rotate(240deg) saturate(3)', css: false },
-            { a: 'melonpult', b: 'iceshroom', result: '冰西瓜投手', img: 'assets/images/Plants/MelonPult/MelonPult.gif', filter: 'hue-rotate(200deg) saturate(1.5) brightness(1.2)', css: false },
+            { a: 'melonpult', b: 'iceshroom', result: '冰西瓜投手', img: 'assets/images/Plants/WinterMelon/WinterMelon.gif?v=1788042000', css: false },
             { a: 'repeater', b: 'spikeweed', result: '猫尾草', img: 'assets/images/Plants/Cattail/Cattail.gif', css: false },
             { a: 'fumeshroom', b: 'fumeshroom', result: '忧郁菇', img: 'assets/images/Plants/GloomShroom/GloomShroom.gif', css: false },
             { a: 'spikeweed', b: 'spikeweed', result: '钢地刺', img: 'assets/images/Plants/Spikerock/Spikerock.gif', css: false },
@@ -310,8 +310,8 @@ class Game {
                     'squash': 'assets/images/Plants/Squash/Squash.gif',
                     'doomshroom': 'assets/images/Plants/DoomShroom/DoomShroom.gif',
                     'jalapeno': 'assets/images/Plants/Jalapeno/Jalapeno.gif',
-                    'melonpult': 'assets/images/Plants/MelonPult/MelonPult.gif',
-                    'wintermelon': 'assets/images/Plants/MelonPult/MelonPult.gif',
+                    'melonpult': 'assets/images/Plants/MelonPult/MelonPult.gif?v=1788042000',
+                    'wintermelon': 'assets/images/Plants/WinterMelon/WinterMelon.gif?v=1788042000',
                     'cattail': 'assets/images/Plants/Cattail/Cattail.gif',
                     'gloomshroom': 'assets/images/Plants/GloomShroom/GloomShroom.gif',
                     'spikerock': 'assets/images/Plants/Spikerock/Spikerock.gif'
@@ -799,5 +799,5 @@ class Game {
 
 // Start game when page loads
 window.onload = () => {
-    new Game();
+    window._pvzGame = new Game();
 };

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1788015039">
+    <link rel="stylesheet" href="css/style.css?v=1788042000">
 </head>
 <body>
     <div id="game-container">
@@ -32,6 +32,9 @@
                 </div>
                 <div id="score-bank" style="margin-left: auto; background-color: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; color: white; font-family: monospace; font-size: 20px; display: flex; align-items: center; border: 2px solid #8b5a2b; height: 34px;">
                     Score: <span id="score-count" style="margin-left: 10px; font-weight: bold; color: #ffd700;">0</span>
+                </div>
+                <div id="version-bank" title="当前游戏版本（变更后请刷新页面）" style="margin-left: 10px; background-color: rgba(0,80,40,0.7); padding: 5px 12px; border-radius: 20px; color: #bdf; font-family: monospace; font-size: 14px; display: flex; align-items: center; border: 2px solid #4a8; height: 34px; cursor: help;">
+                    🏷️ <span id="version-display" style="margin-left: 6px; font-weight: bold;">v?.?.?</span>
                 </div>
                 <button id="btn-speed" style="margin-left: 15px; padding: 5px 15px; border-radius: 20px; font-family: monospace; font-size: 18px; font-weight: bold; background: rgba(0,0,0,0.5); color: #fff; border: 2px solid #8b5a2b; cursor: pointer; text-shadow: 1px 1px 2px black;">Speed: 1x</button>
             </div>
@@ -92,17 +95,37 @@
         }
         window.addEventListener('resize', resizeGame);
         resizeGame();
+
+        // ===== 加载版本号（用户用以判断是否运行最新代码）=====
+        (function loadVersion() {
+            const el = document.getElementById('version-display');
+            if (!el) return;
+            fetch('version.json?t=' + Date.now())
+                .then(r => r.ok ? r.json() : null)
+                .then(v => {
+                    if (v && v.version) {
+                        el.textContent = v.version + ' (build ' + (v.build || '?') + ')';
+                        el.title = (v.feature || '') + '\nasset version: ' + (v.assetVersion || '?');
+                    } else {
+                        el.textContent = 'no version.json';
+                    }
+                })
+                .catch(err => {
+                    el.textContent = 'load err';
+                    console.warn('version.json load failed:', err);
+                });
+        })();
     </script>
-    <script src="js/InputManager.js?v=1788015039"></script>
-    <script src="js/Board.js?v=1788015039"></script>
-    <script src="js/entities/Entity.js?v=1788015039"></script>
-    <script src="js/entities/Plant.js?v=1788015039"></script>
-    <script src="js/entities/Zombie.js?v=1788015039"></script>
-    <script src="js/entities/Projectile.js?v=1788015039"></script>
-    <script src="js/entities/Sun.js?v=1788015039"></script>
-    <script src="js/managers/WaveManager.js?v=1788015039"></script>
-    <script src="js/managers/CollisionManager.js?v=1788015039"></script>
-    <script src="js/managers/EventManager.js?v=1788015039"></script>
-    <script src="js/GameLoop.js?v=1788015039"></script>
+    <script src="js/InputManager.js?v=1788042000"></script>
+    <script src="js/Board.js?v=1788042000"></script>
+    <script src="js/entities/Entity.js?v=1788042000"></script>
+    <script src="js/entities/Plant.js?v=1788042000"></script>
+    <script src="js/entities/Zombie.js?v=1788042000"></script>
+    <script src="js/entities/Projectile.js?v=1788042000"></script>
+    <script src="js/entities/Sun.js?v=1788042000"></script>
+    <script src="js/managers/WaveManager.js?v=1788042000"></script>
+    <script src="js/managers/CollisionManager.js?v=1788042000"></script>
+    <script src="js/managers/EventManager.js?v=1788042000"></script>
+    <script src="js/GameLoop.js?v=1788042000"></script>
 </body>
 </html>

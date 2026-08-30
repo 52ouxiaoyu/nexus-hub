@@ -124,10 +124,10 @@ class InputManager {
             else if (type === 'torchwood') imgName = 'Torchwood/Torchwood';
             else if (type === 'garlic') imgName = 'Garlic/Garlic';
             else if (type === 'melonpult') imgName = 'MelonPult/MelonPult';
-            else if (type === 'wintermelon') imgName = 'MelonPult/MelonPult';
+            else if (type === 'wintermelon') imgName = 'WinterMelon/WinterMelon';
             else if (type === 'cattail') imgName = 'Cattail/Cattail';
             
-            this.dragGhost.style.backgroundImage = `url('assets/images/Plants/${imgName}.gif')`;
+            this.dragGhost.style.backgroundImage = `url('assets/images/Plants/${imgName}.gif?v=1788042000')`;
         }
     }
 }
