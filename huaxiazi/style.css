@@ -80,7 +80,7 @@ ul{list-style:none}
 /* 筛选 */
 .filter-block{margin-bottom:14px}
 .chip-row{
-  display:flex;gap:8px;align-items:center;
+  display:flex;flex-wrap:wrap;gap:8px;align-items:center;
   padding:4px 2px 8px;overflow-x:auto;scrollbar-width:none;
 }
 .chip-row::-webkit-scrollbar{display:none}
