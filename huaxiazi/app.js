@@ -284,11 +284,21 @@ function init(){
   $('#btnCloseModal').addEventListener('click', closeModal);
   $('#modalMask').addEventListener('click', function(e){ if(e.target.id==='modalMask') closeModal(); });
   $('#btnClear').addEventListener('click', function(){
-    if(confirm('确定清空全部打卡、记录和收藏吗？此操作不可恢复。')){
+    var btn = $('#btnClear');
+    if(btn.dataset.arming === '1'){
       history=[]; favs=[]; checkins=[];
       save(); renderToday(); renderFavs(); syncTopStats();
+      btn.dataset.arming = ''; btn.textContent = '清空全部数据'; btn.classList.remove('arming');
       toast('已清空');
+      return;
     }
+    btn.dataset.arming = '1';
+    btn.textContent = '再点一次确认清空';
+    btn.classList.add('arming');
+    clearTimeout(btn._t);
+    btn._t = setTimeout(function(){
+      btn.dataset.arming = ''; btn.textContent = '清空全部数据'; btn.classList.remove('arming');
+    }, 5000);
   });
   $('#gbClose').addEventListener('click', function(){
     $('#guideBanner').style.display='none';

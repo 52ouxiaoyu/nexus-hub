@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('/Users/wujohn/.workbuddy/binaries/node/workspace/node_modules/jsdom');
 
-const dir = '/Users/wujohn/WorkBuddy/2026-08-30-10-56-19/liaoliaobei';
+const dir = __dirname;
 const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
 const topics = fs.readFileSync(path.join(dir, 'topics.js'), 'utf8');
 const app = fs.readFileSync(path.join(dir, 'app.js'), 'utf8');
@@ -95,6 +95,9 @@ check('3-6岁学龄前痛点覆盖（入园/抢玩具/怕黑）',
   pre.filter(b => /抢|打人/.test(b.t)).length >= 5 &&
   pre.filter(b => /怕黑|害怕/.test(b.t)).length >= 5);
 
+// 1.9 弹窗默认隐藏（防一打开就弹设置页）
+check('弹窗初始默认隐藏', $('#modalMask').classList.contains('mask-hidden'));
+
 // 2. 初始抽卡已显示
 const t0 = $('#topicText').textContent;
 check('初始话题非空', t0.length > 4);
@@ -142,6 +145,16 @@ const stored = window.localStorage.getItem('llb_history');
 check('history 已持久化', stored && JSON.parse(stored).length >= 1);
 const storedFavs = window.localStorage.getItem('llb_favs');
 check('favs 已持久化', storedFavs && JSON.parse(storedFavs).length >= 1);
+
+// 9.5 清空数据两步确认（防误触）
+const histBefore = JSON.parse(window.localStorage.getItem('llb_history')).length;
+const clearBtn = $('#btnClear');
+clearBtn.click();
+check('第一次点击：数据未清空', JSON.parse(window.localStorage.getItem('llb_history')).length === histBefore);
+check('第一次点击：按钮变为确认态', clearBtn.textContent === '再点一次确认清空' && clearBtn.classList.contains('arming'));
+clearBtn.click();
+check('第二次点击：数据已清空', JSON.parse(window.localStorage.getItem('llb_history')).length === 0);
+check('第二次点击：按钮恢复', clearBtn.textContent === '清空全部数据' && !clearBtn.classList.contains('arming'));
 
 console.log('\n结果: ' + pass + ' 通过, ' + fail + ' 失败');
 process.exit(fail ? 1 : 0);

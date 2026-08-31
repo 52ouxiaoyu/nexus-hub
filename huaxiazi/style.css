@@ -250,6 +250,8 @@ ul{list-style:none}
   background:#FFF0E8;color:var(--pri-deep);font-size:14px;font-weight:500;
 }
 .m-btn.danger{background:#FCEBEB;color:#C0392B}
+.m-btn.danger.arming{background:#C0392B;color:#fff;animation:arm-pulse .8s infinite alternate}
+@keyframes arm-pulse{from{opacity:1}to{opacity:.75}}
 .mask-hidden{visibility:hidden;opacity:0;transition:opacity .2s}
 .modal-mask:not(.mask-hidden){visibility:visible;opacity:1;transition:opacity .2s}
 
