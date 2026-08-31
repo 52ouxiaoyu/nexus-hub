@@ -153,12 +153,12 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788088286';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788183268';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788088286';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788183268';
         }
         
 
@@ -297,6 +297,11 @@ class Plant extends Entity {
             this.element.src = s.src;
         }
         this.maxHp = this.hp;
+        
+        // 炸弹母体：基础一次性炸弹（樱桃/辣椒/寒冰菇/毁灭菇）种下后不再自动爆炸，
+        // 停留场上作为"融合中心"：可用手套与周围 3×3 内植物多次合成，点击后才引爆。
+        // 融合产物（fusion_*）不受影响，仍按原逻辑自动爆炸。
+        this.isBombHost = (type === 'cherrybomb' || type === 'jalapeno' || type === 'iceshroom' || type === 'doomshroom') && !type.startsWith('fusion_');
     }
 
     hasTrait(trait) {
@@ -308,7 +313,7 @@ class Plant extends Entity {
     triggerBombFusion() {
         const fusions = [ {row: this.row, col: this.col} ];
         
-        if (this.hasTrait('cherrybomb') || this.hasTrait('iceshroom')) {
+        if (this.hasTrait('cherrybomb') || this.hasTrait('iceshroom') || this.hasTrait('doomshroom') || this.hasTrait('jalapeno')) {
             for (let r = -1; r <= 1; r++) {
                 for (let c = -1; c <= 1; c++) {
                     if (r === 0 && c === 0) continue;
@@ -335,6 +340,87 @@ class Plant extends Entity {
                     }
                 }
             }
+        }
+    }
+    
+    // 点击引爆：炸弹母体（樱桃/辣椒/寒冰菇/毁灭菇）种植后停留场上作为融合中心，
+    // 玩家点击后才爆炸。攻击方式、伤害范围与数值保持原版不变。
+    explodeNow() {
+        if (this.isDead) return;
+        
+        if (this.hasTrait('cherrybomb') || this.hasTrait('jalapeno')) {
+            if (this.hasExploded) return;
+            this.hasExploded = true;
+            this.game.audioManager.play('splat');
+            this.triggerBombFusion();
+            
+            const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+            for (let z of zombies) {
+                if (this.hasTrait('cherrybomb') && this.hasTrait('snowpea')) {
+                    if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 100) {
+                        z.takeDamage(900); // half damage
+                        z.isSlowed = true;
+                        z.slowTimer = 10.0;
+                    }
+                } else if (this.hasTrait('cherrybomb')) {
+                    if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 150) {
+                        z.takeDamage(1800);
+                    }
+                } else if (this.hasTrait('jalapeno')) {
+                    if (z.row === this.row) {
+                        z.takeDamage(1800);
+                    }
+                }
+            }
+            
+            if (this.hasTrait('cherrybomb')) {
+                this.element.src = 'assets/images/Plants/CherryBomb/Boom.gif';
+                this.element.style.transform = 'translate(-50%, -50%) scale(1.5)';
+            } else {
+                this.element.src = 'assets/images/Plants/Jalapeno/JalapenoAttack.gif';
+                this.element.style.transform = 'translate(-50%, -50%) scaleX(3)';
+            }
+            
+            setTimeout(() => { this.hp = 0; }, 500);
+        } else if (this.hasTrait('iceshroom')) {
+            this.game.audioManager.play('splat');
+            this.triggerBombFusion();
+            const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+            for (let z of zombies) {
+                z.isSlowed = true;
+                z.slowTimer = 10.0;
+                z.takeDamage(20); // slight damage
+            }
+            this.hp = 0;
+        } else if (this.hasTrait('doomshroom')) {
+            if (this.state !== 'idle') return; // 已处于膨胀/爆炸/弹坑阶段，忽略重复点击
+            this.state = 'swelling';
+            this.element.src = 'assets/images/Plants/DoomShroom/BeginBoom.gif';
+            this.game.audioManager.play('plant'); // some sound
+            setTimeout(() => {
+                this.state = 'exploding';
+                this.game.audioManager.play('splat');
+                this.triggerBombFusion();
+                this.element.src = 'assets/images/Plants/DoomShroom/Boom.png';
+                this.element.style.zIndex = 3000; // Put boom on top
+                this.element.style.transform = 'translate(-50%, -80%)'; // Move boom up a bit
+                
+                // Deal damage
+                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+                for (let z of zombies) {
+                    z.takeDamage(9999); // Full screen nuke
+                }
+                
+                setTimeout(() => {
+                    this.type = 'crater';
+                    this.element.src = 'assets/images/Plants/DoomShroom/crater11.png';
+                    this.element.style.zIndex = 10; // crater stays on bottom
+                    this.element.style.transform = 'translate(-50%, -50%)'; // Reset transform
+                    
+                    // We can just leave the crater visual indefinitely, or kill it after a long time
+                    setTimeout(() => { this.hp = 0; }, 30000); // 30 seconds crater
+                }, 1000); // Boom lasts 1 sec
+            }, 1000); // Swell lasts 1 sec
         }
     }
     
@@ -530,7 +616,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     }
                 }
             }
-        } else if (this.hasTrait('cherrybomb') || this.hasTrait('jalapeno')) {
+        } else if ((this.hasTrait('cherrybomb') || this.hasTrait('jalapeno')) && !this.isBombHost) {
             if (!this.hasExploded) {
                 this.explodeTimer -= deltaTime;
                 if (this.explodeTimer <= 0) {
@@ -568,7 +654,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                 setTimeout(() => { this.hp = 0; }, 500);
                 }
             }
-        } else if (this.hasTrait('iceshroom')) {
+        } else if (this.hasTrait('iceshroom') && !this.isBombHost) {
             this.explodeTimer -= deltaTime;
             if (this.explodeTimer <= 0) {
                 this.game.audioManager.play('splat');
@@ -581,7 +667,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                 }
                 this.hp = 0;
             }
-        } else if (this.hasTrait('doomshroom')) {
+        } else if (this.hasTrait('doomshroom') && !this.isBombHost) {
             if (this.state === 'idle') {
                 this.explodeTimer -= deltaTime;
                 if (this.explodeTimer <= 0) {
