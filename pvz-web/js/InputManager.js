@@ -84,7 +84,7 @@ class InputManager {
                 this.isShovelSelected = false;
                 this.dragGhost.style.display = 'none';
             } else {
-                // 普通点击：点击炸弹母体（樱桃/辣椒/寒冰菇/毁灭菇）→ 引爆（攻击方式不变）
+                // 普通点击：点击已种下的炸弹可立即引爆（不点也会自动爆炸）
                 const rect = this.container.getBoundingClientRect();
                 const scale = window.gameScale || 1;
                 const mouseX = (e.clientX - rect.left) / scale;
@@ -92,7 +92,7 @@ class InputManager {
                 const gridPos = this.game.board.getGridPos(mouseX, mouseY);
                 if (gridPos) {
                     const p = this.game.board.grid[gridPos.row][gridPos.col];
-                    if (p && p.isBombHost && !p.isDead) {
+                    if (p && p.autoExplode && !p.isDead) {
                         p.explodeNow();
                     }
                 }
@@ -143,8 +143,8 @@ class InputManager {
             // Melon / Winter Melon 图是 PNG，其他植物是 GIF
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1788183268`
-                : `assets/images/Plants/${imgName}.gif?v=1788183268`;
+                ? `assets/images/Plants/${imgName}.png?v=1788354862`
+                : `assets/images/Plants/${imgName}.gif?v=1788354862`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
         }
     }

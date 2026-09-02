@@ -153,12 +153,12 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788183268';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788354862';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788183268';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788354862';
         }
         
 
@@ -298,10 +298,10 @@ class Plant extends Entity {
         }
         this.maxHp = this.hp;
         
-        // 炸弹母体：基础一次性炸弹（樱桃/辣椒/寒冰菇/毁灭菇）种下后不再自动爆炸，
-        // 停留场上作为"融合中心"：可用手套与周围 3×3 内植物多次合成，点击后才引爆。
-        // 融合产物（fusion_*）不受影响，仍按原逻辑自动爆炸。
-        this.isBombHost = (type === 'cherrybomb' || type === 'jalapeno' || type === 'iceshroom' || type === 'doomshroom') && !type.startsWith('fusion_');
+        // 自动引爆标记：樱桃炸弹/火爆辣椒/寒冰菇/毁灭菇与寒冰炸弹（融合炸弹）种下后
+        // 自动执行本来的爆炸功能（无需点击/手套）；而樱桃射手/毁灭向日葵这类"阵亡时
+        // 爆炸"的常驻融合植物不自动引爆，只按普通植物运作。
+        this.autoExplode = (type === 'cherrybomb' || type === 'jalapeno' || type === 'iceshroom' || type === 'doomshroom' || type === 'fusion_frostbomb');
     }
 
     hasTrait(trait) {
@@ -310,7 +310,10 @@ class Plant extends Entity {
         return false;
     }
     
+    // 爆炸融合：以炸弹所在格为中心，扫描自身 3×3（含斜角，同寒冰菇范围）内的植物，
+    // 凡与该炸弹有配方的植物全部与原植物格融合（炸弹为催化剂，随爆炸消耗）。
     triggerBombFusion() {
+        if (!this.game.fusionMode) return; // 爆炸融合仅限融合进化模式
         const fusions = [ {row: this.row, col: this.col} ];
         
         if (this.hasTrait('cherrybomb') || this.hasTrait('iceshroom') || this.hasTrait('doomshroom') || this.hasTrait('jalapeno')) {
@@ -343,10 +346,10 @@ class Plant extends Entity {
         }
     }
     
-    // 点击引爆：炸弹母体（樱桃/辣椒/寒冰菇/毁灭菇）种植后停留场上作为融合中心，
-    // 玩家点击后才爆炸。攻击方式、伤害范围与数值保持原版不变。
+    // 手动引爆：点击炸弹可立即引爆（也可等它种下后自动爆炸）。攻击方式不变。
     explodeNow() {
         if (this.isDead) return;
+        if (!this.autoExplode) return; // 常驻融合植物（樱桃射手等）点击不引爆
         
         if (this.hasTrait('cherrybomb') || this.hasTrait('jalapeno')) {
             if (this.hasExploded) return;
@@ -616,7 +619,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     }
                 }
             }
-        } else if ((this.hasTrait('cherrybomb') || this.hasTrait('jalapeno')) && !this.isBombHost) {
+        } else if ((this.hasTrait('cherrybomb') || this.hasTrait('jalapeno')) && this.autoExplode) {
             if (!this.hasExploded) {
                 this.explodeTimer -= deltaTime;
                 if (this.explodeTimer <= 0) {
@@ -654,7 +657,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                 setTimeout(() => { this.hp = 0; }, 500);
                 }
             }
-        } else if (this.hasTrait('iceshroom') && !this.isBombHost) {
+        } else if (this.hasTrait('iceshroom') && this.autoExplode) {
             this.explodeTimer -= deltaTime;
             if (this.explodeTimer <= 0) {
                 this.game.audioManager.play('splat');
@@ -667,7 +670,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                 }
                 this.hp = 0;
             }
-        } else if (this.hasTrait('doomshroom') && !this.isBombHost) {
+        } else if (this.hasTrait('doomshroom') && this.autoExplode) {
             if (this.state === 'idle') {
                 this.explodeTimer -= deltaTime;
                 if (this.explodeTimer <= 0) {

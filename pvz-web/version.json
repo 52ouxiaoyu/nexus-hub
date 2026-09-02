@@ -1,6 +1,6 @@
 {
-  "version": "v3.2.31-bombhost",
-  "build": "2026-08-31",
-  "feature": "PVZ1 style Melon-pult + Winter Melon (bowl trebuchet + full melon bullet)",
-  "assetVersion": 1788183268
+  "version": "v3.2.32-bombauto",
+  "build": "2026-09-02",
+  "feature": "炸弹种下自动引爆并融合周围 3×3：樱桃/辣椒/寒冰菇/毁灭菇先执行原爆炸功能，爆炸后自动与范围内可融合植物合成(仅融合进化模式)",
+  "assetVersion": 1788354862
 }
