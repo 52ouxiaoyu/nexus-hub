@@ -1,80 +1,80 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<html lang="en" data-page-node-id="HzDrNaN7CoP0Sm8o3SjaYD">
+<head data-page-node-id="p6uqjKxPAkhd8kf4AJHFjY">
+    <meta charset="UTF-8" data-page-node-id="fvct4kKB77qx0aDFZg0TFG">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="7cXFTDee52Hp5l8aujUlmz">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1788354862">
+    <link rel="stylesheet" href="css/style.css?v=1788355723" data-page-node-id="Q5lrPWp6xqtldfdpxSWXxH">
 </head>
-<body>
-    <div id="game-container">
-        <div id="background-layer"></div>
-        <div id="entity-layer"></div>
+<body data-page-node-id="lPg8spSQ9t6E6ZEWT8akzU">
+    <div id="game-container" data-page-node-id="dle8H483OJAxh7uRwqXTVW">
+        <div id="background-layer" data-page-node-id="PF00aJ197e0YFwGy63BeTx"></div>
+        <div id="entity-layer" data-page-node-id="K7bC3IrB8SqVApJop7DRRE"></div>
         
         <!-- UI Layer -->
-        <div id="ui-layer">
-            <div id="top-bar" style="width: 100%; display: flex; flex-wrap: nowrap; align-items: flex-start;">
-                <div id="sun-bank">
-                    <span id="sun-count">50</span>
+        <div id="ui-layer" data-page-node-id="g4Bg5wFM7xIdfQYyg5ij2z">
+            <div id="top-bar" style="width: 100%; display: flex; flex-wrap: nowrap; align-items: flex-start;" data-page-node-id="4WpGhq8U79jT82Cnv8NYVU">
+                <div id="sun-bank" data-page-node-id="N54o50nukAFpFsHne2m98m">
+                    <span id="sun-count" data-page-node-id="DCAt9dxphqriMZ32aAeAu9">50</span>
                 </div>
-                <div id="seed-bank"></div>
+                <div id="seed-bank" data-page-node-id="ow8b2cxoiPifuvHd2BhkKe"></div>
                 
-                <div id="shovel-bank">
-                    <div id="shovel" class="tool-card" title="铲子"></div>
-                </div>
-                
-                <div id="glove-bank" style="width: 70px; height: 72px; margin-left: 10px; background: rgba(0,0,0,0.5); border: 2px solid #a65; border-radius: 10px; display: none; cursor: pointer; justify-content: center; align-items: center; box-sizing: border-box;">
-                    <div style="font-size: 36px; line-height: 72px;">🧤</div>
+                <div id="shovel-bank" data-page-node-id="lOC9KzEosohEYiG4Hqzp1T">
+                    <div id="shovel" class="tool-card" title="铲子" data-page-node-id="HYthwILD1qznMnaHjMpMGI"></div>
                 </div>
                 
-                <div id="recipe-book-btn" style="width: 70px; height: 72px; margin-left: 10px; background: rgba(0,0,0,0.5); border: 2px solid #a65; border-radius: 10px; display: none; cursor: pointer; justify-content: center; align-items: center; box-sizing: border-box;" title="融合图鉴">
-                    <div style="font-size: 36px; line-height: 72px;">📖</div>
+                <div id="glove-bank" style="width: 70px; height: 72px; margin-left: 10px; background: rgba(0,0,0,0.5); border: 2px solid #a65; border-radius: 10px; display: none; cursor: pointer; justify-content: center; align-items: center; box-sizing: border-box;" data-page-node-id="WlyvdPw9xGD9tGGgYDAnlC">
+                    <div style="font-size: 36px; line-height: 72px;" data-page-node-id="l84jKQwFjaDF1cpAsVUHgL">🧤</div>
                 </div>
-                <div id="score-bank" style="margin-left: auto; background-color: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; color: white; font-family: monospace; font-size: 20px; display: flex; align-items: center; border: 2px solid #8b5a2b; height: 34px;">
-                    Score: <span id="score-count" style="margin-left: 10px; font-weight: bold; color: #ffd700;">0</span>
+                
+                <div id="recipe-book-btn" style="width: 70px; height: 72px; margin-left: 10px; background: rgba(0,0,0,0.5); border: 2px solid #a65; border-radius: 10px; display: none; cursor: pointer; justify-content: center; align-items: center; box-sizing: border-box;" title="融合图鉴" data-page-node-id="sC5gKcjlnQJHlw9ffTH3jR">
+                    <div style="font-size: 36px; line-height: 72px;" data-page-node-id="DaZDG2maXWaImSREBEpDJo">📖</div>
                 </div>
-                <div id="version-bank" title="当前游戏版本（变更后请刷新页面）" style="margin-left: 10px; background-color: rgba(0,80,40,0.7); padding: 5px 12px; border-radius: 20px; color: #bdf; font-family: monospace; font-size: 14px; display: flex; align-items: center; border: 2px solid #4a8; height: 34px; cursor: help;">
-                    🏷️ <span id="version-display" style="margin-left: 6px; font-weight: bold;">v?.?.?</span>
+                <div id="score-bank" style="margin-left: auto; background-color: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; color: white; font-family: monospace; font-size: 20px; display: flex; align-items: center; border: 2px solid #8b5a2b; height: 34px;" data-page-node-id="j1D6U9P6UtyfaCYO2LmRtV">
+                    Score: <span id="score-count" style="margin-left: 10px; font-weight: bold; color: #ffd700;" data-page-node-id="mYcjQvG6T0hdaYC33SElQP">0</span>
                 </div>
-                <button id="btn-speed" style="margin-left: 15px; padding: 5px 15px; border-radius: 20px; font-family: monospace; font-size: 18px; font-weight: bold; background: rgba(0,0,0,0.5); color: #fff; border: 2px solid #8b5a2b; cursor: pointer; text-shadow: 1px 1px 2px black;">Speed: 1x</button>
+                <div id="version-bank" title="当前游戏版本（变更后请刷新页面）" style="margin-left: 10px; background-color: rgba(0,80,40,0.7); padding: 5px 12px; border-radius: 20px; color: #bdf; font-family: monospace; font-size: 14px; display: flex; align-items: center; border: 2px solid #4a8; height: 34px; cursor: help;" data-page-node-id="mvFES5IHvETsDlJkV7zb5b">
+                    🏷️ <span id="version-display" style="margin-left: 6px; font-weight: bold;" data-page-node-id="r1tebpIQEV13kYgYlOta9I">v?.?.?</span>
+                </div>
+                <button id="btn-speed" style="margin-left: 15px; padding: 5px 15px; border-radius: 20px; font-family: monospace; font-size: 18px; font-weight: bold; background: rgba(0,0,0,0.5); color: #fff; border: 2px solid #8b5a2b; cursor: pointer; text-shadow: 1px 1px 2px black;" data-page-node-id="QJADFcmyv9Nd53wK5eTBjm">Speed: 1x</button>
             </div>
         <!-- Recipe Modal -->
-        <div id="recipe-modal" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; background: #c69c6d; border: 4px solid #4a3018; border-radius: 10px; z-index: 3000; padding: 20px; box-shadow: 0 0 20px #000; pointer-events: auto;">
-            <h2 style="text-align: center; color: #fff; text-shadow: 2px 2px 0 #000; margin-top: 0;">融合配方大全</h2>
-            <ul id="recipe-list" style="list-style: none; padding: 0; max-height: 300px; overflow-y: auto; background: #fff; border: 2px inset #000; padding: 10px; color: #000;">
+        <div id="recipe-modal" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; background: #c69c6d; border: 4px solid #4a3018; border-radius: 10px; z-index: 3000; padding: 20px; box-shadow: 0 0 20px #000; pointer-events: auto;" data-page-node-id="AsNVcorOLT06Lkm66PukyA">
+            <h2 style="text-align: center; color: #fff; text-shadow: 2px 2px 0 #000; margin-top: 0;" data-page-node-id="HjzQ8lDrDRE1Hh9Qrk0Yaq">融合配方大全</h2>
+            <ul id="recipe-list" style="list-style: none; padding: 0; max-height: 300px; overflow-y: auto; background: #fff; border: 2px inset #000; padding: 10px; color: #000;" data-page-node-id="RBsCGRCU7dO6NPnAjd2Z2r">
             </ul>
-            <div style="text-align: center; margin-top: 15px;">
-                <button id="close-recipe" style="padding: 5px 20px; font-weight: bold; cursor: pointer;">关闭</button>
+            <div style="text-align: center; margin-top: 15px;" data-page-node-id="c0wIZfMRCyJaA4PkzBfXi0">
+                <button id="close-recipe" style="padding: 5px 20px; font-weight: bold; cursor: pointer;" data-page-node-id="ZCxEUQvwNFMlF3ndKZDOAR">关闭</button>
             </div>
         </div>
-            <div id="drag-ghost" style="display: none;"></div>
+            <div id="drag-ghost" style="display: none;" data-page-node-id="oxg0KepTyAk4dejBHYvYfU"></div>
         </div>
         
         <!-- Seed Chooser UI -->
-        <div id="seed-chooser" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 1500; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <div style="background-color: #6b4a2b; padding: 25px; border-radius: 15px; border: 4px solid #3c2a11; box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.8); width: 650px;">
-                <h2 style="color: #f5deb3; text-align: center; margin-bottom: 15px; text-shadow: 2px 2px 2px black; font-family: monospace; font-size: 24px;">Choose Your Plants (<span id="chooser-count">0</span>/10)</h2>
-                <div id="chooser-grid" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 25px; max-height: 350px; overflow-y: auto; background-color: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; box-shadow: inset 0 0 10px black;">
+        <div id="seed-chooser" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 1500; display: flex; flex-direction: column; align-items: center; justify-content: center;" data-page-node-id="X4NosskEsRgbhQyiWKuCgz">
+            <div style="background-color: #6b4a2b; padding: 25px; border-radius: 15px; border: 4px solid #3c2a11; box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.8); width: 650px;" data-page-node-id="ECDYF7omRj84CLZRXMNhAx">
+                <h2 style="color: #f5deb3; text-align: center; margin-bottom: 15px; text-shadow: 2px 2px 2px black; font-family: monospace; font-size: 24px;" data-page-node-id="mOE48vJgb83klb9BTGvzOk">Choose Your Plants (<span id="chooser-count" data-page-node-id="X4rscFzXGNzNIjDbPeoy5n">0</span>/10)</h2>
+                <div id="chooser-grid" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 25px; max-height: 350px; overflow-y: auto; background-color: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; box-shadow: inset 0 0 10px black;" data-page-node-id="Rl69bPYksGBthTYF3r1X1Q">
                     <!-- Seeds will be injected here -->
                 </div>
-                <div style="display: flex; justify-content: center; gap: 20px;">
-                    <button id="btn-back" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 30px; font-size: 18px; font-family: monospace; font-weight: bold; color: white; cursor: pointer; border-radius: 10px; text-shadow: 1px 1px 2px black;">Return</button>
-                    <button id="btn-lets-rock" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 40px; font-size: 20px; font-family: monospace; font-weight: bold; color: white; cursor: pointer; border-radius: 10px; opacity: 0.5; text-shadow: 1px 1px 2px black;" disabled>Let's Rock!</button>
+                <div style="display: flex; justify-content: center; gap: 20px;" data-page-node-id="jKPD22ZwYKqOFlfi70MlK7">
+                    <button id="btn-back" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 30px; font-size: 18px; font-family: monospace; font-weight: bold; color: white; cursor: pointer; border-radius: 10px; text-shadow: 1px 1px 2px black;" data-page-node-id="gQhuVJUZNk962YvcAikSUa">Return</button>
+                    <button id="btn-lets-rock" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 40px; font-size: 20px; font-family: monospace; font-weight: bold; color: white; cursor: pointer; border-radius: 10px; opacity: 0.5; text-shadow: 1px 1px 2px black;" disabled data-page-node-id="qWm7Pt2i5U84Spl6qnDBNP">Let's Rock!</button>
                 </div>
             </div>
         </div>
 
         <!-- Start Menu -->
-        <div id="start-menu" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 2000; transition: transform 0.2s;">
-            <img src="assets/images/interface/Logo.png" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none;">
-            <div id="start-version" style="position: absolute; bottom: 10px; right: 15px; color: rgba(255,255,255,0.7); font-size: 14px; font-family: monospace; z-index: 2001; text-shadow: 1px 1px 2px black;">加载版本号...</div>
+        <div id="start-menu" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 2000; transition: transform 0.2s;" data-page-node-id="LdHaHr8agm8vF544UBg1t1">
+            <img src="assets/images/interface/Logo.png" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none;" data-page-node-id="SDkSeL12l5cFs8hw1XCbsZ">
+            <div id="start-version" style="position: absolute; bottom: 10px; right: 15px; color: rgba(255,255,255,0.7); font-size: 14px; font-family: monospace; z-index: 2001; text-shadow: 1px 1px 2px black;" data-page-node-id="UEMdysdDmkeuddR7RTK4ES">加载版本号...</div>
             
             <!-- 玩家名字（木牌 WELCOME BACK 正下方红圈位置） -->
-            <div id="player-name" style="position: absolute; left: 50px; top: 140px; width: 200px; text-align: center; color: #f5e6c8; font-family: Impact, 'Arial Black', 'STHeiti', sans-serif; font-size: 22px; letter-spacing: 4px; z-index: 2002; text-shadow: 2px 2px 0 #2a1a08, 1px 1px 0 #000;">区耀丁</div>
+            <div id="player-name" style="position: absolute; left: 50px; top: 140px; width: 200px; text-align: center; color: #f5e6c8; font-family: Impact, 'Arial Black', 'STHeiti', sans-serif; font-size: 22px; letter-spacing: 4px; z-index: 2002; text-shadow: 2px 2px 0 #2a1a08, 1px 1px 0 #000;" data-page-node-id="5DBOJvDVMCzjGxxATJTn4y">区耀丁</div>
             
-            <div style="position: absolute; left: 220px; top: 60px; display: flex; flex-direction: column; gap: 18px; z-index: 2003;">
-                <button id="btn-adventure" style="width: 500px; height: 95px; background: linear-gradient(rgb(95,95,118) 0%, rgb(72,72,92) 50%, rgb(82,82,105) 100%); border: 4px solid #383848; border-top-left-radius: 250px; border-top-right-radius: 250px; border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; color: #0a0a0a; font-size: 28px; font-family: Impact, 'Arial Black', serif; font-weight: bold; letter-spacing: 3px; cursor: pointer; text-shadow: 1px 1px 0 rgba(220,220,230,0.4); box-shadow: 0 5px 10px rgba(0,0,0,0.6), inset 0 4px 8px rgba(0,0,0,0.4), inset 0 -3px 6px rgba(200,200,210,0.15); transition: transform 0.1s;">经典冒险</button>
-                <button id="btn-fusion" style="width: 500px; height: 95px; background: linear-gradient(rgb(95,95,118) 0%, rgb(72,72,92) 50%, rgb(82,82,105) 100%); border: 4px solid #383848; border-top-left-radius: 250px; border-top-right-radius: 250px; border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; color: #0a0a0a; font-size: 28px; font-family: Impact, 'Arial Black', serif; font-weight: bold; letter-spacing: 3px; cursor: pointer; text-shadow: 1px 1px 0 rgba(220,220,230,0.4); box-shadow: 0 5px 10px rgba(0,0,0,0.6), inset 0 4px 8px rgba(0,0,0,0.4), inset 0 -3px 6px rgba(200,200,210,0.15); transition: transform 0.1s;">融合进化</button>
+            <div style="position: absolute; left: 220px; top: 60px; display: flex; flex-direction: column; gap: 18px; z-index: 2003;" data-page-node-id="rCTDfcEHHXBCZqyUHIpyeO">
+                <button id="btn-adventure" style="width: 500px; height: 95px; background: linear-gradient(rgb(95,95,118) 0%, rgb(72,72,92) 50%, rgb(82,82,105) 100%); border: 4px solid #383848; border-top-left-radius: 250px; border-top-right-radius: 250px; border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; color: #0a0a0a; font-size: 28px; font-family: Impact, 'Arial Black', serif; font-weight: bold; letter-spacing: 3px; cursor: pointer; text-shadow: 1px 1px 0 rgba(220,220,230,0.4); box-shadow: 0 5px 10px rgba(0,0,0,0.6), inset 0 4px 8px rgba(0,0,0,0.4), inset 0 -3px 6px rgba(200,200,210,0.15); transition: transform 0.1s;" data-page-node-id="Zc9WnR1xZmY7aZgJ6ZIpx6">经典冒险</button>
+                <button id="btn-fusion" style="width: 500px; height: 95px; background: linear-gradient(rgb(95,95,118) 0%, rgb(72,72,92) 50%, rgb(82,82,105) 100%); border: 4px solid #383848; border-top-left-radius: 250px; border-top-right-radius: 250px; border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; color: #0a0a0a; font-size: 28px; font-family: Impact, 'Arial Black', serif; font-weight: bold; letter-spacing: 3px; cursor: pointer; text-shadow: 1px 1px 0 rgba(220,220,230,0.4); box-shadow: 0 5px 10px rgba(0,0,0,0.6), inset 0 4px 8px rgba(0,0,0,0.4), inset 0 -3px 6px rgba(200,200,210,0.15); transition: transform 0.1s;" data-page-node-id="UE84l3WS1QiAcXOo4VOGWQ">融合进化</button>
             </div>
         </div>
     </div>
@@ -122,16 +122,16 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1788354862"></script>
-    <script src="js/Board.js?v=1788354862"></script>
-    <script src="js/entities/Entity.js?v=1788354862"></script>
-    <script src="js/entities/Plant.js?v=1788354862"></script>
-    <script src="js/entities/Zombie.js?v=1788354862"></script>
-    <script src="js/entities/Projectile.js?v=1788354862"></script>
-    <script src="js/entities/Sun.js?v=1788354862"></script>
-    <script src="js/managers/WaveManager.js?v=1788354862"></script>
-    <script src="js/managers/CollisionManager.js?v=1788354862"></script>
-    <script src="js/managers/EventManager.js?v=1788354862"></script>
-    <script src="js/GameLoop.js?v=1788354862"></script>
+    <script src="js/InputManager.js?v=1788355723"></script>
+    <script src="js/Board.js?v=1788355723"></script>
+    <script src="js/entities/Entity.js?v=1788355723"></script>
+    <script src="js/entities/Plant.js?v=1788355723"></script>
+    <script src="js/entities/Zombie.js?v=1788355723"></script>
+    <script src="js/entities/Projectile.js?v=1788355723"></script>
+    <script src="js/entities/Sun.js?v=1788355723"></script>
+    <script src="js/managers/WaveManager.js?v=1788355723"></script>
+    <script src="js/managers/CollisionManager.js?v=1788355723"></script>
+    <script src="js/managers/EventManager.js?v=1788355723"></script>
+    <script src="js/GameLoop.js?v=1788355723"></script>
 </body>
 </html>
