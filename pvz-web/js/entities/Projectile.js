@@ -19,12 +19,12 @@ class Projectile extends Entity {
             this.element.src = 'assets/images/Plants/ShroomBullet.gif';
             this.damage = 40;
         } else if (type === 'melon') {
-            this.element.src = 'assets/images/Plants/MelonPult/Melon.png?v=1788355723';
+            this.element.src = 'assets/images/Plants/MelonPult/Melon.png?v=1788442140';
             this.element.style.transform = 'scale(1.0)';
             this.element.style.borderRadius = '50%';
             this.damage = 60;
         } else if (type === 'wintermelon') {
-            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon.png?v=1788355723';
+            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon.png?v=1788442140';
             this.element.style.transform = 'scale(1.0)';
             this.element.style.borderRadius = '50%';
             this.damage = 60;
@@ -34,13 +34,13 @@ class Projectile extends Entity {
             this.damage = 20;
             this.speed = 400;
         } else if (type === 'cattail_melon') {
-            this.element.src = 'assets/images/Plants/MelonPult/Melon_small.png?v=1788355723';
+            this.element.src = 'assets/images/Plants/MelonPult/Melon_small.png?v=1788442140';
             this.element.style.transform = 'scale(0.8)';
             this.element.style.borderRadius = '50%';
             this.damage = 60;
             this.speed = 400;
         } else if (type === 'cattail_wintermelon') {
-            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon_small.png?v=1788355723';
+            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon_small.png?v=1788442140';
             this.element.style.transform = 'scale(0.8)';
             this.element.style.borderRadius = '50%';
             this.damage = 60;
@@ -54,6 +54,18 @@ class Projectile extends Entity {
         } else if (type === 'firepea') {
             this.element.src = 'assets/images/Plants/PB10.gif';
             this.damage = 40; // Double damage
+        } else if (type === 'cherrypea') {
+            // 樱桃射手普通子弹：樱桃红/橙色豌豆（20 伤害同豌豆，纯视觉区分）
+            this.element.src = 'assets/images/Plants/PB10.gif';
+            this.element.style.filter = 'hue-rotate(-15deg) saturate(1.8)';
+        } else if (type === 'minicherry') {
+            // 樱桃射手第 10 发：小樱桃炸弹——飞行中的迷你樱桃，命中即爆，
+            // 3×3 范围伤害 900（原版樱桃炸弹 1800 的一半）
+            this.element.src = 'assets/images/Plants/CherryBomb/CherryBomb.gif';
+            this.element.style.transform = 'scale(0.6)';
+            this.element.style.filter = 'brightness(1.15)';
+            this.damage = 900;
+            this.radius = 14;
         } else if (type === 'backpea') {
             this.element.src = 'assets/images/Plants/PB00.gif';
             this.speed = -300; // Moves left

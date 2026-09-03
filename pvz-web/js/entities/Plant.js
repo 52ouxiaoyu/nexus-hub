@@ -153,12 +153,12 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788355723';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788442140';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788355723';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788442140';
         }
         
 
@@ -302,6 +302,18 @@ class Plant extends Entity {
         // 自动执行本来的爆炸功能（无需点击/手套）；而樱桃射手/毁灭向日葵这类"阵亡时
         // 爆炸"的常驻融合植物不自动引爆，只按普通植物运作。
         this.autoExplode = (type === 'cherrybomb' || type === 'jalapeno' || type === 'iceshroom' || type === 'doomshroom' || type === 'fusion_frostbomb');
+        
+        // 樱桃射手：每 10 次攻击发射一颗小樱桃炸弹（伤害=原版樱桃炸弹一半=900），
+        // 普通子弹为樱桃红色。计数从 0 开始。
+        if (type === 'fusion_cherrybomb_peashooter') {
+            this.cherryVolley = 0;
+        }
+        // 毁灭向日葵：毁灭菇的主动贡献——每 12 秒释放一次"毁灭新星"（暗影爆破 5×5，
+        // 伤害弱于原版毁灭菇），平时照常产阳光。
+        if (type === 'fusion_doomshroom_sunflower') {
+            this.doomNovaTimer = 0;
+            this.doomNovaInterval = 12.0;
+        }
     }
 
     hasTrait(trait) {
@@ -445,14 +457,17 @@ class Plant extends Entity {
                 boom.src = 'assets/images/Plants/CherryBomb/Boom.gif';
                 if (this.type === 'fusion_doomshroom_sunflower') {
                     boom.style.filter = 'hue-rotate(270deg) invert(1)';
-                    for (let zombie of this.game.zombies) {
-                        if (Math.abs(zombie.col - this.col) <= 2 && Math.abs(zombie.row - this.row) <= 2) {
+                    const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+                    for (let zombie of zombies) {
+                        // Zombie 无 col 属性，用 x 距离判定（80px/格，差<200 ≈ 中心±2格）
+                        if (Math.abs(zombie.row - this.row) <= 2 && Math.abs(zombie.x - this.x) < 200) {
                             zombie.takeDamage(1800);
                         }
                     }
                 } else {
-                    for (let zombie of this.game.zombies) {
-                        if (Math.abs(zombie.col - this.col) <= 1 && Math.abs(zombie.row - this.row) <= 1) {
+                    const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+                    for (let zombie of zombies) {
+                        if (Math.abs(zombie.row - this.row) <= 1 && Math.abs(zombie.x - this.x) < 150) {
                             zombie.takeDamage(1800);
                         }
                     }
@@ -541,6 +556,18 @@ class Plant extends Entity {
                          if (this.hasTrait('wintermelon')) projType = 'cattail_wintermelon';
                          else if (this.hasTrait('melonpult')) projType = 'cattail_melon';
                          else projType = 'cattail';
+                    }
+                    
+                    // 樱桃射手特色：普通子弹为樱桃色豌豆，每第 10 次攻击发射小樱桃炸弹
+                    // （伤害=原版樱桃炸弹 1800 的一半=900，命中后 3×3 爆炸）
+                    if (this.type === 'fusion_cherrybomb_peashooter') {
+                        this.cherryVolley = (this.cherryVolley || 0) + 1;
+                        if (this.cherryVolley >= 10) {
+                            this.cherryVolley = 0;
+                            projType = 'minicherry';   // 第 10 发：小樱桃炸弹
+                        } else {
+                            projType = 'cherrypea';    // 普通发：樱桃红色豌豆
+                        }
                     }
                     
                     if (this.hasTrait('threepeater') && hasZombieAhead) {
@@ -701,6 +728,37 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                             setTimeout(() => { this.hp = 0; }, 30000); // 30 seconds crater
                         }, 1000); // Boom lasts 1 sec
                     }, 1000); // Swell lasts 1 sec
+                }
+            }
+        }
+        
+        // 毁灭向日葵特色：毁灭菇的主动贡献——每 12 秒释放一次"毁灭新星"，
+        // 以自身为中心 5×5 暗影爆破（400 伤害，弱于原版毁灭菇的全屏），
+        // 平时照常产阳光；被啃死后仍保留原本的大爆炸。
+        if (this.type === 'fusion_doomshroom_sunflower') {
+            this.doomNovaTimer += deltaTime;
+            if (this.doomNovaTimer >= this.doomNovaInterval) {
+                this.doomNovaTimer = 0;
+                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+                let hit = false;
+                for (let z of zombies) {
+                    // Zombie 无 col 属性，用 x 距离判定（80px/格，差<200 ≈ 中心±2格=5×5）
+                    if (Math.abs(z.row - this.row) <= 2 && Math.abs(z.x - this.x) < 200) {
+                        z.takeDamage(400);
+                        hit = true;
+                    }
+                }
+                if (hit) {
+                    this.game.audioManager.play('splat');
+                    let boom = document.createElement('img');
+                    boom.src = 'assets/images/Plants/CherryBomb/Boom.gif';
+                    boom.style.filter = 'hue-rotate(270deg) invert(1)';
+                    boom.style.position = 'absolute';
+                    boom.style.left = (this.element.offsetLeft - 80) + 'px';
+                    boom.style.top = (this.element.offsetTop - 80) + 'px';
+                    boom.style.zIndex = '100';
+                    this.game.container.appendChild(boom);
+                    setTimeout(() => boom.remove(), 800);
                 }
             }
         }

@@ -45,6 +45,25 @@ class CollisionManager {
                                 }
                             }
                             
+                            // 小樱桃炸弹（樱桃射手第 10 发）：命中即爆，
+                            // 以命中僵尸为中心 3×3 爆炸，900 伤害（原版樱桃炸弹 1800 的一半）
+                            if (p.type === 'minicherry') {
+                                const allZombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+                                for (let oz of allZombies) {
+                                    if (oz !== z && Math.abs(oz.row - z.row) <= 1 && Math.abs(oz.x - z.x) < 150) {
+                                        oz.takeDamage(p.damage);
+                                    }
+                                }
+                                let boom = document.createElement('img');
+                                boom.src = 'assets/images/Plants/CherryBomb/Boom.gif';
+                                boom.style.position = 'absolute';
+                                boom.style.left = (z.x - 60) + 'px';
+                                boom.style.top = (z.y - 80) + 'px';
+                                boom.style.zIndex = '100';
+                                this.game.container.appendChild(boom);
+                                setTimeout(() => boom.remove(), 800);
+                            }
+                            
                             this.game.audioManager.play('splat');
                             break; 
                         }
