@@ -25,7 +25,7 @@ class WaveManager {
         let poleChance = 0, newsChance = 0, screenChance = 0;
         let danceChance = 0, jackChance = 0, zomboniChance = 0, impChance = 0;
         let pogoChance = 0, ladderChance = 0, gargantuarChance = 0;
-        let bossChance = 0;
+        let bossChance = 0, plantheadChance = 0;
         
         if (this.timeElapsed > 60) coneChance = Math.min(0.2, (this.timeElapsed - 60) / 300); 
         if (this.timeElapsed > 120) poleChance = Math.min(0.15, (this.timeElapsed - 120) / 400);
@@ -42,11 +42,25 @@ class WaveManager {
         if (this.timeElapsed > 600) gargantuarChance = Math.min(0.05, (this.timeElapsed - 600) / 800);
         if (this.timeElapsed > 600) bossChance = Math.min(0.05, (this.timeElapsed - 600) / 1000); // Rare boss spawn
         
+        // 植物头僵尸（peahead/nuthead/sunhead/snowpeahead）：
+        // 头顶基础植物的"僵尸改造体"，只有融合进化模式会刷出 —— 经典冒险不会出现。
+        // 75 秒后解锁，随对局时长逐渐常见（概率上限 0.24）。
+        if (this.game.fusionMode && this.timeElapsed > 75) {
+            plantheadChance = Math.min(0.24, (this.timeElapsed - 75) / 280);
+        }
+        
         const r = Math.random();
         let type = 'normal';
         let acc = 0;
         
-        if (r < (acc += bossChance)) type = 'lgboss';
+        if (r < (acc += plantheadChance)) {
+            const pr = Math.random();
+            if (pr < 0.35) type = 'peahead';      // 豌豆头
+            else if (pr < 0.6) type = 'nuthead';  // 坚果头（重甲）
+            else if (pr < 0.82) type = 'sunhead'; // 向日葵头
+            else type = 'snowpeahead';            // 寒冰头（免疫减速）
+        }
+        else if (r < (acc += bossChance)) type = 'lgboss';
         else if (r < (acc += gargantuarChance)) type = 'gargantuar';
         else if (r < (acc += zomboniChance)) type = 'zomboni';
         else if (r < (acc += pogoChance)) type = 'pogo';

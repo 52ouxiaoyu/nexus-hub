@@ -14,6 +14,8 @@ class Zombie extends Entity {
         
         this.isSlowed = false;
         this.slowTimer = 0;
+        this.immuneSlow = false; // planthead snowpea zombies ignore freezing
+        this.hasPlantHead = false;
         
         if (type === 'normal') {
             this.hp = 200; this.maxHp = 200;
@@ -27,6 +29,26 @@ class Zombie extends Entity {
             this.walkSrc = 'assets/images/Zombies/FlagZombie/FlagZombie.gif';
             this.attackSrc = 'assets/images/Zombies/FlagZombie/FlagZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+        } else if (type === 'peahead' || type === 'nuthead' || type === 'sunhead' || type === 'snowpeahead') {
+            // === 植物头僵尸（仅融合进化模式刷出）===
+            // 头顶的基础植物不是融合植物，而是像路障/铁桶一样的"装甲"：
+            // 破甲（头被打掉）后植物头飞落，露出普通僵尸本体。
+            // peahead=豌豆头(中甲) nuthead=坚果头(重甲慢) sunhead=向日葵头(死后掉阳光) snowpeahead=寒冰头(免疫减速)
+            const headCfg = {
+                peahead:     { hp: 560, speed: 20, headSrc: 'assets/images/Plants/Peashooter/Peashooter.gif', headSize: 56, breakHp: 200 },
+                nuthead:     { hp: 1300, speed: 15, headSrc: 'assets/images/Plants/WallNut/WallNut.gif',      headSize: 64, breakHp: 200 },
+                sunhead:     { hp: 320, speed: 20, headSrc: 'assets/images/Plants/SunFlower/SunFlower1.gif',  headSize: 62, breakHp: 150 },
+                snowpeahead: { hp: 420, speed: 26, headSrc: 'assets/images/Plants/SnowPea/SnowPea.gif',       headSize: 58, breakHp: 150 }
+            }[type];
+            this.hp = headCfg.hp; this.maxHp = this.hp;
+            this.speed = headCfg.speed;
+            this.headBreakHp = headCfg.breakHp;
+            this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            if (type === 'snowpeahead') this.immuneSlow = true; // 寒冰射手头：不惧冰冻
+            this.createPlantHead(headCfg.headSrc, headCfg.headSize); // 头上顶一颗基础植物
         } else if (type === 'conehead') {
             this.hp = 560; this.maxHp = 560;
             this.element.src = 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif';
@@ -147,9 +169,63 @@ class Zombie extends Entity {
         }
     }
     
+    // 植物头僵尸：把一颗基础植物顶在头上（独立 DOM 层，随僵尸同步移动）
+    createPlantHead(src, headSize) {
+        const img = document.createElement('img');
+        img.src = src;
+        img.style.position = 'absolute';
+        img.style.pointerEvents = 'none';
+        img.style.width = headSize + 'px';
+        img.style.height = headSize + 'px';
+        img.style.objectFit = 'contain';
+        this.headEl = img;
+        this.headSize = headSize;
+        this.hasPlantHead = true;
+        this.game.entityLayer.appendChild(img);
+        this.syncPlantHead();
+    }
+    
+    // 每帧把植物头锁定在僵尸头顶位置（身体图 144px 高、中心在 (x,y+yOffset)，头顶 ≈ -72px）
+    syncPlantHead() {
+        if (!this.headEl) return;
+        this.headEl.style.left = (this.x - this.headSize / 2) + 'px';
+        this.headEl.style.top = (this.y + this.yOffset - 72 + 6) + 'px'; // 从头顶往下 6px 开始扣住
+        this.headEl.style.zIndex = String(Math.floor(this.y) + 1); // 略高于同一行的身体
+        // 被冰冻时头顶植物一起结冰（寒冰头免疫减速，永不进入该分支）
+        this.headEl.style.filter = this.isSlowed ? 'brightness(70%) sepia(100%) hue-rotate(190deg) saturate(500%)' : '';
+    }
+    
+    // 破甲：植物头被打掉，翻滚飞落消失（路障/铁桶同款掉落机制）
+    dropPlantHead() {
+        if (!this.headEl) return;
+        const h = this.headEl;
+        this.headEl = null;
+        this.hasPlantHead = false;
+        h.style.transition = 'transform 0.5s ease-in, opacity 0.5s ease-in';
+        h.style.transform = 'translateY(30px) rotate(40deg)';
+        h.style.opacity = '0';
+        setTimeout(() => { if (h.parentNode) h.parentNode.removeChild(h); }, 550);
+    }
+    
+    // 减速统一入口：寒冰头（snowpeahead，头还在时）免疫任何冰冻
+    setSlow(t = 10) {
+        if (this.immuneSlow || this.isDead) return;
+        this.isSlowed = true;
+        this.slowTimer = t;
+    }
+    
+    // 解冻（火爆辣椒/火球等）：同时清掉蓝色滤镜
+    thaw() {
+        this.isSlowed = false;
+        this.slowTimer = 0;
+        if (this.element) this.element.style.filter = '';
+        if (this.headEl) this.headEl.style.filter = '';
+    }
+    
     update(deltaTime) {
         super.update(deltaTime);
         this.element.style.top = `${this.y + this.yOffset}px`;
+        this.syncPlantHead(); // 植物头跟随身体移动
         
         if (this.isSlowed) {
             this.slowTimer -= deltaTime;
@@ -178,6 +254,12 @@ class Zombie extends Entity {
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
             this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
+        }
+        
+        // Handle plant head falling off (植物头僵尸破甲：头被打掉后变普通僵尸，寒冰免疫一并失效)
+        if (this.hasPlantHead && this.hp <= this.headBreakHp && this.state !== 'DYING') {
+            this.dropPlantHead();
+            this.immuneSlow = false;
         }
         
         // Handle newspaper falling off
@@ -247,6 +329,11 @@ class Zombie extends Entity {
         
         if (this.hp <= 0 && this.state !== 'DYING') {
             this.state = 'DYING';
+            if (this.headEl) this.dropPlantHead(); // 植物头先翻滚掉落再倒地
+            if (this.type === 'sunhead') {
+                // 僵尸化的向日葵：死后把阳光"还"给玩家（掉落在它的位置）
+                this.game.entities.push(new Sun(this.game, this.x, this.y + this.yOffset - 60, this.y + this.yOffset));
+            }
             this.element.src = this.dieSrc;
             if (this.game.score !== undefined) {
                 this.game.score += 10;
@@ -414,8 +501,7 @@ class Zombie extends Entity {
                         this.hp -= 20 * deltaTime; // reflect damage
                     }
                     if (this.eatTarget.hasTrait && this.eatTarget.hasTrait('snowpea') && !this.isSlowed) {
-                        this.isSlowed = true;
-                        this.slowTimer = 10.0;
+                        this.setSlow(10.0);
                     }
                     
                     if (!this.chompTimer) this.chompTimer = 0;

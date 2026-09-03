@@ -101,8 +101,8 @@ class EventManager {
                 g.gameSpeed = 4; setTimeout(() => g.gameSpeed = 1, 4000);
             }},
             { msg: '🐢 迟缓：时间泥沼！', color: '#4444ff', exec: g => {
-                const z = g.entities.filter(e => e instanceof Zombie); z.forEach(e => e.isSlowed = true);
-                setTimeout(() => z.forEach(e => e.isSlowed = false), 6000);
+                const z = g.entities.filter(e => e instanceof Zombie); z.forEach(e => e.setSlow(10));
+                setTimeout(() => z.forEach(e => e.thaw()), 6000);
             }},
             { msg: '💖 治愈：僵尸医疗！', color: '#ffaaaa', minScore: 200, exec: g => {
                 g.entities.filter(e => e instanceof Zombie).forEach(z => z.hp += 200);

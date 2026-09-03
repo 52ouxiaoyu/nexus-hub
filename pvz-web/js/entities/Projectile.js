@@ -19,12 +19,12 @@ class Projectile extends Entity {
             this.element.src = 'assets/images/Plants/ShroomBullet.gif';
             this.damage = 40;
         } else if (type === 'melon') {
-            this.element.src = 'assets/images/Plants/MelonPult/Melon.png?v=1788442140';
+            this.element.src = 'assets/images/Plants/MelonPult/Melon.png?v=1788443631';
             this.element.style.transform = 'scale(1.0)';
             this.element.style.borderRadius = '50%';
             this.damage = 60;
         } else if (type === 'wintermelon') {
-            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon.png?v=1788442140';
+            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon.png?v=1788443631';
             this.element.style.transform = 'scale(1.0)';
             this.element.style.borderRadius = '50%';
             this.damage = 60;
@@ -34,13 +34,13 @@ class Projectile extends Entity {
             this.damage = 20;
             this.speed = 400;
         } else if (type === 'cattail_melon') {
-            this.element.src = 'assets/images/Plants/MelonPult/Melon_small.png?v=1788442140';
+            this.element.src = 'assets/images/Plants/MelonPult/Melon_small.png?v=1788443631';
             this.element.style.transform = 'scale(0.8)';
             this.element.style.borderRadius = '50%';
             this.damage = 60;
             this.speed = 400;
         } else if (type === 'cattail_wintermelon') {
-            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon_small.png?v=1788442140';
+            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon_small.png?v=1788443631';
             this.element.style.transform = 'scale(0.8)';
             this.element.style.borderRadius = '50%';
             this.damage = 60;
@@ -119,14 +119,12 @@ class Projectile extends Entity {
                          if (z !== this.targetZombie && Math.abs(z.row - this.targetZombie.row) <= 1 && Math.abs(z.x - this.targetZombie.x) < 150) {
                              z.takeDamage(this.damage / 2); // splash damage is half
                              if (this.type === 'cattail_wintermelon') {
-                                 z.isSlowed = true;
-                                 z.slowTimer = 10.0;
+                                 z.setSlow(10.0);
                              }
                          }
                      }
                      if (this.type === 'cattail_wintermelon') {
-                         this.targetZombie.isSlowed = true;
-                         this.targetZombie.slowTimer = 10.0;
+                         this.targetZombie.setSlow(10.0);
                      }
                      this.game.audioManager.play('splat');
                  }

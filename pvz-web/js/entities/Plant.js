@@ -153,12 +153,12 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788442140';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788443631';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788442140';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788443631';
         }
         
 
@@ -374,8 +374,7 @@ class Plant extends Entity {
                 if (this.hasTrait('cherrybomb') && this.hasTrait('snowpea')) {
                     if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 100) {
                         z.takeDamage(900); // half damage
-                        z.isSlowed = true;
-                        z.slowTimer = 10.0;
+                        z.setSlow(10.0);
                     }
                 } else if (this.hasTrait('cherrybomb')) {
                     if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 150) {
@@ -402,8 +401,7 @@ class Plant extends Entity {
             this.triggerBombFusion();
             const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
             for (let z of zombies) {
-                z.isSlowed = true;
-                z.slowTimer = 10.0;
+                z.setSlow(10.0);
                 z.takeDamage(20); // slight damage
             }
             this.hp = 0;
@@ -659,8 +657,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     if (this.hasTrait('cherrybomb') && this.hasTrait('snowpea')) {
                         if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 100) {
                             z.takeDamage(900); // half damage
-                            z.isSlowed = true;
-                            z.slowTimer = 10.0;
+                            z.setSlow(10.0);
                         }
                     } else if (this.hasTrait('cherrybomb')) {
                         if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 150) {
@@ -691,8 +688,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                 this.triggerBombFusion();
                 const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                 for (let z of zombies) {
-                    z.isSlowed = true;
-                    z.slowTimer = 10.0;
+                    z.setSlow(10.0);
                     z.takeDamage(20); // slight damage
                 }
                 this.hp = 0;
