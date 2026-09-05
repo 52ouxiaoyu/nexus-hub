@@ -1,10 +1,10 @@
-/* 验证植物头僵尸（融合进化专属）
+/* 验证植物头僵尸（融合进化专属 · 纯外观版）
    T1 融合模式波次会刷出 4 种植物头僵尸
    T2 经典冒险模式永不刷植物头僵尸
-   T3 peahead 创建：DOM 出现豌豆头 overlay & hp=560
-   T4 破甲：hp<=200 植物头掉落(动画后 DOM 移除)
+   T3 peahead 创建：DOM 出现豌豆头 overlay & hp=200(=普通僵尸) & 素材正确
+   T4 头是纯外观：受伤不会掉头(无破甲装甲)，只有死亡才掉落
    T5 头部位置随僵尸移动同步
-   T6 nuthead hp=1300 & sunhead 死亡掉阳光 & snowpeahead 免疫减速(破甲前免疫/破甲后失效)
+   T6 无特殊能力：nuthead hp=200 / snowpeahead 可被减速 / sunhead 死亡不掉阳光
 */
 const puppeteer = require('puppeteer');
 const URL = 'file:///Users/clawbox/nexus-hub/pvz-web/index.html';
@@ -43,7 +43,7 @@ const headEls = (page) => page.evaluate(() => {
             g.waveManager.timeElapsed = 300;
             const count = { peahead: 0, nuthead: 0, sunhead: 0, snowpeahead: 0 };
             for (let i = 0; i < 600; i++) {
-                const t = (() => { g.waveManager.spawnZombie(); return null; })();
+                g.waveManager.spawnZombie();
                 const z = g.entities[g.entities.length - 1];
                 if (z && z.type in count) count[z.type]++;
                 g.entities.pop(); // 不保留实体只统计
@@ -77,7 +77,7 @@ const headEls = (page) => page.evaluate(() => {
         await page.close();
     }
 
-    // T3 peahead 创建：DOM 出现豌豆头 overlay & hp=560 & 素材正确
+    // T3 peahead 创建：DOM 出现豌豆头 overlay & hp=200 与普通僵尸一致 & 素材正确
     {
         const page = await newPage(true);
         const info = await page.evaluate(() => {
@@ -85,39 +85,46 @@ const headEls = (page) => page.evaluate(() => {
             const z = new Zombie(g, 2, 'peahead');
             z.x = 700; g.entities.push(z);
             const heads = [...document.querySelectorAll('#entity-layer img')].filter(i => /Plants\/Peashooter\//.test(i.src));
-            return { hp: z.hp, headCount: heads.length, headTop: heads.length ? heads[0].style.top : null, headLeft: heads.length ? heads[0].style.left : null, bodySrc: z.element.src.split('/').pop(), zIndex: heads.length ? heads[0].style.zIndex : null, bodyTop: z.y + z.yOffset };
+            return { hp: z.hp, speed: z.speed, headCount: heads.length, headTop: heads.length ? heads[0].style.top : null, headLeft: heads.length ? heads[0].style.left : null, bodySrc: z.element.src.split('/').pop(), bodyTop: z.y + z.yOffset };
         });
-        ok('T3 peahead hp=560', info.hp === 560, 'hp=' + info.hp);
+        ok('T3 peahead hp=200(与普通一致)', info.hp === 200, 'hp=' + info.hp);
+        ok('T3 peahead speed=20(与普通一致)', info.speed === 20, 'speed=' + info.speed);
         ok('T3 DOM 出现豌豆头 overlay', info.headCount === 1, 'count=' + info.headCount);
         ok('T3 头悬在身体头顶之上', info.headTop !== null && parseFloat(info.headTop) < info.bodyTop, 'headTop=' + info.headTop + ' bodyTop=' + info.bodyTop);
         await page.close();
     }
 
-    // T4 破甲：掉头后 DOM 移除 & 仍可继续行走(不报错)
+    // T4 头是纯外观：受伤不破甲不掉头(无装甲逻辑)，死亡才掉落
     {
         const page = await newPage(true);
         await addZ(page, 'peahead', 2);
         await step(page, 0.3);
-        let before = await headEls(page);
         await page.evaluate(() => {
             const g = window._pvzGame;
             const z = g.entities.find(e => e instanceof Zombie && e.type === 'peahead');
-            z.takeDamage(400); // 560->160 <= 200 破甲
+            z.takeDamage(150); // 200 -> 50，已低于旧破甲线 200，但纯外观版不应掉头
         });
         await step(page, 0.2);
-        await new Promise(r => setTimeout(r, 800)); // 等 0.5s 掉落动画移除
-        let after = await headEls(page);
-        const hpAfter = await page.evaluate(() => { const g = window._pvzGame; const z = g.entities.find(e => e instanceof Zombie && e.type === 'peahead'); return z ? z.hp : -1; });
-        await step(page, 1.0); // 破甲后继续跑无错
-        ok('T4 破甲前头存在', before === 1, 'before=' + before);
-        ok('T4 破甲后头掉落移除', after === 0, 'after=' + after + ' hp=' + hpAfter);
+        await new Promise(r => setTimeout(r, 800));
+        const mid = await headEls(page); // 头应仍在
+        const hpMid = await page.evaluate(() => { const g = window._pvzGame; const z = g.entities.find(e => e instanceof Zombie && e.type === 'peahead'); return z ? z.hp : -1; });
+        await page.evaluate(() => {
+            const g = window._pvzGame;
+            const z = g.entities.find(e => e instanceof Zombie && e.type === 'peahead');
+            z.hp = 0; // 致死
+        });
+        await step(page, 0.2);
+        await new Promise(r => setTimeout(r, 900)); // 等掉落动画
+        const after = await headEls(page);
+        ok('T4 受伤(50hp)头不掉落', mid === 1, 'mid=' + mid + ' hp=' + hpMid);
+        ok('T4 死亡后头掉落移除', after === 0, 'after=' + after);
         await page.close();
     }
 
     // T5 头部位置随僵尸移动同步
     {
         const page = await newPage(true);
-        const pos1 = await addZ(page, 'peahead', 3);
+        await addZ(page, 'peahead', 3);
         await step(page, 0.2);
         const xy1 = await page.evaluate(() => {
             const g = window._pvzGame;
@@ -136,7 +143,7 @@ const headEls = (page) => page.evaluate(() => {
         await page.close();
     }
 
-    // T6 nuthead 高血 / sunhead 死亡掉阳光 / snowpeahead 免疫
+    // T6 无特殊能力：nuthead hp=200 / snowpeahead 可被减速 / sunhead 死亡不掉阳光
     {
         const page = await newPage(true);
         await addZ(page, 'nuthead', 1);
@@ -147,51 +154,27 @@ const headEls = (page) => page.evaluate(() => {
             const g = window._pvzGame;
             const nut = g.entities.find(e => e instanceof Zombie && e.type === 'nuthead');
             const snow = g.entities.find(e => e instanceof Zombie && e.type === 'snowpeahead');
-            // 免疫测试：完整头时
-            snow.setSlow(10);
-            const immune = !snow.isSlowed;
-            // 普通僵尸对照
-            const nz = new Zombie(g, 0, 'normal'); g.entities.push(nz);
-            nz.setSlow(10);
-            const normalSlowed = nz.isSlowed;
-            nz.hp = 0;
-            return { nutHp: nut.hp, immune, normalSlowed };
+            snow.setSlow(10); // 寒冰头也应正常被减速
+            return { nutHp: nut.hp, slowed: snow.isSlowed };
         });
-        ok('T6 nuthead hp=1300', r1.nutHp === 1300, 'hp=' + r1.nutHp);
-        ok('T6 寒冰头免疫减速(普通对照生效)', r1.immune === true && r1.normalSlowed === true, JSON.stringify(r1));
+        ok('T6 nuthead hp=200(无厚血)', r1.nutHp === 200, 'hp=' + r1.nutHp);
+        ok('T6 寒冰头可被正常减速(无免疫)', r1.slowed === true, JSON.stringify(r1));
 
-        // 破甲(打掉寒冰头)后不再免疫
-        const r2 = await page.evaluate(() => {
-            const g = window._pvzGame;
-            const snow = g.entities.find(e => e instanceof Zombie && e.type === 'snowpeahead');
-            snow.takeDamage(300); // 420 -> 120 <=150
-            return null;
-        });
-        await step(page, 0.2);
-        await new Promise(r => setTimeout(r, 800));
-        const r3 = await page.evaluate(() => {
-            const g = window._pvzGame;
-            const snow = g.entities.find(e => e instanceof Zombie && e.type === 'snowpeahead');
-            const headGone = !snow.headEl;
-            snow.setSlow(10);
-            return { headGone, slowAfter: snow.isSlowed };
-        });
-        ok('T6 破甲后头移除且不再免疫', r3.headGone && r3.slowAfter === true, JSON.stringify(r3));
-
-        // sunhead 死亡掉阳光
+        // sunhead 死亡不掉阳光
         const r4 = await page.evaluate(() => {
             const g = window._pvzGame;
             const sun = g.entities.find(e => e instanceof Zombie && e.type === 'sunhead');
             sun.hp = 0;
             const before = g.entities.filter(e => e instanceof Sun).length;
-            return before;
+            const sunCount = g.sunCount;
+            return { before, sunCount };
         });
         await step(page, 0.2);
         const r5 = await page.evaluate(() => {
             const g = window._pvzGame;
-            return g.entities.filter(e => e instanceof Sun).length;
+            return { suns: g.entities.filter(e => e instanceof Sun).length, sunCount: g.sunCount };
         });
-        ok('T6 sunhead 死亡掉阳光', r5 > r4, 'sun before=' + r4 + ' after=' + r5);
+        ok('T6 sunhead 死亡不掉阳光', r5.suns === r4.before && r5.sunCount === r4.sunCount, 'sun before=' + r4.before + ' after=' + r5.suns + ' count=' + r5.sunCount);
         // 杀掉所有剩余僵尸，等掉落动画结束，确认植物头 DOM 全部清除、无泄漏
         await page.evaluate(() => {
             const g = window._pvzGame;

@@ -56,9 +56,9 @@ class WaveManager {
         if (r < (acc += plantheadChance)) {
             const pr = Math.random();
             if (pr < 0.35) type = 'peahead';      // 豌豆头
-            else if (pr < 0.6) type = 'nuthead';  // 坚果头（重甲）
+            else if (pr < 0.6) type = 'nuthead';  // 坚果头
             else if (pr < 0.82) type = 'sunhead'; // 向日葵头
-            else type = 'snowpeahead';            // 寒冰头（免疫减速）
+            else type = 'snowpeahead';            // 寒冰头
         }
         else if (r < (acc += bossChance)) type = 'lgboss';
         else if (r < (acc += gargantuarChance)) type = 'gargantuar';

@@ -14,7 +14,6 @@ class Zombie extends Entity {
         
         this.isSlowed = false;
         this.slowTimer = 0;
-        this.immuneSlow = false; // planthead snowpea zombies ignore freezing
         this.hasPlantHead = false;
         
         if (type === 'normal') {
@@ -30,25 +29,23 @@ class Zombie extends Entity {
             this.attackSrc = 'assets/images/Zombies/FlagZombie/FlagZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
         } else if (type === 'peahead' || type === 'nuthead' || type === 'sunhead' || type === 'snowpeahead') {
-            // === 植物头僵尸（仅融合进化模式刷出）===
-            // 头顶的基础植物不是融合植物，而是像路障/铁桶一样的"装甲"：
-            // 破甲（头被打掉）后植物头飞落，露出普通僵尸本体。
-            // peahead=豌豆头(中甲) nuthead=坚果头(重甲慢) sunhead=向日葵头(死后掉阳光) snowpeahead=寒冰头(免疫减速)
-            const headCfg = {
-                peahead:     { hp: 560, speed: 20, headSrc: 'assets/images/Plants/Peashooter/Peashooter.gif', headSize: 56, breakHp: 200 },
-                nuthead:     { hp: 1300, speed: 15, headSrc: 'assets/images/Plants/WallNut/WallNut.gif',      headSize: 64, breakHp: 200 },
-                sunhead:     { hp: 320, speed: 20, headSrc: 'assets/images/Plants/SunFlower/SunFlower1.gif',  headSize: 62, breakHp: 150 },
-                snowpeahead: { hp: 420, speed: 26, headSrc: 'assets/images/Plants/SnowPea/SnowPea.gif',       headSize: 58, breakHp: 150 }
+            // === 植物头僵尸（仅融合进化模式刷出，纯外观变体）===
+            // 行为与普通僵尸完全一致（hp=200 / speed=20 / 无任何附加能力），
+            // 唯一的区别是头顶顶着一棵基础植物（豌豆/坚果/向日葵/寒冰射手），
+            // 该植物是外观而非融合植物，也不是"装甲"，不提供任何增益。
+            const headSrc = {
+                peahead:     'assets/images/Plants/Peashooter/Peashooter.gif',
+                nuthead:     'assets/images/Plants/WallNut/WallNut.gif',
+                sunhead:     'assets/images/Plants/SunFlower/SunFlower1.gif',
+                snowpeahead: 'assets/images/Plants/SnowPea/SnowPea.gif'
             }[type];
-            this.hp = headCfg.hp; this.maxHp = this.hp;
-            this.speed = headCfg.speed;
-            this.headBreakHp = headCfg.breakHp;
+            const headSize = { peahead: 56, nuthead: 64, sunhead: 62, snowpeahead: 58 }[type];
+            this.hp = 200; this.maxHp = 200;
             this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
-            if (type === 'snowpeahead') this.immuneSlow = true; // 寒冰射手头：不惧冰冻
-            this.createPlantHead(headCfg.headSrc, headCfg.headSize); // 头上顶一颗基础植物
+            this.createPlantHead(headSrc, headSize); // 头顶一棵基础植物（纯外观）
         } else if (type === 'conehead') {
             this.hp = 560; this.maxHp = 560;
             this.element.src = 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif';
@@ -191,11 +188,11 @@ class Zombie extends Entity {
         this.headEl.style.left = (this.x - this.headSize / 2) + 'px';
         this.headEl.style.top = (this.y + this.yOffset - 72 + 6) + 'px'; // 从头顶往下 6px 开始扣住
         this.headEl.style.zIndex = String(Math.floor(this.y) + 1); // 略高于同一行的身体
-        // 被冰冻时头顶植物一起结冰（寒冰头免疫减速，永不进入该分支）
+        // 被冰冻时头顶植物一起结冰（外观联动）
         this.headEl.style.filter = this.isSlowed ? 'brightness(70%) sepia(100%) hue-rotate(190deg) saturate(500%)' : '';
     }
     
-    // 破甲：植物头被打掉，翻滚飞落消失（路障/铁桶同款掉落机制）
+    // 死亡时：植物头随僵尸一起翻滚飞落消失（纯视觉，无任何收益/惩罚）
     dropPlantHead() {
         if (!this.headEl) return;
         const h = this.headEl;
@@ -207,9 +204,9 @@ class Zombie extends Entity {
         setTimeout(() => { if (h.parentNode) h.parentNode.removeChild(h); }, 550);
     }
     
-    // 减速统一入口：寒冰头（snowpeahead，头还在时）免疫任何冰冻
+    // 减速统一入口（植物头僵尸与普通僵尸一致，均可被减速）
     setSlow(t = 10) {
-        if (this.immuneSlow || this.isDead) return;
+        if (this.isDead) return;
         this.isSlowed = true;
         this.slowTimer = t;
     }
@@ -256,11 +253,7 @@ class Zombie extends Entity {
             this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
         }
         
-        // Handle plant head falling off (植物头僵尸破甲：头被打掉后变普通僵尸，寒冰免疫一并失效)
-        if (this.hasPlantHead && this.hp <= this.headBreakHp && this.state !== 'DYING') {
-            this.dropPlantHead();
-            this.immuneSlow = false;
-        }
+        // 植物头僵尸的头顶植物是纯外观：不提供装甲/不掉落，随僵尸一起行动直到死亡。
         
         // Handle newspaper falling off
         if (this.type === 'newspaper' && this.hp <= 150 && !this.hasLostNewspaper && this.state !== 'DYING') {
@@ -329,11 +322,7 @@ class Zombie extends Entity {
         
         if (this.hp <= 0 && this.state !== 'DYING') {
             this.state = 'DYING';
-            if (this.headEl) this.dropPlantHead(); // 植物头先翻滚掉落再倒地
-            if (this.type === 'sunhead') {
-                // 僵尸化的向日葵：死后把阳光"还"给玩家（掉落在它的位置）
-                this.game.entities.push(new Sun(this.game, this.x, this.y + this.yOffset - 60, this.y + this.yOffset));
-            }
+            if (this.headEl) this.dropPlantHead(); // 头顶植物随僵尸倒地（纯外观）
             this.element.src = this.dieSrc;
             if (this.game.score !== undefined) {
                 this.game.score += 10;

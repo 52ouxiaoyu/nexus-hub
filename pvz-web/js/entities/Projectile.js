@@ -19,12 +19,12 @@ class Projectile extends Entity {
             this.element.src = 'assets/images/Plants/ShroomBullet.gif';
             this.damage = 40;
         } else if (type === 'melon') {
-            this.element.src = 'assets/images/Plants/MelonPult/Melon.png?v=1788443631';
+            this.element.src = 'assets/images/Plants/MelonPult/Melon.png?v=1788585168';
             this.element.style.transform = 'scale(1.0)';
             this.element.style.borderRadius = '50%';
             this.damage = 60;
         } else if (type === 'wintermelon') {
-            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon.png?v=1788443631';
+            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon.png?v=1788585168';
             this.element.style.transform = 'scale(1.0)';
             this.element.style.borderRadius = '50%';
             this.damage = 60;
@@ -34,13 +34,13 @@ class Projectile extends Entity {
             this.damage = 20;
             this.speed = 400;
         } else if (type === 'cattail_melon') {
-            this.element.src = 'assets/images/Plants/MelonPult/Melon_small.png?v=1788443631';
+            this.element.src = 'assets/images/Plants/MelonPult/Melon_small.png?v=1788585168';
             this.element.style.transform = 'scale(0.8)';
             this.element.style.borderRadius = '50%';
             this.damage = 60;
             this.speed = 400;
         } else if (type === 'cattail_wintermelon') {
-            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon_small.png?v=1788443631';
+            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon_small.png?v=1788585168';
             this.element.style.transform = 'scale(0.8)';
             this.element.style.borderRadius = '50%';
             this.damage = 60;
