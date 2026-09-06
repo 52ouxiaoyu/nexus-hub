@@ -2612,60 +2612,60 @@ class Game {
                     this.ctx.fillStyle = '#A0E6FF'; this.ctx.fillRect(px, py, 32, 32);
                     this.ctx.fillStyle = '#FFF'; this.ctx.fillRect(px+4, py+4, 8, 2);
                 } else if (tile === 9) { // BASE
-                    // Tech Core Base
-                    this.ctx.fillStyle = '#111'; this.ctx.fillRect(px, py, 64, 64);
+                    // Crown Base
+                    this.ctx.fillStyle = '#1a1a1a'; this.ctx.fillRect(px, py, 64, 64);
                     
-                    // Outer shield ring
+                    // Gold Crown Base
+                    this.ctx.fillStyle = '#FFC107';
                     this.ctx.beginPath();
-                    this.ctx.arc(px + 32, py + 32, 28, 0, Math.PI * 2);
-                    this.ctx.lineWidth = 4;
-                    this.ctx.strokeStyle = '#0cf';
-                    this.ctx.setLineDash([8, 4]);
-                    this.ctx.stroke();
-                    this.ctx.setLineDash([]);
-                    
-                    // Inner glowing core
-                    this.ctx.beginPath();
-                    this.ctx.arc(px + 32, py + 32, 16, 0, Math.PI * 2);
-                    this.ctx.fillStyle = '#0cf';
-                    this.ctx.shadowBlur = 20;
-                    this.ctx.shadowColor = '#0ff';
+                    this.ctx.moveTo(px+10, py+15); this.ctx.lineTo(px+16, py+48); this.ctx.lineTo(px+48, py+48); this.ctx.lineTo(px+54, py+15);
+                    this.ctx.lineTo(px+42, py+32); this.ctx.lineTo(px+32, py+12); this.ctx.lineTo(px+22, py+32);
                     this.ctx.fill();
+                    
+                    // Bottom rim
+                    this.ctx.fillStyle = '#FFA000';
+                    this.ctx.fillRect(px+14, py+48, 36, 6);
+
+                    // Jewels
+                    this.ctx.shadowBlur = 8;
+                    this.ctx.shadowColor = '#F00';
+                    this.ctx.fillStyle = '#F44336'; this.ctx.beginPath(); this.ctx.arc(px+32, py+42, 4, 0, Math.PI*2); this.ctx.fill();
+                    
+                    this.ctx.shadowColor = '#0F0';
+                    this.ctx.fillStyle = '#4CAF50'; this.ctx.beginPath(); this.ctx.arc(px+20, py+42, 3, 0, Math.PI*2); this.ctx.fill();
+                    
+                    this.ctx.shadowColor = '#00F';
+                    this.ctx.fillStyle = '#2196F3'; this.ctx.beginPath(); this.ctx.arc(px+44, py+42, 3, 0, Math.PI*2); this.ctx.fill();
                     this.ctx.shadowBlur = 0;
-                    
-                    // Core details (a star)
-                    this.ctx.fillStyle = '#fff';
-                    this.ctx.beginPath();
-                    for(let i=0; i<5; i++) {
-                        let angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
-                        let r = (i % 2 === 0) ? 8 : 4;
-                        this.ctx.lineTo(px + 32 + Math.cos(angle)*r, py + 32 + Math.sin(angle)*r);
-                    }
-                    this.ctx.fill();
                 } else if (tile === 10) { // BASE_DESTROYED
                     this.ctx.fillStyle = '#222'; this.ctx.fillRect(px, py, 64, 64);
                     
-                    // Broken outer ring
+                    // Broken Crown Base
+                    this.ctx.fillStyle = '#555';
                     this.ctx.beginPath();
-                    this.ctx.arc(px + 32, py + 32, 28, 0, Math.PI);
-                    this.ctx.lineWidth = 4;
-                    this.ctx.strokeStyle = '#555';
-                    this.ctx.stroke();
-                    
-                    // Dead core
-                    this.ctx.beginPath();
-                    this.ctx.arc(px + 32, py + 32, 16, 0, Math.PI * 2);
-                    this.ctx.fillStyle = '#333';
+                    this.ctx.moveTo(px+10, py+15); this.ctx.lineTo(px+16, py+48); this.ctx.lineTo(px+48, py+48); this.ctx.lineTo(px+54, py+15);
+                    this.ctx.lineTo(px+42, py+32); this.ctx.lineTo(px+32, py+22); // Broken tip
+                    this.ctx.lineTo(px+22, py+32);
                     this.ctx.fill();
                     
-                    // Crack
-                    this.ctx.strokeStyle = '#000';
+                    // Bottom rim
+                    this.ctx.fillStyle = '#444';
+                    this.ctx.fillRect(px+14, py+48, 36, 6);
+
+                    // Crack in the middle
+                    this.ctx.strokeStyle = '#111';
                     this.ctx.lineWidth = 2;
                     this.ctx.beginPath();
-                    this.ctx.moveTo(px + 20, py + 20);
-                    this.ctx.lineTo(px + 30, py + 32);
-                    this.ctx.lineTo(px + 25, py + 45);
+                    this.ctx.moveTo(px+25, py+20);
+                    this.ctx.lineTo(px+35, py+35);
+                    this.ctx.lineTo(px+30, py+48);
                     this.ctx.stroke();
+
+                    // Dead Jewels
+                    this.ctx.fillStyle = '#333';
+                    this.ctx.beginPath(); this.ctx.arc(px+32, py+42, 4, 0, Math.PI*2); this.ctx.fill();
+                    this.ctx.beginPath(); this.ctx.arc(px+20, py+42, 3, 0, Math.PI*2); this.ctx.fill();
+                    this.ctx.beginPath(); this.ctx.arc(px+44, py+42, 3, 0, Math.PI*2); this.ctx.fill();
                 }
             }
         }
