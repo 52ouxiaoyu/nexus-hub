@@ -137,3 +137,15 @@ canvas {
     70% { box-shadow: 0 0 0 10px rgba(212, 175, 55, 0); }
     100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
 }
+
+.build-menu-scroll::-webkit-scrollbar {
+    height: 8px;
+}
+.build-menu-scroll::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+}
+.build-menu-scroll::-webkit-scrollbar-thumb {
+    background: #d4af37;
+    border-radius: 4px;
+}
