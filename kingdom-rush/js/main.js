@@ -210,7 +210,7 @@ class Game {
     prepareNextWave() {
         this.wave++;
         this.enemiesToSpawn = [];
-        let count = 10 + this.wave * 3;
+        let count = 20 + this.wave * 8; // Massive Swarm
         for(let i=0; i<count; i++) {
             if (i === count-1 && this.wave % 4 === 0) this.enemiesToSpawn.push('BOSS');
             else if (Math.random() < 0.25 && this.wave > 3) this.enemiesToSpawn.push('GARGOYLE');
@@ -1052,12 +1052,20 @@ class Game {
             this.ctx.translate(p.x, p.y);
             this.ctx.rotate(Math.atan2(p.target.y - p.y, p.target.x - p.x));
             
-            if (p.def.type === 'splash') {
-                this.ctx.fillStyle = '#c0392b';
-                this.ctx.beginPath(); this.ctx.arc(0, 0, 8, 0, Math.PI*2); this.ctx.fill();
+            if (p.def.type === 'nuke') {
+                this.ctx.fillStyle = '#bdc3c7'; this.ctx.fillRect(-15, -5, 30, 10);
+                this.ctx.fillStyle = '#e74c3c'; this.ctx.beginPath(); this.ctx.arc(15, 0, 5, 0, Math.PI*2); this.ctx.fill();
+                this.ctx.fillStyle = '#f39c12'; this.ctx.beginPath(); this.ctx.arc(-15, 0, 6, 0, Math.PI*2); this.ctx.fill(); // Rocket flame
+            } else if (p.def.type === 'money') {
+                this.ctx.fillStyle = '#f1c40f'; this.ctx.beginPath(); this.ctx.arc(0, 0, 8, 0, Math.PI*2); this.ctx.fill();
+                this.ctx.fillStyle = '#f39c12'; this.ctx.beginPath(); this.ctx.arc(0, 0, 5, 0, Math.PI*2); this.ctx.fill();
+            } else if (p.baseDef.name === '巨弩塔') {
+                this.ctx.fillStyle = '#7f8c8d'; this.ctx.fillRect(-20, -2, 40, 4);
+                this.ctx.fillStyle = '#c0392b'; this.ctx.beginPath(); this.ctx.moveTo(20, -4); this.ctx.lineTo(25, 0); this.ctx.lineTo(20, 4); this.ctx.fill();
+            } else if (p.def.type === 'splash') {
+                this.ctx.fillStyle = '#c0392b'; this.ctx.beginPath(); this.ctx.arc(0, 0, 8, 0, Math.PI*2); this.ctx.fill();
             } else if (p.def.type === 'poison') {
-                this.ctx.fillStyle = '#2ecc71';
-                this.ctx.beginPath(); this.ctx.arc(0, 0, 6, 0, Math.PI*2); this.ctx.fill();
+                this.ctx.fillStyle = '#2ecc71'; this.ctx.beginPath(); this.ctx.arc(0, 0, 6, 0, Math.PI*2); this.ctx.fill();
             } else if (p.baseDef.dmgType === 'magic') {
                 this.ctx.fillStyle = p.baseDef.color;
                 this.ctx.beginPath(); this.ctx.arc(0, 0, 6, 0, Math.PI*2); this.ctx.fill();
