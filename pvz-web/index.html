@@ -4,7 +4,7 @@
     <meta charset="UTF-8" data-page-node-id="fvct4kKB77qx0aDFZg0TFG">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="7cXFTDee52Hp5l8aujUlmz">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1788679127" data-page-node-id="Q5lrPWp6xqtldfdpxSWXxH">
+    <link rel="stylesheet" href="css/style.css?v=1788679404" data-page-node-id="Q5lrPWp6xqtldfdpxSWXxH">
 </head>
 <body data-page-node-id="lPg8spSQ9t6E6ZEWT8akzU">
     <div id="game-container" data-page-node-id="dle8H483OJAxh7uRwqXTVW">
@@ -128,18 +128,16 @@
             }
             .pkt-art img { height: 96px; width: auto; image-rendering: pixelated; }
             /* 融合卡：公式排版（两行：植物+植物  / = ？）*/
-            .pkt-art.formula {
-                flex-direction: column; gap: 6px;
-                font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif;
-                color: #3a2a10;
-            }
+            .pkt-art.formula { flex-direction: column; gap: 6px; font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif; color: #3a2a10; }
             .pkt-art.formula .row { display: flex; align-items: center; justify-content: center; }
-            .pkt-art.formula .row.plants  { gap: 10px; }
-            .pkt-art.formula .row.result  { gap: 4px; }
-            .pkt-art.formula .formula-line { font-size: 22px; font-weight: 900; letter-spacing: 2px; }
-            .pkt-art.formula .formula-op   { font-size: 22px; font-weight: 900; color: #a14b18; }
-            .pkt-art.formula .formula-eq   { font-size: 28px; font-weight: 900; color: #4a3414; }
-            .pkt-art.formula .formula-q    { font-size: 32px; font-weight: 900; color: #c0211e;
+            .pkt-art.formula .row.plants { gap: 8px; }
+            .pkt-art.formula .row.plants img { height: 58px; width: auto; image-rendering: pixelated; display: block; }
+            .pkt-art.formula .row.plants .img-a { transform: translateY(2px); }
+            .pkt-art.formula .row.plants .img-b { height: 48px; transform: translateY(4px); }
+            .pkt-art.formula .row.result  { gap: 4px; margin-top: -2px; }
+            .pkt-art.formula .formula-op   { font-size: 22px; font-weight: 900; color: #a14b18; line-height: 1; }
+            .pkt-art.formula .formula-eq   { font-size: 26px; font-weight: 900; color: #4a3414; line-height: 1; }
+            .pkt-art.formula .formula-q    { font-size: 30px; font-weight: 900; color: #c0211e;
                 text-shadow: 1px 1px 0 #fff, 2px 2px 0 rgba(0,0,0,0.25);
                 animation: q-pulse 2.2s ease-in-out infinite;
                 display: inline-block; transform-origin: center; }
@@ -190,7 +188,7 @@
                 <div class="menu-cards">
                     <button id="btn-adventure" class="mode-card" data-page-node-id="Zc9WnR1xZmY7aZgJ6ZIpx6">
                         <div class="pkt-art">
-                            <img src="assets/images/Plants/Sunflower/0.gif" alt="向日葵" class="solo">
+                            <img src="assets/images/Plants/SunFlower/0.gif" alt="向日葵" class="solo">
                         </div>
                         <div class="pkt-name">经典冒险</div>
                         <div class="pkt-tag">ADVENTURE</div>
@@ -200,9 +198,9 @@
                     <button id="btn-fusion" class="mode-card" data-page-node-id="UE84l3WS1QiAcXOo4VOGWQ">
                         <div class="pkt-art fusion formula">
                             <div class="row plants">
-                                <span class="formula-line">豌豆射手</span>
+                                <img class="img-a" src="assets/images/Plants/Peashooter/0.gif" alt="豌豆射手">
                                 <span class="formula-op">+</span>
-                                <span class="formula-line">大蒜</span>
+                                <img class="img-b" src="assets/images/Plants/Garlic/0.gif" alt="大蒜">
                             </div>
                             <div class="row result">
                                 <span class="formula-eq">=</span>
@@ -260,16 +258,16 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1788679127"></script>
-    <script src="js/Board.js?v=1788679127"></script>
-    <script src="js/entities/Entity.js?v=1788679127"></script>
-    <script src="js/entities/Plant.js?v=1788679127"></script>
-    <script src="js/entities/Zombie.js?v=1788679127"></script>
-    <script src="js/entities/Projectile.js?v=1788679127"></script>
-    <script src="js/entities/Sun.js?v=1788679127"></script>
-    <script src="js/managers/WaveManager.js?v=1788679127"></script>
-    <script src="js/managers/CollisionManager.js?v=1788679127"></script>
-    <script src="js/managers/EventManager.js?v=1788679127"></script>
-    <script src="js/GameLoop.js?v=1788679127"></script>
+    <script src="js/InputManager.js?v=1788679404"></script>
+    <script src="js/Board.js?v=1788679404"></script>
+    <script src="js/entities/Entity.js?v=1788679404"></script>
+    <script src="js/entities/Plant.js?v=1788679404"></script>
+    <script src="js/entities/Zombie.js?v=1788679404"></script>
+    <script src="js/entities/Projectile.js?v=1788679404"></script>
+    <script src="js/entities/Sun.js?v=1788679404"></script>
+    <script src="js/managers/WaveManager.js?v=1788679404"></script>
+    <script src="js/managers/CollisionManager.js?v=1788679404"></script>
+    <script src="js/managers/EventManager.js?v=1788679404"></script>
+    <script src="js/GameLoop.js?v=1788679404"></script>
 </body>
 </html>

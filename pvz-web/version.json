@@ -1,6 +1,6 @@
 {
-  "version": "v3.3.2-home-polish",
+  "version": "v3.3.3-home-imgs",
   "build": "2026-09-06",
-  "feature": "顶部HUD与首页视觉打磨: ①游戏内版本号胶囊移除(版本号仅保留开始菜单左下角) ②太阳数与分数合并为右侧上下双行小仪表 ③植物栏卡片flex-shrink修复不再被挤扁(放不下时横向滚动) ④首页经典冒险改为单张彩色向日葵整株立绘 ⑤首页融合进化改为文字公式'豌豆射手+大蒜=？'替代双段式种子卡截图",
-  "assetVersion": 1788679127
+  "feature": "首页模式卡图修复(部署后图片404): ①向日葵引用路径大小写修复 Sunflower -> SunFlower(本地mac大小写不敏感掩盖了问题, Linux/GitHub Pages大小写敏感导致部署后只剩alt文字) ②融合进化卡恢复'豌豆射手图 + 大蒜图 = ?'图+图+公式布局(整株立绘Plants/Peashooter/0.gif 与 Plants/Garlic/0.gif, 无任何文字植物名) ③全量扫描 133 处资源引用与 git 入库路径大小写一致校验通过",
+  "assetVersion": 1788679404
 }
