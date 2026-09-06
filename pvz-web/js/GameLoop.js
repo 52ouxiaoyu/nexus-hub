@@ -213,32 +213,32 @@ class Game {
     initUI() {
         // Just define the seeds, don't populate the top bar yet
         this.seeds = [
-            { type: 'sunflower', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/SunFlower.png?v=1788670556' },
-            { type: 'twinsunflower', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/TwinSunflower.png?v=1788670556' },
-            { type: 'sunshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/SunShroom.png?v=1788670556' },
-            { type: 'peashooter', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Peashooter.png?v=1788670556' },
-            { type: 'repeater', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/Repeater.png?v=1788670556' },
-            { type: 'threepeater', cost: 300, cooldown: 7.5, img: 'assets/images/Card/Plants/Threepeater.png?v=1788670556' },
-            { type: 'gatlingpea', cost: 250, cooldown: 50, img: 'assets/images/Card/Plants/GatlingPea.png?v=1788670556' },
-            { type: 'snowpea', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/SnowPea.png?v=1788670556' },
-            { type: 'splitpea', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/SplitPea.png?v=1788670556' },
-            { type: 'torchwood', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/Torchwood.png?v=1788670556' },
-            { type: 'wallnut', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/WallNut.png?v=1788670556' },
-            { type: 'cherrybomb', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/CherryBomb.png?v=1788670556' },            { type: 'squash', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/Squash.png?v=1788670556' },
-            { type: 'jalapeno', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/Jalapeno.png?v=1788670556' },
-            { type: 'potatomine', cost: 25, cooldown: 30, img: 'assets/images/Card/Plants/PotatoMine.png?v=1788670556' },
-            { type: 'chomper', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/Chomper.png?v=1788670556' },
-            { type: 'tallnut', cost: 125, cooldown: 30, img: 'assets/images/Card/Plants/TallNut.png?v=1788670556' },
-            { type: 'puffshroom', cost: 0, cooldown: 7.5, img: 'assets/images/Card/Plants/PuffShroom.png?v=1788670556' },
-            { type: 'fumeshroom', cost: 75, cooldown: 7.5, img: 'assets/images/Card/Plants/FumeShroom.png?v=1788670556' },
-            { type: 'scaredyshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/ScaredyShroom.png?v=1788670556' },
-            { type: 'gloomshroom', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/GloomShroom.png?v=1788670556' },
-            { type: 'spikerock', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikerock.png?v=1788670556' },
-            { type: 'cattail', cost: 225, cooldown: 7.5, img: 'assets/images/Card/Plants/Cattail.png?v=1788670556' },
-            { type: 'melonpult', cost: 300, cooldown: 7.5, img: 'assets/images/Card/Plants/MelonPult.png?v=1788670556' },{ type: 'iceshroom', cost: 75, cooldown: 50, img: 'assets/images/Card/Plants/IceShroom.png?v=1788670556' },
-            { type: 'doomshroom', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/DoomShroom.png?v=1788670556' },
-            { type: 'spikeweed', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikeweed.png?v=1788670556' },
-            { type: 'garlic', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/Garlic.png?v=1788670556' }
+            { type: 'sunflower', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/SunFlower.png?v=1788671489' },
+            { type: 'twinsunflower', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/TwinSunflower.png?v=1788671489' },
+            { type: 'sunshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/SunShroom.png?v=1788671489' },
+            { type: 'peashooter', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Peashooter.png?v=1788671489' },
+            { type: 'repeater', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/Repeater.png?v=1788671489' },
+            { type: 'threepeater', cost: 300, cooldown: 7.5, img: 'assets/images/Card/Plants/Threepeater.png?v=1788671489' },
+            { type: 'gatlingpea', cost: 250, cooldown: 50, img: 'assets/images/Card/Plants/GatlingPea.png?v=1788671489' },
+            { type: 'snowpea', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/SnowPea.png?v=1788671489' },
+            { type: 'splitpea', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/SplitPea.png?v=1788671489' },
+            { type: 'torchwood', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/Torchwood.png?v=1788671489' },
+            { type: 'wallnut', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/WallNut.png?v=1788671489' },
+            { type: 'cherrybomb', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/CherryBomb.png?v=1788671489' },            { type: 'squash', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/Squash.png?v=1788671489' },
+            { type: 'jalapeno', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/Jalapeno.png?v=1788671489' },
+            { type: 'potatomine', cost: 25, cooldown: 30, img: 'assets/images/Card/Plants/PotatoMine.png?v=1788671489' },
+            { type: 'chomper', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/Chomper.png?v=1788671489' },
+            { type: 'tallnut', cost: 125, cooldown: 30, img: 'assets/images/Card/Plants/TallNut.png?v=1788671489' },
+            { type: 'puffshroom', cost: 0, cooldown: 7.5, img: 'assets/images/Card/Plants/PuffShroom.png?v=1788671489' },
+            { type: 'fumeshroom', cost: 75, cooldown: 7.5, img: 'assets/images/Card/Plants/FumeShroom.png?v=1788671489' },
+            { type: 'scaredyshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/ScaredyShroom.png?v=1788671489' },
+            { type: 'gloomshroom', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/GloomShroom.png?v=1788671489' },
+            { type: 'spikerock', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikerock.png?v=1788671489' },
+            { type: 'cattail', cost: 225, cooldown: 7.5, img: 'assets/images/Card/Plants/Cattail.png?v=1788671489' },
+            { type: 'melonpult', cost: 300, cooldown: 7.5, img: 'assets/images/Card/Plants/MelonPult.png?v=1788671489' },{ type: 'iceshroom', cost: 75, cooldown: 50, img: 'assets/images/Card/Plants/IceShroom.png?v=1788671489' },
+            { type: 'doomshroom', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/DoomShroom.png?v=1788671489' },
+            { type: 'spikeweed', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikeweed.png?v=1788671489' },
+            { type: 'garlic', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/Garlic.png?v=1788671489' }
         ];
         // The top bar will be populated in startGame() after selection
     }
@@ -290,7 +290,7 @@ class Game {
             { a: 'puffshroom', b: 'sunflower', result: '阳光菇', img: 'assets/images/Plants/SunShroom/SunShroom.gif', css: false },
             { a: 'puffshroom', b: 'peashooter', result: '胆小菇', img: 'assets/images/Plants/ScaredyShroom/ScaredyShroom.gif', css: false },
             { a: 'wallnut', b: 'jalapeno', result: '火炬树桩', img: 'assets/images/Plants/Torchwood/Torchwood.gif', css: false },
-            { a: 'chomper', b: 'tallnut', result: '西瓜投手', img: 'assets/images/Plants/MelonPult/MelonPult.png?v=1788670556', css: false },
+            { a: 'chomper', b: 'tallnut', result: '西瓜投手', img: 'assets/images/Plants/MelonPult/MelonPult.png?v=1788671489', css: false },
             { a: 'peashooter', b: 'sunflower', result: '豌豆向日葵', base: 'assets/images/Plants/SunFlower/SunFlower1.gif', over: 'assets/images/Plants/Peashooter/Peashooter.gif', overClip: 'polygon(0 0, 100% 0, 100% 65%, 0 65%)', overTransform: 'translate(0px, -20px) scale(1.0)' },
             { a: 'peashooter', b: 'wallnut', result: '坚果射手', base: 'assets/images/Plants/WallNut/WallNut.gif', over: 'assets/images/Plants/Peashooter/Peashooter.gif', overClip: 'polygon(0 0, 100% 0, 100% 65%, 0 65%)', overTransform: 'translate(5px, -15px) scale(1.0)' },
             { a: 'snowpea', b: 'cherrybomb', result: '寒冰炸弹', img: 'assets/images/Plants/CherryBomb/CherryBomb.gif', filter: 'hue-rotate(180deg) saturate(1.5)', css: false },
@@ -299,7 +299,7 @@ class Game {
             { a: 'snowpea', b: 'wallnut', result: '寒冰坚果', img: 'assets/images/Plants/WallNut/WallNut.gif', filter: 'hue-rotate(180deg) saturate(1.5) brightness(1.2)', css: false },
             { a: 'peashooter', b: 'cherrybomb', result: '樱桃射手', img: 'assets/images/Plants/Peashooter/Peashooter.gif', filter: 'hue-rotate(-45deg) saturate(2.0)', css: false },
             { a: 'sunflower', b: 'doomshroom', result: '毁灭向日葵', img: 'assets/images/Plants/SunFlower/SunFlower1.gif', filter: 'grayscale(0.8) brightness(0.6) sepia(1) hue-rotate(240deg) saturate(3)', css: false },
-            { a: 'melonpult', b: 'iceshroom', result: '冰西瓜投手', img: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788670556', css: false },
+            { a: 'melonpult', b: 'iceshroom', result: '冰西瓜投手', img: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788671489', css: false },
             { a: 'repeater', b: 'spikeweed', result: '猫尾草', img: 'assets/images/Plants/Cattail/Cattail.gif', css: false },
             { a: 'fumeshroom', b: 'fumeshroom', result: '忧郁菇', img: 'assets/images/Plants/GloomShroom/GloomShroom.gif', css: false },
             { a: 'spikeweed', b: 'spikeweed', result: '钢地刺', img: 'assets/images/Plants/Spikerock/Spikerock.gif', css: false },
@@ -308,9 +308,9 @@ class Game {
             // ===== v3.2.38 新增 =====
             { a: 'splitpea', b: 'sunflower', result: '杨桃', img: 'assets/images/Plants/Starfruit/Starfruit.gif', css: false },
             { a: 'puffshroom', b: 'garlic', result: '魅惑菇', img: 'assets/images/Plants/HypnoShroom/HypnoShroom.gif', css: false },
-            { a: 'wallnut', b: 'tallnut', result: '南瓜壳（可套在植物上）', img: 'assets/images/Plants/PumpkinHead/PumpkinHead.gif', css: false },
-            { a: 'melonpult', b: 'cattail', result: '西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/MelonPult/MelonPult.png?v=1788670556', overTransform: 'translate(-5px, -30px) scale(0.7)' },
-            { a: 'wintermelon', b: 'cattail', result: '冰西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788670556', overTransform: 'translate(-5px, -30px) scale(0.7)' }
+            { a: 'wallnut', b: 'tallnut', result: '南瓜壳（可套在任意植物上）', img: 'assets/images/Plants/PumpkinHead/PumpkinHead.gif', css: false },
+            { a: 'melonpult', b: 'cattail', result: '西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/MelonPult/MelonPult.png?v=1788671489', overTransform: 'translate(-5px, -30px) scale(0.7)' },
+            { a: 'wintermelon', b: 'cattail', result: '冰西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788671489', overTransform: 'translate(-5px, -30px) scale(0.7)' }
         ];
         
         const list = document.getElementById('recipe-list');
@@ -341,8 +341,8 @@ class Game {
                     'fumeshroom': 'assets/images/Plants/FumeShroom/FumeShroom.gif',
                     'spikeweed': 'assets/images/Plants/Spikeweed/Spikeweed.gif',
                     'tallnut': 'assets/images/Plants/TallNut/TallNut.gif',
-                    'melonpult': 'assets/images/Plants/MelonPult/MelonPult.png?v=1788670556',
-                    'wintermelon': 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788670556',
+                    'melonpult': 'assets/images/Plants/MelonPult/MelonPult.png?v=1788671489',
+                    'wintermelon': 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788671489',
                     'cattail': 'assets/images/Plants/Cattail/Cattail.gif',
                     'gloomshroom': 'assets/images/Plants/GloomShroom/GloomShroom.gif',
                     'spikerock': 'assets/images/Plants/Spikerock/Spikerock.gif',
@@ -442,27 +442,8 @@ class Game {
             try { fusionType = this.getFusionResult(this.gloveSource.type, plant.type); } catch(e) { console.error(e); }
             if (fusionType) {
                 if (fusionType === 'fusion_pumpkinhead') {
-                    // 南瓜壳（坚果墙+高坚果）：PVZ 原版"套壳"玩法——
-                    // 第一株（源植物）作为材料被消耗，第二株（目标植物）保留并套上
-                    // +4000 耐久的南瓜壳；僵尸须先啃穿外壳才会伤到里面的植物。
-                    const material = this.gloveSource;
-                    const host = plant;
-                    if (host.shield || host.shieldEl) {
-                        // 目标已套壳：还原源植物并提示
-                        material.element.style.display = 'block';
-                        if (material.fusionOverlay) material.fusionOverlay.style.display = 'block';
-                        this.showAnnouncement('这株植物已经套有南瓜壳了', '#ff0000');
-                    } else {
-                        material.element.style.display = 'block'; // Reset display before dying to ensure cleanup
-                        material.hp = 0; // 消耗材料植物（坚果墙/高坚果之一）
-                        this.board.grid[material.row][material.col] = null;
-                        try {
-                            if (host.attachShield()) {
-                                if (this.audioManager) this.audioManager.play('btn');
-                                this.showAnnouncement(`融合成功：南瓜壳已套在${this.getPlantName(host.type)}上！(+4000耐久)`, '#ff00ff');
-                            }
-                        } catch(e) { console.error(e); }
-                    }
+                    // 南瓜壳：PVZ 原版"套壳"玩法——材料植物被消耗，宿主植物保留并套上外壳
+                    this.applyPumpkinShell(this.gloveSource, plant);
                 } else {
                     this.gloveSource.element.style.display = 'block'; // Reset display before dying to ensure cleanup
                     this.gloveSource.hp = 0; // kill source
@@ -479,6 +460,10 @@ class Game {
                         }
                     } catch(e) { console.error(e); }
                 }
+            } else if (this.gloveSource.type === 'wallnut' || this.gloveSource.type === 'tallnut') {
+                // 墙果材料（坚果墙/高坚果）拖到任意植物上 = 给那株植物套上南瓜壳
+                // （PVZ 原版：南瓜壳可保护任何常驻植物；材料被消耗、宿主保留）
+                this.applyPumpkinShell(this.gloveSource, plant);
             } else {
                 this.gloveSource.element.style.display = 'block';
                 if (this.gloveSource.fusionOverlay) this.gloveSource.fusionOverlay.style.display = 'block';
@@ -493,6 +478,36 @@ class Game {
             this.gloveSource = null;
         }
         return true;
+    }
+
+    // 南瓜壳套壳（PVZ 原版玩法）：material（坚果墙/高坚果，手套源）作为材料被消耗，
+    // host（场上任意常驻植物）保留并套上 +4000 耐久外壳；僵尸须先啃穿外壳才会伤到里面的植物。
+    applyPumpkinShell(material, host) {
+        const restoreMaterial = () => {
+            material.element.style.display = 'block';
+            if (material.fusionOverlay) material.fusionOverlay.style.display = 'block';
+        };
+        // 一次性/爆炸类植物不能套壳（套了也无意义；与 PVZ 原版一致）
+        const oneShot = ['cherrybomb', 'jalapeno', 'potatomine', 'squash', 'doomshroom', 'iceshroom', 'crater'];
+        if (host.isDead || host.shield || host.shieldEl) {
+            restoreMaterial();
+            this.showAnnouncement('这株植物已经套有南瓜壳了', '#ff0000');
+            return;
+        }
+        if (oneShot.includes(host.type)) {
+            restoreMaterial();
+            this.showAnnouncement('这种植物套不了南瓜壳', '#ff0000');
+            return;
+        }
+        restoreMaterial(); // Reset display before dying to ensure cleanup
+        material.hp = 0; // 消耗材料植物（坚果墙/高坚果之一）
+        this.board.grid[material.row][material.col] = null;
+        try {
+            if (host.attachShield()) {
+                if (this.audioManager) this.audioManager.play('btn');
+                this.showAnnouncement(`融合成功：南瓜壳已套在${this.getPlantName(host.type)}上！(+4000耐久)`, '#ff00ff');
+            }
+        } catch(e) { console.error(e); }
     }
 
     getPlantName(type) {
