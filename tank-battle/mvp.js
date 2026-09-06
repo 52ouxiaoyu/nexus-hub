@@ -13,20 +13,15 @@ async function generateMVPReview(game, p1, p2, mvp) {
 
     function getRuleBasedQuote(player, isMvp, isDraw) {
         if (!player) return "";
+        if (isMvp && !isDraw) return ""; // 核心修改：MVP 玩家不需要任何评论
         let quote = "";
         const s = player.stats;
         if (isDraw) return pickRandom(defaultQuotes.draw);
         
-        if (isMvp) {
-            if (s.kills > 20) quote = pickRandom(defaultQuotes.carry);
-            else if (s.blocks > 30) quote = pickRandom(defaultQuotes.brickBreaker);
-            else quote = pickRandom(defaultQuotes.win);
-        } else {
-            if (s.friendlyFires > 5) quote = pickRandom(defaultQuotes.friendlyFire);
-            else if (s.deaths > 5) quote = pickRandom(defaultQuotes.feeder);
-            else if (s.powerups > 10 && s.kills < 5) quote = pickRandom(defaultQuotes.itemHoarder);
-            else quote = pickRandom(defaultQuotes.feeder);
-        }
+        if (s.deaths > 5) quote = pickRandom(defaultQuotes.feeder);
+        else if (s.powerups > 10 && s.kills < 5) quote = pickRandom(defaultQuotes.itemHoarder);
+        else quote = pickRandom(defaultQuotes.feeder);
+        
         return quote;
     }
 
@@ -39,13 +34,19 @@ async function generateMVPReview(game, p1, p2, mvp) {
             const capabilities = await window.ai.languageModel.capabilities();
             if (capabilities.available === 'readily') {
                 const session = await window.ai.languageModel.create({
-                    systemPrompt: `你是一个毒舌又专业的电竞解说，现在要对一场《坦克大战》的两位玩家进行一句话锐评（不超过30个字）。游戏规则是保护基地不被摧毁并击杀敌人。`
+                    systemPrompt: `你是一个毒舌又专业的电竞解说，现在要对一场《坦克大战》的失败玩家进行嘲讽（不超过30个字）。游戏规则是保护基地不被摧毁并击杀敌人。`
                 });
                 
                 let prompt = `游戏结果：${mvp === 'DRAW' ? '平局' : (mvp ? `P${mvp.id} 是 MVP` : '两人都很菜')}。\n`;
                 if (p1) prompt += `玩家1(P1)：得分为${p1.score}，击杀${p1.stats.kills}，死亡${p1.stats.deaths}，误伤队友${p1.stats.friendlyFires}次，吃道具${p1.stats.powerups}个，拆墙${p1.stats.blocks}块。\n`;
                 if (p2) prompt += `玩家2(P2)：得分为${p2.score}，击杀${p2.stats.kills}，死亡${p2.stats.deaths}，误伤队友${p2.stats.friendlyFires}次，吃道具${p2.stats.powerups}个，拆墙${p2.stats.blocks}块。\n`;
-                prompt += `请分别给出P1和P2的锐评。格式要求（必须严格遵守）：\nP1: [对P1的锐评]\nP2: [对P2的锐评]`;
+                
+                if (mvp === 'DRAW') {
+                    prompt += `请分别给出P1和P2的嘲讽。格式：\nP1: [对P1的嘲讽]\nP2: [对P2的嘲讽]`;
+                } else {
+                    let loser = mvp === p1 ? 'P2' : 'P1';
+                    prompt += `请**仅**对败者 ${loser} 给出犀利的嘲讽，不要评论MVP。格式要求：\n${loser}: [对${loser}的嘲讽]`;
+                }
 
                 const response = await session.prompt(prompt);
                 
@@ -53,8 +54,12 @@ async function generateMVPReview(game, p1, p2, mvp) {
                 let aiP1 = lines.find(l => l.startsWith('P1:'))?.substring(3).trim();
                 let aiP2 = lines.find(l => l.startsWith('P2:'))?.substring(3).trim();
                 
-                if (aiP1) p1Quote = aiP1.replace(/["*]/g, '');
-                if (aiP2) p2Quote = aiP2.replace(/["*]/g, '');
+                if (aiP1 && mvp !== p1) p1Quote = aiP1.replace(/["*]/g, '');
+                if (aiP2 && mvp !== p2) p2Quote = aiP2.replace(/["*]/g, '');
+                
+                // Double safe cleanup
+                if (mvp === p1 && mvp !== 'DRAW') p1Quote = "";
+                if (mvp === p2 && mvp !== 'DRAW') p2Quote = "";
                 
                 session.destroy();
             }
