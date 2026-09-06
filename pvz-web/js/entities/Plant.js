@@ -153,12 +153,12 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788682882';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788686227';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788682882';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788686227';
         }
         
 
@@ -366,7 +366,7 @@ class Plant extends Entity {
         this.shield = { hp: 4000, maxHp: 4000 };
         // 套壳视觉（PVZ 原版）：壳是"罩"在植物外的空心护甲——
         // 植物下半身被壳前壁遮挡、上半身从壳顶洞口伸出（穿插/部分被遮）。
-        // 三层 z 序（低→高）：宿主植物 → 洞底暗影(洞里显"深") → 带洞壳前壁。
+        // 两层 z 序（低→高）：宿主植物 → 带洞壳前壁（洞口透明，直接透出植物本体，无黑影）。
         const S = 'assets/images/Plants/PumpkinHead/';
         // 宿主显示尺寸：用布局像素(offsetHeight)，与 this.x/y 同处 900x600 逻辑系，
         // 不受 game-container 的 CSS transform:scale 影响（getBoundingClientRect 会含缩放）。
@@ -379,18 +379,7 @@ class Plant extends Entity {
         // 壳底贴宿主底(留 2px)，壳顶因此低于宿主顶 → 植物从壳顶洞口探出
         const shCenterX = this.x;
         const shCenterY = hostBottom - shH / 2 - 2;
-        // 洞底暗影层：画在宿主之上、壳之下（洞区显深色内腔）
-        const cav = document.createElement('img');
-        cav.src = S + 'pump_cavity.png';
-        cav.className = 'entity';
-        cav.style.pointerEvents = 'none';
-        cav.style.width = shW + 'px';
-        cav.style.height = shH + 'px';
-        cav.style.objectFit = 'contain';
-        cav.style.zIndex = String(Math.floor(this.y) + 2);
-        this.cavityEl = cav;
-        this.game.entityLayer.appendChild(cav);
-        // 壳前壁层（带顶洞，挖洞处透明 → 露出洞底暗影与植物探头）
+        // 壳前壁层（带顶洞，挖洞处透明 → 直接透出里面的植物探头，不再画洞底黑影）
         const el = document.createElement('img');
         el.src = S + 'shield_full.png';
         el.className = 'entity';
