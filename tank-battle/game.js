@@ -1475,7 +1475,7 @@ class Boss extends Enemy {
         
         // Ensure starting players can defeat the boss with skillful movement (~15-30 hits for normal boss)
         const avgPlayerLvl = Math.max(1, ...this.game.players.map(p => p.level || 1));
-        this.health = Math.floor((15 + stage * 3 + avgPlayerLvl * 2) * hpMult); 
+        this.health = Math.floor((10 + stage * 1.5 + avgPlayerLvl * 1.5) * hpMult); 
         this.maxHealth = this.health;
         this.speed = (1.0 + difficulty * 0.8) * speedMult; 
         this.baseSpeed = this.speed;
@@ -1682,8 +1682,8 @@ class Boss extends Enemy {
                 moving = true;
                 if (pDist < this.width) {
                     nearestPowerup.active = false; 
-                    this.health = Math.min(this.maxHealth, this.health + 50);
-                    this.game.showFloatingText('+50 HP', this.x, this.y, '#0f0');
+                    this.health = Math.min(this.maxHealth, this.health + 10);
+                    this.game.showFloatingText('+10 HP', this.x, this.y, '#0f0');
                 }
             }
         }
