@@ -991,7 +991,7 @@ class Tank {
             }
         }
         if (this instanceof Enemy && !this.isBoss) {
-            let dropChance = 0.15; // Increased base drop chance
+            let dropChance = 0.25; // Increased base drop chance significantly
             let type = null;
             
             if (this.weaponClass && this.weaponClass !== 'NORMAL') {
@@ -1004,26 +1004,27 @@ class Tank {
             } else {
                 let dropTypes = [
                     POWERUP_TYPES.SHIELD, POWERUP_TYPES.BOMB, POWERUP_TYPES.SHOVEL, 
-                    POWERUP_TYPES.TIME, POWERUP_TYPES.STAR, POWERUP_TYPES.ULTIMATE,
+                    POWERUP_TYPES.TIME, POWERUP_TYPES.STAR, 
+                    POWERUP_TYPES.ULTIMATE, POWERUP_TYPES.ULTIMATE, POWERUP_TYPES.ULTIMATE,
                     POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.W_MISSILE,
                     POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_EXPLOSIVE
                 ];
                 
                 if (this.variant === 'HEAVY') {
-                    dropChance = 0.3;
-                    dropTypes = [POWERUP_TYPES.LIFE, POWERUP_TYPES.SHOVEL, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.BOMB, POWERUP_TYPES.ULTIMATE];
+                    dropChance = 0.4;
+                    dropTypes = [POWERUP_TYPES.LIFE, POWERUP_TYPES.SHOVEL, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.BOMB, POWERUP_TYPES.ULTIMATE, POWERUP_TYPES.ULTIMATE];
                 } else if (this.variant === 'FAST') {
-                    dropChance = 0.25;
-                    dropTypes = [POWERUP_TYPES.TIME, POWERUP_TYPES.SHIELD, POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.ULTIMATE];
-                } else if (this.variant === 'ELITE') {
-                    dropChance = 0.5;
-                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.STAR, POWERUP_TYPES.LIFE, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.ULTIMATE, POWERUP_TYPES.ULTIMATE];
-                } else if (this.variant === 'SMART') {
                     dropChance = 0.35;
-                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.SHIELD, POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.ULTIMATE];
+                    dropTypes = [POWERUP_TYPES.TIME, POWERUP_TYPES.SHIELD, POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.ULTIMATE, POWERUP_TYPES.ULTIMATE];
+                } else if (this.variant === 'ELITE') {
+                    dropChance = 0.6;
+                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.STAR, POWERUP_TYPES.LIFE, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.ULTIMATE, POWERUP_TYPES.ULTIMATE, POWERUP_TYPES.ULTIMATE, POWERUP_TYPES.ULTIMATE];
+                } else if (this.variant === 'SMART') {
+                    dropChance = 0.45;
+                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.SHIELD, POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.ULTIMATE, POWERUP_TYPES.ULTIMATE];
                 } else if (this.variant === 'RAPID') {
-                    dropChance = 0.3;
-                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.ULTIMATE];
+                    dropChance = 0.4;
+                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.ULTIMATE, POWERUP_TYPES.ULTIMATE];
                 }
                 type = dropTypes[Math.floor(Math.random() * dropTypes.length)];
             }
@@ -1903,7 +1904,7 @@ class Boss extends Enemy {
         if (this.health <= 0) {
             this.alive = false; this.game.weather = 'NONE';
             for (let i = 0; i < 12; i++) {
-                const standardTypes = [POWERUP_TYPES.SHIELD, POWERUP_TYPES.BOMB, POWERUP_TYPES.SHOVEL, POWERUP_TYPES.TIME, POWERUP_TYPES.LIFE, POWERUP_TYPES.STAR, POWERUP_TYPES.STAR, POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.ULTIMATE, POWERUP_TYPES.ULTIMATE];
+                const standardTypes = [POWERUP_TYPES.SHIELD, POWERUP_TYPES.BOMB, POWERUP_TYPES.SHOVEL, POWERUP_TYPES.TIME, POWERUP_TYPES.LIFE, POWERUP_TYPES.STAR, POWERUP_TYPES.STAR, POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.ULTIMATE, POWERUP_TYPES.ULTIMATE, POWERUP_TYPES.ULTIMATE, POWERUP_TYPES.ULTIMATE];
                 const angle = (i / 12) * Math.PI * 2;
                 const dist = TILE_SIZE * 3;
                 let px = this.x + this.width/2 + Math.cos(angle) * dist - 32;
