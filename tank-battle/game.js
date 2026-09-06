@@ -970,7 +970,7 @@ class Tank {
             let slideDist = !isPlayer ? 24 : 18;
             
             if (dir === 'UP' || dir === 'DOWN') { 
-                const gx = Math.round(this.x / TILE_SIZE) * TILE_SIZE + (TILE_SIZE - this.width)/2; 
+                const gx = Math.round(this.x / TILE_SIZE) * TILE_SIZE + 2; 
                 if (Math.abs(this.x - gx) < slideDist) {
                     if (this.x < gx) this.x = Math.min(gx, this.x + slideSpeed);
                     else if (this.x > gx) this.x = Math.max(gx, this.x - slideSpeed);
@@ -980,7 +980,7 @@ class Tank {
                     }
                 }
             } else { 
-                const gy = Math.round(this.y / TILE_SIZE) * TILE_SIZE + (TILE_SIZE - this.height)/2; 
+                const gy = Math.round(this.y / TILE_SIZE) * TILE_SIZE + 2; 
                 if (Math.abs(this.y - gy) < slideDist) {
                     if (this.y < gy) this.y = Math.min(gy, this.y + slideSpeed);
                     else if (this.y > gy) this.y = Math.max(gy, this.y - slideSpeed);
