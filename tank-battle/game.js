@@ -965,24 +965,27 @@ class Tank {
         }
         else {
             // Enhanced Corner Smoothing (拐角顺滑过渡)
-            let slideSpeed = moveSpeed * 1.5;
+            const isPlayer = this instanceof Player;
+            let slideSpeed = moveSpeed * (!isPlayer ? 1.0 : 1.5);
+            let slideDist = !isPlayer ? 24 : 18;
+            
             if (dir === 'UP' || dir === 'DOWN') { 
                 const gx = Math.round(this.x / TILE_SIZE) * TILE_SIZE + (TILE_SIZE - this.width)/2; 
-                if (Math.abs(this.x - gx) < 18) {
+                if (Math.abs(this.x - gx) < slideDist) {
                     if (this.x < gx) this.x = Math.min(gx, this.x + slideSpeed);
                     else if (this.x > gx) this.x = Math.max(gx, this.x - slideSpeed);
                     
-                    if (!this.game.map.isBlocked(this.x, ny, this.width, this.height, false, this.canBoat, this.canFly)) {
+                    if (isPlayer && !this.game.map.isBlocked(this.x, ny, this.width, this.height, false, this.canBoat, this.canFly)) {
                         this.y = ny;
                     }
                 }
             } else { 
                 const gy = Math.round(this.y / TILE_SIZE) * TILE_SIZE + (TILE_SIZE - this.height)/2; 
-                if (Math.abs(this.y - gy) < 18) {
+                if (Math.abs(this.y - gy) < slideDist) {
                     if (this.y < gy) this.y = Math.min(gy, this.y + slideSpeed);
                     else if (this.y > gy) this.y = Math.max(gy, this.y - slideSpeed);
                     
-                    if (!this.game.map.isBlocked(nx, this.y, this.width, this.height, false, this.canBoat, this.canFly)) {
+                    if (isPlayer && !this.game.map.isBlocked(nx, this.y, this.width, this.height, false, this.canBoat, this.canFly)) {
                         this.x = nx;
                     }
                 }
