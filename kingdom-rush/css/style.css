@@ -70,6 +70,7 @@ canvas {
 #hud-panel {
     background: transparent; pointer-events: none;
     padding: 20px; box-sizing: border-box;
+    justify-content: flex-start; /* FIX: Don't center vertically */
 }
 
 .top-bar { display: flex; justify-content: space-between; width: 100%; pointer-events: none; max-width: 900px; margin: 0 auto;}
