@@ -763,7 +763,13 @@ class Bullet {
             // Don't let player bullets clash with other player bullets
             if (this.owner instanceof Player && other.owner instanceof Player) continue;
             
-            if (this.x < other.x + other.size && this.x + this.size > other.x && this.y < other.y + other.size && this.y + this.size > other.y) { 
+            // "Hitbox Forgiveness" for bullet clashing:
+            // Expands the collision box significantly so players can block shots even if slightly misaligned.
+            let pad = 12; // 12 pixels padding on all sides
+            let ax = this.x - pad, ay = this.y - pad, as = this.size + pad * 2;
+            let bx = other.x - pad, by = other.y - pad, bs = other.size + pad * 2;
+
+            if (ax < bx + bs && ax + as > bx && ay < by + bs && ay + as > by) { 
                 this.active = false; 
                 other.active = false; 
                 this.triggerExplosion(this.x, this.y, true); 
