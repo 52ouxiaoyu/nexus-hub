@@ -850,14 +850,24 @@ class Bullet {
             this.active = false;
             return;
         }
+        
         const isEnemyBullet = this.owner instanceof Enemy;
-        const tanks = isEnemyBullet ? this.game.players : this.game.enemies;
+        const tanks = [...this.game.enemies, ...this.game.players];
+        
         for (const tank of tanks) {
-            if (!tank.alive) continue;
-            if (tank.canFly && this.owner instanceof Enemy) continue;
+            if (!tank.alive || tank === this.owner) continue;
+            if (isEnemyBullet && tank instanceof Enemy) continue;
+            if (tank.canFly && isEnemyBullet) continue; // Enemies can't hit flying players
+            
             if (this.x < tank.x + tank.width && this.x + this.size > tank.x && this.y < tank.y + tank.height && this.y + this.size > tank.y) { 
                 this.triggerExplosion(this.x + this.size/2, this.y + this.size/2); 
-                tank.destroy(this.owner, this.damage); 
+                
+                if (tank instanceof Player && this.owner instanceof Player) {
+                    tank.stunTimer = 60; // Friendly fire stun!
+                } else {
+                    tank.destroy(this.owner, this.damage); 
+                }
+                
                 if (!this.piercing) { this.active = false; break; }
             }
         }
@@ -892,11 +902,19 @@ class Bullet {
             }
         }
         
-        const targets = (this.owner instanceof Enemy) ? this.game.players : this.game.enemies;
+        const targets = [...this.game.enemies, ...this.game.players];
         for (const tank of targets) {
-            if (!tank.alive) continue;
+            if (!tank.alive || tank === this.owner) continue;
+            if (this.owner instanceof Enemy && tank instanceof Enemy) continue;
+            
             let d = Math.hypot(tank.x/TILE_SIZE - gridX, tank.y/TILE_SIZE - gridY);
-            if (d <= radius + 0.5) tank.destroy(this.owner || this, this.damage);
+            if (d <= radius + 0.5) {
+                if (tank instanceof Player && this.owner instanceof Player) {
+                    tank.stunTimer = 60; // Friendly fire AOE stun
+                } else {
+                    tank.destroy(this.owner || this, this.damage);
+                }
+            }
         }
     }
     draw(ctx) { 
@@ -932,7 +950,9 @@ class Tank {
         }
     }
     update() { if (this.cooldown > 0) this.cooldown--;
-        if (this.overdriveTimer > 0) this.overdriveTimer--; if (this.shieldTimer > 0) this.shieldTimer--; if (this.flyBombCooldown > 0) this.flyBombCooldown--; }
+        if (this.overdriveTimer > 0) this.overdriveTimer--; if (this.shieldTimer > 0) this.shieldTimer--; if (this.flyBombCooldown > 0) this.flyBombCooldown--; 
+        if (this.flashTimer > 0) this.flashTimer--;
+    }
     move(dir) {
         this.direction = dir; let nx = this.x; let ny = this.y;
         const onWater = this.game.map.isOnWater(this.x, this.y, this.width, this.height);
@@ -944,18 +964,27 @@ class Tank {
             if (this.moveCounter % 5 === 0) this.game.effects.push(new Effect(this.x + this.width/2, this.y + this.height/2, 'TRACK', { dir: this.direction, w: this.width, h: this.height }));
         }
         else {
+            // Enhanced Corner Smoothing (拐角顺滑过渡)
+            let slideSpeed = moveSpeed * 1.5;
             if (dir === 'UP' || dir === 'DOWN') { 
-                const gx = Math.round(this.x / TILE_SIZE) * TILE_SIZE + 2; 
-                if (Math.abs(this.x - gx) < 24) {
-                    if (this.x < gx) this.x = Math.min(gx, this.x + moveSpeed);
-                    else if (this.x > gx) this.x = Math.max(gx, this.x - moveSpeed);
+                const gx = Math.round(this.x / TILE_SIZE) * TILE_SIZE + (TILE_SIZE - this.width)/2; 
+                if (Math.abs(this.x - gx) < 18) {
+                    if (this.x < gx) this.x = Math.min(gx, this.x + slideSpeed);
+                    else if (this.x > gx) this.x = Math.max(gx, this.x - slideSpeed);
+                    
+                    if (!this.game.map.isBlocked(this.x, ny, this.width, this.height, false, this.canBoat, this.canFly)) {
+                        this.y = ny;
+                    }
                 }
             } else { 
-                const cy = this.y + this.height / 2; 
-                const gy = Math.round(this.y / TILE_SIZE) * TILE_SIZE + 2; 
-                if (Math.abs(this.y - gy) < 24) {
-                    if (this.y < gy) this.y = Math.min(gy, this.y + moveSpeed);
-                    else if (this.y > gy) this.y = Math.max(gy, this.y - moveSpeed);
+                const gy = Math.round(this.y / TILE_SIZE) * TILE_SIZE + (TILE_SIZE - this.height)/2; 
+                if (Math.abs(this.y - gy) < 18) {
+                    if (this.y < gy) this.y = Math.min(gy, this.y + slideSpeed);
+                    else if (this.y > gy) this.y = Math.max(gy, this.y - slideSpeed);
+                    
+                    if (!this.game.map.isBlocked(nx, this.y, this.width, this.height, false, this.canBoat, this.canFly)) {
+                        this.x = nx;
+                    }
                 }
             }
         }
@@ -1034,6 +1063,8 @@ class Tank {
         if (!this.alive) return;
         if (this.shieldTimer > 0) return; 
         this.health = (this.health || 1) - damage;
+        this.flashTimer = 4;
+        
         if (this.health > 0) {
             audio.play('hit');
             this.game.effects.push(new Effect(this.x + 30, this.y + 30, 'EXPLOSION', 1));
@@ -1174,6 +1205,8 @@ class Tank {
         }
         
         ctx.save();
+        if (this.flashTimer > 0) ctx.filter = 'brightness(300%) grayscale(50%)';
+        
         if (this.overdriveTimer > 0) {
             ctx.shadowBlur = 30 + Math.sin(Date.now() / 50) * 20;
             ctx.shadowColor = Math.floor(Date.now() / 100) % 2 === 0 ? '#ff0000' : '#ffff00';
@@ -1278,6 +1311,13 @@ class Player extends Tank {
     
     update() {
         if (!this.alive) return;
+        
+        if (this.stunTimer > 0) {
+            this.stunTimer--;
+            if (this.stunTimer % 15 === 0) this.game.showFloatingText('被队友痛击!', this.x, this.y, '#888');
+            return; 
+        }
+        
         if (this.game.playerFrozenTimer > 0) return;
         if (isNaN(this.x) || isNaN(this.y)) { this.x = TILE_SIZE * 8; this.y = TILE_SIZE * 22; }
         
@@ -1975,7 +2015,27 @@ class Boss extends Enemy {
         if (this.bossVariant !== 'SUMMONER' || !this.shieldActive) {
             this.move(this.direction); 
         }
-        if (this.x === ox && this.y === oy) this.dirTimer = 0; 
+        if (this.x === ox && this.y === oy) {
+            this.dirTimer = 0; 
+            // Boss Demolition: Crush normal BRICKs if stuck!
+            let tx = Math.floor((this.x + this.width/2 + (this.direction === 'LEFT' ? -TILE_SIZE : this.direction === 'RIGHT' ? TILE_SIZE : 0)) / TILE_SIZE);
+            let ty = Math.floor((this.y + this.height/2 + (this.direction === 'UP' ? -TILE_SIZE : this.direction === 'DOWN' ? TILE_SIZE : 0)) / TILE_SIZE);
+            
+            // Only crush if we are not aiming at the base
+            if (!(tx >= 10 && tx <= 15 && ty >= 22)) {
+                for (let i = -1; i <= 1; i++) {
+                    for (let j = -1; j <= 1; j++) {
+                        let cx = tx + j, cy = ty + i;
+                        if (cx > 0 && cx < GRID_SIZE-1 && cy > 0 && cy < GRID_SIZE-1) {
+                            if (this.game.map.grid[cy][cx] === TILE_TYPES.BRICK) {
+                                this.game.map.grid[cy][cx] = TILE_TYPES.EMPTY;
+                                this.game.effects.push(new Effect(cx * TILE_SIZE + 16, cy * TILE_SIZE + 16, 'EXPLOSION', 0.5));
+                            }
+                        }
+                    }
+                }
+            }
+        }
         
         if (nearestEnemy) {
             const cx = this.x + this.width / 2;
@@ -2011,14 +2071,13 @@ class Boss extends Enemy {
             return;
         }
         this.health -= damage; 
+        this.flashTimer = 4;
+        
         if (killer instanceof Player) {
             this.damageTracker[killer.id] = (this.damageTracker[killer.id] || 0) + damage;
         }
         this.game.effects.push(new Effect(this.x + Math.random()*this.width, this.y + Math.random()*this.height, 'EXPLOSION', 2.5));
         audio.play('hit');
-        const oldColor = this.color;
-        this.color = '#ffffff';
-        setTimeout(() => { if (this.alive) this.color = oldColor; }, 100);
 
         if (this.health <= 0) {
             this.alive = false; this.game.weather = 'NONE';
