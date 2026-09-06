@@ -27,32 +27,32 @@ const TOWER_DEFS = {
         name: '弓箭塔', color: '#a0522d', dmgType: 'physical', baseColor: '#5d4037', barrelColor: '#8d6e63',
         levels: [
             { cost: 70, range: 180, dmg: 15, cd: 400, type: 'single' },
-            { cost: 110, range: 200, dmg: 30, cd: 350, type: 'single' },
-            { cost: 160, range: 220, dmg: 55, cd: 300, type: 'single' }
+            { cost: 110, range: 230, dmg: 30, cd: 350, type: 'single' },
+            { cost: 160, range: 280, dmg: 55, cd: 300, type: 'single' }
         ]
     },
     'MAGE': { 
         name: '魔法塔', color: '#9b59b6', dmgType: 'magic', baseColor: '#34495e', barrelColor: '#8e44ad',
         levels: [
             { cost: 100, range: 160, dmg: 40, cd: 1200, type: 'single' },
-            { cost: 160, range: 170, dmg: 80, cd: 1100, type: 'single' },
-            { cost: 240, range: 180, dmg: 160, cd: 1000, type: 'single' }
+            { cost: 160, range: 200, dmg: 80, cd: 1100, type: 'single' },
+            { cost: 240, range: 250, dmg: 160, cd: 1000, type: 'single' }
         ]
     },
     'ARTILLERY': { 
         name: '火炮塔', color: '#e74c3c', dmgType: 'physical', baseColor: '#2c3e50', barrelColor: '#7f8c8d',
         levels: [
             { cost: 125, range: 150, dmg: 35, cd: 2000, type: 'splash', splash: 90 },
-            { cost: 220, range: 160, dmg: 70, cd: 1800, type: 'splash', splash: 100 },
-            { cost: 320, range: 170, dmg: 140, cd: 1600, type: 'splash', splash: 120 }
+            { cost: 220, range: 190, dmg: 70, cd: 1800, type: 'splash', splash: 100 },
+            { cost: 320, range: 230, dmg: 140, cd: 1600, type: 'splash', splash: 120 }
         ]
     },
     'ICE': { 
         name: '冰霜塔', color: '#3498db', dmgType: 'magic', baseColor: '#ecf0f1', barrelColor: '#2980b9',
         levels: [
             { cost: 150, range: 140, dmg: 15, cd: 1000, type: 'splash', splash: 80, slowDur: 1500, slowMult: 0.6 },
-            { cost: 200, range: 160, dmg: 30, cd: 950, type: 'splash', splash: 90, slowDur: 2000, slowMult: 0.5 },
-            { cost: 250, range: 180, dmg: 50, cd: 900, type: 'splash', splash: 100, slowDur: 2500, slowMult: 0.4 }
+            { cost: 200, range: 180, dmg: 30, cd: 950, type: 'splash', splash: 90, slowDur: 2000, slowMult: 0.5 },
+            { cost: 250, range: 220, dmg: 50, cd: 900, type: 'splash', splash: 100, slowDur: 2500, slowMult: 0.4 }
         ]
     }
 };
@@ -272,14 +272,35 @@ class Game {
     updateUpgradeMenu() {
         if (!this.selectedEntity || !this.selectedEntity.isTower) return;
         let t = this.selectedEntity; let baseDef = TOWER_DEFS[t.type];
+        
+        let curDef = baseDef.levels[t.lvl];
         document.getElementById('upg-title').innerText = `${baseDef.name} Lv.${t.lvl + 1}`;
+        
+        let statsDiv = document.getElementById('upg-stats');
         let btnUpg = document.getElementById('btn-upgrade');
-        if (t.lvl < 2) {
+        
+        if (t.lvl < baseDef.levels.length - 1) {
             let nextDef = baseDef.levels[t.lvl + 1];
+            
+            // Build stats preview
+            let dpsCur = Math.round(curDef.dmg / (curDef.cd / 1000));
+            let dpsNext = Math.round(nextDef.dmg / (nextDef.cd / 1000));
+            
+            statsDiv.innerHTML = `
+                🗡️ 秒伤: ${dpsCur} <span style="color:#2ecc71;">➜ ${dpsNext}</span><br>
+                🎯 范围: ${curDef.range} <span style="color:#2ecc71;">➜ ${nextDef.range}</span>
+            `;
+            statsDiv.style.display = 'block';
+            
             btnUpg.innerText = `升级 (${nextDef.cost})`; btnUpg.disabled = this.gold < nextDef.cost;
         } else {
+            let dpsCur = Math.round(curDef.dmg / (curDef.cd / 1000));
+            statsDiv.innerHTML = `🗡️ 秒伤: ${dpsCur}<br>🎯 范围: ${curDef.range}`;
+            statsDiv.style.display = 'block';
+            
             btnUpg.innerText = `已满级`; btnUpg.disabled = true;
         }
+        
         let totalCost = 0; for(let i=0; i<=t.lvl; i++) totalCost += baseDef.levels[i].cost;
         document.getElementById('btn-sell').innerText = `出售 (${Math.floor(totalCost * 0.6)})`;
     }
@@ -760,9 +781,20 @@ class Game {
             
             // Range highlight
             if (this.selectedEntity === t) {
+                // Current Range (Solid White)
                 this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
                 this.ctx.lineWidth = 2;
                 this.ctx.beginPath(); this.ctx.arc(t.x, t.y, baseDef.levels[t.lvl].range, 0, Math.PI*2); this.ctx.stroke();
+                
+                // Next Level Range (Dashed Green) if not max level
+                if (t.lvl < baseDef.levels.length - 1) {
+                    this.ctx.save();
+                    this.ctx.strokeStyle = 'rgba(46, 204, 113, 0.6)'; // Emerald green
+                    this.ctx.lineWidth = 2;
+                    this.ctx.setLineDash([5, 5]);
+                    this.ctx.beginPath(); this.ctx.arc(t.x, t.y, baseDef.levels[t.lvl + 1].range, 0, Math.PI*2); this.ctx.stroke();
+                    this.ctx.restore();
+                }
             }
         });
         
