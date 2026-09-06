@@ -1,6 +1,6 @@
 
 const CONFIG = {
-    CELL_SIZE: 80, COLS: 20, ROWS: 15, WIDTH: 1600, HEIGHT: 1200,
+    CELL_SIZE: 80, COLS: 20, ROWS: 14, WIDTH: 1600, HEIGHT: 1120,
     START_GOLD: 800, START_HP: 20
 };
 
@@ -18,8 +18,7 @@ const MAP_GRID = [
     [0,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1,1,0,5,0],
     [0,0,5,0,0,1,0,4,0,0,0,5,0,0,0,4,0,0,0,0],
     [0,4,0,0,0,1,0,0,0,0,0,0,0,5,0,0,0,5,0,0],
-    [0,0,0,5,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3],
-    [4,0,0,0,0,0,4,0,0,5,0,0,0,0,4,0,0,0,0,4]
+    [0,0,0,5,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3]
 ];
 
 function generateWaypoints() {
@@ -863,10 +862,9 @@ class Game {
             }
         }
         
-        // Grid lines
         this.ctx.strokeStyle = 'rgba(0,0,0,0.3)'; this.ctx.lineWidth = 1;
-        for(let r=0; r<=CONFIG.ROWS; r++) { this.ctx.beginPath(); this.ctx.moveTo(0, r*80); this.ctx.lineTo(960, r*80); this.ctx.stroke(); }
-        for(let c=0; c<=CONFIG.COLS; c++) { this.ctx.beginPath(); this.ctx.moveTo(c*80, 0); this.ctx.lineTo(c*80, 640); this.ctx.stroke(); }
+        for(let r=0; r<=CONFIG.ROWS; r++) { this.ctx.beginPath(); this.ctx.moveTo(0, r*80); this.ctx.lineTo(CONFIG.WIDTH, r*80); this.ctx.stroke(); }
+        for(let c=0; c<=CONFIG.COLS; c++) { this.ctx.beginPath(); this.ctx.moveTo(c*80, 0); this.ctx.lineTo(c*80, CONFIG.HEIGHT); this.ctx.stroke(); }
         
         // Draw Props
         this.props.forEach(p => {
