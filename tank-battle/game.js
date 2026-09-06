@@ -864,14 +864,10 @@ class Bullet {
             if (tank.canFly && isEnemyBullet) continue; // Enemies can't hit flying players
             
             if (this.x < tank.x + tank.width && this.x + this.size > tank.x && this.y < tank.y + tank.height && this.y + this.size > tank.y) { 
-                this.triggerExplosion(this.x + this.size/2, this.y + this.size/2); 
+                if (tank instanceof Player && this.owner instanceof Player) continue;
                 
-                if (tank instanceof Player && this.owner instanceof Player) {
-                    tank.stunTimer = 60; // Friendly fire stun!
-                    if (tank !== this.owner) this.owner.stats.friendlyFires++;
-                } else {
-                    tank.destroy(this.owner, this.damage); 
-                }
+                this.triggerExplosion(this.x + this.size/2, this.y + this.size/2); 
+                tank.destroy(this.owner, this.damage); 
                 
                 if (!this.piercing) { this.active = false; break; }
             }
@@ -917,12 +913,9 @@ class Bullet {
             
             let d = Math.hypot(tank.x/TILE_SIZE - gridX, tank.y/TILE_SIZE - gridY);
             if (d <= radius + 0.5) {
-                if (tank instanceof Player && this.owner instanceof Player) {
-                    tank.stunTimer = 60; // Friendly fire AOE stun
-                    if (tank !== this.owner) this.owner.stats.friendlyFires++;
-                } else {
-                    tank.destroy(this.owner || this, this.damage);
-                }
+                if (tank instanceof Player && this.owner instanceof Player) continue;
+                
+                tank.destroy(this.owner || this, this.damage);
             }
         }
     }
