@@ -9,10 +9,11 @@
 </head>
 <body>
     <div id="game-container">
-        <canvas id="gameCanvas" width="960" height="640"></canvas>
-        <div id="grid-overlay" style="width: 960px; height: 640px;"></div>
+        <div id="game-wrapper" style="position: relative; width: 960px; height: 640px;">
+            <canvas id="gameCanvas" width="960" height="640"></canvas>
+            <div id="grid-overlay" style="position: absolute; top:0; left:0; width: 960px; height: 640px;"></div>
 
-        <div id="ui-layer">
+            <div id="ui-layer" style="position: absolute; top:0; left:0; width: 100%; height: 100%;">
             <!-- Main Menu -->
             <div id="menu-panel" class="panel active">
                 <div style="position: absolute; bottom: 20px; right: 20px; color: rgba(255,255,255,0.3); font-size: 14px;">v5.0.0 (Hardcore Edition)</div>
@@ -73,6 +74,7 @@
                 <h2 class="sub-title" id="end-desc">抵挡到了第 1 波</h2>
                 <button id="btn-restart" class="ui-btn primary">重新集结</button>
             </div>
+        </div>
         </div>
     </div>
     
