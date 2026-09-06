@@ -2622,7 +2622,10 @@ class Game {
             "你的坦克履带是不是上错润滑油了，怎么一直往子弹上撞？", "你对敌人的仁慈，就是对队友的残忍",
             "你的操作就像是在用摩斯密码求救", "你这坦克开的，交警看了都要吊销你驾照"
         ];
-        this.mvpQuote = quotes[Math.floor(Math.random() * quotes.length)];
+        // Shuffle quotes to pick two distinct ones
+        const shuffledQuotes = [...quotes].sort(() => Math.random() - 0.5);
+        this.p1Quote = shuffledQuotes[0];
+        this.p2Quote = shuffledQuotes[1];
         
         audio.play('powerup');
         setTimeout(() => {
@@ -2649,12 +2652,20 @@ class Game {
             this.ctx.fillText(`P2 分数: ${this.players[1].score}`, cx + 200, 60);
         }
         
-        // Draw Quote at the bottom
-        this.ctx.font = 'bold 24px Arial';
-        this.ctx.fillStyle = '#ffaa00';
+        // Draw Quotes at the bottom
+        this.ctx.font = 'bold 22px Arial';
         this.ctx.shadowBlur = 4;
         this.ctx.shadowColor = '#000';
-        this.ctx.fillText(`“${this.mvpQuote || ""}”`, cx, 750);
+        
+        if (this.players[0]) {
+            this.ctx.fillStyle = this.players[0].color;
+            this.ctx.fillText(`P1 锐评: “${this.p1Quote || ""}”`, cx, 720);
+        }
+        if (this.players[1]) {
+            this.ctx.fillStyle = this.players[1].color;
+            this.ctx.fillText(`P2 锐评: “${this.p2Quote || ""}”`, cx, 760);
+        }
+        
         this.ctx.shadowBlur = 0;
         
         if (this.mvpPlayer === 'DRAW') {
