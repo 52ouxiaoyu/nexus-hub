@@ -316,7 +316,6 @@ class PowerUp {
                 this.game.effects.push(new Effect(this.x + 32 + (Math.random() - 0.5) * 60, this.y + 32 + (Math.random() - 0.5) * 60, 'SPARK'));
             }, i * 80);
         }
-        const isPlayer = player instanceof Player;
         if (this.type === POWERUP_TYPES.FAKE_BOMB) {
             this.game.effects.push(new Effect(this.x + 32, this.y + 32, 'EXPLOSION', 2));
             if (isPlayer) {
