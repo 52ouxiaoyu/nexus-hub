@@ -1480,6 +1480,7 @@ class Boss extends Enemy {
         this.speed = (1.0 + difficulty * 0.8) * speedMult; 
         this.baseSpeed = this.speed;
         this.isBoss = true;
+        this.damageTracker = {};
         this.turretAngle = 0; this.turretTargetAngle = 0;
         this.barrelLength = this.width * 0.6;
         this.level = 2 + Math.floor(difficulty * 2);
@@ -1755,6 +1756,9 @@ class Boss extends Enemy {
             return;
         }
         this.health -= damage; 
+        if (killer instanceof Player) {
+            this.damageTracker[killer.id] = (this.damageTracker[killer.id] || 0) + damage;
+        }
         this.game.effects.push(new Effect(this.x + Math.random()*this.width, this.y + Math.random()*this.height, 'EXPLOSION', 2.5));
         audio.play('hit');
         const oldColor = this.color;
@@ -1787,7 +1791,27 @@ class Boss extends Enemy {
             this.game.fortifyBase();
             this.game.enemies.forEach(e => { if (e !== this && e.alive) e.destroy(killer, 999); });
             
-            if (killer instanceof Player) { 
+            let totalDamage = Object.values(this.damageTracker).reduce((a, b) => a + b, 0);
+            
+            if (totalDamage > 0) {
+                for (const playerId in this.damageTracker) {
+                    const dmg = this.damageTracker[playerId];
+                    const share = Math.floor((dmg / totalDamage) * 20000);
+                    const p = this.game.players.find(p => p.id == playerId);
+                    if (p) {
+                        p.score += share;
+                        p.level = Math.max(p.level, 2); 
+                        p.speed = Math.min(8, 4 + p.level * 0.15);
+                        p.setShield(600);
+                        
+                        const offsetX = p.id === 1 ? -60 : 60;
+                        this.game.showFloatingText(`P${p.id} +${share}`, this.x + this.width/2 + offsetX, this.y - 20, p.color || '#ff0');
+                    }
+                }
+                this.game.showAnnouncement('BOSS 陨落! BOSS DESTROYED!', '#ff0');
+                this.game.showAnnouncement('基地防御加强! BASE FORTIFIED!', '#0f0');
+                this.game.updateHUD(); 
+            } else if (killer instanceof Player) { 
                 killer.score += 20000; 
                 killer.level = Math.max(killer.level, 2); 
                 killer.speed = Math.min(8, 4 + killer.level * 0.15);
