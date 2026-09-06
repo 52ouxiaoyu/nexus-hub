@@ -2520,6 +2520,25 @@ class Game {
         } else {
             this.mvpPlayer = sortedPlayers[0];
         }
+        
+        const quotes = [
+            "这操作，看得敌人直呼内行！", "这走位，怕不是键盘上撒了把米鸡在啄？", "MVP = Most Vegetable Player 🥬",
+            "基地没爆，你俩的感情先爆了 💔", "我奶奶来闭着眼睛都比你打得高！", "建议转行玩连连看，那个不需要走位~",
+            "你俩是来给敌军刷业绩的吧？", "打成这样，键盘肯定很想报警 🚨", "这就是传说中的“又菜又爱玩”吗？",
+            "你就是这条街最硬的坦克！", "走位风骚，意识淫荡，这波天秀！", "如果坑队友能算分，你早超神了",
+            "你的坦克是纸糊的吗，一碰就碎碎平安？", "别灰心，至少你还可以点“重新开始”", "你俩的默契程度，简直就像两个互不认识的 AI",
+            "这分……是拿脚打出来的吗？", "敌军指挥官发来贺电：感谢送分！", "答应我，下次别用脸接子弹了，好吗？",
+            "虽然你打得烂，但你死得快啊！", "你的每一次死亡，都让队友的血压升高了 10 毫米汞柱", "这游戏可能不太适合你，要不去玩贪吃蛇？",
+            "你和高手的区别就是，高手用手，你用脸", "你就是传说中的“团灭发动机”？", "别人是来打游戏的，你是来视察阵地的",
+            "别怕，菜是原罪，但不要放弃治疗", "你的操作充满了想象力，可惜和游戏逻辑不太兼容", "只要你足够菜，系统都不知道怎么嘲讽你",
+            "你的走位有一种不顾队友死活的美感", "感谢你为敌方的击杀锦集提供了宝贵素材", "玩得很好，下次别玩了！",
+            "看你打游戏，比玩游戏本身还有趣", "你的存在，是对“合作”两个字最大的侮辱", "我以为你在秀操作，原来你是在找死",
+            "你的每一次开火，都在浪费基地的军费", "能把坦克开成碰碰车，也是一种天赋", "这局游戏，你最大的贡献就是没有中途拔网线",
+            "你的坦克履带是不是上错润滑油了，怎么一直往子弹上撞？", "你对敌人的仁慈，就是对队友的残忍",
+            "你的操作就像是在用摩斯密码求救", "你这坦克开的，交警看了都要吊销你驾照"
+        ];
+        this.mvpQuote = quotes[Math.floor(Math.random() * quotes.length)];
+        
         audio.play('powerup');
         setTimeout(() => {
             this.showGameOverScreen();
@@ -2531,6 +2550,28 @@ class Game {
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
+        let cx = 416;
+        
+        // Draw Scores at the top
+        this.ctx.font = 'bold 30px Arial';
+        this.ctx.textAlign = 'center';
+        if (this.players[0]) {
+            this.ctx.fillStyle = this.players[0].color;
+            this.ctx.fillText(`P1 分数: ${this.players[0].score}`, cx - 200, 60);
+        }
+        if (this.players[1]) {
+            this.ctx.fillStyle = this.players[1].color;
+            this.ctx.fillText(`P2 分数: ${this.players[1].score}`, cx + 200, 60);
+        }
+        
+        // Draw Quote at the bottom
+        this.ctx.font = 'bold 24px Arial';
+        this.ctx.fillStyle = '#ffaa00';
+        this.ctx.shadowBlur = 4;
+        this.ctx.shadowColor = '#000';
+        this.ctx.fillText(`“${this.mvpQuote || ""}”`, cx, 750);
+        this.ctx.shadowBlur = 0;
+        
         if (this.mvpPlayer === 'DRAW') {
             let cx1 = 250;
             let cx2 = 582;
@@ -2541,12 +2582,11 @@ class Game {
             
             this.ctx.font = 'bold 80px Arial';
             this.ctx.fillStyle = '#ff0';
-            this.ctx.textAlign = 'center';
             this.ctx.fillText("TIE GAME!", 416, 200);
             
             this.ctx.font = 'bold 40px Arial';
             this.ctx.fillStyle = '#fff';
-            this.ctx.fillText("不分上下！都在哭！😭", 416, 260);
+            this.ctx.fillText("平局！不分上下！😭", 416, 260);
             
             for (let i = 0; i < 2; i++) {
                 let p = this.players[i];
@@ -2570,17 +2610,12 @@ class Game {
                 this.ctx.fillRect(4, -4 + tear2, 4, 6);
                 
                 this.ctx.restore();
-                
-                this.ctx.font = 'bold 40px Arial';
-                this.ctx.fillStyle = p.color;
-                this.ctx.fillText(`P${p.id}: ${p.score}`, px, cy + 120);
             }
             return;
         }
         
         if (!this.mvpPlayer) return;
         
-        let cx = 416;
         let cy = 416 + 50;
         
         let jump = Math.abs(Math.sin(this.mvpTimer / 10)) * 30;
@@ -2614,7 +2649,7 @@ class Game {
         // MVP Text
         this.ctx.save();
         let textScale = 1 + Math.sin(this.mvpTimer / 15) * 0.1;
-        this.ctx.translate(cx, cy - 120 - jump*0.5);
+        this.ctx.translate(cx, cy - 150 - jump*0.5);
         this.ctx.scale(textScale, textScale);
         this.ctx.rotate(-rot * 0.5);
         
@@ -2624,12 +2659,7 @@ class Game {
         this.ctx.fillStyle = Math.floor(this.mvpTimer / 5) % 2 === 0 ? '#ff0' : '#fff';
         this.ctx.shadowBlur = 20;
         this.ctx.shadowColor = '#f00';
-        this.ctx.fillText(`${this.mvpPlayer.id} MVP!`, 0, 0);
-        
-        this.ctx.shadowBlur = 0;
-        this.ctx.font = 'bold 40px Arial';
-        this.ctx.fillStyle = '#fff';
-        this.ctx.fillText(`SCORE: ${this.mvpPlayer.score}`, 0, 60);
+        this.ctx.fillText(`P${this.mvpPlayer.id} MVP!`, 0, 0);
         this.ctx.restore();
     }
 }
