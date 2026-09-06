@@ -38,6 +38,8 @@ class Game {
         this.initEventListeners();
         Audio.init();
         
+        
+        this.setupDOMEvents();
         this.showMainMenu();
         this.gameLoop(0);
     }
@@ -57,6 +59,70 @@ class Game {
                 hero.x = this.lanes[hero.laneIndex];
                 hero.y = CONFIG.CANVAS_HEIGHT - 120;
             });
+        }
+    }
+
+    
+    setupDOMEvents() {
+        document.getElementById('btn-players-minus').onclick = () => { this.numPlayers = Math.max(1, this.numPlayers - 1); document.getElementById('lbl-players').innerText = this.numPlayers; };
+        document.getElementById('btn-players-plus').onclick = () => { this.numPlayers = Math.min(3, this.numPlayers + 1); document.getElementById('lbl-players').innerText = this.numPlayers; };
+        document.getElementById('btn-lanes-minus').onclick = () => { this.numLanes = Math.max(1, this.numLanes - 1); document.getElementById('lbl-lanes').innerText = this.numLanes; };
+        document.getElementById('btn-lanes-plus').onclick = () => { this.numLanes = Math.min(10, this.numLanes + 1); document.getElementById('lbl-lanes').innerText = this.numLanes; };
+        
+        document.getElementById('btn-start').onclick = () => { Audio.init(); Audio.resume(); this.startGame(); };
+        document.getElementById('btn-restart').onclick = () => { this.showMainMenu(); };
+    }
+    
+    updateHUDDOM() {
+        if (this.state !== 'playing') return;
+        
+        // Update King HP
+        const hpPercent = (this.castleHp / this.maxCastleHp) * 100;
+        const fill = document.getElementById('king-hp-fill');
+        const container = document.querySelector('.hp-bar-container');
+        fill.style.width = hpPercent + '%';
+        document.getElementById('king-hp-text').innerText = this.castleHp + '/' + this.maxCastleHp;
+        
+        if (this.castleHp <= 3) {
+            container.classList.add('danger');
+            fill.classList.add('danger');
+        } else {
+            container.classList.remove('danger');
+            fill.classList.remove('danger');
+        }
+        
+        // Update Wave
+        document.getElementById('hud-wave').innerText = Math.floor(1 + this.gameTimer/30000);
+        
+        // Update Player Cards (create if not exist)
+        const playersBar = document.getElementById('players-bar');
+        if (playersBar.children.length !== this.numPlayers) {
+            playersBar.innerHTML = '';
+            for (let i = 0; i < this.numPlayers; i++) {
+                const hero = this.heroes[i];
+                const card = document.createElement('div');
+                card.className = 'player-card';
+                card.style.borderColor = hero.color;
+                card.innerHTML = `
+                    <div class="p-name" style="color:${hero.color}">${hero.name}</div>
+                    <div class="p-stat"><span>💰金币</span> <span class="p-gold" id="p${i}-gold">${hero.gold}</span></div>
+                    <div class="p-stat"><span>🏆得分</span> <span id="p${i}-score">${hero.score}</span></div>
+                    <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.2); font-size:14px; color:#aaa; display:flex; justify-content:space-between;">
+                        <span>⚔️<span id="p${i}-dmg">${hero.damage}</span></span>
+                        <span>⚡<span id="p${i}-spd">${(1000/hero.fireRate).toFixed(1)}</span>/s</span>
+                        <span>🏹<span id="p${i}-arr">${hero.arrows}</span></span>
+                    </div>
+                `;
+                playersBar.appendChild(card);
+            }
+        } else {
+            for (let i = 0; i < this.numPlayers; i++) {
+                document.getElementById(`p${i}-gold`).innerText = this.heroes[i].gold;
+                document.getElementById(`p${i}-score`).innerText = this.heroes[i].score;
+                document.getElementById(`p${i}-dmg`).innerText = this.heroes[i].damage;
+                document.getElementById(`p${i}-spd`).innerText = (1000/this.heroes[i].fireRate).toFixed(1);
+                document.getElementById(`p${i}-arr`).innerText = this.heroes[i].arrows;
+            }
         }
     }
 
@@ -90,64 +156,29 @@ class Game {
         });
     }
     
-    handleClick(pos) {
+        handleClick(pos) {
         Audio.init();
         Audio.resume();
-        const cx = CONFIG.CANVAS_WIDTH / 2;
-        const cy = CONFIG.CANVAS_HEIGHT / 2;
-
-        if (this.state === 'menu') {
-            if (pos.y >= cy - 20 && pos.y <= cy + 20) {
-                if (pos.x >= cx - 130 && pos.x <= cx - 90) this.numPlayers = Math.max(1, this.numPlayers - 1);
-                else if (pos.x >= cx + 90 && pos.x <= cx + 130) this.numPlayers = Math.min(3, this.numPlayers + 1);
-            }
-            if (pos.y >= cy + 50 && pos.y <= cy + 90) {
-                if (pos.x >= cx - 130 && pos.x <= cx - 90) this.numLanes = Math.max(1, this.numLanes - 1);
-                else if (pos.x >= cx + 90 && pos.x <= cx + 130) this.numLanes = Math.min(10, this.numLanes + 1);
-            }
-            if (pos.x >= cx - 100 && pos.x <= cx + 100 && pos.y >= cy + 140 && pos.y <= cy + 190) {
-                this.startGame();
-            }
-        } else if (this.state === 'gameover') {
-            this.showMainMenu();
-        } else if (this.state === 'playing') {
-            const sectionWidth = (CONFIG.CANVAS_WIDTH - 200) / this.numPlayers;
-            const btnW = (sectionWidth - 20) / 3 - 5;
-
-            for (let p = 0; p < this.numPlayers; p++) {
-                const hero = this.heroes[p];
-                const startX = p * sectionWidth;
-                
-                for (let i = 0; i < CONFIG.UPGRADES.length; i++) {
-                    const upg = CONFIG.UPGRADES[i];
-                    const cost = Math.floor(upg.cost * Math.pow(upg.costMult, hero.upgradeLevels[i]));
-                    const btnX = startX + 10 + i * (btnW + 5);
-                    const btnY = 70;
-                    
-                    if (pos.x >= btnX && pos.x <= btnX + btnW && pos.y >= btnY && pos.y <= btnY + 26) {
-                        if (hero.gold >= cost) {
-                            hero.gold -= cost;
-                            hero.upgradeLevels[i]++;
-                            if (upg.type === 'weapon') hero.weaponTier = Math.min(CONFIG.WEAPON_TIERS.length - 1, hero.weaponTier + 1);
-                            if (upg.type === 'speed') hero.fireRate *= upg.fireRateMult;
-                            if (upg.type === 'arrows') hero.arrows += upg.arrows;
-                            
-                            this.spawnFloatingText("升级成功!", btnX + btnW/2, btnY, '#4CAF50');
-                        } else {
-                            this.spawnFloatingText("金钱不足", btnX + btnW/2, btnY, '#FF0000');
-                        }
-                    }
-                }
-            }
-        }
+        // Canvas clicks can be used for manual interaction in the future (like tower defense grid placement)
+        // For now, in lane defense, mostly auto or keyboard.
     }
+
+
     
-    showMainMenu() {
+        showMainMenu() {
         this.state = 'menu';
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.getElementById('menu-panel').classList.add('active');
+        document.getElementById('lbl-players').innerText = this.numPlayers;
+        document.getElementById('lbl-lanes').innerText = this.numLanes;
     }
     
     startGame() {
         this.state = 'playing';
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.getElementById('hud-panel').classList.add('active');
+        document.getElementById('players-bar').innerHTML = ''; // Force redraw player cards
+
         this.resize();
         
         this.castleHp = this.maxCastleHp;
@@ -311,6 +342,7 @@ class Game {
         if (this.reverseTimer > 0) this.reverseTimer -= deltaTime;
         if (this.blindTimer > 0) this.blindTimer -= deltaTime;
         this.waveMultiplier = 1 + Math.floor(this.gameTimer / 30000) * 0.2;
+        this.updateHUDDOM();
 
         this.heroes.forEach(hero => {
             if (hero.buffs.rapidTimer > 0) hero.buffs.rapidTimer -= deltaTime;
@@ -455,7 +487,15 @@ class Game {
             } 
             
             if (e.y + (e.type.size*2) >= CONFIG.CANVAS_HEIGHT - 100) {
+                
                 this.castleHp--;
+                const hpBox = document.querySelector('.king-hp-box');
+                if (hpBox) {
+                    hpBox.classList.remove('shake');
+                    void hpBox.offsetWidth; // trigger reflow
+                    hpBox.classList.add('shake');
+                }
+
                 this.triggerShake(10, 300);
                 this.spawnParticles(e.x, e.y, '#FF0000', 20);
                 Audio.playHit();
@@ -464,6 +504,9 @@ class Game {
                 if (this.castleHp <= 0) {
                     this.gameOver = true;
                     this.state = 'gameover';
+                    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                    document.getElementById('gameover-panel').classList.add('active');
+                    document.getElementById('final-wave').innerText = Math.floor(1 + this.gameTimer/30000);
                     Audio.playGameOver();
                 }
                 continue;
@@ -666,46 +709,12 @@ class Game {
         const cx = CONFIG.CANVAS_WIDTH / 2;
         const cy = CONFIG.CANVAS_HEIGHT / 2;
 
-        if (this.state === 'menu') {
-            ctx.fillStyle = '#222';
-            ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
-            ctx.strokeStyle = '#111';
-            ctx.lineWidth = 2;
-            for(let y=0; y<CONFIG.CANVAS_HEIGHT; y+=40) {
-                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CONFIG.CANVAS_WIDTH, y); ctx.stroke();
-                let offset = (y%80===0)?0:20;
-                for(let x=offset; x<CONFIG.CANVAS_WIDTH; x+=40) {
-                    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y+40); ctx.stroke();
-                }
-            }
-            
-            this.drawPixelText(ctx, '王国保卫战 v1.0.1', cx, cy - 160, 60, '#FFD700');
-            this.drawPixelText(ctx, '像素射击版', cx, cy - 110, 30, '#FFF');
-            
-            this.drawPixelText(ctx, '操作指南：P1 (A/D) | P2 (左右) | P3 (J/L)', cx, cy - 50, 18, '#CCC');
-            
-            this.drawPixelText(ctx, '玩家数量: ' + this.numPlayers, cx, cy, 24, '#FFF');
-            this.drawButton(ctx, cx - 130, cy - 20, 40, 40, '-', '#444');
-            this.drawButton(ctx, cx + 90, cy - 20, 40, 40, '+', '#444');
-
-            this.drawPixelText(ctx, '敌人路线: ' + this.numLanes, cx, cy + 70, 24, '#FFF');
-            this.drawButton(ctx, cx - 130, cy + 50, 40, 40, '-', '#444');
-            this.drawButton(ctx, cx + 90, cy + 50, 40, 40, '+', '#444');
-
-            this.drawButton(ctx, cx - 100, cy + 140, 200, 50, '开始游戏', '#8B0000');
+        if (this.state !== 'playing') {
             ctx.restore();
             return;
         }
 
-        if (this.state === 'gameover') {
-            ctx.fillStyle = 'rgba(0,0,0,0.8)';
-            ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
-            this.drawPixelText(ctx, '城堡被攻破！', cx, cy - 50, 60, '#FF0000');
-            this.drawPixelText(ctx, '点击返回主菜单', cx, cy + 50, 24, '#FFF');
-            ctx.restore();
-            return;
-        }
-
+        ctx.fillStyle = '#2d4c1e'; 
         ctx.fillStyle = '#2d4c1e'; 
         ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
         ctx.fillStyle = '#355E24';
@@ -854,54 +863,12 @@ class Game {
         });
 
         ctx.restore();
-
-        // ==========================
-        // HUD (Refined and Concise)
-        // ==========================
-        ctx.fillStyle = '#1a1a1a';
-        ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, 110); // Increased height to 110
-        ctx.strokeStyle = '#444';
-        ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.moveTo(0, 110); ctx.lineTo(CONFIG.CANVAS_WIDTH, 110); ctx.stroke();
-
-        this.drawPixelText(ctx, `难度:${(this.waveMultiplier*100).toFixed(0)}%`, CONFIG.CANVAS_WIDTH - 100, 40, 16, '#FF4500', 'center');
-        let hpColor = this.castleHp > 5 ? '#32CD32' : (this.castleHp > 2 ? '#FFD700' : '#FF0000');
-        this.drawPixelText(ctx, `城墙:${this.castleHp}/${this.maxCastleHp}`, CONFIG.CANVAS_WIDTH - 100, 75, 16, hpColor, 'center');
-
-        const sectionWidth = (CONFIG.CANVAS_WIDTH - 200) / this.numPlayers; 
-        const btnW = (sectionWidth - 20) / 3 - 5;
-        const icons = ['⚔️', '⚡', '🏹'];
-
-        for (let p = 0; p < this.numPlayers; p++) {
-            const hero = this.heroes[p];
-            const startX = p * sectionWidth;
-            
-            if (p > 0) {
-                ctx.beginPath(); ctx.moveTo(startX, 0); ctx.lineTo(startX, 110); ctx.stroke();
-            }
-
-            // Top Row: Name, Score, Gold
-            this.drawPixelText(ctx, hero.name, startX + 10, 25, 16, hero.color, 'left');
-            this.drawPixelText(ctx, `🏆${hero.score}`, startX + 90, 25, 14, '#FFF', 'left');
-            this.drawPixelText(ctx, `🪙${hero.gold}`, startX + 160, 25, 14, '#FFD700', 'left');
-            
-            // Middle Row: Stats
-            let speedStr = (1000/hero.fireRate).toFixed(1);
-            this.drawPixelText(ctx, `⚔️${hero.damage}  ⚡${speedStr}/s  🏹${hero.arrows}`, startX + 10, 50, 14, '#AAA', 'left');
-
-            // Bottom Row: Upgrades
-            for (let i = 0; i < CONFIG.UPGRADES.length; i++) {
-                const upg = CONFIG.UPGRADES[i];
-                const cost = Math.floor(upg.cost * Math.pow(upg.costMult, hero.upgradeLevels[i]));
-                const btnX = startX + 10 + i * (btnW + 5);
-                const btnY = 70;
-                
-                const btnColor = hero.gold >= cost ? '#2E8B57' : '#555';
-                this.drawButton(ctx, btnX, btnY, btnW, 26, `${icons[i]}${cost}`, btnColor, 14);
-            }
-        }
     }
 }
+
+window.addEventListener('load', () => {
+    new Game();
+});
 
 window.addEventListener('load', () => {
     new Game();

@@ -2,32 +2,78 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>王国保卫战 - Kingdom Rush</title>
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background: #000;
-        }
-        #game-container {
-            width: 100%;
-            height: 100%;
-        }
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>奇幻守卫战：胖王保卫纪</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div id="game-container">
+        <!-- Canvas Layer for World Rendering -->
         <canvas id="gameCanvas"></canvas>
+
+        <!-- HTML/CSS Overlay for HUD (Option 3) -->
+        <div id="ui-layer">
+            
+            <!-- Main Menu Panel -->
+            <div id="menu-panel" class="panel active">
+                <h1 class="game-title">🏰 奇幻守卫战</h1>
+                <h2 class="sub-title">胖王保卫纪</h2>
+                
+                <div class="menu-controls">
+                    <div class="control-group">
+                        <label>玩家数量 <span id="lbl-players">2</span></label>
+                        <div class="btn-group">
+                            <button id="btn-players-minus" class="ui-btn small">-</button>
+                            <button id="btn-players-plus" class="ui-btn small">+</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>防守路线 <span id="lbl-lanes">5</span></label>
+                        <div class="btn-group">
+                            <button id="btn-lanes-minus" class="ui-btn small">-</button>
+                            <button id="btn-lanes-plus" class="ui-btn small">+</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <button id="btn-start" class="ui-btn primary pulse">开始保卫！</button>
+                <div class="help-text">操作指南: P1 (A/D) | P2 (左右) | P3 (J/L)</div>
+            </div>
+
+            <!-- In-Game HUD -->
+            <div id="hud-panel" class="panel">
+                <div class="top-bar">
+                    <!-- King's HP -->
+                    <div class="hud-box king-hp-box">
+                        <span class="icon">👑</span>
+                        <div class="hp-bar-container">
+                            <div id="king-hp-fill" class="hp-fill"></div>
+                        </div>
+                        <span id="king-hp-text" class="text-value">10/10</span>
+                    </div>
+
+                    <!-- Game Stats -->
+                    <div class="hud-box stats-box">
+                        <div class="stat"><span class="icon">🚩</span> 波次 <span id="hud-wave" class="text-value highlight">1</span></div>
+                    </div>
+                </div>
+                
+                <!-- Bottom Action Bar (Players Info) -->
+                <div id="players-bar" class="bottom-bar">
+                    <!-- Player cards injected dynamically -->
+                </div>
+            </div>
+
+            <!-- Game Over Panel -->
+            <div id="gameover-panel" class="panel">
+                <h1 class="game-title text-danger">胖王被抓走了！</h1>
+                <p class="score-text">抵挡到了第 <span id="final-wave" class="highlight"></span> 波</p>
+                <button id="btn-restart" class="ui-btn primary">重新集结</button>
+            </div>
+
+        </div>
     </div>
+
     <script src="js/config.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/sprites.js"></script>
