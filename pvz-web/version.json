@@ -1,6 +1,6 @@
 {
-  "version": "v3.3.6-shield-noshadow",
+  "version": "v3.3.7-seedbar-wrap",
   "build": "2026-09-06",
-  "feature": "南瓜壳视觉优化: 去掉壳内'洞底暗影'(pump_cavity.png)图层, 壳顶洞口直接透出里面植物本体(不再有黑影糊在洞内), 套壳渲染由三层改为两层: 宿主植物 → 带洞壳前壁; 壳高62%、壳底贴宿主底、裂纹三态等机制均不变",
-  "assetVersion": 1788686227
+  "feature": "种子栏选满10张不再被横滚遮挡(弟弟抱怨'西瓜投手攒了一局发现没了'的根因): ①#seed-bank 增加 flex-wrap 换行, 10张卡两行全可见无横向滚动 ②#top-bar 整体 scale 0.9→0.7(原点 top center), 抵消两行增加的视觉高度(顶栏82px≈原77px, 草坪第一行视野不被多吃) ③点击坐标链路无影响(已puppeteer验证拖放链路通, 游戏逻辑 tryPlanting 完整回归) ④选5张以下仍单行排布, 不影响旧关卡体验",
+  "assetVersion": 1788686925
 }

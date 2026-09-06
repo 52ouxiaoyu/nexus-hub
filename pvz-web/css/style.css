@@ -66,8 +66,8 @@ body {
     padding: 5px;
     box-sizing: border-box;
     pointer-events: auto;
-    transform: scale(0.9);
-    transform-origin: top center;
+    transform: scale(0.7);             /* 整体缩 0.7：种满 10 张时种子栏换行为两行, 顶栏自然变高, 缩放抵消视觉增加, 草坪第一行视野不被多吃 */
+    transform-origin: top center;     /* 改为水平居中缩放, 避免 UI 整体右移出框且对称 */
 }
 
 /* 除种子栏外的固定区块都不允许被 flex 压缩变形 */
@@ -122,10 +122,11 @@ body {
 
 #seed-bank {
     display: flex;
+    flex-wrap: wrap;        /* 关键：选满 10 张时换行显示,避免被横滚遮挡导致玩家误以为"卡消失" */
     gap: 5px;
-    flex: 1 1 0;          /* 吃掉全部剩余宽度 */
-    min-width: 0;         /* 允许收窄，配合 overflow 触发横向滚动 */
-    overflow-x: auto;
+    flex: 1 1 0;            /* 吃掉全部剩余宽度 */
+    min-width: 0;           /* 允许收窄,配合 flex-wrap 换行 */
+    overflow-x: hidden;     /* 换行后无需横向滚动 */
     overflow-y: hidden;
     padding-bottom: 5px;
     background-image: url('../assets/images/interface/SeedChooser_Background.png');
