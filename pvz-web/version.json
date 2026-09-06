@@ -1,6 +1,6 @@
 {
-  "version": "v3.3.3-home-imgs",
+  "version": "v3.3.4-shield-3d",
   "build": "2026-09-06",
-  "feature": "首页模式卡图修复(部署后图片404): ①向日葵引用路径大小写修复 Sunflower -> SunFlower(本地mac大小写不敏感掩盖了问题, Linux/GitHub Pages大小写敏感导致部署后只剩alt文字) ②融合进化卡恢复'豌豆射手图 + 大蒜图 = ?'图+图+公式布局(整株立绘Plants/Peashooter/0.gif 与 Plants/Garlic/0.gif, 无任何文字植物名) ③全量扫描 133 处资源引用与 git 入库路径大小写一致校验通过",
-  "assetVersion": 1788679404
+  "feature": "南瓜壳改为'套住'式立体渲染(PVZ原版观感): ①新增带顶洞素材 shield_full/mid/bad.png 与洞底暗影 pump_cavity.png(顶部椭圆洞口透明) ②套壳渲染拆三层z序: 宿主植物 → 洞底暗影cavity(洞内显深) → 带洞壳前壁 ③壳高动态=宿主高度62%、壳底贴宿主底, 植物上半从壳口探出、下半被壳前壁遮挡(穿插/部分消失) ④裂纹三态沿用(满/中裂/重裂)",
+  "assetVersion": 1788682019
 }

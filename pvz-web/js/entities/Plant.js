@@ -153,12 +153,12 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788679404';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788682019';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788679404';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788682019';
         }
         
 
@@ -364,15 +364,43 @@ class Plant extends Entity {
     attachShield() {
         if (this.shield || this.shieldEl || this.isDead) return false;
         this.shield = { hp: 4000, maxHp: 4000 };
+        // 套壳视觉（PVZ 原版）：壳是"罩"在植物外的空心护甲——
+        // 植物下半身被壳前壁遮挡、上半身从壳顶洞口伸出（穿插/部分被遮）。
+        // 三层 z 序（低→高）：宿主植物 → 洞底暗影(洞里显"深") → 带洞壳前壁。
+        const S = 'assets/images/Plants/PumpkinHead/';
+        // 宿主显示尺寸：用布局像素(offsetHeight)，与 this.x/y 同处 900x600 逻辑系，
+        // 不受 game-container 的 CSS transform:scale 影响（getBoundingClientRect 会含缩放）。
+        const hostH = this.element.offsetHeight || this.element.naturalHeight || 74;
+        // 壳尺寸 = 宿主高度 62%（矮一截，让植物上部从洞口探出）
+        const shH = Math.max(40, Math.round(hostH * 0.62));
+        const shW = Math.round(shH * 97 / 67);
+        // 宿主可视底部(逻辑系): element top=y+yOffset 且 .entity translate(-50%,-50%) 居中
+        const hostBottom = this.y + this.yOffset + hostH / 2;
+        // 壳底贴宿主底(留 2px)，壳顶因此低于宿主顶 → 植物从壳顶洞口探出
+        const shCenterX = this.x;
+        const shCenterY = hostBottom - shH / 2 - 2;
+        // 洞底暗影层：画在宿主之上、壳之下（洞区显深色内腔）
+        const cav = document.createElement('img');
+        cav.src = S + 'pump_cavity.png';
+        cav.className = 'entity';
+        cav.style.pointerEvents = 'none';
+        cav.style.width = shW + 'px';
+        cav.style.height = shH + 'px';
+        cav.style.objectFit = 'contain';
+        cav.style.zIndex = String(Math.floor(this.y) + 2);
+        this.cavityEl = cav;
+        this.game.entityLayer.appendChild(cav);
+        // 壳前壁层（带顶洞，挖洞处透明 → 露出洞底暗影与植物探头）
         const el = document.createElement('img');
-        el.src = 'assets/images/Plants/PumpkinHead/PumpkinHead.gif';
-        el.className = 'entity';   // translate(-50%,-50%) 居中定位，与植物同一锚点
+        el.src = S + 'shield_full.png';
+        el.className = 'entity';
         el.style.pointerEvents = 'none';
-        el.style.width = '92px';
-        el.style.height = '70px';
+        el.style.width = shW + 'px';
+        el.style.height = shH + 'px';
         el.style.objectFit = 'contain';
-        el.style.zIndex = String(Math.floor(this.y) + 3); // 盖在本株植物之上
+        el.style.zIndex = String(Math.floor(this.y) + 3);
         this.shieldEl = el;
+        this.shieldGeom = { cx: shCenterX, cy: shCenterY };
         this.game.entityLayer.appendChild(el);
         this.updateShieldAppearance();
         return true;
@@ -381,24 +409,27 @@ class Plant extends Entity {
     // 移除南瓜壳（被打穿时带碎裂淡出动画；植物死亡时直接移除）
     removeShield(animate) {
         const el = this.shieldEl;
+        const cav = this.cavityEl;
         this.shield = null;
         this.shieldEl = null;
-        if (!el) return;
-        if (animate) {
+        this.cavityEl = null;
+        this.shieldGeom = null;
+        if (el && animate) {
             el.style.transition = 'transform 0.4s ease-in, opacity 0.4s ease-in';
             el.style.transform = 'translate(-50%, -30%) scale(0.75)';
             el.style.opacity = '0';
             setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 450);
-        } else if (el.parentNode) {
+        } else if (el && el.parentNode) {
             el.parentNode.removeChild(el);
         }
+        if (cav && cav.parentNode) cav.parentNode.removeChild(cav);
     }
     
     // 南瓜壳裂纹分三阶段（满/中裂/重裂），与原版 WallNut 裂纹一致
     updateShieldAppearance() {
         if (!this.shield || !this.shieldEl) return;
         const ratio = this.shield.hp / this.shield.maxHp;
-        const img = ratio < 0.34 ? 'PumpkinHead2.gif' : (ratio < 0.67 ? 'PumpkinHead1.gif' : 'PumpkinHead.gif');
+        const img = ratio < 0.34 ? 'shield_bad.png' : (ratio < 0.67 ? 'shield_mid.png' : 'shield_full.png');
         if (this.shieldEl.src.indexOf(img) === -1) {
             this.shieldEl.src = 'assets/images/Plants/PumpkinHead/' + img;
         }
@@ -529,9 +560,19 @@ class Plant extends Entity {
             this.fusionOverlay.style.top = `${this.y + this.yOffset}px`;
         }
         if (this.shieldEl) {
-            // 南瓜壳略微下移，让里面植物的头部露出来（PVZ 原版观感）
-            this.shieldEl.style.left = `${this.x}px`;
-            this.shieldEl.style.top = `${this.y + this.yOffset + 10}px`;
+            const g = this.shieldGeom;
+            if (g) {
+                this.shieldEl.style.left = `${g.cx}px`;
+                this.shieldEl.style.top = `${g.cy}px`;
+                if (this.cavityEl) {
+                    this.cavityEl.style.left = `${g.cx}px`;
+                    this.cavityEl.style.top = `${g.cy}px`;
+                }
+            } else {
+                // 兜底：无几何信息时沿用植物中心（异常路径）
+                this.shieldEl.style.left = `${this.x}px`;
+                this.shieldEl.style.top = `${this.y + this.yOffset + 10}px`;
+            }
             this.shieldEl.style.zIndex = String(Math.floor(this.y) + 3);
             this.updateShieldAppearance();
         }
@@ -579,8 +620,12 @@ class Plant extends Entity {
             if (this.shieldEl && this.shieldEl.parentNode) {
                 this.shieldEl.parentNode.removeChild(this.shieldEl);
             }
+            if (this.cavityEl && this.cavityEl.parentNode) {
+                this.cavityEl.parentNode.removeChild(this.cavityEl);
+            }
             this.shield = null;
             this.shieldEl = null;
+            this.cavityEl = null;
             return;
         }
         
