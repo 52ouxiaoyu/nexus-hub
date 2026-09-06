@@ -1,6 +1,6 @@
 {
-  "version": "v3.3.9-shield-tophole",
+  "version": "v3.3.10-melon-hd",
   "build": "2026-09-06",
-  "feature": "南瓜壳去掉'上面的黑影'(顶部椭圆形深灰不透明覆盖物, 实为制图时把'洞'涂成了灰色而非挖成真透明): 用'灰暗像素判定' (RGB三值接近且max<110) 把 shield_full/mid/bad 顶部 y2-y21 区所有不透明灰色椭圆像素(alpha→0)挖成真透明, 套壳后顶部直接透出宿主植物身体, 消除植物脖子前的黑色横块; 壳身中下部黑斑(v3.3.8)与洞口结构、裂纹三态、壳高62%机制全部不变; Jack-O-Lantern 鬼脸(透明镂空, 来自 PumpkinHead1.gif 原版)保留作为 PVZ 原版南瓜标志",
-  "assetVersion": 1788689333
+  "feature": "西瓜投手 / 冰西瓜投手 静态精灵图改用 wiki.gg 官方HD原图(Melon-pulthd.png 260×197、HD Winter Melon.png 456×417), 按 96×96 基画布同脚位(底 y=91)缩放居中适配后替换 Plants/MelonPult/MelonPult.png 与 Plants/WinterMelon/WinterMelon.png: 同时覆盖游戏内植物展示、融合配方结果图、配方叠层、选卡四处引用; 弹丸小图(MelonPult/Melon.png 50×40 等)保持原样; 锐度(拉普拉斯方差) MelonPult 2887.6→3039.6、WinterMelon 2858.3→3620.1",
+  "assetVersion": 1788695989
 }
