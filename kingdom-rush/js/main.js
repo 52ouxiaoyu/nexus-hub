@@ -4,22 +4,54 @@ const CONFIG = {
     START_GOLD: 800, START_HP: 20
 };
 
-const MAP_GRID = [
-    [4,0,0,0,0,4,0,0,0,5,0,0,0,0,4,0,0,0,5,0],
-    [2,1,1,1,1,1,1,0,0,0,0,5,0,0,0,0,4,0,0,0],
-    [0,0,0,0,5,0,1,0,4,0,0,0,0,4,0,0,0,0,5,0],
-    [0,4,0,0,0,0,1,1,1,1,1,1,1,0,0,0,4,0,0,0],
-    [0,0,0,5,0,0,0,0,0,4,0,0,1,0,0,0,0,0,4,0],
-    [0,0,0,0,0,4,0,0,0,0,0,0,1,1,1,1,1,0,0,0],
-    [0,5,0,0,0,0,0,5,0,0,0,0,0,4,0,0,1,0,5,0],
-    [0,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,0,0,0],
-    [0,1,0,4,0,0,5,0,0,1,0,4,0,0,5,0,1,0,4,0],
-    [0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0],
-    [0,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1,1,0,5,0],
-    [0,0,5,0,0,1,0,4,0,0,0,5,0,0,0,4,0,0,0,0],
-    [0,4,0,0,0,1,0,0,0,0,0,0,0,5,0,0,0,5,0,0],
-    [0,0,0,5,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3]
-];
+let MAP_GRID = [];
+
+function generateRandomMap() {
+    let grid = Array(CONFIG.ROWS).fill(null).map(() => Array(CONFIG.COLS).fill(0));
+    let r = Math.floor(Math.random() * (CONFIG.ROWS - 4)) + 2;
+    let c = 0;
+    grid[r][c] = 2; // Start point
+    
+    let currentDir = 'RIGHT'; // 'RIGHT', 'UP', 'DOWN'
+    
+    while (c < CONFIG.COLS - 1) {
+        if (currentDir === 'RIGHT') {
+            let steps = Math.floor(Math.random() * 4) + 2; 
+            if (c + steps > CONFIG.COLS - 1) steps = (CONFIG.COLS - 1) - c;
+            for (let i = 0; i < steps; i++) {
+                c++;
+                if (c === CONFIG.COLS - 1) break;
+                grid[r][c] = 1;
+            }
+            currentDir = Math.random() < 0.5 ? 'UP' : 'DOWN';
+            if (r <= 3) currentDir = 'DOWN';
+            if (r >= CONFIG.ROWS - 4) currentDir = 'UP';
+        } else {
+            let steps = Math.floor(Math.random() * 4) + 2;
+            let dir = currentDir === 'UP' ? -1 : 1;
+            for (let i = 0; i < steps; i++) {
+                if ((dir === -1 && r <= 1) || (dir === 1 && r >= CONFIG.ROWS - 2)) break;
+                r += dir;
+                grid[r][c] = 1;
+            }
+            currentDir = 'RIGHT';
+        }
+    }
+    grid[r][CONFIG.COLS - 1] = 3; // End point
+    
+    // Fill random decorations
+    for (let i = 0; i < CONFIG.ROWS; i++) {
+        for (let j = 0; j < CONFIG.COLS; j++) {
+            if (grid[i][j] === 0) {
+                if (Math.random() < 0.06) grid[i][j] = 4; // Tree
+                else if (Math.random() < 0.04) grid[i][j] = 5; // Rock
+            }
+        }
+    }
+    return grid;
+}
+
+MAP_GRID = generateRandomMap();
 
 function generateWaypoints() {
     let pts = [];
@@ -180,6 +212,9 @@ class Game {
     }
     
     resetGame() {
+        MAP_GRID = generateRandomMap();
+        WAYPOINTS = generateWaypoints();
+        
         this.gold = CONFIG.START_GOLD;
         this.hp = CONFIG.START_HP;
         this.wave = 0;
