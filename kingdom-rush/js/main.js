@@ -135,7 +135,11 @@ const ENEMY_DEFS = {
     'GOBLIN': { name: '哥布林', hp: 80, speed: 2.5, reward: 10, color: '#2ecc71', size: 10, armor: 0, mr: 0, flying: false },
     'ORC': { name: '重甲兽人', hp: 250, speed: 1.2, reward: 20, color: '#27ae60', size: 16, armor: 50, mr: 0, flying: false },
     'GARGOYLE': { name: '石像鬼', hp: 120, speed: 1.8, reward: 25, color: '#7f8c8d', size: 14, armor: 0, mr: 70, flying: true },
-    'BOSS': { name: '巨魔首领', hp: 1500, speed: 0.8, reward: 150, color: '#1abc9c', size: 24, armor: 30, mr: 30, flying: false, boss: true }
+    'BOSS': { name: '巨魔首领', hp: 1500, speed: 0.8, reward: 150, color: '#1abc9c', size: 24, armor: 30, mr: 30, flying: false, boss: true },
+    'THIEF': { type: 'thief', name: '窃贼', hp: 100, speed: 4.0, reward: 30, color: '#f1c40f', size: 12, armor: 10, mr: 10, flying: false },
+    'SHAMAN': { type: 'shaman', name: '治疗者', hp: 300, speed: 1.5, reward: 40, color: '#2ecc71', size: 14, armor: 0, mr: 40, flying: false },
+    'BOMBER': { type: 'bomber', name: '自爆怪', hp: 200, speed: 2.0, reward: 40, color: '#c0392b', size: 16, armor: 20, mr: 20, flying: false },
+    'GHOST': { type: 'ghost', name: '物理免疫', hp: 150, speed: 1.8, reward: 35, color: '#bdc3c7', size: 14, armor: 9999, mr: -50, flying: false }
 };
 
 class Game {
@@ -492,7 +496,7 @@ class Game {
                     def: eDef, wpIdx: targetIdx,
                     x: startX, y: startY,
                     maxHp: maxHp, hp: maxHp, slowTimer: 0,
-                    spawnTimer: 0, poisonTimer: 0, poisonDps: 0
+                    spawnTimer: 0, poisonTimer: 0, poisonDps: 0, healTimer: 3000, healTimer: 3000
                 });
                 this.spawnTimer = this.spawnInterval;
             }
@@ -524,7 +528,7 @@ class Game {
                     this.enemies.push({
                         def: ENEMY_DEFS['GOBLIN'], wpIdx: e.wpIdx,
                         x: e.x + (Math.random()-0.5)*40, y: e.y + (Math.random()-0.5)*40,
-                        maxHp: 150, hp: 150, slowTimer: 0, spawnTimer: 0, poisonTimer: 0, poisonDps: 0
+                        maxHp: 150, hp: 150, slowTimer: 0, spawnTimer: 0, poisonTimer: 0, poisonDps: 0, healTimer: 3000
                     });
                     this.spawnParticles(e.x, e.y, '#2ecc71', 10);
                 }
