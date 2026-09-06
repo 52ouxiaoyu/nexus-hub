@@ -3,77 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>奇幻守卫战：萝卜纪</title>
+    <title>王国保卫战 - Kingdom Rush</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div id="game-container">
-        <!-- Canvas Layer for rendering map, enemies, projectiles -->
-        <canvas id="gameCanvas" width="800" height="480"></canvas>
-        
-        <!-- Grid overlay for clicking to build -->
-        <div id="grid-overlay" style="width: 800px; height: 480px;"></div>
+        <canvas id="gameCanvas" width="960" height="640"></canvas>
+        <div id="grid-overlay" style="width: 960px; height: 640px;"></div>
 
-        <!-- HTML/CSS Overlay for HUD -->
         <div id="ui-layer">
-            
-            <!-- Main Menu Panel -->
+            <!-- Main Menu -->
             <div id="menu-panel" class="panel active">
-                <h1 class="game-title">🥕 奇幻守卫战</h1>
-                <h2 class="sub-title">萝卜纪元 v3.0</h2>
-                <button id="btn-start" class="ui-btn primary">开始保卫！</button>
+                <div style="position: absolute; bottom: 20px; right: 20px; color: rgba(255,255,255,0.3); font-size: 14px;">v4.0.0 (Epic Grid Edition)</div>
+                <h1 class="game-title">KINGDOM RUSH</h1>
+                <h2 class="sub-title">王国保卫战：新纪元</h2>
+                <button id="btn-start" class="ui-btn primary">保卫王国</button>
             </div>
 
             <!-- In-Game HUD -->
             <div id="hud-panel" class="panel">
                 <div class="top-bar">
                     <div class="hud-box">
-                        <span class="icon">❤️</span>
-                        <span id="king-hp-text">10 / 10</span>
+                        <span class="icon">🏰</span>
+                        <span id="king-hp-text">20 / 20</span>
                     </div>
-                    
                     <div class="hud-box">
-                        <span class="icon">💰</span>
-                        <span id="hud-gold">300</span>
+                        <span class="icon">🪙</span>
+                        <span id="hud-gold">500</span>
                     </div>
-
                     <div class="hud-box">
-                        <span class="icon">🚩</span>
+                        <span class="icon">☠️</span>
                         <span>第 <span id="hud-wave">1</span> 波</span>
                     </div>
                 </div>
                 
-                <!-- Bottom Action Bar (Tower Selection) -->
+                <!-- Tower Selection -->
                 <div id="build-menu" class="bottom-bar" style="display: none;">
-                    <div class="tower-card" data-type="BOTTLE">
+                    <div class="tower-card" data-type="ARCHER">
                         <div class="tower-icon">🏹</div>
+                        <div class="tower-cost">70</div>
+                    </div>
+                    <div class="tower-card" data-type="MAGE">
+                        <div class="tower-icon">🔮</div>
                         <div class="tower-cost">100</div>
                     </div>
-                    <div class="tower-card" data-type="MAGIC">
-                        <div class="tower-icon">🔮</div>
-                        <div class="tower-cost">180</div>
-                    </div>
-                    <div class="tower-card" data-type="MORTAR">
+                    <div class="tower-card" data-type="ARTILLERY">
                         <div class="tower-icon">💣</div>
-                        <div class="tower-cost">220</div>
+                        <div class="tower-cost">125</div>
                     </div>
                     <div class="tower-card" data-type="ICE">
                         <div class="tower-icon">❄️</div>
                         <div class="tower-cost">150</div>
                     </div>
                 </div>
+
+                <div id="upgrade-menu">
+                    <div id="upg-title" style="color: #d4af37; font-size: 14px; text-align: center; margin-bottom: 5px;"></div>
+                    <button id="btn-upgrade" class="upg-btn">升级 (100)</button>
+                    <button id="btn-sell" class="upg-btn">出售 (50)</button>
+                </div>
             </div>
 
-            <!-- Game Over Panel -->
+            <!-- Game Over -->
             <div id="gameover-panel" class="panel">
-                <h1 class="game-title text-danger" id="end-title">萝卜被吃掉了！</h1>
+                <h1 class="game-title text-danger" id="end-title">王国陨落</h1>
                 <h2 class="sub-title" id="end-desc">抵挡到了第 1 波</h2>
-                <button id="btn-restart" class="ui-btn primary">重新开始</button>
+                <button id="btn-restart" class="ui-btn primary">重新集结</button>
             </div>
-
         </div>
     </div>
-
     <script src="js/main.js"></script>
 </body>
 </html>

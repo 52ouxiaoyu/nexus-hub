@@ -1,45 +1,78 @@
 
 const CONFIG = {
     CELL_SIZE: 80,
-    COLS: 10,
-    ROWS: 6,
-    WIDTH: 800,
-    HEIGHT: 480,
-    START_GOLD: 350,
-    START_HP: 10
+    COLS: 12,
+    ROWS: 8,
+    WIDTH: 960,
+    HEIGHT: 640,
+    START_GOLD: 300,
+    START_HP: 20
 };
 
-// 0: empty, 1: path, 2: spawn, 3: base (carrot)
+// 0: empty, 1: path, 2: spawn, 3: base, 4: small prop, 5: large prop
 const MAP_GRID = [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [2, 1, 1, 1, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 1, 0, 0, 1, 1, 1, 0],
-    [0, 0, 0, 1, 1, 1, 1, 0, 1, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 1, 3],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    [4, 4, 0, 0, 0, 5, 5, 0, 0, 4, 4, 0],
+    [2, 1, 1, 1, 0, 0, 4, 1, 1, 1, 0, 0],
+    [0, 5, 4, 1, 0, 0, 0, 1, 4, 1, 0, 5],
+    [0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 4],
+    [4, 5, 0, 0, 5, 4, 0, 0, 0, 1, 0, 0],
+    [0, 4, 1, 1, 1, 1, 1, 1, 1, 1, 0, 4],
+    [0, 0, 1, 4, 5, 0, 4, 0, 5, 0, 0, 5],
+    [5, 4, 1, 1, 1, 1, 3, 0, 4, 0, 0, 4]
 ];
 
-// Calculate waypoints from MAP_GRID
-let WAYPOINTS = [];
-function initWaypoints() {
-    WAYPOINTS = [
-        {c: 0, r: 1}, {c: 3, r: 1}, {c: 3, r: 3}, 
-        {c: 6, r: 3}, {c: 6, r: 2}, {c: 8, r: 2},
-        {c: 8, r: 4}, {c: 9, r: 4}
-    ];
-    // Convert to pixel coordinates (center of cell)
-    WAYPOINTS = WAYPOINTS.map(wp => ({
-        x: wp.c * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE/2,
-        y: wp.r * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE/2
-    }));
-}
+// Calculate waypoints from MAP_GRID intuitively
+let WAYPOINTS = [
+    {c: 0, r: 1}, {c: 3, r: 1}, {c: 3, r: 3}, {c: 7, r: 3}, 
+    {c: 7, r: 1}, {c: 9, r: 1}, {c: 9, r: 5}, {c: 2, r: 5}, 
+    {c: 2, r: 7}, {c: 6, r: 7}
+];
+WAYPOINTS = WAYPOINTS.map(wp => ({
+    x: wp.c * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE/2,
+    y: wp.r * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE/2
+}));
 
-const TOWER_TYPES = {
-    'BOTTLE': { cost: 100, range: 160, dmg: 20, cd: 400, color: '#FFEB3B', type: 'single', name: '弓箭', icon: '🏹' },
-    'MAGIC':  { cost: 180, range: 120, dmg: 10, cd: 800, color: '#9C27B0', type: 'aoe_ring', name: '魔法', icon: '🔮' },
-    'MORTAR': { cost: 220, range: 240, dmg: 40, cd: 1500, color: '#FF5722', type: 'splash', splashRadius: 100, name: '炮塔', icon: '💣' },
-    'ICE':    { cost: 150, range: 160, dmg: 5, cd: 1000, color: '#00BCD4', type: 'slow', name: '冰霜', icon: '❄️' }
+const TOWER_DEFS = {
+    'ARCHER': { 
+        name: '弓箭塔', icon: '🏹', color: '#a0522d',
+        levels: [
+            { cost: 70, range: 180, dmg: 10, cd: 400, type: 'single' },
+            { cost: 110, range: 200, dmg: 20, cd: 350, type: 'single' },
+            { cost: 160, range: 220, dmg: 40, cd: 300, type: 'single' }
+        ]
+    },
+    'MAGE': { 
+        name: '魔法塔', icon: '🔮', color: '#8e44ad',
+        levels: [
+            { cost: 100, range: 150, dmg: 30, cd: 1000, type: 'pierce' },
+            { cost: 160, range: 160, dmg: 60, cd: 950, type: 'pierce' },
+            { cost: 240, range: 180, dmg: 120, cd: 900, type: 'pierce' }
+        ]
+    },
+    'ARTILLERY': { 
+        name: '火炮塔', icon: '💣', color: '#c0392b',
+        levels: [
+            { cost: 125, range: 140, dmg: 25, cd: 1800, type: 'splash', splash: 80 },
+            { cost: 220, range: 150, dmg: 50, cd: 1700, type: 'splash', splash: 90 },
+            { cost: 320, range: 160, dmg: 100, cd: 1500, type: 'splash', splash: 110 }
+        ]
+    },
+    'ICE': { 
+        name: '冰霜塔', icon: '❄️', color: '#2980b9',
+        levels: [
+            { cost: 150, range: 130, dmg: 10, cd: 800, type: 'slow', slowDur: 1500, slowMult: 0.6 },
+            { cost: 200, range: 150, dmg: 20, cd: 800, type: 'slow', slowDur: 2000, slowMult: 0.5 },
+            { cost: 250, range: 170, dmg: 40, cd: 800, type: 'slow', slowDur: 2500, slowMult: 0.4 }
+        ]
+    }
 };
+
+const ENEMY_TYPES = [
+    { name: '哥布林', hp: 80, speed: 2.0, reward: 10, color: '#27ae60', size: 12 },
+    { name: '兽人', hp: 200, speed: 1.2, reward: 20, color: '#556b2f', size: 16 },
+    { name: '狼骑士', hp: 150, speed: 2.8, reward: 25, color: '#8b4513', size: 14 },
+    { name: '巨魔 (首领)', hp: 800, speed: 0.8, reward: 100, color: '#2f4f4f', size: 24 }
+];
 
 class Game {
     constructor() {
@@ -47,12 +80,10 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         this.overlay = document.getElementById('grid-overlay');
         
-        this.state = 'menu'; // menu, playing, gameover
+        this.state = 'menu';
         
-        this.resetGame();
-        initWaypoints();
         this.setupDOMEvents();
-        this.setupGrid();
+        this.resetGame();
         
         this.lastTime = performance.now();
         requestAnimationFrame((t) => this.gameLoop(t));
@@ -66,17 +97,49 @@ class Game {
         this.towers = [];
         this.projectiles = [];
         this.particles = [];
+        this.props = [];
+        
+        // Initialize Props from MAP_GRID
+        for (let r = 0; r < CONFIG.ROWS; r++) {
+            for (let c = 0; c < CONFIG.COLS; c++) {
+                if (MAP_GRID[r][c] === 4) {
+                    this.props.push({ c: c, r: r, x: c*80+40, y: r*80+40, type: 'tree', hp: 200, maxHp: 200, reward: 50, icon: '🌲' });
+                } else if (MAP_GRID[r][c] === 5) {
+                    this.props.push({ c: c, r: r, x: c*80+40, y: r*80+40, type: 'rock', hp: 400, maxHp: 400, reward: 100, icon: '🪨' });
+                }
+            }
+        }
         
         this.spawnTimer = 0;
-        this.waveTimer = 0;
-        this.enemiesToSpawn = 10;
-        this.spawnInterval = 1500;
+        this.enemiesToSpawn = [];
+        this.prepareWave();
         
         this.selectedTowerType = null;
+        this.selectedEntity = null; // Can be a tower (to upgrade) or a prop (to target)
         
-        // Clear DOM highlights
         document.querySelectorAll('.tower-card').forEach(el => el.classList.remove('selected'));
+        document.getElementById('upgrade-menu').style.display = 'none';
+        
+        this.setupGrid();
         this.updateHUD();
+    }
+    
+    prepareWave() {
+        this.enemiesToSpawn = [];
+        let count = 10 + this.wave * 2;
+        for(let i=0; i<count; i++) {
+            if (i === count-1 && this.wave % 5 === 0) {
+                this.enemiesToSpawn.push(3); // Boss
+            } else if (Math.random() < 0.2 && this.wave > 2) {
+                this.enemiesToSpawn.push(2); // Wolf
+            } else if (Math.random() < 0.4 && this.wave > 1) {
+                this.enemiesToSpawn.push(1); // Orc
+            } else {
+                this.enemiesToSpawn.push(0); // Goblin
+            }
+        }
+        this.spawnInterval = Math.max(600, 1500 - this.wave * 50);
+        this.spawnTimer = 2000;
     }
     
     setupDOMEvents() {
@@ -98,6 +161,9 @@ class Game {
         document.querySelectorAll('.tower-card').forEach(card => {
             card.onclick = () => {
                 if (this.state !== 'playing') return;
+                this.selectedEntity = null; // clear tower selection
+                document.getElementById('upgrade-menu').style.display = 'none';
+                
                 let type = card.dataset.type;
                 if (this.selectedTowerType === type) {
                     this.selectedTowerType = null;
@@ -109,6 +175,33 @@ class Game {
                 }
             };
         });
+        
+        document.getElementById('btn-upgrade').onclick = () => {
+            if (this.selectedEntity && this.selectedEntity.isTower && this.selectedEntity.lvl < 2) {
+                let def = TOWER_DEFS[this.selectedEntity.type].levels[this.selectedEntity.lvl + 1];
+                if (this.gold >= def.cost) {
+                    this.gold -= def.cost;
+                    this.selectedEntity.lvl++;
+                    this.spawnParticles(this.selectedEntity.x, this.selectedEntity.y, '#ffd700', 20);
+                    this.updateUpgradeMenu();
+                    this.updateHUD();
+                }
+            }
+        };
+        
+        document.getElementById('btn-sell').onclick = () => {
+            if (this.selectedEntity && this.selectedEntity.isTower) {
+                let totalCost = 0;
+                for(let i=0; i<=this.selectedEntity.lvl; i++) totalCost += TOWER_DEFS[this.selectedEntity.type].levels[i].cost;
+                this.gold += Math.floor(totalCost * 0.6);
+                
+                this.towers = this.towers.filter(t => t !== this.selectedEntity);
+                this.spawnParticles(this.selectedEntity.x, this.selectedEntity.y, '#ccc', 15);
+                this.selectedEntity = null;
+                document.getElementById('upgrade-menu').style.display = 'none';
+                this.updateHUD();
+            }
+        };
     }
     
     setupGrid() {
@@ -120,20 +213,62 @@ class Game {
         for (let r = 0; r < CONFIG.ROWS; r++) {
             for (let c = 0; c < CONFIG.COLS; c++) {
                 let cell = document.createElement('div');
-                cell.style.width = '100%';
-                cell.style.height = '100%';
-                cell.style.boxSizing = 'border-box';
-                cell.style.cursor = MAP_GRID[r][c] === 0 ? 'pointer' : 'not-allowed';
+                cell.style.width = '100%'; cell.style.height = '100%';
                 
-                // Optional visual grid lines
-                cell.style.border = '1px solid rgba(255,255,255,0.1)';
+                cell.onclick = (e) => {
+                    if (this.state !== 'playing') return;
+                    
+                    // Check if clicked on a tower
+                    let clickedTower = this.towers.find(t => t.c === c && t.r === r);
+                    if (clickedTower) {
+                        this.selectedTowerType = null;
+                        document.querySelectorAll('.tower-card').forEach(el => el.classList.remove('selected'));
+                        this.selectedEntity = clickedTower;
+                        this.updateUpgradeMenu();
+                        
+                        let menu = document.getElementById('upgrade-menu');
+                        menu.style.display = 'flex';
+                        menu.style.left = (c * 80 + 40) + 'px';
+                        menu.style.top = (r * 80) + 'px';
+                        return;
+                    }
+                    
+                    // Check if clicked on a prop (to target it)
+                    let clickedProp = this.props.find(p => p.c === c && p.r === r);
+                    if (clickedProp) {
+                        this.selectedTowerType = null;
+                        document.querySelectorAll('.tower-card').forEach(el => el.classList.remove('selected'));
+                        this.selectedEntity = clickedProp;
+                        document.getElementById('upgrade-menu').style.display = 'none';
+                        // Add target marker
+                        this.spawnParticles(clickedProp.x, clickedProp.y, '#f39c12', 10);
+                        return;
+                    }
+                    
+                    // Clicked empty space
+                    document.getElementById('upgrade-menu').style.display = 'none';
+                    if (MAP_GRID[r][c] === 0 && this.selectedTowerType) {
+                        let towerDef = TOWER_DEFS[this.selectedTowerType].levels[0];
+                        if (this.gold >= towerDef.cost) {
+                            this.gold -= towerDef.cost;
+                            this.towers.push({
+                                isTower: true, c: c, r: r,
+                                x: c * 80 + 40, y: r * 80 + 40,
+                                type: this.selectedTowerType, lvl: 0, cdTimer: 0
+                            });
+                            this.updateHUD();
+                            this.spawnParticles(c * 80 + 40, r * 80 + 40, '#FFD700', 15);
+                            this.selectedTowerType = null;
+                            document.querySelectorAll('.tower-card').forEach(el => el.classList.remove('selected'));
+                        }
+                    } else {
+                        this.selectedEntity = null;
+                    }
+                };
                 
-                cell.onclick = () => this.handleCellClick(c, r);
-                
-                // Hover effect showing range if tower selected
                 cell.onmouseover = () => {
                     if (this.selectedTowerType && MAP_GRID[r][c] === 0) {
-                        cell.style.backgroundColor = 'rgba(76, 175, 80, 0.4)';
+                        cell.style.backgroundColor = 'rgba(255, 215, 0, 0.2)';
                     }
                 };
                 cell.onmouseout = () => { cell.style.backgroundColor = 'transparent'; };
@@ -143,47 +278,27 @@ class Game {
         }
     }
     
-    handleCellClick(c, r) {
-        if (this.state !== 'playing' || !this.selectedTowerType) return;
+    updateUpgradeMenu() {
+        if (!this.selectedEntity || !this.selectedEntity.isTower) return;
+        let t = this.selectedEntity;
+        let baseDef = TOWER_DEFS[t.type];
         
-        if (MAP_GRID[r][c] !== 0) return; // Not buildable (path/spawn/base)
+        let title = document.getElementById('upg-title');
+        title.innerText = `${baseDef.name} Lv.${t.lvl + 1}`;
         
-        // Check if tower already exists here
-        if (this.towers.find(t => t.c === c && t.r === r)) return;
-        
-        let towerDef = TOWER_TYPES[this.selectedTowerType];
-        if (this.gold >= towerDef.cost) {
-            this.gold -= towerDef.cost;
-            this.towers.push({
-                c: c, r: r,
-                x: c * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE/2,
-                y: r * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE/2,
-                type: this.selectedTowerType,
-                def: towerDef,
-                cdTimer: 0,
-                targetAngle: 0
-            });
-            this.updateHUD();
-            this.spawnParticles(c * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE/2, r * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE/2, '#FFEB3B', 15);
-            
-            // Deselect after build
-            this.selectedTowerType = null;
-            document.querySelectorAll('.tower-card').forEach(el => el.classList.remove('selected'));
+        let btnUpg = document.getElementById('btn-upgrade');
+        if (t.lvl < 2) {
+            let nextDef = baseDef.levels[t.lvl + 1];
+            btnUpg.innerText = `升级 (${nextDef.cost})`;
+            btnUpg.disabled = this.gold < nextDef.cost;
+        } else {
+            btnUpg.innerText = `已满级`;
+            btnUpg.disabled = true;
         }
-    }
-    
-    spawnEnemy() {
-        let hpBase = 100 + (this.wave * 40);
-        this.enemies.push({
-            wpIdx: 0,
-            x: WAYPOINTS[0].x - 40, // start slightly offscreen
-            y: WAYPOINTS[0].y,
-            maxHp: hpBase,
-            hp: hpBase,
-            speed: 1.5 + (this.wave * 0.1),
-            slowTimer: 0,
-            color: `hsl(${Math.random()*360}, 70%, 50%)`
-        });
+        
+        let totalCost = 0;
+        for(let i=0; i<=t.lvl; i++) totalCost += baseDef.levels[i].cost;
+        document.getElementById('btn-sell').innerText = `出售 (${Math.floor(totalCost * 0.6)})`;
     }
     
     updateHUD() {
@@ -191,20 +306,22 @@ class Game {
         document.getElementById('king-hp-text').innerText = `${this.hp} / ${CONFIG.START_HP}`;
         document.getElementById('hud-wave').innerText = this.wave;
         
-        // Update cards availability
         document.querySelectorAll('.tower-card').forEach(card => {
-            let cost = TOWER_TYPES[card.dataset.type].cost;
-            if (this.gold < cost) card.style.opacity = '0.5';
+            let cost = TOWER_DEFS[card.dataset.type].levels[0].cost;
+            if (this.gold < cost) card.style.opacity = '0.4';
             else card.style.opacity = '1';
         });
+        
+        if (this.selectedEntity && this.selectedEntity.isTower) {
+            this.updateUpgradeMenu();
+        }
     }
     
     spawnParticles(x, y, color, count) {
         for(let i=0; i<count; i++) {
             this.particles.push({
-                x: x, y: y,
-                vx: (Math.random() - 0.5) * 6,
-                vy: (Math.random() - 0.5) * 6,
+                x: x + (Math.random()-0.5)*20, y: y + (Math.random()-0.5)*20,
+                vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4,
                 life: 1.0, color: color
             });
         }
@@ -215,41 +332,41 @@ class Game {
         this.lastTime = timestamp;
         if (dt > 100) dt = 16;
         
-        if (this.state === 'playing') {
-            this.update(dt);
-        }
-        
+        if (this.state === 'playing') this.update(dt);
         this.draw();
         
         requestAnimationFrame((t) => this.gameLoop(t));
     }
     
     update(dt) {
-        // Wave management
-        if (this.enemiesToSpawn > 0) {
+        // Wave
+        if (this.enemiesToSpawn.length > 0) {
             this.spawnTimer -= dt;
             if (this.spawnTimer <= 0) {
-                this.spawnEnemy();
-                this.enemiesToSpawn--;
+                let eTypeIdx = this.enemiesToSpawn.shift();
+                let eDef = ENEMY_TYPES[eTypeIdx];
+                let maxHp = eDef.hp * (1 + this.wave * 0.2);
+                this.enemies.push({
+                    def: eDef, wpIdx: 0,
+                    x: WAYPOINTS[0].x - 40, y: WAYPOINTS[0].y,
+                    maxHp: maxHp, hp: maxHp, slowTimer: 0
+                });
                 this.spawnTimer = this.spawnInterval;
             }
         } else if (this.enemies.length === 0) {
-            // Wave cleared!
             this.wave++;
-            this.gold += 100 + this.wave * 20; // Wave clear bonus
-            this.enemiesToSpawn = 10 + Math.floor(this.wave * 1.5);
-            this.spawnInterval = Math.max(500, 1500 - this.wave * 50);
-            this.spawnTimer = 2000; // Break between waves
+            this.gold += 150 + this.wave * 10;
+            this.prepareWave();
             this.updateHUD();
         }
         
-        // Update Enemies
+        // Enemies
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             let e = this.enemies[i];
-            
             if (e.slowTimer > 0) e.slowTimer -= dt;
-            let currentSpeed = e.slowTimer > 0 ? e.speed * 0.4 : e.speed;
-            let moveDist = currentSpeed * (dt/16);
+            
+            let spd = e.def.speed * (e.slowTimer > 0 ? 0.5 : 1.0);
+            let moveDist = spd * (dt/16);
             
             let target = WAYPOINTS[e.wpIdx];
             let dx = target.x - e.x;
@@ -257,11 +374,9 @@ class Game {
             let dist = Math.hypot(dx, dy);
             
             if (dist <= moveDist) {
-                e.x = target.x;
-                e.y = target.y;
+                e.x = target.x; e.y = target.y;
                 e.wpIdx++;
                 if (e.wpIdx >= WAYPOINTS.length) {
-                    // Reached the end!
                     this.hp--;
                     this.enemies.splice(i, 1);
                     this.updateHUD();
@@ -281,99 +396,112 @@ class Game {
             }
         }
         
-        // Update Towers
+        // Towers
         this.towers.forEach(t => {
             if (t.cdTimer > 0) t.cdTimer -= dt;
             
-            // Find target
+            let def = TOWER_DEFS[t.type].levels[t.lvl];
             let target = null;
-            let minDist = t.def.range;
+            let minDist = def.range;
             
-            this.enemies.forEach(e => {
-                let d = Math.hypot(e.x - t.x, e.y - t.y);
-                if (d < minDist) {
-                    minDist = d;
-                    target = e;
+            // Priority: Explicit prop target > Enemies
+            if (this.selectedEntity && !this.selectedEntity.isTower) {
+                let p = this.selectedEntity; // Prop
+                let d = Math.hypot(p.x - t.x, p.y - t.y);
+                if (d <= def.range) {
+                    target = p;
                 }
-            });
+            }
             
-            if (target) {
-                t.targetAngle = Math.atan2(target.y - t.y, target.x - t.x);
-                
-                if (t.cdTimer <= 0) {
-                    t.cdTimer = t.def.cd;
-                    
-                    if (t.def.type === 'aoe_ring') {
-                        // Magic tower damages everyone in range immediately
-                        this.spawnParticles(t.x, t.y, t.def.color, 10);
-                        this.enemies.forEach(e => {
-                            if (Math.hypot(e.x - t.x, e.y - t.y) <= t.def.range) {
-                                e.hp -= t.def.dmg;
-                            }
-                        });
-                    } else {
-                        // Shoot projectile
-                        this.projectiles.push({
-                            x: t.x, y: t.y,
-                            target: target,
-                            def: t.def,
-                            speed: 8
-                        });
+            if (!target) {
+                // Find enemy furthest along the path (highest wpIdx, lowest dist to next wp)
+                let bestScore = -1;
+                this.enemies.forEach(e => {
+                    let d = Math.hypot(e.x - t.x, e.y - t.y);
+                    if (d <= def.range) {
+                        let distToNext = Math.hypot(WAYPOINTS[e.wpIdx].x - e.x, WAYPOINTS[e.wpIdx].y - e.y);
+                        let score = e.wpIdx * 1000 - distToNext; // Higher score = closer to end
+                        if (score > bestScore) {
+                            bestScore = score;
+                            target = e;
+                        }
                     }
-                }
+                });
+            }
+            
+            if (target && t.cdTimer <= 0) {
+                t.cdTimer = def.cd;
+                this.projectiles.push({
+                    x: t.x, y: t.y - 20,
+                    target: target,
+                    def: def, color: TOWER_DEFS[t.type].color, speed: 10
+                });
             }
         });
         
-        // Update Projectiles
+        // Projectiles
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             let p = this.projectiles[i];
             
-            if (p.target && !this.enemies.includes(p.target)) {
-                p.target = null; // target died while projectile in air
-            }
+            // If target is an enemy and it died, projectile still flies to last known pos? Or just disappears.
+            // Let's make it disappear if enemy dies to keep it simple, or track x/y. Track x/y is better.
+            let tx = p.target.x;
+            let ty = p.target.y;
             
-            if (p.target) {
-                let dx = p.target.x - p.x;
-                let dy = p.target.y - p.y;
-                let dist = Math.hypot(dx, dy);
-                
-                if (dist < 20) {
-                    // Hit!
-                    if (p.def.type === 'splash') {
-                        this.enemies.forEach(e => {
-                            if (Math.hypot(e.x - p.target.x, e.y - p.target.y) <= p.def.splashRadius) {
-                                e.hp -= p.def.dmg;
-                            }
-                        });
-                        this.spawnParticles(p.x, p.y, p.def.color, 20);
-                    } else {
-                        p.target.hp -= p.def.dmg;
-                        if (p.def.type === 'slow') p.target.slowTimer = 2000;
-                        this.spawnParticles(p.x, p.y, p.def.color, 5);
-                    }
-                    this.projectiles.splice(i, 1);
-                    continue;
+            let dx = tx - p.x;
+            let dy = ty - p.y;
+            let dist = Math.hypot(dx, dy);
+            
+            if (dist < 15) {
+                // Hit
+                if (p.def.type === 'splash') {
+                    this.spawnParticles(tx, ty, '#e74c3c', 20);
+                    this.enemies.forEach(e => {
+                        if (Math.hypot(e.x - tx, e.y - ty) <= p.def.splash) {
+                            e.hp -= p.def.dmg;
+                        }
+                    });
+                    // Also damage props in splash
+                    this.props.forEach(prop => {
+                        if (Math.hypot(prop.x - tx, prop.y - ty) <= p.def.splash) {
+                            prop.hp -= p.def.dmg;
+                        }
+                    });
                 } else {
-                    p.x += (dx / dist) * p.speed * (dt/16);
-                    p.y += (dy / dist) * p.speed * (dt/16);
+                    p.target.hp -= p.def.dmg;
+                    if (p.def.type === 'slow' && p.target.def) { // Only slow enemies
+                        p.target.slowTimer = p.def.slowDur;
+                    }
+                    this.spawnParticles(tx, ty, p.color, 5);
                 }
+                this.projectiles.splice(i, 1);
             } else {
-                // Fly straight if target lost
-                p.x += p.speed * (dt/16);
-                if (p.x < 0 || p.x > CONFIG.WIDTH || p.y < 0 || p.y > CONFIG.HEIGHT) {
-                    this.projectiles.splice(i, 1);
-                }
+                p.x += (dx / dist) * p.speed * (dt/16);
+                p.y += (dy / dist) * p.speed * (dt/16);
             }
         }
         
-        // Kill enemies
+        // Kill Enemies
         for (let i = this.enemies.length - 1; i >= 0; i--) {
-            let e = this.enemies[i];
-            if (e.hp <= 0) {
-                this.gold += 15;
-                this.updateHUD();
-                this.spawnParticles(e.x, e.y, e.color, 15);
+            if (this.enemies[i].hp <= 0) {
+                let e = this.enemies[i];
+                this.gold += e.def.reward;
+                this.spawnParticles(e.x, e.y, e.def.color, 15);
                 this.enemies.splice(i, 1);
+                this.updateHUD();
+            }
+        }
+        
+        // Kill Props
+        for (let i = this.props.length - 1; i >= 0; i--) {
+            if (this.props[i].hp <= 0) {
+                let prop = this.props[i];
+                this.gold += prop.reward;
+                MAP_GRID[prop.r][prop.c] = 0; // Free the grid!
+                this.spawnParticles(prop.x, prop.y, '#d4af37', 30);
+                if (this.selectedEntity === prop) this.selectedEntity = null;
+                this.props.splice(i, 1);
+                this.updateHUD();
             }
         }
         
@@ -381,23 +509,17 @@ class Game {
         for (let i = this.particles.length - 1; i >= 0; i--) {
             let pt = this.particles[i];
             pt.x += pt.vx * (dt/16); pt.y += pt.vy * (dt/16);
-            pt.life -= dt / 500;
+            pt.life -= dt / 1000;
             if(pt.life <= 0) this.particles.splice(i, 1);
         }
     }
     
     draw() {
-        // Clear background
-        this.ctx.fillStyle = '#8BC34A';
+        // Epic Background (Grass/Dirt)
+        this.ctx.fillStyle = '#355E24'; // KR Grass
         this.ctx.fillRect(0, 0, CONFIG.WIDTH, CONFIG.HEIGHT);
         
-        // Draw grid lines
-        this.ctx.strokeStyle = 'rgba(0,0,0,0.05)';
-        this.ctx.lineWidth = 1;
-        for (let r=0; r<=CONFIG.ROWS; r++) { this.ctx.beginPath(); this.ctx.moveTo(0, r*CONFIG.CELL_SIZE); this.ctx.lineTo(CONFIG.WIDTH, r*CONFIG.CELL_SIZE); this.ctx.stroke(); }
-        for (let c=0; c<=CONFIG.COLS; c++) { this.ctx.beginPath(); this.ctx.moveTo(c*CONFIG.CELL_SIZE, 0); this.ctx.lineTo(c*CONFIG.CELL_SIZE, CONFIG.HEIGHT); this.ctx.stroke(); }
-        
-        // Draw Map Tiles
+        // Draw Path
         for (let r = 0; r < CONFIG.ROWS; r++) {
             for (let c = 0; c < CONFIG.COLS; c++) {
                 let v = MAP_GRID[r][c];
@@ -406,108 +528,121 @@ class Game {
                 let s = CONFIG.CELL_SIZE;
                 
                 if (v === 1 || v === 2 || v === 3) {
-                    // Path (dirt)
-                    this.ctx.fillStyle = '#D7CCC8';
+                    this.ctx.fillStyle = '#6d5b4c'; // Dirt path
                     this.ctx.fillRect(px, py, s, s);
-                    // Add some dirt texture dots
-                    this.ctx.fillStyle = '#BCAAA4';
-                    this.ctx.fillRect(px + 10, py + 10, 8, 8);
-                    this.ctx.fillRect(px + 50, py + 30, 12, 12);
-                    this.ctx.fillRect(px + 20, py + 60, 10, 10);
+                    this.ctx.fillStyle = '#5d4037';
+                    this.ctx.fillRect(px + 10, py + 10, 10, 10);
+                    this.ctx.fillRect(px + 50, py + 50, 15, 15);
                 }
                 
                 if (v === 2) {
-                    // Spawn Cave
-                    this.ctx.fillStyle = '#4E342E';
-                    this.ctx.beginPath();
-                    this.ctx.arc(px + s/2, py + s/2, s/2.5, 0, Math.PI*2);
-                    this.ctx.fill();
+                    this.ctx.fillStyle = '#2b1712'; // Spawn cave
+                    this.ctx.beginPath(); this.ctx.arc(px + s/2, py + s/2, s/2.2, 0, Math.PI*2); this.ctx.fill();
+                    this.ctx.fillStyle = '#111';
+                    this.ctx.beginPath(); this.ctx.arc(px + s/2, py + s/2, s/3, 0, Math.PI*2); this.ctx.fill();
                 }
                 
                 if (v === 3) {
-                    // Carrot/Base
+                    // Castle / Base
                     this.ctx.font = '50px Arial';
-                    this.ctx.textAlign = 'center';
-                    this.ctx.textBaseline = 'middle';
-                    this.ctx.fillText('🥕', px + s/2, py + s/2);
+                    this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText('🏰', px + s/2, py + s/2);
                 }
             }
         }
         
-        // Draw Towers
-        this.towers.forEach(t => {
-            let s = CONFIG.CELL_SIZE;
-            // Base
-            this.ctx.fillStyle = 'rgba(0,0,0,0.2)';
-            this.ctx.beginPath(); this.ctx.ellipse(t.x, t.y + s/3, s/3, s/6, 0, 0, Math.PI*2); this.ctx.fill();
+        // Grid lines (subtle)
+        this.ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+        this.ctx.lineWidth = 1;
+        for(let r=0; r<=CONFIG.ROWS; r++) { this.ctx.beginPath(); this.ctx.moveTo(0, r*80); this.ctx.lineTo(960, r*80); this.ctx.stroke(); }
+        for(let c=0; c<=CONFIG.COLS; c++) { this.ctx.beginPath(); this.ctx.moveTo(c*80, 0); this.ctx.lineTo(c*80, 640); this.ctx.stroke(); }
+        
+        // Draw Props
+        this.props.forEach(p => {
+            this.ctx.font = '50px Arial';
+            this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(p.icon, p.x, p.y);
             
-            // Tower Icon
-            this.ctx.font = '40px Arial';
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            this.ctx.fillText(t.def.icon, t.x, t.y);
+            // Prop HP
+            if (p.hp < p.maxHp) {
+                let hpPct = p.hp / p.maxHp;
+                this.ctx.fillStyle = '#000'; this.ctx.fillRect(p.x - 20, p.y - 30, 40, 6);
+                this.ctx.fillStyle = '#d4af37'; this.ctx.fillRect(p.x - 19, p.y - 29, 38 * hpPct, 4);
+            }
             
-            // Selected outline range
-            if (this.selectedTowerType && !this.selectedTowerType) {
-                // If we want to show range of existing towers on click (future enhancement)
+            // Targeted mark
+            if (this.selectedEntity === p) {
+                this.ctx.strokeStyle = '#e74c3c'; this.ctx.lineWidth = 3;
+                this.ctx.strokeRect(p.x - 30, p.y - 30, 60, 60);
+                this.ctx.fillStyle = '#e74c3c';
+                this.ctx.fillText('🎯', p.x, p.y - 40);
             }
         });
         
-        // Draw building ghost (if selected)
-        if (this.state === 'playing' && this.selectedTowerType) {
-            // Find mouse pos from overlay? 
-            // In a real game we track mouse, but here hover is handled by DOM
+        // Draw Towers
+        this.towers.forEach(t => {
+            // Shadow
+            this.ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            this.ctx.beginPath(); this.ctx.ellipse(t.x, t.y + 20, 25, 10, 0, 0, Math.PI*2); this.ctx.fill();
+            
+            // Base based on level
+            this.ctx.fillStyle = ['#7f8c8d', '#bdc3c7', '#ecf0f1'][t.lvl];
+            this.ctx.fillRect(t.x - 25, t.y - 15 - t.lvl*5, 50, 30 + t.lvl*5);
+            this.ctx.fillStyle = '#2c3e50';
+            this.ctx.fillRect(t.x - 25, t.y + 15, 50, 5);
+            
+            this.ctx.font = '36px Arial';
+            this.ctx.fillText(TOWER_DEFS[t.type].icon, t.x, t.y - 10 - t.lvl*10);
+            
+            // Level indicator
+            this.ctx.fillStyle = '#d4af37';
+            this.ctx.font = '12px Arial';
+            let stars = ''; for(let i=0; i<=t.lvl; i++) stars += '★';
+            this.ctx.fillText(stars, t.x, t.y + 25);
+            
+            if (this.selectedEntity === t) {
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.arc(t.x, t.y, TOWER_DEFS[t.type].levels[t.lvl].range, 0, Math.PI*2);
+                this.ctx.stroke();
+            }
+        });
+        
+        // Ghost Tower Range
+        if (this.selectedTowerType && this.state === 'playing') {
+            // Can't easily track mouse in canvas without adding an event listener.
+            // But we can just show global highlight.
         }
         
         // Draw Enemies
         this.enemies.forEach(e => {
-            // Shadow
-            this.ctx.fillStyle = 'rgba(0,0,0,0.2)';
-            this.ctx.beginPath(); this.ctx.ellipse(e.x, e.y + 20, 20, 8, 0, 0, Math.PI*2); this.ctx.fill();
+            this.ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            this.ctx.beginPath(); this.ctx.ellipse(e.x, e.y + e.def.size, e.def.size, e.def.size/2, 0, 0, Math.PI*2); this.ctx.fill();
             
-            // Monster body (cute blob)
-            this.ctx.fillStyle = e.slowTimer > 0 ? '#81D4FA' : e.color;
-            this.ctx.beginPath();
-            this.ctx.arc(e.x, e.y, 20, 0, Math.PI*2);
-            this.ctx.fill();
+            this.ctx.fillStyle = e.slowTimer > 0 ? '#3498db' : e.def.color;
+            this.ctx.beginPath(); this.ctx.arc(e.x, e.y, e.def.size, 0, Math.PI*2); this.ctx.fill();
             
-            // Eyes
-            this.ctx.fillStyle = 'white';
-            this.ctx.beginPath(); this.ctx.arc(e.x - 8, e.y - 5, 6, 0, Math.PI*2); this.ctx.fill();
-            this.ctx.beginPath(); this.ctx.arc(e.x + 8, e.y - 5, 6, 0, Math.PI*2); this.ctx.fill();
-            this.ctx.fillStyle = 'black';
-            this.ctx.beginPath(); this.ctx.arc(e.x - 8, e.y - 5, 2, 0, Math.PI*2); this.ctx.fill();
-            this.ctx.beginPath(); this.ctx.arc(e.x + 8, e.y - 5, 2, 0, Math.PI*2); this.ctx.fill();
-            
-            // HP Bar
             let hpPct = e.hp / e.maxHp;
-            this.ctx.fillStyle = '#000'; this.ctx.fillRect(e.x - 16, e.y - 30, 32, 6);
-            this.ctx.fillStyle = hpPct > 0.5 ? '#4CAF50' : '#F44336';
-            this.ctx.fillRect(e.x - 15, e.y - 29, 30 * hpPct, 4);
+            this.ctx.fillStyle = '#000'; this.ctx.fillRect(e.x - 12, e.y - e.def.size - 10, 24, 4);
+            this.ctx.fillStyle = hpPct > 0.5 ? '#2ecc71' : '#e74c3c';
+            this.ctx.fillRect(e.x - 11, e.y - e.def.size - 9, 22 * hpPct, 2);
         });
         
         // Draw Projectiles
         this.projectiles.forEach(p => {
-            this.ctx.fillStyle = p.def.color;
-            this.ctx.beginPath();
-            this.ctx.arc(p.x, p.y, p.def.type === 'splash' ? 10 : 6, 0, Math.PI*2);
-            this.ctx.fill();
-            
-            // Trail
-            this.ctx.fillStyle = 'rgba(255,255,255,0.5)';
-            this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.def.type === 'splash' ? 6 : 3, 0, Math.PI*2); this.ctx.fill();
+            this.ctx.fillStyle = p.color;
+            this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.def.type === 'splash' ? 8 : 4, 0, Math.PI*2); this.ctx.fill();
         });
         
-        // Draw Particles
+        // Particles
         this.particles.forEach(pt => {
             this.ctx.globalAlpha = pt.life;
             this.ctx.fillStyle = pt.color;
-            this.ctx.beginPath(); this.ctx.arc(pt.x, pt.y, 4, 0, Math.PI*2); this.ctx.fill();
+            this.ctx.fillRect(pt.x, pt.y, 4, 4);
             this.ctx.globalAlpha = 1.0;
         });
     }
 }
 
-window.addEventListener('load', () => {
-    new Game();
-});
+window.addEventListener('load', () => new Game());
