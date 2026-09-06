@@ -2887,8 +2887,16 @@ class Game {
         ];
         // Shuffle quotes to pick two distinct ones
         const shuffledQuotes = [...quotes].sort(() => Math.random() - 0.5);
-        this.p1Quote = shuffledQuotes[0];
-        this.p2Quote = shuffledQuotes[1];
+        this.p1Quote = "";
+        this.p2Quote = "";
+        
+        if (this.mvpPlayer === 'DRAW') {
+            this.p1Quote = shuffledQuotes[0];
+            this.p2Quote = shuffledQuotes[1];
+        } else {
+            if (this.players[0] && this.mvpPlayer !== this.players[0]) this.p1Quote = shuffledQuotes[0];
+            if (this.players[1] && this.mvpPlayer !== this.players[1]) this.p2Quote = shuffledQuotes[1];
+        }
         
         audio.play('powerup');
         setTimeout(() => {
@@ -2903,30 +2911,57 @@ class Game {
         
         let cx = 416;
         
+        // MVP shiny animation for the winner
+        let mvpScale = 1 + Math.sin(this.mvpTimer * 0.2) * 0.15;
+        
         // Draw Scores at the top
         this.ctx.font = 'bold 30px Arial';
         this.ctx.textAlign = 'center';
+        
         if (this.players[0]) {
-            this.ctx.fillStyle = this.players[0].color;
-            this.ctx.fillText(`P1 分数: ${this.players[0].score}`, cx - 200, 60);
-        }
-        if (this.players[1]) {
-            this.ctx.fillStyle = this.players[1].color;
-            this.ctx.fillText(`P2 分数: ${this.players[1].score}`, cx + 200, 60);
+            this.ctx.save();
+            this.ctx.translate(cx - 200, 60);
+            if (this.mvpPlayer === this.players[0]) {
+                this.ctx.scale(mvpScale, mvpScale);
+                this.ctx.fillStyle = (Math.floor(this.mvpTimer / 5) % 2 === 0) ? '#fff' : '#ff0';
+                this.ctx.shadowBlur = 15;
+                this.ctx.shadowColor = '#ff0';
+            } else {
+                this.ctx.fillStyle = this.players[0].color;
+            }
+            this.ctx.fillText(`P1 分数: ${this.players[0].score}`, 0, 0);
+            this.ctx.restore();
         }
         
-        // Draw Quotes at the bottom
+        if (this.players[1]) {
+            this.ctx.save();
+            this.ctx.translate(cx + 200, 60);
+            if (this.mvpPlayer === this.players[1]) {
+                this.ctx.scale(mvpScale, mvpScale);
+                this.ctx.fillStyle = (Math.floor(this.mvpTimer / 5) % 2 === 0) ? '#fff' : '#ff0';
+                this.ctx.shadowBlur = 15;
+                this.ctx.shadowColor = '#ff0';
+            } else {
+                this.ctx.fillStyle = this.players[1].color;
+            }
+            this.ctx.fillText(`P2 分数: ${this.players[1].score}`, 0, 0);
+            this.ctx.restore();
+        }
+        
+        // Draw Quotes at the bottom (only for losers)
         this.ctx.font = 'bold 22px Arial';
         this.ctx.shadowBlur = 4;
         this.ctx.shadowColor = '#000';
         
-        if (this.players[0]) {
+        let quoteY = 720;
+        if (this.players[0] && this.p1Quote) {
             this.ctx.fillStyle = this.players[0].color;
-            this.ctx.fillText(`P1 锐评: “${this.p1Quote || ""}”`, cx, 720);
+            this.ctx.fillText(`P1 锐评: “${this.p1Quote}”`, cx, quoteY);
+            quoteY += 40;
         }
-        if (this.players[1]) {
+        if (this.players[1] && this.p2Quote) {
             this.ctx.fillStyle = this.players[1].color;
-            this.ctx.fillText(`P2 锐评: “${this.p2Quote || ""}”`, cx, 760);
+            this.ctx.fillText(`P2 锐评: “${this.p2Quote}”`, cx, quoteY);
         }
         
         this.ctx.shadowBlur = 0;
