@@ -307,6 +307,8 @@ class PowerUp {
     }
     applyEffect(player) {
         audio.play('powerup');
+        if (player instanceof Player) player.stats.powerups++;
+        const isPlayer = player instanceof Player;
         this.game.shakeScreen(6);
         this.game.effects.push(new Effect(this.x + 32, this.y + 32, 'EXPLOSION', 1.5));
         for (let i = 0; i < 6; i++) {
@@ -795,15 +797,18 @@ class Bullet {
             if (this.piercing) {
                 if (tile === TILE_TYPES.BRICK || tile === TILE_TYPES.HARD_BRICK || tile === TILE_TYPES.BARREL) {
                     this.game.map.grid[ty][tx] = TILE_TYPES.EMPTY;
+                    if (this.owner instanceof Player) this.owner.stats.blocks++;
                     return;
                 }
                 if (tile === TILE_TYPES.STEEL && this.type === 'LASER' && this.level >= 5) {
                     this.game.map.grid[ty][tx] = TILE_TYPES.EMPTY;
+                    if (this.owner instanceof Player) this.owner.stats.blocks++;
                     return;
                 }
             }
             if (tile === TILE_TYPES.BARREL) {
                 this.game.map.grid[ty][tx] = TILE_TYPES.EMPTY;
+                if (this.owner instanceof Player) this.owner.stats.blocks++;
                 this.game.hitStopTimer = 6; // Hit Stop!
                 let explosionRadius = 3.5;
                 audio.play('explosion');
@@ -864,6 +869,7 @@ class Bullet {
                 
                 if (tank instanceof Player && this.owner instanceof Player) {
                     tank.stunTimer = 60; // Friendly fire stun!
+                    if (tank !== this.owner) this.owner.stats.friendlyFires++;
                 } else {
                     tank.destroy(this.owner, this.damage); 
                 }
@@ -892,10 +898,13 @@ class Bullet {
                         let t = this.game.map.grid[iy][ix];
                         if (t === TILE_TYPES.BRICK) {
                             this.game.map.grid[iy][ix] = TILE_TYPES.EMPTY;
+                            if (this.owner instanceof Player) this.owner.stats.blocks++;
                         } else if (t === TILE_TYPES.HARD_BRICK && this.level >= 5) {
                             this.game.map.grid[iy][ix] = TILE_TYPES.EMPTY;
+                            if (this.owner instanceof Player) this.owner.stats.blocks++;
                         } else if (t === TILE_TYPES.STEEL && this.level >= 5 && d <= radius - 1.5) {
                             this.game.map.grid[iy][ix] = TILE_TYPES.EMPTY;
+                            if (this.owner instanceof Player) this.owner.stats.blocks++;
                         }
                     }
                 }
@@ -911,6 +920,7 @@ class Bullet {
             if (d <= radius + 0.5) {
                 if (tank instanceof Player && this.owner instanceof Player) {
                     tank.stunTimer = 60; // Friendly fire AOE stun
+                    if (tank !== this.owner) this.owner.stats.friendlyFires++;
                 } else {
                     tank.destroy(this.owner || this, this.damage);
                 }
@@ -1091,7 +1101,11 @@ class Tank {
 
         this.alive = false; this.game.effects.push(new Effect(this.x + 30, this.y + 30, 'EXPLOSION', this.isBoss ? 3 : 1));
         this.game.shakeScreen(this.isBoss ? 15 : 5);
+        if (this instanceof Player) {
+            this.stats.deaths++;
+        }
         if (killer instanceof Player) {
+            if (!(this instanceof Player)) killer.stats.kills++;
             const points = this.isBoss ? 500 : 100;
             killer.score += points;
             this.game.showFloatingText(`+${points}`, this.x + this.width/2, this.y - 10, '#fff');
@@ -1275,6 +1289,7 @@ class Player extends Tank {
         this.aiMoveTimer = 0;
         this.killStreak = 0;
         this.lastKillTime = 0;
+        this.stats = { kills: 0, friendlyFires: 0, deaths: 0, powerups: 0, blocks: 0 };
         this.lives = 2;
         this.ultimate = null;
         this.ultCooldown = 0;
@@ -2931,34 +2946,19 @@ class Game {
             this.mvpPlayer = sortedPlayers[0];
         }
         
-        const quotes = [
-            "这操作，看得敌人直呼内行！", "这走位，怕不是键盘上撒了把米鸡在啄？", "MVP = Most Vegetable Player 🥬",
-            "基地没爆，你俩的感情先爆了 💔", "我奶奶来闭着眼睛都比你打得高！", "建议转行玩连连看，那个不需要走位~",
-            "你俩是来给敌军刷业绩的吧？", "打成这样，键盘肯定很想报警 🚨", "这就是传说中的“又菜又爱玩”吗？",
-            "你就是这条街最硬的坦克！", "走位风骚，意识淫荡，这波天秀！", "如果坑队友能算分，你早超神了",
-            "你的坦克是纸糊的吗，一碰就碎碎平安？", "别灰心，至少你还可以点“重新开始”", "你俩的默契程度，简直就像两个互不认识的 AI",
-            "这分……是拿脚打出来的吗？", "敌军指挥官发来贺电：感谢送分！", "答应我，下次别用脸接子弹了，好吗？",
-            "虽然你打得烂，但你死得快啊！", "你的每一次死亡，都让队友的血压升高了 10 毫米汞柱", "这游戏可能不太适合你，要不去玩贪吃蛇？",
-            "你和高手的区别就是，高手用手，你用脸", "你就是传说中的“团灭发动机”？", "别人是来打游戏的，你是来视察阵地的",
-            "别怕，菜是原罪，但不要放弃治疗", "你的操作充满了想象力，可惜和游戏逻辑不太兼容", "只要你足够菜，系统都不知道怎么嘲讽你",
-            "你的走位有一种不顾队友死活的美感", "感谢你为敌方的击杀锦集提供了宝贵素材", "玩得很好，下次别玩了！",
-            "看你打游戏，比玩游戏本身还有趣", "你的存在，是对“合作”两个字最大的侮辱", "我以为你在秀操作，原来你是在找死",
-            "你的每一次开火，都在浪费基地的军费", "能把坦克开成碰碰车，也是一种天赋", "这局游戏，你最大的贡献就是没有中途拔网线",
-            "你的坦克履带是不是上错润滑油了，怎么一直往子弹上撞？", "你对敌人的仁慈，就是对队友的残忍",
-            "你的操作就像是在用摩斯密码求救", "你这坦克开的，交警看了都要吊销你驾照"
-        ];
-        // Shuffle quotes to pick two distinct ones
-        const shuffledQuotes = [...quotes].sort(() => Math.random() - 0.5);
-        this.p1Quote = "";
-        this.p2Quote = "";
+        this.p1Quote = "正在生成专属锐评...";
+        this.p2Quote = "正在生成专属锐评...";
         
-        if (this.mvpPlayer === 'DRAW') {
-            this.p1Quote = shuffledQuotes[0];
-            this.p2Quote = shuffledQuotes[1];
+        if (window.generateMVPReview) {
+            window.generateMVPReview(this, this.players[0], this.players[1], this.mvpPlayer).then(quotes => {
+                this.p1Quote = quotes.p1Quote;
+                this.p2Quote = quotes.p2Quote;
+            });
         } else {
-            if (this.players[0] && this.mvpPlayer !== this.players[0]) this.p1Quote = shuffledQuotes[0];
-            if (this.players[1] && this.mvpPlayer !== this.players[1]) this.p2Quote = shuffledQuotes[1];
+            this.p1Quote = "系统错误";
+            this.p2Quote = "系统错误";
         }
+        
         
         audio.play('powerup');
         setTimeout(() => {
