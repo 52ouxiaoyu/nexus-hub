@@ -3,84 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>奇幻守卫战：胖王保卫纪</title>
+    <title>奇幻守卫战：萝卜纪</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div id="game-container">
-        <!-- Canvas Layer for World Rendering -->
-        <canvas id="gameCanvas"></canvas>
+        <!-- Canvas Layer for rendering map, enemies, projectiles -->
+        <canvas id="gameCanvas" width="800" height="480"></canvas>
+        
+        <!-- Grid overlay for clicking to build -->
+        <div id="grid-overlay" style="width: 800px; height: 480px;"></div>
 
-        <!-- HTML/CSS Overlay for HUD (Option 3) -->
+        <!-- HTML/CSS Overlay for HUD -->
         <div id="ui-layer">
             
             <!-- Main Menu Panel -->
             <div id="menu-panel" class="panel active">
-                <div style="position: absolute; bottom: 20px; right: 20px; color: rgba(255,255,255,0.5); font-family: sans-serif; font-size: 14px; letter-spacing: 1px;">v2.0.0</div>
-                <h1 class="game-title">🏰 奇幻守卫战</h1>
-                <h2 class="sub-title">胖王保卫纪</h2>
-                
-                <div class="menu-controls">
-                    <div class="control-group">
-                        <label>玩家数量 <span id="lbl-players">2</span></label>
-                        <div class="btn-group">
-                            <button id="btn-players-minus" class="ui-btn small">-</button>
-                            <button id="btn-players-plus" class="ui-btn small">+</button>
-                        </div>
-                    </div>
-                    <div class="control-group">
-                        <label>防守路线 <span id="lbl-lanes">5</span></label>
-                        <div class="btn-group">
-                            <button id="btn-lanes-minus" class="ui-btn small">-</button>
-                            <button id="btn-lanes-plus" class="ui-btn small">+</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <button id="btn-start" class="ui-btn primary pulse">开始保卫！</button>
-                <div class="help-text">操作指南: P1 (A/D) | P2 (左右) | P3 (J/L)</div>
+                <h1 class="game-title">🥕 奇幻守卫战</h1>
+                <h2 class="sub-title">萝卜纪元 v3.0</h2>
+                <button id="btn-start" class="ui-btn primary">开始保卫！</button>
             </div>
 
             <!-- In-Game HUD -->
             <div id="hud-panel" class="panel">
                 <div class="top-bar">
-                    <!-- King's HP -->
-                    <div class="hud-box king-hp-box">
-                        <span class="icon">👑</span>
-                        <div class="hp-bar-container">
-                            <div id="king-hp-fill" class="hp-fill"></div>
-                        </div>
-                        <span id="king-hp-text" class="text-value">10/10</span>
+                    <div class="hud-box">
+                        <span class="icon">❤️</span>
+                        <span id="king-hp-text">10 / 10</span>
+                    </div>
+                    
+                    <div class="hud-box">
+                        <span class="icon">💰</span>
+                        <span id="hud-gold">300</span>
                     </div>
 
-                    <!-- Game Stats -->
-                    <div class="hud-box stats-box">
-                        <div class="stat"><span class="icon">🚩</span> 波次 <span id="hud-wave" class="text-value highlight">1</span></div>
+                    <div class="hud-box">
+                        <span class="icon">🚩</span>
+                        <span>第 <span id="hud-wave">1</span> 波</span>
                     </div>
                 </div>
                 
-                <!-- Bottom Action Bar (Players Info) -->
-                <div id="players-bar" class="bottom-bar">
-                    <!-- Player cards injected dynamically -->
+                <!-- Bottom Action Bar (Tower Selection) -->
+                <div id="build-menu" class="bottom-bar" style="display: none;">
+                    <div class="tower-card" data-type="BOTTLE">
+                        <div class="tower-icon">🏹</div>
+                        <div class="tower-cost">100</div>
+                    </div>
+                    <div class="tower-card" data-type="MAGIC">
+                        <div class="tower-icon">🔮</div>
+                        <div class="tower-cost">180</div>
+                    </div>
+                    <div class="tower-card" data-type="MORTAR">
+                        <div class="tower-icon">💣</div>
+                        <div class="tower-cost">220</div>
+                    </div>
+                    <div class="tower-card" data-type="ICE">
+                        <div class="tower-icon">❄️</div>
+                        <div class="tower-cost">150</div>
+                    </div>
                 </div>
             </div>
 
             <!-- Game Over Panel -->
             <div id="gameover-panel" class="panel">
-                <h1 class="game-title text-danger">胖王被抓走了！</h1>
-                <p class="score-text">抵挡到了第 <span id="final-wave" class="highlight"></span> 波</p>
-                <button id="btn-restart" class="ui-btn primary">重新集结</button>
+                <h1 class="game-title text-danger" id="end-title">萝卜被吃掉了！</h1>
+                <h2 class="sub-title" id="end-desc">抵挡到了第 1 波</h2>
+                <button id="btn-restart" class="ui-btn primary">重新开始</button>
             </div>
 
         </div>
     </div>
 
-    <script src="js/config.js"></script>
-    <script src="js/audio.js"></script>
-    <script src="js/sprites.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/renderer.js"></script>
-    <script src="js/ui.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>
