@@ -647,7 +647,24 @@ class Bullet {
         }
         for (let other of this.game.bullets) {
             if (other === this || !other.active || this.owner === other.owner) continue;
-            if (this.x < other.x + other.size && this.x + this.size > other.x && this.y < other.y + other.size && this.y + this.size > other.y) { this.active = false; other.active = false; this.triggerExplosion(this.x, this.y, true); return; }
+            // Don't let player bullets clash with other player bullets
+            if (this.owner instanceof Player && other.owner instanceof Player) continue;
+            
+            if (this.x < other.x + other.size && this.x + this.size > other.x && this.y < other.y + other.size && this.y + this.size > other.y) { 
+                this.active = false; 
+                other.active = false; 
+                this.triggerExplosion(this.x, this.y, true); 
+                
+                // Bullet Clash Optimization: A player's bullet blast clears nearby enemy bullets!
+                if (this.owner instanceof Player || other.owner instanceof Player) {
+                    for (let b of this.game.bullets) {
+                        if (b.active && b.owner instanceof Enemy && Math.hypot(b.x - this.x, b.y - this.y) < 64) {
+                            b.active = false;
+                        }
+                    }
+                }
+                return; 
+            }
         }
         const tx = Math.floor((this.x + this.size/2) / TILE_SIZE); const ty = Math.floor((this.y + this.size/2) / TILE_SIZE);
         if (tx < 0 || tx >= GRID_SIZE || ty < 0 || ty >= GRID_SIZE) { 
@@ -857,8 +874,9 @@ class Tank {
         
         let bType = this.weaponClass || 'NORMAL';
         let numShots = 1;
+        let burstDelay = 60; // ms between burst shots
         
-        // Weapon Logic Revamp
+        // Weapon Logic Revamp: Single barrel, burst fire instead of parallel!
         if (bType === 'NORMAL' || bType === 'MISSILE') {
             if (this.level >= 9) numShots = 5;
             else if (this.level >= 7) numShots = 4;
@@ -870,14 +888,26 @@ class Tank {
             else numShots = 1;
         }
         
-        for (let i = 0; i < numShots; i++) {
-            let offset = (numShots === 1) ? 0 : (i - (numShots - 1) / 2);
-            let bx_i = bx, by_i = by;
-            if (this.direction === 'UP' || this.direction === 'DOWN') { bx_i += offset * 12; }
-            else { by_i += offset * 12; }
+        const shootSingle = () => {
+            if (!this.alive) return;
+            // Always calculate spawn position relative to CURRENT tank position!
+            let currentBx = this.x + this.width / 2 - 4;
+            let currentBy = this.y + this.height / 2 - 4;
+            if (this.direction === 'UP') currentBy = this.y - 8;
+            else if (this.direction === 'DOWN') currentBy = this.y + this.height;
+            else if (this.direction === 'LEFT') currentBx = this.x - 8;
+            else if (this.direction === 'RIGHT') currentBx = this.x + this.width;
             
-            let b = new Bullet(this.game, this, bx_i, by_i, this.direction, this.level, bType);
+            let b = new Bullet(this.game, this, currentBx, currentBy, this.direction, this.level, bType);
             this.game.bullets.push(b);
+        };
+        
+        for (let i = 0; i < numShots; i++) {
+            if (i === 0) {
+                shootSingle();
+            } else {
+                setTimeout(shootSingle, i * burstDelay);
+            }
         }
     }
 
