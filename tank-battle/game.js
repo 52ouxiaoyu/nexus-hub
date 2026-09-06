@@ -1228,6 +1228,7 @@ class Player extends Tank {
         const baseX = 13 * TILE_SIZE;
         const baseY = 24 * TILE_SIZE;
 
+        // 1. DODGE INCOMING BULLETS (Highest Priority)
         let threat = this.findIncomingBullet(myX, myY);
         if (threat) {
             if (this.aiDodgeTimer <= 0) {
@@ -1243,10 +1244,42 @@ class Player extends Tank {
         }
         this.aiDodgeTimer = 0;
 
-        let nearestEnemy = null;
-        let nearestDist = Infinity;
+        // 2. EVALUATE TARGETS
+        let targetX = baseX, targetY = baseY - TILE_SIZE * 3; // Default idle position
+        let targetPriority = 0; // Higher is more important
+        let preferredDist = 0; // How close to get to the target
+
+        // A. Rescue Teammate
+        const teammate = this.game.players.find(p => p !== this && !p.alive && p.lives <= 0 && !p.respawning);
+        if (teammate) {
+            let d = Math.hypot(teammate.x - this.x, teammate.y - this.y);
+            if (d < TILE_SIZE * 1.5) {
+                // We are rescuing! Stay still, shoot at enemies, and face them.
+                this.aiMoveTimer = 0;
+                let nearestEnemy = [...this.game.enemies].sort((a,b) => Math.hypot(a.x-this.x, a.y-this.y) - Math.hypot(b.x-this.x, b.y-this.y))[0];
+                if (nearestEnemy) {
+                    if (Math.abs(nearestEnemy.x - this.x) > Math.abs(nearestEnemy.y - this.y)) {
+                        this.direction = nearestEnemy.x > this.x ? 'RIGHT' : 'LEFT';
+                    } else {
+                        this.direction = nearestEnemy.y > this.y ? 'DOWN' : 'UP';
+                    }
+                    this.shoot();
+                }
+                return; // Do not move!
+            } else {
+                targetX = teammate.x + teammate.width / 2;
+                targetY = teammate.y + teammate.height / 2;
+                targetPriority = 100; // MUST RESCUE
+                preferredDist = 0;
+            }
+        }
+
+        // B. Base Defense (Intercept enemies near base)
         let baseThreat = null;
         let baseThreatDist = Infinity;
+        let nearestEnemy = null;
+        let nearestDist = Infinity;
+
         for (const e of this.game.enemies) {
             if (!e.alive) continue;
             const d = Math.hypot(e.x - this.x, e.y - this.y);
@@ -1255,48 +1288,67 @@ class Player extends Tank {
             if (dBase < baseThreatDist) { baseThreatDist = dBase; baseThreat = e; }
         }
 
-        let powerUp = null;
-        let powerUpDist = Infinity;
-        for (const p of this.game.powerUps) {
-            if (!p.active) continue;
-            const d = Math.hypot(p.x - this.x, p.y - this.y);
-            if (d < powerUpDist && d < TILE_SIZE * 10) { powerUpDist = d; powerUp = p; }
-        }
-
-        let targetX, targetY;
-        if (powerUp && powerUpDist < TILE_SIZE * 8) {
-            targetX = powerUp.x + powerUp.width / 2;
-            targetY = powerUp.y + powerUp.height / 2;
-        } else if (baseThreat && baseThreatDist < TILE_SIZE * 12) {
+        if (targetPriority < 90 && baseThreat && baseThreatDist < TILE_SIZE * 10) {
             targetX = baseThreat.x + baseThreat.width / 2;
             targetY = baseThreat.y + baseThreat.height / 2;
-        } else if (nearestEnemy) {
-            targetX = nearestEnemy.x + nearestEnemy.width / 2;
-            targetY = nearestEnemy.y + nearestEnemy.height / 2;
-        } else {
-            targetX = baseX;
-            targetY = baseY - TILE_SIZE * 3;
+            targetPriority = 90;
+            preferredDist = TILE_SIZE * 3;
         }
 
-        const dx = targetX - myX;
-        const dy = targetY - myY;
-        let moveDir;
-        if (Math.abs(dx) > Math.abs(dy)) moveDir = dx > 0 ? 'RIGHT' : 'LEFT';
-        else moveDir = dy > 0 ? 'DOWN' : 'UP';
-
-        if (!this.aiMoveDir) {
-            this.aiMoveDir = moveDir;
-            this.aiMoveTimer = 30 + Math.floor(Math.random() * 20);
-        }
-        if (this.aiMoveTimer > 0) {
-            this.aiMoveTimer--;
-        } else {
-            if (moveDir !== this.aiMoveDir) {
-                this.aiMoveDir = moveDir;
-                this.aiMoveTimer = 30 + Math.floor(Math.random() * 20);
+        // C. Powerups
+        if (targetPriority < 80) {
+            let powerUp = null;
+            let powerUpDist = Infinity;
+            for (const p of this.game.powerUps) {
+                if (!p.active) continue;
+                // Ignore bomb if it's fake
+                if (p.type === POWERUP_TYPES.FAKE_BOMB) continue;
+                const d = Math.hypot(p.x - this.x, p.y - this.y);
+                if (d < powerUpDist && d < TILE_SIZE * 15) { powerUpDist = d; powerUp = p; }
+            }
+            if (powerUp) {
+                targetX = powerUp.x + powerUp.width / 2;
+                targetY = powerUp.y + powerUp.height / 2;
+                targetPriority = 80;
+                preferredDist = 0;
             }
         }
 
+        // D. Hunt Enemy
+        if (targetPriority < 70 && nearestEnemy) {
+            targetX = nearestEnemy.x + nearestEnemy.width / 2;
+            targetY = nearestEnemy.y + nearestEnemy.height / 2;
+            targetPriority = 70;
+            preferredDist = nearestEnemy.isBoss ? TILE_SIZE * 6 : TILE_SIZE * 3;
+        }
+
+        // 3. MOVE TOWARDS TARGET
+        let dx = targetX - myX;
+        let dy = targetY - myY;
+        let distToTarget = Math.hypot(dx, dy);
+
+        let moveDir;
+        if (distToTarget <= preferredDist) {
+            // Reached optimal distance. Try to align for a shot!
+            if (Math.abs(dx) > Math.abs(dy)) {
+                moveDir = dy > 0 ? 'DOWN' : 'UP'; // align vertically
+            } else {
+                moveDir = dx > 0 ? 'RIGHT' : 'LEFT'; // align horizontally
+            }
+        } else {
+            // Move closer
+            if (Math.abs(dx) > Math.abs(dy)) moveDir = dx > 0 ? 'RIGHT' : 'LEFT';
+            else moveDir = dy > 0 ? 'DOWN' : 'UP';
+        }
+
+        if (!this.aiMoveDir || this.aiMoveTimer <= 0) {
+            this.aiMoveDir = moveDir;
+            this.aiMoveTimer = 15 + Math.floor(Math.random() * 20); // More frequent updates
+        } else {
+            this.aiMoveTimer--;
+        }
+
+        // Obstacle avoidance
         if (this.isTileBlocked(myX, myY, this.aiMoveDir)) {
             this.aiMoveDir = this.getAlternateDir(this.aiMoveDir, dx, dy, myX, myY);
             this.aiMoveTimer = 20;
@@ -1304,13 +1356,31 @@ class Player extends Tank {
 
         this.move(this.aiMoveDir);
 
+        // 4. COMBAT LOGIC
+        // Always shoot if we have a clear line of sight to any enemy, and not facing base
         if (!this.isFacingBase()) {
             let shot = false;
             for (const e of this.game.enemies) {
                 if (!e.alive) continue;
                 if (this.canShootTarget(e)) { this.shoot(); shot = true; break; }
             }
-            if (!shot && Math.random() < 0.03) this.shoot();
+            // Suppressive fire if moving towards an enemy
+            if (!shot && targetPriority === 70 && Math.random() < 0.1) {
+                this.shoot();
+            }
+        }
+        
+        // 5. AUTO ULTIMATE
+        if (this.ultimate && this.ultCooldown <= 0) {
+            // Only use ultimate if it's useful (boss nearby, or many enemies)
+            let bossNearby = this.game.enemies.some(e => e.alive && e.isBoss && Math.hypot(e.x - this.x, e.y - this.y) < TILE_SIZE * 15);
+            let enemiesCount = this.game.enemies.filter(e => e.alive && Math.hypot(e.x - this.x, e.y - this.y) < TILE_SIZE * 15).length;
+            if (bossNearby || enemiesCount >= 3) {
+                this.ultimate.effect(this, this.game);
+                this.ultCooldown = this.ultimate.cd;
+                this.game.showFloatingText('🔥 AI 绝招释放!', this.x, this.y - 20, '#ff0');
+                this.game.updateHUD();
+            }
         }
     }
     isFacingBase() {
@@ -2541,11 +2611,60 @@ class Game {
                     this.ctx.fillStyle = '#A0E6FF'; this.ctx.fillRect(px, py, 32, 32);
                     this.ctx.fillStyle = '#FFF'; this.ctx.fillRect(px+4, py+4, 8, 2);
                 } else if (tile === 9) { // BASE
-                    this.ctx.fillStyle = '#E79C21'; this.ctx.fillRect(px, py, 64, 64);
-                    this.ctx.fillStyle = '#fff'; this.ctx.font = '24px Arial'; this.ctx.textAlign='center'; this.ctx.fillText('🦅', px+32, py+40);
+                    // Tech Core Base
+                    this.ctx.fillStyle = '#111'; this.ctx.fillRect(px, py, 64, 64);
+                    
+                    // Outer shield ring
+                    this.ctx.beginPath();
+                    this.ctx.arc(px + 32, py + 32, 28, 0, Math.PI * 2);
+                    this.ctx.lineWidth = 4;
+                    this.ctx.strokeStyle = '#0cf';
+                    this.ctx.setLineDash([8, 4]);
+                    this.ctx.stroke();
+                    this.ctx.setLineDash([]);
+                    
+                    // Inner glowing core
+                    this.ctx.beginPath();
+                    this.ctx.arc(px + 32, py + 32, 16, 0, Math.PI * 2);
+                    this.ctx.fillStyle = '#0cf';
+                    this.ctx.shadowBlur = 20;
+                    this.ctx.shadowColor = '#0ff';
+                    this.ctx.fill();
+                    this.ctx.shadowBlur = 0;
+                    
+                    // Core details (a star)
+                    this.ctx.fillStyle = '#fff';
+                    this.ctx.beginPath();
+                    for(let i=0; i<5; i++) {
+                        let angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+                        let r = (i % 2 === 0) ? 8 : 4;
+                        this.ctx.lineTo(px + 32 + Math.cos(angle)*r, py + 32 + Math.sin(angle)*r);
+                    }
+                    this.ctx.fill();
                 } else if (tile === 10) { // BASE_DESTROYED
-                    this.ctx.fillStyle = '#555'; this.ctx.fillRect(px, py, 64, 64);
-                    this.ctx.fillStyle = '#000'; this.ctx.font = '24px Arial'; this.ctx.textAlign='center'; this.ctx.fillText('🏳️', px+32, py+40);
+                    this.ctx.fillStyle = '#222'; this.ctx.fillRect(px, py, 64, 64);
+                    
+                    // Broken outer ring
+                    this.ctx.beginPath();
+                    this.ctx.arc(px + 32, py + 32, 28, 0, Math.PI);
+                    this.ctx.lineWidth = 4;
+                    this.ctx.strokeStyle = '#555';
+                    this.ctx.stroke();
+                    
+                    // Dead core
+                    this.ctx.beginPath();
+                    this.ctx.arc(px + 32, py + 32, 16, 0, Math.PI * 2);
+                    this.ctx.fillStyle = '#333';
+                    this.ctx.fill();
+                    
+                    // Crack
+                    this.ctx.strokeStyle = '#000';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(px + 20, py + 20);
+                    this.ctx.lineTo(px + 30, py + 32);
+                    this.ctx.lineTo(px + 25, py + 45);
+                    this.ctx.stroke();
                 }
             }
         }
