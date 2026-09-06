@@ -2283,10 +2283,12 @@ class Game {
             
             if (deadP.rescueTimer === undefined) deadP.rescueTimer = 0;
             
+            let rescuer = null;
             let beingRescued = false;
             for (const aliveP of alivePlayers) {
                 if (Math.hypot(aliveP.x - deadP.x, aliveP.y - deadP.y) < TILE_SIZE * 1.5) {
                     beingRescued = true;
+                    rescuer = aliveP;
                     break;
                 }
             }
@@ -2296,6 +2298,12 @@ class Game {
                 if (deadP.rescueTimer >= 5000) {
                     deadP.rescueTimer = 0;
                     this.revivePlayer(deadP);
+                    if (rescuer) {
+                        let bonus = [666, 888, 1024, 2048, 6666, 8888, 9999][Math.floor(Math.random() * 7)];
+                        rescuer.score += bonus;
+                        this.showFloatingText(`+${bonus} (神秘救援奖励!)`, rescuer.x + rescuer.width/2, rescuer.y - 30, '#0ff');
+                        this.updateHUD();
+                    }
                 }
             } else {
                 deadP.rescueTimer = Math.max(0, deadP.rescueTimer - (1000 / 60));
