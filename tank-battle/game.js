@@ -455,6 +455,68 @@ class GameMap {
         this.clearArea(8, 22, 2, 2); this.clearArea(16, 22, 2, 2); this.clearArea(1, 1, 3, 3); this.clearArea(11, 1, 3, 3); this.clearArea(21, 1, 3, 3);
         this.grid[24][12] = this.grid[24][13] = this.grid[25][12] = this.grid[25][13] = TILE_TYPES.BASE;
         this.setBaseWalls(TILE_TYPES.BRICK);
+        
+        this.guaranteeConnectivity();
+    }
+    
+    isConnected(x1, y1, x2, y2) {
+        const impassable = [TILE_TYPES.STEEL, TILE_TYPES.HARD_BRICK, TILE_TYPES.UNBREAKABLE, TILE_TYPES.WATER];
+        let visited = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(false));
+        let queue = [[x1, y1]];
+        visited[y1][x1] = true;
+        while (queue.length > 0) {
+            let [x, y] = queue.shift();
+            if (x === x2 && y === y2) return true;
+            for (let [dx, dy] of [[0,1],[1,0],[0,-1],[-1,0]]) {
+                let nx = x + dx; let ny = y + dy;
+                if (nx > 0 && nx < GRID_SIZE-1 && ny > 0 && ny < GRID_SIZE-1) {
+                    if (!visited[ny][nx] && !impassable.includes(this.grid[ny][nx])) {
+                        visited[ny][nx] = true;
+                        queue.push([nx, ny]);
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    forcePath(x1, y1, x2, y2) {
+        const impassable = [TILE_TYPES.STEEL, TILE_TYPES.HARD_BRICK, TILE_TYPES.UNBREAKABLE, TILE_TYPES.WATER];
+        let x = x1; let y = y1;
+        while (x !== x2 || y !== y2) {
+            if (x !== x2 && y !== y2) {
+                if (Math.random() < 0.5) x += x < x2 ? 1 : -1;
+                else y += y < y2 ? 1 : -1;
+            } else if (x !== x2) {
+                x += x < x2 ? 1 : -1;
+            } else {
+                y += y < y2 ? 1 : -1;
+            }
+            if (x >= 10 && x <= 15 && y >= 20) continue; // protect base area
+            if (x <= 0 || x >= GRID_SIZE - 1 || y <= 0 || y >= GRID_SIZE - 1) continue;
+            
+            if (impassable.includes(this.grid[y][x])) {
+                this.grid[y][x] = TILE_TYPES.EMPTY;
+                // clear a 2x2 area to ensure tank can pass easily
+                if (x+1 < GRID_SIZE-1 && impassable.includes(this.grid[y][x+1]) && !(x+1 >= 10 && x+1 <= 15 && y >= 20)) this.grid[y][x+1] = TILE_TYPES.EMPTY;
+                if (y+1 < GRID_SIZE-1 && impassable.includes(this.grid[y+1][x]) && !(x >= 10 && x <= 15 && y+1 >= 20)) this.grid[y+1][x] = TILE_TYPES.EMPTY;
+                if (x-1 > 0 && impassable.includes(this.grid[y][x-1]) && !(x-1 >= 10 && x-1 <= 15 && y >= 20)) this.grid[y][x-1] = TILE_TYPES.EMPTY;
+                if (y-1 > 0 && impassable.includes(this.grid[y-1][x]) && !(x >= 10 && x <= 15 && y-1 >= 20)) this.grid[y-1][x] = TILE_TYPES.EMPTY;
+            }
+        }
+    }
+
+    guaranteeConnectivity() {
+        // Points that must be connected: P1, P2, Base top, and all 3 enemy spawns
+        const keyPoints = [ [8,22], [16,22], [12,20], [2,2], [12,2], [22,2] ];
+        
+        for (let i = 0; i < keyPoints.length - 1; i++) {
+            let p1 = keyPoints[i];
+            let p2 = keyPoints[i+1];
+            if (!this.isConnected(p1[0], p1[1], p2[0], p2[1])) {
+                this.forcePath(p1[0], p1[1], p2[0], p2[1]);
+            }
+        }
     }
     setBaseWalls(type) {
         const walls = [
