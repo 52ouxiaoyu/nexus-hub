@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -14,9 +15,9 @@
         <div id="ui-layer">
             <!-- Main Menu -->
             <div id="menu-panel" class="panel active">
-                <div style="position: absolute; bottom: 20px; right: 20px; color: rgba(255,255,255,0.3); font-size: 14px;">v4.0.0 (Epic Grid Edition)</div>
+                <div style="position: absolute; bottom: 20px; right: 20px; color: rgba(255,255,255,0.3); font-size: 14px;">v5.0.0 (Hardcore Edition)</div>
                 <h1 class="game-title">KINGDOM RUSH</h1>
-                <h2 class="sub-title">王国保卫战：新纪元</h2>
+                <h2 class="sub-title">王国保卫战：硬核纪元</h2>
                 <button id="btn-start" class="ui-btn primary">保卫王国</button>
             </div>
 
@@ -31,27 +32,29 @@
                         <span class="icon">🪙</span>
                         <span id="hud-gold">500</span>
                     </div>
-                    <div class="hud-box">
+                    <div class="hud-box" style="display:flex; align-items:center; gap: 10px;">
                         <span class="icon">☠️</span>
                         <span>第 <span id="hud-wave">1</span> 波</span>
+                        <button id="btn-call-wave" class="small-btn pulse" style="display:none;">提前召唤(+🪙)</button>
+                        <button id="btn-speed" class="small-btn">▶️ 1x</button>
                     </div>
                 </div>
                 
                 <!-- Tower Selection -->
                 <div id="build-menu" class="bottom-bar" style="display: none;">
-                    <div class="tower-card" data-type="ARCHER">
+                    <div class="tower-card" data-type="ARCHER" title="物理单体速射">
                         <div class="tower-icon">🏹</div>
                         <div class="tower-cost">70</div>
                     </div>
-                    <div class="tower-card" data-type="MAGE">
+                    <div class="tower-card" data-type="MAGE" title="魔法穿甲单体">
                         <div class="tower-icon">🔮</div>
                         <div class="tower-cost">100</div>
                     </div>
-                    <div class="tower-card" data-type="ARTILLERY">
+                    <div class="tower-card" data-type="ARTILLERY" title="物理群体溅射">
                         <div class="tower-icon">💣</div>
                         <div class="tower-cost">125</div>
                     </div>
-                    <div class="tower-card" data-type="ICE">
+                    <div class="tower-card" data-type="ICE" title="魔法群体减速">
                         <div class="tower-icon">❄️</div>
                         <div class="tower-cost">150</div>
                     </div>
@@ -72,6 +75,8 @@
             </div>
         </div>
     </div>
+    
+    <script src="js/audio.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>
