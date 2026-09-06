@@ -2202,12 +2202,30 @@ class Game {
         const alivePlayers = this.players.filter(p => p.alive);
         
         for (const deadP of deadPlayers) {
+            if (deadP.lives > 0 || deadP.respawning) continue;
+            
+            if (deadP.rescueTimer === undefined) deadP.rescueTimer = 0;
+            
+            let beingRescued = false;
             for (const aliveP of alivePlayers) {
-                if (Math.hypot(aliveP.x - deadP.x, aliveP.y - deadP.y) < TILE_SIZE) {
+                if (Math.hypot(aliveP.x - deadP.x, aliveP.y - deadP.y) < TILE_SIZE * 1.5) {
+                    beingRescued = true;
+                    break;
+                }
+            }
+            
+            if (beingRescued) {
+                deadP.rescueTimer += 1000 / 60;
+                if (deadP.rescueTimer >= 5000) {
+                    deadP.rescueTimer = 0;
                     this.revivePlayer(deadP);
                 }
-                
-                if (this.input.isDown(deadP.controls.rescue) && !deadP.respawning) {
+            } else {
+                deadP.rescueTimer = Math.max(0, deadP.rescueTimer - (1000 / 60));
+            }
+            
+            for (const aliveP of alivePlayers) {
+                if (this.input.isDown(deadP.controls.rescue)) {
                     if (aliveP.lives > 0) {
                         aliveP.lives--;
                         let scoreCost = Math.floor(deadP.score / 2);
@@ -2216,6 +2234,7 @@ class Game {
                         this.updateHUD();
                         this.respawnPlayer(deadP);
                         this.showFloatingText('借命成功!', aliveP.x + aliveP.width/2, aliveP.y - 10, '#0f0');
+                        deadP.rescueTimer = 0;
                     }
                 }
             }
@@ -2248,7 +2267,43 @@ class Game {
                 else if (this.weather === 'LIGHTNING') { if (this.lightningFlash > 0) { this.ctx.fillStyle = `rgba(255, 255, 255, ${this.lightningFlash/10})`; this.ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE); } }
                 this.ctx.restore();
             }
-            this.players.forEach(p => { try { if(p.alive) { p.draw(this.ctx); if (p.aiActive) { this.ctx.save(); this.ctx.fillStyle = 'rgba(0,0,0,0.7)'; this.ctx.beginPath(); this.ctx.arc(p.x + 30, p.y - 12, 14, 0, Math.PI * 2); this.ctx.fill(); this.ctx.fillStyle = '#0f0'; this.ctx.font = 'bold 12px Arial'; this.ctx.textAlign = 'center'; this.ctx.fillText('AI', p.x + 30, p.y - 8); this.ctx.restore(); } } else { const otherP = this.players.find(o => o.id !== p.id); if (p.lives === 0 && !p.respawning && otherP && otherP.alive && otherP.lives > 0) { this.ctx.save(); this.ctx.fillStyle = '#0f0'; this.ctx.font = 'bold 12px Arial'; this.ctx.textAlign = 'center'; this.ctx.shadowBlur = 4; this.ctx.shadowColor = '#000'; const key = p.id === 1 ? 'U键' : '9键'; this.ctx.fillText(`按 ${key} 借命(-50%分)`, p.x + 30, p.y + 30); this.ctx.restore(); } } } catch(e) {} });
+            this.players.forEach(p => { 
+                try { 
+                    if(p.alive) { 
+                        p.draw(this.ctx); 
+                        if (p.aiActive) { 
+                            this.ctx.save(); this.ctx.fillStyle = 'rgba(0,0,0,0.7)'; this.ctx.beginPath(); this.ctx.arc(p.x + 30, p.y - 12, 14, 0, Math.PI * 2); this.ctx.fill(); this.ctx.fillStyle = '#0f0'; this.ctx.font = 'bold 12px Arial'; this.ctx.textAlign = 'center'; this.ctx.fillText('AI', p.x + 30, p.y - 8); this.ctx.restore(); 
+                        } 
+                    } else if (p.lives === 0 && !p.respawning) { 
+                        this.ctx.save(); 
+                        this.ctx.fillStyle = '#666';
+                        this.ctx.fillRect(p.x + 20, p.y + 10, 20, 30);
+                        this.ctx.beginPath();
+                        this.ctx.arc(p.x + 30, p.y + 10, 10, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        this.ctx.fillStyle = '#ccc';
+                        this.ctx.fillRect(p.x + 28, p.y + 15, 4, 15);
+                        this.ctx.fillRect(p.x + 24, p.y + 20, 12, 4);
+                        if (p.rescueTimer > 0) {
+                            this.ctx.fillStyle = '#000';
+                            this.ctx.fillRect(p.x + 10, p.y - 10, 40, 6);
+                            this.ctx.fillStyle = '#0f0';
+                            this.ctx.fillRect(p.x + 11, p.y - 9, 38 * (p.rescueTimer / 5000), 4);
+                        }
+                        const otherP = this.players.find(o => o.id !== p.id); 
+                        if (otherP && otherP.alive && otherP.lives > 0) { 
+                            this.ctx.fillStyle = '#0f0'; 
+                            this.ctx.font = 'bold 12px Arial'; 
+                            this.ctx.textAlign = 'center'; 
+                            this.ctx.shadowBlur = 4; 
+                            this.ctx.shadowColor = '#000'; 
+                            const key = p.id === 1 ? 'U键' : '9键'; 
+                            this.ctx.fillText(`按 ${key} 借命(-50%分)`, p.x + 30, p.y + 55); 
+                        }
+                        this.ctx.restore(); 
+                    } 
+                } catch(e) {} 
+            });
             this.enemies.forEach(e => { try { e.draw(this.ctx); } catch(e) {} }); 
             this.bullets.forEach(b => { try { b.draw(this.ctx); } catch(e) {} }); 
             this.effects.forEach(e => { try { e.draw(this.ctx); } catch(e) {} }); 
