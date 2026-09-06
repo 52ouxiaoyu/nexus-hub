@@ -153,12 +153,12 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788585168';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788665653';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788585168';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788665653';
         }
         
 
@@ -176,6 +176,10 @@ class Plant extends Entity {
             else if (type === 'fusion_snownut') { p1 = 'snowpea'; p2 = 'wallnut'; }
             else if (type === 'fusion_melon_cattail') { p1 = 'melonpult'; p2 = 'cattail'; }
             else if (type === 'fusion_wintermelon_cattail') { p1 = 'wintermelon'; p2 = 'cattail'; }
+            else if (type === 'fusion_starfruit') { p1 = 'splitpea'; p2 = 'sunflower'; }          // 杨桃：裂荚射手+向日葵
+            else if (type === 'fusion_hypnoshroom') { p1 = 'puffshroom'; p2 = 'garlic'; }        // 魅惑菇：小喷菇+大蒜
+            else if (type === 'fusion_pumpkinhead') { p1 = 'wallnut'; p2 = 'tallnut'; }          // 南瓜壳：坚果墙+高坚果
+            else if (type === 'fusion_chomper_wallnut') { p1 = 'wallnut'; p2 = 'chomper'; }      // 大嘴坚果：大嘴花+坚果墙
             else {
                 const parts = type.split('_');
                 p1 = parts[1];
@@ -285,6 +289,29 @@ class Plant extends Entity {
                     this.fusionOverlay.src = s1.src; // melon
                     this.fusionOverlay.style.clipPath = 'none';
                     this.fusionOverlay.style.transform = 'translate(-5px, -30px) scale(0.7)'; // put on top of cattail head
+                } else if (type === 'fusion_starfruit') {
+                    // 杨桃：使用原版杨桃整株立绘
+                    this.element.src = 'assets/images/Plants/Starfruit/Starfruit.gif';
+                    this.yOffset = -10;
+                    this.fusionOverlay.style.display = 'none';
+                } else if (type === 'fusion_hypnoshroom') {
+                    // 魅惑菇：使用原版魅惑菇立绘（被动植物，被吃即策反僵尸）
+                    this.element.src = 'assets/images/Plants/HypnoShroom/HypnoShroom.gif';
+                    this.yOffset = -10;
+                    this.fusionOverlay.style.display = 'none';
+                } else if (type === 'fusion_pumpkinhead') {
+                    // 南瓜壳：正常由手套融合"套"在已有植物上（见 GameLoop），
+                    // 此处仅作为独立兜底外观（罕见情况）
+                    this.element.src = 'assets/images/Plants/PumpkinHead/PumpkinHead.gif';
+                    this.yOffset = -15;
+                    this.fusionOverlay.style.display = 'none';
+                } else if (type === 'fusion_chomper_wallnut') {
+                    // 大嘴坚果：坚果身 + 大嘴花头（与图鉴合成图一致）
+                    this.element.src = s1.src; // wallnut 身体
+                    this.fusionOverlay.src = s2.src; // chomper 头
+                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 85%, 0 85%)';
+                    this.fusionOverlay.style.transform = 'translate(0px, -25px) scale(0.9)';
+                    this.fusionOverlay.style.transformOrigin = 'center center';
                 }
                 
                 this.game.entityLayer.appendChild(this.fusionOverlay);
@@ -296,6 +323,10 @@ class Plant extends Entity {
             Object.assign(this, s);
             this.element.src = s.src;
         }
+        // 融合特调（兜底）：南瓜壳=PVZ"南瓜(4000)+高坚果(8000)叠放"等效总护甲 12000。
+        // 正常游戏里南瓜壳由手套融合"套"在已有植物上（不会作为独立 Plant 出现），此兜底仅防御异常路径。
+        if (type === 'fusion_pumpkinhead') this.hp = 12000;
+        
         this.maxHp = this.hp;
         
         // 自动引爆标记：樱桃炸弹/火爆辣椒/寒冰菇/毁灭菇与寒冰炸弹（融合炸弹）种下后
@@ -314,12 +345,63 @@ class Plant extends Entity {
             this.doomNovaTimer = 0;
             this.doomNovaInterval = 12.0;
         }
+        // 大嘴坚果：坚果的防御 + 大嘴花的啃咬（状态合并时 state 被保留为坚果侧，需显式初始化）
+        if (type === 'fusion_chomper_wallnut') {
+            this.state = 'idle';
+            this.chewTimer = 0;
+        }
     }
 
     hasTrait(trait) {
         if (this.type === trait) return true;
         if (this.traits && this.traits.includes(trait)) return true;
         return false;
+    }
+    
+    // ===== 南瓜壳（护甲层，PVZ 原版机制）=====
+    // 用 坚果墙+高坚果 融合出手套南瓜壳后，可"套"在已有植物上：
+    // 南瓜壳额外 4000 耐久，僵尸必须先啃穿外壳才会伤到里面的植物。
+    attachShield() {
+        if (this.shield || this.shieldEl || this.isDead) return false;
+        this.shield = { hp: 4000, maxHp: 4000 };
+        const el = document.createElement('img');
+        el.src = 'assets/images/Plants/PumpkinHead/PumpkinHead.gif';
+        el.className = 'entity';   // translate(-50%,-50%) 居中定位，与植物同一锚点
+        el.style.pointerEvents = 'none';
+        el.style.width = '92px';
+        el.style.height = '70px';
+        el.style.objectFit = 'contain';
+        el.style.zIndex = String(Math.floor(this.y) + 3); // 盖在本株植物之上
+        this.shieldEl = el;
+        this.game.entityLayer.appendChild(el);
+        this.updateShieldAppearance();
+        return true;
+    }
+    
+    // 移除南瓜壳（被打穿时带碎裂淡出动画；植物死亡时直接移除）
+    removeShield(animate) {
+        const el = this.shieldEl;
+        this.shield = null;
+        this.shieldEl = null;
+        if (!el) return;
+        if (animate) {
+            el.style.transition = 'transform 0.4s ease-in, opacity 0.4s ease-in';
+            el.style.transform = 'translate(-50%, -30%) scale(0.75)';
+            el.style.opacity = '0';
+            setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 450);
+        } else if (el.parentNode) {
+            el.parentNode.removeChild(el);
+        }
+    }
+    
+    // 南瓜壳裂纹分三阶段（满/中裂/重裂），与原版 WallNut 裂纹一致
+    updateShieldAppearance() {
+        if (!this.shield || !this.shieldEl) return;
+        const ratio = this.shield.hp / this.shield.maxHp;
+        const img = ratio < 0.34 ? 'PumpkinHead2.gif' : (ratio < 0.67 ? 'PumpkinHead1.gif' : 'PumpkinHead.gif');
+        if (this.shieldEl.src.indexOf(img) === -1) {
+            this.shieldEl.src = 'assets/images/Plants/PumpkinHead/' + img;
+        }
     }
     
     // 爆炸融合：以炸弹所在格为中心，扫描自身 3×3（含斜角，同寒冰菇范围）内的植物，
@@ -446,6 +528,13 @@ class Plant extends Entity {
             this.fusionOverlay.style.left = `${this.x}px`;
             this.fusionOverlay.style.top = `${this.y + this.yOffset}px`;
         }
+        if (this.shieldEl) {
+            // 南瓜壳略微下移，让里面植物的头部露出来（PVZ 原版观感）
+            this.shieldEl.style.left = `${this.x}px`;
+            this.shieldEl.style.top = `${this.y + this.yOffset + 10}px`;
+            this.shieldEl.style.zIndex = String(Math.floor(this.y) + 3);
+            this.updateShieldAppearance();
+        }
         
         if (this.hp <= 0 && !this.isDead) {
             this.isDead = true;
@@ -487,6 +576,11 @@ class Plant extends Entity {
             if (this.ladderOverlay && this.ladderOverlay.parentNode) {
                 this.ladderOverlay.parentNode.removeChild(this.ladderOverlay);
             }
+            if (this.shieldEl && this.shieldEl.parentNode) {
+                this.shieldEl.parentNode.removeChild(this.shieldEl);
+            }
+            this.shield = null;
+            this.shieldEl = null;
             return;
         }
         
@@ -497,7 +591,7 @@ class Plant extends Entity {
             // Handle Scaredy-shroom hiding
             if (this.hasTrait('scaredyshroom')) {
                 const zombieNear = this.game.entities.some(e => 
-                    e instanceof Zombie && e.row === this.row && !e.isDead && e.state !== 'DYING' && e.x - this.x > -40 && e.x - this.x < 120
+                    e instanceof Zombie && e.row === this.row && !e.isDead && e.state !== 'DYING' && !e.hypnotized && e.x - this.x > -40 && e.x - this.x < 120
                 );
                 if (zombieNear && !this.isHiding) {
                     this.isHiding = true;
@@ -513,6 +607,9 @@ class Plant extends Entity {
             let skipShooting = false;
             if (this.hasTrait('scaredyshroom') && this.isHiding) skipShooting = true;
             if (this.hasTrait('potatomine') && !this.isArmed) skipShooting = true;
+            // 魅惑菇是被动植物（不走射击逻辑）；杨桃走专属五星分支（见下方 type 特判）
+            if (this.type === 'fusion_hypnoshroom') skipShooting = true;
+            if (this.type === 'fusion_starfruit') skipShooting = true;
             
             if (!skipShooting) {
                 this.fireTimer += deltaTime;
@@ -521,6 +618,7 @@ class Plant extends Entity {
                 
                 let hasZombieAhead = this.game.entities.some(e => {
                     if (!(e instanceof Zombie) || e.isDead || e.state === 'DYING') return false;
+                    if (e.hypnotized) return false; // 友方僵尸不算威胁
                     if (this.hasTrait('threepeater')) {
                         return Math.abs(e.row - this.row) <= 1 && e.x > this.x;
                     } else {
@@ -531,13 +629,13 @@ class Plant extends Entity {
                 let hasZombieBehind = false;
                 if (this.hasTrait('splitpea')) {
                     hasZombieBehind = this.game.entities.some(e => 
-                        e instanceof Zombie && !e.isDead && e.row === this.row && e.x < this.x
+                        e instanceof Zombie && !e.isDead && !e.hypnotized && e.row === this.row && e.x < this.x
                     );
                 }
                 
                 let cattailTarget = null;
                 if (this.hasTrait('cattail')) {
-                    cattailTarget = this.game.entities.find(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+                    cattailTarget = this.game.entities.find(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized);
                 }
                 
                 if (hasZombieAhead || hasZombieBehind || cattailTarget) {
@@ -605,6 +703,36 @@ class Plant extends Entity {
             }
         }
             }
+        
+        // 杨桃（裂荚射手+向日葵）：PVZ 原版五向星光射击（独立分支，避免触发三线/后射逻辑）。
+        // 五颗星星分别飞向 → / ↗ / ↘ / ↑ / ↓；穿透、可跨行命中（命中逻辑在 Projectile 'star' 类型里）。
+        if (this.type === 'fusion_starfruit') {
+            this.fireTimer += deltaTime;
+            if (this.fireTimer >= this.fireRate) {
+                // 只要前方（含斜向可及范围）有敌方僵尸就齐射五颗
+                const hasEnemy = this.game.entities.some(e =>
+                    e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized &&
+                    e.x > this.x - 20
+                );
+                if (hasEnemy) {
+                    this.fireTimer = 0;
+                    if (this.game.audioManager) this.game.audioManager.play('splat');
+                    const starSpeed = 350;
+                    const dirs = [
+                        [1, 0],               // →
+                        [0.7071, -0.7071],    // ↗
+                        [0.7071, 0.7071],     // ↘
+                        [0, -1],              // ↑
+                        [0, 1]                // ↓
+                    ];
+                    for (const d of dirs) {
+                        const p = new Projectile(this.game, this.x + 15, this.y - 15, this.row, 'star', null, d[0] * starSpeed, d[1] * starSpeed);
+                        p.speed = starSpeed;
+                        this.game.entities.push(p);
+                    }
+                }
+            }
+        }
         
         if (this.hasTrait('sunshroom')) {
             this.growthTimer += deltaTime;
@@ -759,7 +887,14 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
             }
         }
         
-        if (this.hasTrait('wallnut') || this.hasTrait('tallnut')) {
+        if (this.type === 'fusion_pumpkinhead') {
+            // 南瓜壳（兜底立绘）自身三阶段裂纹，素材直接沿用 PumpkinHead 目录
+            const ratio = this.hp / this.maxHp;
+            const img = ratio < 0.34 ? 'PumpkinHead2.gif' : (ratio < 0.67 ? 'PumpkinHead1.gif' : 'PumpkinHead.gif');
+            if (this.element.src.indexOf(img) === -1) {
+                this.element.src = 'assets/images/Plants/PumpkinHead/' + img;
+            }
+        } else if (this.hasTrait('wallnut') || this.hasTrait('tallnut')) {
             const maxHp = this.maxHp || (this.hasTrait('wallnut') ? 4000 : 8000);
             const path = this.hasTrait('wallnut') ? 'WallNut' : 'TallNut';
             const name = this.hasTrait('wallnut') ? 'Wallnut_cracked' : 'TallnutCracked';
@@ -810,7 +945,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
             this.fireTimer += deltaTime;
             if (this.fireTimer >= 1.5) {
                 const zombies = this.game.entities.filter(e => 
-                    e instanceof Zombie && !e.isDead && e.state !== 'DYING' && Math.abs(e.row - this.row) <= 1 && Math.abs(e.x - this.x) <= 150
+                    e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized && Math.abs(e.row - this.row) <= 1 && Math.abs(e.x - this.x) <= 150
                 );
                 if (zombies.length > 0) {
                     this.fireTimer = 0;
@@ -832,7 +967,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
         } else if (this.hasTrait('squash')) {
             if (this.state === 'idle') {
                 const zombie = this.game.entities.find(e => 
-                    e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 60 && !e.isDead && e.state !== 'DYING'
+                    e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 60 && !e.isDead && e.state !== 'DYING' && !e.hypnotized
                 );
                 if (zombie) {
                     this.state = 'jumping';
@@ -884,7 +1019,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                 }
             } else if (!this.hasExploded) {
                 const zombieNear = this.game.entities.some(e => 
-                    e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 40 && !e.isDead
+                    e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 40 && !e.isDead && !e.hypnotized
                 );
                 if (zombieNear) {
                     this.hasExploded = true; // Prevent multiple triggers
@@ -908,15 +1043,18 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                 }
             }
         } else if (this.hasTrait('chomper')) {
+            // 大嘴坚果：保留坚果身+大嘴花头的合成外观，攻击/消化时只换嘴部动画不合适，
+            // 因此维持静态外观（咬合音效与伤害照常），其余大嘴花植物照常换图。
+            const isBigNutChomper = (this.type === 'fusion_chomper_wallnut');
             if (this.state === 'idle') {
                 const zombieNear = this.game.entities.find(e => 
-                    e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 140 && !e.isDead && e.type !== 'crater'
+                    e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 140 && !e.isDead && !e.hypnotized && e.type !== 'crater'
                 );
                 if (zombieNear) {
                     this.state = 'biting';
                     this.chewTimer = 0.5; // half second bite animation
                     zombieNear.hp = 0; // instant kill
-                    this.element.src = 'assets/images/Plants/Chomper/ChomperAttack.gif';
+                    if (!isBigNutChomper) this.element.src = 'assets/images/Plants/Chomper/ChomperAttack.gif';
                     this.game.audioManager.play('chomp');
                 }
             } else if (this.state === 'biting') {
@@ -924,13 +1062,13 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                 if (this.chewTimer <= 0) {
                     this.state = 'chewing';
                     this.chewTimer = 40.0; // 40 seconds chew
-                    this.element.src = 'assets/images/Plants/Chomper/ChomperDigest.gif';
+                    if (!isBigNutChomper) this.element.src = 'assets/images/Plants/Chomper/ChomperDigest.gif';
                 }
             } else if (this.state === 'chewing') {
                 this.chewTimer -= deltaTime;
                 if (this.chewTimer <= 0) {
                     this.state = 'idle';
-                    this.element.src = 'assets/images/Plants/Chomper/Chomper.gif';
+                    if (!isBigNutChomper) this.element.src = 'assets/images/Plants/Chomper/Chomper.gif';
                 }
             }
         }

@@ -15,6 +15,7 @@ class Zombie extends Entity {
         this.isSlowed = false;
         this.slowTimer = 0;
         this.hasPlantHead = false;
+        this.hypnotized = false; // 被魅惑菇策反后变为友方僵尸（向右行进，与敌方僵尸搏斗）
         
         if (type === 'normal') {
             this.hp = 200; this.maxHp = 200;
@@ -204,9 +205,9 @@ class Zombie extends Entity {
         setTimeout(() => { if (h.parentNode) h.parentNode.removeChild(h); }, 550);
     }
     
-    // 减速统一入口（植物头僵尸与普通僵尸一致，均可被减速）
+    // 减速统一入口（植物头僵尸与普通僵尸一致，均可被减速；友方魅惑僵尸不可被减速）
     setSlow(t = 10) {
-        if (this.isDead) return;
+        if (this.isDead || this.hypnotized) return;
         this.isSlowed = true;
         this.slowTimer = t;
     }
@@ -217,6 +218,61 @@ class Zombie extends Entity {
         this.slowTimer = 0;
         if (this.element) this.element.style.filter = '';
         if (this.headEl) this.headEl.style.filter = '';
+    }
+    
+    // 被魅惑菇策反：调头向右，为玩家而战（PVZ 原版机制：满血转化）
+    hypnotize() {
+        if (this.hypnotized) return;
+        this.hypnotized = true;
+        this.thaw();              // 清除冰冻状态与蓝色滤镜
+        this.hp = this.maxHp;     // 满状态转化
+        this.state = 'WALKING';
+        this.eatTarget = null;
+        this.fightTarget = null;
+        if (this.element) this.element.src = this.walkSrc;
+    }
+    
+    // 魅惑（友方）僵尸每帧逻辑：向右行进，攻击同排遇到的敌方僵尸；走出右边界离场
+    updateHypnotized(deltaTime, currentSpeed) {
+        if (this.state === 'DYING') return;
+        
+        if (this.state === 'FIGHTING') {
+            const foe = this.fightTarget;
+            if (foe && !foe.isDead && foe.state !== 'DYING' && !foe.hypnotized &&
+                foe.row === this.row && Math.abs(foe.x - this.x) < 95) {
+                // 友方僵尸啃咬：100 伤害/秒（略强于敌方僵尸的 50/秒）
+                foe.takeDamage(100 * deltaTime);
+                if (!this.chompTimer) this.chompTimer = 0;
+                this.chompTimer -= deltaTime;
+                if (this.chompTimer <= 0) { this.game.audioManager.play('chomp'); this.chompTimer = 1.0; }
+                return;
+            }
+            this.fightTarget = null;
+            this.state = 'WALKING';
+            if (this.element) this.element.src = this.walkSrc;
+        }
+        
+        // 向右行进（敌方从右侧来，友方则走向右侧离开战场）
+        this.x += currentSpeed * deltaTime;
+        if (this.x > 985) {
+            // 走出画面右侧 → 离场（不触发游戏结束，也不计分）
+            this.state = 'DYING';
+            if (this.element) this.element.src = this.dieSrc;
+            if (this.headEl) this.dropPlantHead();
+            setTimeout(() => { this.isDead = true; }, 1500);
+            return;
+        }
+        
+        // 接战：正前方 95px 内出现敌方僵尸则停下搏斗
+        const foe = this.game.entities.find(e =>
+            e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized &&
+            e.row === this.row && e.x > this.x - 20 && e.x - this.x < 95
+        );
+        if (foe) {
+            this.state = 'FIGHTING';
+            this.fightTarget = foe;
+            if (this.element) this.element.src = this.attackSrc;
+        }
     }
     
     update(deltaTime) {
@@ -273,7 +329,7 @@ class Zombie extends Entity {
         }
 
         // Handle jack-in-the-box explosion
-        if (this.type === 'jackinthebox' && this.state !== 'DYING') {
+        if (this.type === 'jackinthebox' && this.state !== 'DYING' && !this.hypnotized) {
             this.explodeTimer -= deltaTime;
             if (this.explodeTimer <= 0) {
                 // Explode!
@@ -294,8 +350,8 @@ class Zombie extends Entity {
             }
         }
 
-        // Handle Dancing Zombie summon
-        if (this.type === 'dancing' && this.state !== 'DYING') {
+        // Handle Dancing Zombie summon (被魅惑后不再召唤敌方伴舞)
+        if (this.type === 'dancing' && this.state !== 'DYING' && !this.hypnotized) {
             this.summonTimer -= deltaTime;
             if (this.summonTimer <= 0) {
                 this.summonTimer = 10.0; // Summon every 10s
@@ -324,7 +380,8 @@ class Zombie extends Entity {
             this.state = 'DYING';
             if (this.headEl) this.dropPlantHead(); // 头顶植物随僵尸倒地（纯外观）
             this.element.src = this.dieSrc;
-            if (this.game.score !== undefined) {
+            // 友方（被魅惑）僵尸战死/离场不计分
+            if (!this.hypnotized && this.game.score !== undefined) {
                 this.game.score += 10;
                 this.game.updateScore();
             }
@@ -332,6 +389,12 @@ class Zombie extends Entity {
         }
         
         if (this.state === 'DYING') return;
+        
+        // ===== 魅惑（友方）僵尸：短路正常行走/啃食逻辑 =====
+        if (this.hypnotized) {
+            this.updateHypnotized(deltaTime, currentSpeed);
+            return;
+        }
         
         // Gargantuar throw imps logic
         if (this.type === 'gargantuar' && this.hp < 2000 && !this.hasThrownImps) {
@@ -344,6 +407,16 @@ class Zombie extends Entity {
         }
 
         if (this.state === 'WALKING') {
+            // 同排附近出现被魅惑的友方僵尸 → 停下与它搏斗（僵尸之间唯一的敌对交互）
+            const hypnoFoe = this.game.entities.find(e =>
+                e instanceof Zombie && !e.isDead && e.state !== 'DYING' && e.hypnotized &&
+                e.row === this.row && Math.abs(e.x - this.x) < 95
+            );
+            if (hypnoFoe) {
+                this.state = 'FIGHTING';
+                this.fightTarget = hypnoFoe;
+                this.element.src = this.attackSrc;
+            } else {
             this.x -= currentSpeed * deltaTime;
             
             if (this.x < 40) { 
@@ -411,6 +484,7 @@ class Zombie extends Entity {
                     this.element.src = this.attackSrc;
                 }
             }
+            } // 关闭"无魅惑僵尸 → 正常行走啃食"分支
         } else if (this.state === 'JUMPING') {
             this.jumpTimer -= deltaTime;
             const progress = 1 - (this.jumpTimer / this.jumpDuration);
@@ -424,7 +498,15 @@ class Zombie extends Entity {
         }
         else if (this.state === 'EATING') {
             if (this.eatTarget && !this.eatTarget.isDead) {
-                if (this.eatTarget.type === 'garlic') {
+                if (this.eatTarget.type === 'fusion_hypnoshroom' && !this.eatTarget._hypnoUsed &&
+                    this.type !== 'gargantuar' && this.type !== 'zomboni' && this.type !== 'lgboss') {
+                    // 魅惑菇：吃下即被策反，转为友方僵尸（巨人与冰车不会"吃"，只会砸烂，故不触发）
+                    this.eatTarget._hypnoUsed = true;
+                    this.eatTarget.hp = 0;      // 蘑菇被吃掉
+                    this.game.audioManager.play('chomp');
+                    if (this.game.showAnnouncement) this.game.showAnnouncement('魅惑成功！这只僵尸现在为你而战', '#ff69b4');
+                    this.hypnotize();
+                } else if (this.eatTarget.type === 'garlic') {
                     // Bite garlic and switch row!
                     this.eatTarget.hp -= 20; // single bite damage
                     this.game.audioManager.play('chomp'); // disgusted sound ideally
@@ -474,7 +556,18 @@ class Zombie extends Entity {
                     this.eatTarget = null;
                     this.element.src = this.walkSrc;
                 } else {
-                    if (this.type === 'gargantuar') {
+                    // 南瓜壳优先吸收伤害：僵尸先啃穿外壳（4000 耐久），才会伤到里面的植物（PVZ 原版）
+                    if (this.eatTarget.shield && this.eatTarget.shield.hp > 0) {
+                        const dmg = (this.type === 'gargantuar') ? this.eatTarget.shield.maxHp : currentDamage * deltaTime;
+                        this.eatTarget.shield.hp -= dmg;
+                        if (this.eatTarget.shield.hp <= 0) {
+                            this.eatTarget.shield.hp = 0;
+                            this.eatTarget.removeShield(true); // 外壳碎裂（植物无损）
+                            this.game.audioManager.play('splat');
+                        } else {
+                            this.eatTarget.updateShieldAppearance();
+                        }
+                    } else if (this.type === 'gargantuar') {
                         if (!this.smashTimer) this.smashTimer = 1.0;
                         this.smashTimer -= deltaTime;
                         if (this.smashTimer <= 0) {
@@ -506,10 +599,29 @@ class Zombie extends Entity {
                 this.eatTarget = null;
                 this.element.src = this.walkSrc;
             }
+        } else if (this.state === 'FIGHTING') {
+            // 敌方僵尸与被魅惑的友方僵尸肉搏（只有敌方僵尸会进入该状态）
+            if (this.fightTarget && !this.fightTarget.isDead && this.fightTarget.state !== 'DYING' &&
+                this.fightTarget.row === this.row && Math.abs(this.fightTarget.x - this.x) < 95) {
+                if (this.fightTarget.hypnotized) {
+                    // 敌方啃咬：50 伤害/秒（与啃植物一致；友方反击 100/秒见 updateHypnotized）
+                    this.fightTarget.hp -= currentDamage * deltaTime;
+                    if (!this.chompTimer) this.chompTimer = 0;
+                    this.chompTimer -= deltaTime;
+                    if (this.chompTimer <= 0) { this.game.audioManager.play('chomp'); this.chompTimer = 1.0; }
+                }
+            } else {
+                this.state = 'WALKING';
+                this.fightTarget = null;
+                this.element.src = this.walkSrc;
+            }
         }
     }
     
     takeDamage(amount) {
+        // 友方（被魅惑）僵尸免疫我方植物/子弹/爆炸的一切伤害，
+        // 只能被敌方僵尸肉搏杀死（FIGHTING 直接扣血）
+        if (this.hypnotized) return;
         this.hp -= amount;
         // Optional: briefly change brightness or show hit effect
     }

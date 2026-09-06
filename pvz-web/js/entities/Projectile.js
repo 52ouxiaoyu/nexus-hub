@@ -19,12 +19,12 @@ class Projectile extends Entity {
             this.element.src = 'assets/images/Plants/ShroomBullet.gif';
             this.damage = 40;
         } else if (type === 'melon') {
-            this.element.src = 'assets/images/Plants/MelonPult/Melon.png?v=1788585168';
+            this.element.src = 'assets/images/Plants/MelonPult/Melon.png?v=1788665653';
             this.element.style.transform = 'scale(1.0)';
             this.element.style.borderRadius = '50%';
             this.damage = 60;
         } else if (type === 'wintermelon') {
-            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon.png?v=1788585168';
+            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon.png?v=1788665653';
             this.element.style.transform = 'scale(1.0)';
             this.element.style.borderRadius = '50%';
             this.damage = 60;
@@ -34,13 +34,13 @@ class Projectile extends Entity {
             this.damage = 20;
             this.speed = 400;
         } else if (type === 'cattail_melon') {
-            this.element.src = 'assets/images/Plants/MelonPult/Melon_small.png?v=1788585168';
+            this.element.src = 'assets/images/Plants/MelonPult/Melon_small.png?v=1788665653';
             this.element.style.transform = 'scale(0.8)';
             this.element.style.borderRadius = '50%';
             this.damage = 60;
             this.speed = 400;
         } else if (type === 'cattail_wintermelon') {
-            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon_small.png?v=1788585168';
+            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon_small.png?v=1788665653';
             this.element.style.transform = 'scale(0.8)';
             this.element.style.borderRadius = '50%';
             this.damage = 60;
@@ -69,6 +69,15 @@ class Projectile extends Entity {
         } else if (type === 'backpea') {
             this.element.src = 'assets/images/Plants/PB00.gif';
             this.speed = -300; // Moves left
+        } else if (type === 'star') {
+            // 杨桃星光：原版五角星弹，穿透且可跨行命中
+            this.element.src = 'assets/images/Plants/Starfruit/Star.gif';
+            this.damage = 20;
+            this.speed = 350;
+            this.radius = 12;
+            this.element.style.width = '26px';
+            this.element.style.height = '26px';
+            this.element.style.objectFit = 'contain';
         } else {
             this.element.src = 'assets/images/Plants/PB00.gif';
         }
@@ -77,6 +86,10 @@ class Projectile extends Entity {
     update(deltaTime) {
         super.update(deltaTime);
         if (this.type === 'cattail' || this.type === 'cattail_melon' || this.type === 'cattail_wintermelon') {
+            // 目标已被魅惑成友方：放弃追踪，继续直线飞行（不伤害友军）
+            if (this.targetZombie && this.targetZombie.hypnotized) {
+                this.targetZombie = null;
+            }
             if (this.targetZombie && !this.targetZombie.isDead && this.targetZombie.state !== 'DYING') {
                 let dx = this.targetZombie.x + 40 - this.x;
                 let dy = this.targetZombie.y + 50 - this.y;
@@ -95,7 +108,7 @@ class Projectile extends Entity {
                 this.y += this.vy * deltaTime;
                 
                 // Also check if it randomly hits another zombie while flying blindly
-                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized);
                 for (let z of zombies) {
                     let dx = z.x + 40 - this.x;
                     let dy = z.y + 50 - this.y;
@@ -114,7 +127,7 @@ class Projectile extends Entity {
                  this.targetZombie.takeDamage(this.damage);
                  if (this.type === 'cattail_melon' || this.type === 'cattail_wintermelon') {
                      // Splash damage in 3x3 area
-                     const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+                     const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized);
                      for (let z of zombies) {
                          if (z !== this.targetZombie && Math.abs(z.row - this.targetZombie.row) <= 1 && Math.abs(z.x - this.targetZombie.x) < 150) {
                              z.takeDamage(this.damage / 2); // splash damage is half
@@ -135,9 +148,8 @@ class Projectile extends Entity {
             this.x += this.vx * deltaTime;
             this.y += this.vy * deltaTime;
             
-            // Gloom-shroom projectile collision
             if (this.type === 'gloom_puff') {
-                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized);
                 for (let z of zombies) {
                     let dx = z.x + 40 - this.x;
                     let dy = z.y + 50 - this.y;
@@ -150,6 +162,20 @@ class Projectile extends Entity {
                 // Range limit (1.5 cells)
                 if (Math.hypot(this.x - this.startX, this.y - this.startY) > 120) {
                     this.isDead = true;
+                }
+            } else if (this.type === 'star') {
+                // 星光：穿透式（同一条星星可打中多只僵尸），按距离命中任意行的僵尸
+                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized);
+                for (let z of zombies) {
+                    if (this.hitZombies.has(z)) continue;
+                    const dx = (z.x + 40) - this.x;
+                    const dy = (z.y + 50) - this.y;
+                    // 矩形判定（僵尸较宽）：横向 90px × 纵向 110px 内算命中
+                    if (Math.abs(dx) < 45 && Math.abs(dy) < 55) {
+                        this.hitZombies.add(z);
+                        z.takeDamage(this.damage);
+                        if (this.game.audioManager) this.game.audioManager.play('splat');
+                    }
                 }
             }
         } else {
@@ -166,6 +192,11 @@ class Projectile extends Entity {
         }
         
         if (this.x > 950 || this.x < -50) {
+            this.isDead = true;
+        }
+        
+        // 带方向（斜向/纵向）飞行的子弹离开草坪上下边界时也清理（星光会纵向穿越多行）
+        if (this.vx !== undefined && this.vx !== null && (this.y < -90 || this.y > 650)) {
             this.isDead = true;
         }
     }
