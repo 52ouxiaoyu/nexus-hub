@@ -43,6 +43,76 @@ ULTIMATES_POOL.push({
     }
 });
 ULTIMATES_POOL.push({
+    name: "地毯式轰炸",
+    desc: "呼叫空中支援，从天而降的毁灭打击",
+    cd: 1500,
+    effect: (p, g) => {
+        g.showAnnouncement('✈️ 呼叫空中支援，地毯式轰炸！', '#f50');
+        for (let i = 0; i < 20; i++) {
+            setTimeout(() => {
+                const rx = Math.random() * g.canvas.width;
+                const ry = (i / 20) * g.canvas.height;
+                g.effects.push(new Effect(rx, ry, 'EXPLOSION', 5));
+                if(window.audio) window.audio.play('explosion');
+                g.shakeScreen(20);
+                g.enemies.forEach(e => {
+                    if (Math.hypot(e.x - rx, e.y - ry) < 180) e.destroy(p, 50);
+                });
+            }, i * 150);
+        }
+    }
+});
+ULTIMATES_POOL.push({
+    name: "电磁风暴",
+    desc: "召唤强力闪电，持续劈向随机敌人",
+    cd: 1200,
+    effect: (p, g) => {
+        g.showAnnouncement('⚡ 电磁风暴降临！', '#0ff');
+        let strikes = 0;
+        let interval = setInterval(() => {
+            if (g.gameState !== 'PLAYING') return clearInterval(interval);
+            let aliveEnemies = g.enemies.filter(e => e.alive);
+            if (aliveEnemies.length > 0) {
+                let target = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
+                g.effects.push(new Effect(target.x + 32, target.y + 32, 'EXPLOSION', 3));
+                if(window.audio) window.audio.play('explosion');
+                target.destroy(p, 15);
+                
+                // Draw a fake lightning bolt next frame
+                let ctx = g.ctx;
+                if(ctx) {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.moveTo(target.x + 32, 0);
+                    ctx.lineTo(target.x + 32, target.y + 32);
+                    ctx.strokeStyle = '#0ff'; ctx.lineWidth = 4; ctx.stroke();
+                    ctx.restore();
+                }
+            }
+            strikes++;
+            if (strikes >= 15) clearInterval(interval);
+        }, 300);
+    }
+});
+ULTIMATES_POOL.push({
+    name: "点石成金",
+    desc: "将场上所有普通敌人转化为星星道具！",
+    cd: 2000,
+    effect: (p, g) => {
+        g.showAnnouncement('🌟 点石成金！天降财富！', '#ff0');
+        g.enemies.forEach(e => {
+            if (!e.isBoss) {
+                g.powerUps.push(new PowerUp(g, e.x, e.y, POWERUP_TYPES.STAR));
+                e.alive = false; // instantly remove without triggering normal drops
+                g.enemiesRemaining--;
+            } else {
+                e.destroy(p, 20); // Just damage the boss
+            }
+        });
+        if(window.audio) window.audio.play('powerup');
+    }
+});
+ULTIMATES_POOL.push({
     name: "绝对零度",
     desc: "时间停止，冻结所有敌人10秒",
     cd: 1500,
@@ -78,6 +148,25 @@ ULTIMATES_POOL.push({
 // ========================
 // 2. 强力增益类 (High Tier)
 // ========================
+ULTIMATES_POOL.push({
+    name: "生命之光",
+    desc: "复活死去的队友，全体满血并获得护盾",
+    cd: 2000,
+    effect: (p, g) => {
+        g.showAnnouncement('💖 生命之光！神圣复苏！', '#f0f');
+        g.players.forEach(player => {
+            if (!player.alive) {
+                player.alive = true;
+                player.health = player.maxHealth;
+            } else {
+                player.health = Math.min(player.health + 5, player.maxHealth);
+            }
+            player.setShield(600);
+        });
+        g.baseHealth = g.maxBaseHealth; // Restore base health too!
+        if(window.audio) window.audio.play('powerup');
+    }
+});
 ULTIMATES_POOL.push({
     name: "基地终极护甲",
     desc: "基地被钢铁包围15秒",
@@ -119,158 +208,58 @@ ULTIMATES_POOL.push({
     desc: "以自身为中心发射一圈激光穿透弹",
     cd: 600,
     effect: (p, g) => {
+        g.showAnnouncement('🎇 激光散射！', '#0ff');
         radialExplosion(g, p, 16, 'LASER', 5);
         if(window.audio) window.audio.play('shoot');
     }
 });
 
 // ========================
-// 3. 搞笑/无厘头类 (Meme Tier - Short CD)
+// 3. 搞怪娱乐类 (Joke Tier) - 精简保留少数有趣的
 // ========================
-const funnyColors = ['#ff0000', '#00ff00', '#0000ff', '#ff00ff', '#ffff00', '#00ffff'];
-funnyColors.forEach((color, idx) => {
-    ULTIMATES_POOL.push({
-        name: `炫彩皮肤 (款${idx+1})`,
-        desc: "仅仅是改变坦克的颜色，极其炫酷",
-        cd: 30,
-        effect: (p, g) => {
-            p.color = color;
-            g.showFloatingText('🎨 换肤成功！', p.x, p.y, color);
-        }
-    });
-});
-
 ULTIMATES_POOL.push({
-    name: "我要隐身",
-    desc: "变得半透明（但敌人还是看得到你）",
-    cd: 60,
-    effect: (p, g) => {
-        g.showFloatingText('👻 皇帝的新隐身衣', p.x, p.y, '#fff');
-    }
-});
-
-ULTIMATES_POOL.push({
-    name: "假装掉线",
-    desc: "屏幕显示掉线提示，吓唬队友",
-    cd: 120,
-    effect: (p, g) => {
-        g.showAnnouncement(`网络连接已断开... (其实并没有)`, '#f00');
-    }
-});
-
-ULTIMATES_POOL.push({
-    name: "原地放屁",
-    desc: "发出奇怪的爆炸声并原地留下一团烟雾",
-    cd: 60,
-    effect: (p, g) => {
-        if(window.audio) window.audio.play('hit');
-        g.effects.push(new Effect(p.x + p.width/2, p.y + p.height/2, 'EXPLOSION', 3));
-        g.showFloatingText('💨 噗...', p.x, p.y - 20, '#a50');
-    }
-});
-
-ULTIMATES_POOL.push({
-    name: "摇滚模式",
-    desc: "发射一堆没有伤害的烟花",
-    cd: 30,
-    effect: (p, g) => {
-        g.showAnnouncement('🎸 ROCK & ROLL!', '#f0f');
-        for (let i=0; i<10; i++) {
-            setTimeout(() => {
-                let rx = p.x + (Math.random() - 0.5) * 200;
-                let ry = p.y + (Math.random() - 0.5) * 200;
-                g.effects.push(new Effect(rx, ry, 'EXPLOSION', Math.random()*2 + 1));
-            }, i * 100);
-        }
-    }
-});
-
-ULTIMATES_POOL.push({
-    name: "大喇叭",
-    desc: "疯狂呼叫队友支援",
-    cd: 10,
-    effect: (p, g) => {
-        g.showAnnouncement(`🔊 P${p.id}: 救命啊！我快不行了！`, p.color);
-    }
-});
-
-ULTIMATES_POOL.push({
-    name: "和平使者",
-    desc: "丢下一堆回血包（敌人也能吃）",
+    name: "炫彩皮肤",
+    desc: "给你换个拉风的颜色！",
     cd: 300,
     effect: (p, g) => {
-        g.showAnnouncement('🕊️ Love & Peace!', '#0f0');
+        const colors = ['#f0f', '#0ff', '#ff0', '#0f0', '#fff'];
+        p.color = colors[Math.floor(Math.random() * colors.length)];
+        g.showFloatingText('✨ 换装成功！', p.x, p.y, p.color);
+    }
+});
+ULTIMATES_POOL.push({
+    name: "我要隐身",
+    desc: "自己变透明，虽然敌人还是能看见你",
+    cd: 400,
+    effect: (p, g) => {
+        p.alpha = 0.2;
+        g.showAnnouncement('👻 皇帝的新衣已激活', '#aaa');
+        setTimeout(() => p.alpha = 1, 10000);
+    }
+});
+ULTIMATES_POOL.push({
+    name: "原地放屁",
+    desc: "放出一团绿色毒气",
+    cd: 200,
+    effect: (p, g) => {
+        g.showFloatingText('💨 噗~~~', p.x, p.y, '#0f0');
         for (let i = 0; i < 5; i++) {
-            g.powerUps.push(new PowerUp(g, p.x + (Math.random()-0.5)*150, p.y + (Math.random()-0.5)*150, POWERUP_TYPES.LIFE));
+            g.effects.push(new Effect(p.x + 32 + (Math.random()-0.5)*40, p.y + 32 + (Math.random()-0.5)*40, 'SPARK', 2));
         }
+        if(window.audio) window.audio.play('shoot');
     }
 });
-
-ULTIMATES_POOL.push({
-    name: "迷踪步",
-    desc: "随机传送到地图上的一个位置",
-    cd: 60,
-    effect: (p, g) => {
-        p.x = Math.random() * (g.canvas.width - 64);
-        p.y = Math.random() * (g.canvas.height - 64);
-        g.effects.push(new Effect(p.x + 32, p.y + 32, 'SPAWN', 3));
-        g.showFloatingText('🌀 咻!', p.x, p.y, '#0ff');
-    }
-});
-
-ULTIMATES_POOL.push({
-    name: "爱的抱抱",
-    desc: "把一个敌人直接传送到你脸上",
-    cd: 120,
-    effect: (p, g) => {
-        if (g.enemies.length > 0) {
-            let e = g.enemies[Math.floor(Math.random() * g.enemies.length)];
-            e.x = p.x + 64; e.y = p.y;
-            g.showFloatingText('❤️ 惊不惊喜!', p.x, p.y, '#f00');
-        }
-    }
-});
-
-ULTIMATES_POOL.push({
-    name: "天降正义(虚假)",
-    desc: "气势磅礴地什么也没发生",
-    cd: 60,
-    effect: (p, g) => {
-        g.showAnnouncement('🔥 接受正义的制裁吧！！！', '#ff0');
-        setTimeout(() => {
-            g.showFloatingText('...呃，忘带弹药了', p.x, p.y, '#fff');
-        }, 1500);
-    }
-});
-
 ULTIMATES_POOL.push({
     name: "打赏主播",
     desc: "撒出一堆加分星星",
-    cd: 120,
+    cd: 300,
     effect: (p, g) => {
         g.showAnnouncement('🌟 感谢老铁送的穿云箭！', '#ff0');
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 5; i++) {
             g.powerUps.push(new PowerUp(g, p.x + (Math.random()-0.5)*150, p.y + (Math.random()-0.5)*150, POWERUP_TYPES.STAR));
         }
     }
 });
-
-// Procedurally generate more funny ultimates to make the pool exactly 100 or huge
-const adjectives = ['闪耀的', '无敌的', '神奇的', '神秘的', '超级', '量子', '终极', '狂暴'];
-const nouns = ['光环', '立场', '装甲', '引擎', '履带', '信号'];
-for(let i=0; i<77; i++) {
-    let adj = adjectives[Math.floor(Math.random()*adjectives.length)];
-    let noun = nouns[Math.floor(Math.random()*nouns.length)];
-    ULTIMATES_POOL.push({
-        name: `${adj}${noun}`,
-        desc: "充满未知的神秘力量",
-        cd: Math.floor(Math.random() * 60) + 10,
-        effect: (p, g) => {
-            g.showFloatingText('✨ ' + adj + noun + '已激活！', p.x, p.y, '#fff');
-            g.effects.push(new Effect(p.x + 32, p.y + 32, 'SPARK', 2));
-        }
-    });
-}
 
 // 暴露给全局
 window.getTankUltimate = function() {
