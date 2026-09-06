@@ -1,31 +1,39 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Noto+Serif+SC:wght@700&display=swap');
 
 body, html {
     margin: 0; padding: 0; width: 100%; height: 100%;
-    overflow: hidden; background: #1a1a1a;
+    overflow: hidden; 
+    background: #355E24; /* Seamless grass background */
     font-family: 'Noto Serif SC', 'Cinzel', serif;
     user-select: none; -webkit-user-select: none;
 }
-
 #game-container {
     position: relative; width: 100%; height: 100%;
-    display: flex; justify-content: center; align-items: center;
-    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%232b3a1a"/><path d="M0 0 L50 50 L100 0 Z" fill="%23253015" opacity="0.5"/></svg>');
-}
-
-canvas {
-    display: block;
-    box-shadow: 0 0 50px rgba(0,0,0,0.8);
-    border: 6px solid #4a3b2c;
-    border-radius: 10px;
+    display: block; /* Remove flex centering */
     background: #355E24;
 }
-
+canvas {
+    display: block;
+    position: absolute; top: 0; left: 0;
+    /* Remove borders and shadows */
+    border: none; box-shadow: none; background: transparent;
+}
+#grid-overlay {
+    position: absolute; pointer-events: auto;
+}
 #ui-layer {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     pointer-events: none;
-    display: flex; flex-direction: column; justify-content: space-between;
 }
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Noto+Serif+SC:wght@700&display=swap');
+
+
+
+
+
+
+
+
 
 /* Medieval Panels */
 .panel {

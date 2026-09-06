@@ -72,11 +72,32 @@ class Game {
         this.state = 'menu';
         this.gameSpeed = 1.0;
         
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        
         this.setupDOMEvents();
         this.resetGame();
         
         this.lastTime = performance.now();
         requestAnimationFrame((t) => this.gameLoop(t));
+    }
+    
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        this.offsetX = (window.innerWidth - CONFIG.WIDTH) / 2;
+        this.offsetY = (window.innerHeight - CONFIG.HEIGHT) / 2;
+        
+        this.overlay.style.width = CONFIG.WIDTH + 'px';
+        this.overlay.style.height = CONFIG.HEIGHT + 'px';
+        this.overlay.style.left = this.offsetX + 'px';
+        this.overlay.style.top = this.offsetY + 'px';
+        
+        if (this.state === 'playing' && this.selectedEntity && this.selectedEntity.isTower) {
+            let menu = document.getElementById('upgrade-menu');
+            menu.style.left = (this.selectedEntity.c * 80 + 40 + this.offsetX) + 'px'; 
+            menu.style.top = (this.selectedEntity.r * 80 + this.offsetY) + 'px';
+        }
     }
     
     resetGame() {
@@ -212,7 +233,7 @@ class Game {
                         this.selectedEntity = clickedTower;
                         this.updateUpgradeMenu();
                         let menu = document.getElementById('upgrade-menu');
-                        menu.style.display = 'flex'; menu.style.left = (c * 80 + 40) + 'px'; menu.style.top = (r * 80) + 'px';
+                        menu.style.display = 'flex'; menu.style.left = (c * 80 + 40 + this.offsetX) + 'px'; menu.style.top = (r * 80 + this.offsetY) + 'px';
                         Audio.playHit(); return;
                     }
                     
@@ -550,8 +571,15 @@ class Game {
     }
     
     draw() {
-        // Epic Background
-        this.ctx.fillStyle = '#2b3a1a'; 
+        // Fill entire window with grass
+        this.ctx.fillStyle = '#355E24'; 
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        this.ctx.save();
+        this.ctx.translate(this.offsetX, this.offsetY);
+        
+        // Draw playable area background (darker dirt/grass base)
+        this.ctx.fillStyle = '#2b3a1a';
         this.ctx.fillRect(0, 0, CONFIG.WIDTH, CONFIG.HEIGHT);
         
         // Dirt path
@@ -741,6 +769,7 @@ class Game {
             this.ctx.fillRect(pt.x, pt.y, 5, 5);
         });
         this.ctx.globalAlpha = 1.0;
+        this.ctx.restore();
     }
 }
 

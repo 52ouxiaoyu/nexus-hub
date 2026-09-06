@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -9,56 +8,36 @@
 </head>
 <body>
     <div id="game-container">
-        <div id="game-wrapper" style="position: relative; width: 960px; height: 640px;">
-            <canvas id="gameCanvas" width="960" height="640"></canvas>
-            <div id="grid-overlay" style="position: absolute; top:0; left:0; width: 960px; height: 640px;"></div>
+        <!-- Canvas will be resized dynamically to window size -->
+        <canvas id="gameCanvas"></canvas>
+        
+        <!-- Grid overlay will be centered dynamically -->
+        <div id="grid-overlay"></div>
 
-            <div id="ui-layer" style="position: absolute; top:0; left:0; width: 100%; height: 100%;">
-            <!-- Main Menu -->
+        <div id="ui-layer">
             <div id="menu-panel" class="panel active">
-                <div style="position: absolute; bottom: 20px; right: 20px; color: rgba(255,255,255,0.3); font-size: 14px;">v5.0.0 (Hardcore Edition)</div>
+                <div style="position: absolute; bottom: 20px; right: 20px; color: rgba(255,255,255,0.3); font-size: 14px;">v6.0.0 (Borderless)</div>
                 <h1 class="game-title">KINGDOM RUSH</h1>
-                <h2 class="sub-title">王国保卫战：硬核纪元</h2>
+                <h2 class="sub-title">王国保卫战：无界纪元</h2>
                 <button id="btn-start" class="ui-btn primary">保卫王国</button>
             </div>
 
-            <!-- In-Game HUD -->
             <div id="hud-panel" class="panel">
                 <div class="top-bar">
-                    <div class="hud-box">
-                        <span class="icon">🏰 基地血量</span>
-                        <span id="king-hp-text">20 / 20</span>
-                    </div>
-                    <div class="hud-box">
-                        <span class="icon">💰 金币</span>
-                        <span id="hud-gold">500</span>
-                    </div>
+                    <div class="hud-box"><span class="icon">🏰 基地血量</span><span id="king-hp-text">20 / 20</span></div>
+                    <div class="hud-box"><span class="icon">💰 金币</span><span id="hud-gold">500</span></div>
                     <div class="hud-box" style="display:flex; align-items:center; gap: 10px;">
-                        <span class="icon">☠️</span>
-                        <span>第 <span id="hud-wave">1</span> 波</span>
+                        <span class="icon">☠️</span><span>第 <span id="hud-wave">1</span> 波</span>
                         <button id="btn-call-wave" class="small-btn pulse" style="display:none;">提前召唤(+🪙)</button>
                         <button id="btn-speed" class="small-btn">▶️ 1x</button>
                     </div>
                 </div>
                 
-                <!-- Tower Selection -->
                 <div id="build-menu" class="bottom-bar" style="display: none;">
-                    <div class="tower-card" data-type="ARCHER" title="物理单体速射">
-                        <div class="tower-icon">🏹</div>
-                        <div class="tower-cost">70</div>
-                    </div>
-                    <div class="tower-card" data-type="MAGE" title="魔法穿甲单体">
-                        <div class="tower-icon">🔮</div>
-                        <div class="tower-cost">100</div>
-                    </div>
-                    <div class="tower-card" data-type="ARTILLERY" title="物理群体溅射">
-                        <div class="tower-icon">💣</div>
-                        <div class="tower-cost">125</div>
-                    </div>
-                    <div class="tower-card" data-type="ICE" title="魔法群体减速">
-                        <div class="tower-icon">❄️</div>
-                        <div class="tower-cost">150</div>
-                    </div>
+                    <div class="tower-card" data-type="ARCHER"><div class="tower-icon">🏹</div><div class="tower-cost">70</div></div>
+                    <div class="tower-card" data-type="MAGE"><div class="tower-icon">🔮</div><div class="tower-cost">100</div></div>
+                    <div class="tower-card" data-type="ARTILLERY"><div class="tower-icon">💣</div><div class="tower-cost">125</div></div>
+                    <div class="tower-card" data-type="ICE"><div class="tower-icon">❄️</div><div class="tower-cost">150</div></div>
                 </div>
 
                 <div id="upgrade-menu">
@@ -68,13 +47,11 @@
                 </div>
             </div>
 
-            <!-- Game Over -->
             <div id="gameover-panel" class="panel">
                 <h1 class="game-title text-danger" id="end-title">王国陨落</h1>
                 <h2 class="sub-title" id="end-desc">抵挡到了第 1 波</h2>
                 <button id="btn-restart" class="ui-btn primary">重新集结</button>
             </div>
-        </div>
         </div>
     </div>
     
