@@ -502,21 +502,72 @@ class GameMap {
                     ctx.fillStyle = '#a8d8ea'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                     ctx.fillStyle = '#d4f1f9'; ctx.fillRect(px + 2, py + 2, TILE_SIZE - 4, 4);
                     ctx.fillStyle = '#b8e6f0'; ctx.fillRect(px + 4, py + 12, 8, 8);
-                } else if (tile === TILE_TYPES.BASE) this.drawEagle(ctx, px, py);
-                else if (tile === TILE_TYPES.BASE_DESTROYED) { ctx.fillStyle = '#555'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE); ctx.fillStyle = '#000'; ctx.font = '24px Arial'; ctx.fillText('X', px + 8, py + 24); }
+                } else if (tile === TILE_TYPES.BASE) {
+                    this.drawBase(ctx, px, py, false);
+                } else if (tile === TILE_TYPES.BASE_DESTROYED) {
+                    this.drawBase(ctx, px, py, true);
+                }
             }
         }
     }
-    drawEagle(ctx, px, py) {
+    drawBase(ctx, px, py, isDestroyed) {
         const tx = Math.floor(px / TILE_SIZE); const ty = Math.floor(py / TILE_SIZE);
-        if (this.grid[ty][tx-1] === TILE_TYPES.BASE || (this.grid[ty-1] && this.grid[ty-1][tx] === TILE_TYPES.BASE)) return;
-        const hpRatio = this.game.baseHealth / this.game.maxBaseHealth;
-        const baseColor = hpRatio > 0.6 ? COLORS.BASE : (hpRatio > 0.3 ? '#fa0' : '#f00');
-        ctx.fillStyle = baseColor; ctx.fillRect(px + 8, py + 8, 48, 48); ctx.fillStyle = '#000';
-        ctx.fillRect(px+8, py+8, 8, 8); ctx.fillRect(px+48, py+8, 8, 8); ctx.fillRect(px+24, py+16, 16, 8);
-        ctx.fillStyle = '#333'; ctx.fillRect(px + 8, py - 8, 48, 5);
-        ctx.fillStyle = baseColor; ctx.fillRect(px + 8, py - 8, 48 * hpRatio, 5);
-        ctx.strokeStyle = '#666'; ctx.lineWidth = 1; ctx.strokeRect(px + 8, py - 8, 48, 5);
+        // Ensure we only draw the 64x64 base ONCE (from its top-left tile)
+        if (this.grid[ty][tx-1] === TILE_TYPES.BASE || this.grid[ty][tx-1] === TILE_TYPES.BASE_DESTROYED || 
+           (this.grid[ty-1] && (this.grid[ty-1][tx] === TILE_TYPES.BASE || this.grid[ty-1][tx] === TILE_TYPES.BASE_DESTROYED))) return;
+           
+        if (!isDestroyed) {
+            ctx.fillStyle = '#222'; ctx.fillRect(px, py, 64, 64);
+            
+            // Shield Background
+            ctx.fillStyle = '#8B0000';
+            ctx.beginPath();
+            ctx.moveTo(px+10, py+10); ctx.lineTo(px+54, py+10);
+            ctx.lineTo(px+54, py+35); ctx.lineTo(px+32, py+58); ctx.lineTo(px+10, py+35);
+            ctx.fill();
+
+            // Gold Eagle
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.moveTo(px+32, py+15);
+            ctx.lineTo(px+50, py+20); ctx.lineTo(px+60, py+12); ctx.lineTo(px+52, py+35);
+            ctx.lineTo(px+32, py+48);
+            ctx.lineTo(px+12, py+35); ctx.lineTo(px+4, py+12); ctx.lineTo(px+14, py+20);
+            ctx.fill();
+            
+            // Eagle Head
+            ctx.fillStyle = '#FFF';
+            ctx.beginPath(); ctx.arc(px+32, py+25, 5, 0, Math.PI*2); ctx.fill();
+
+            // Health Bar
+            const hpRatio = this.game.baseHealth / this.game.maxBaseHealth;
+            const hpColor = hpRatio > 0.6 ? '#0f0' : (hpRatio > 0.3 ? '#fa0' : '#f00');
+            ctx.fillStyle = '#333'; ctx.fillRect(px + 8, py - 8, 48, 5);
+            ctx.fillStyle = hpColor; ctx.fillRect(px + 8, py - 8, 48 * hpRatio, 5);
+            ctx.strokeStyle = '#666'; ctx.lineWidth = 1; ctx.strokeRect(px + 8, py - 8, 48, 5);
+        } else {
+            ctx.fillStyle = '#222'; ctx.fillRect(px, py, 64, 64);
+            
+            // Destroyed Shield Background
+            ctx.fillStyle = '#330000';
+            ctx.beginPath();
+            ctx.moveTo(px+10, py+10); ctx.lineTo(px+54, py+10);
+            ctx.lineTo(px+54, py+35); ctx.lineTo(px+32, py+58); ctx.lineTo(px+10, py+35);
+            ctx.fill();
+
+            // Broken Eagle
+            ctx.fillStyle = '#555500';
+            ctx.beginPath();
+            ctx.moveTo(px+32, py+15);
+            ctx.lineTo(px+50, py+20); ctx.lineTo(px+60, py+12); ctx.lineTo(px+52, py+35);
+            ctx.lineTo(px+32, py+48);
+            ctx.lineTo(px+12, py+35); ctx.lineTo(px+4, py+12); ctx.lineTo(px+14, py+20);
+            ctx.fill();
+
+            // Crack
+            ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(px+25, py+15); ctx.lineTo(px+35, py+35); ctx.lineTo(px+30, py+50); ctx.stroke();
+        }
     }
     isBlocked(x, y, width, height, isBullet = false, canBoat = false, canFly = false) {
         const left = Math.floor(x / TILE_SIZE); const right = Math.floor((x + width - 0.1) / TILE_SIZE);
@@ -2611,61 +2662,55 @@ class Game {
                 } else if (tile === 5) { // ICE
                     this.ctx.fillStyle = '#A0E6FF'; this.ctx.fillRect(px, py, 32, 32);
                     this.ctx.fillStyle = '#FFF'; this.ctx.fillRect(px+4, py+4, 8, 2);
-                } else if (tile === 9) { // BASE
-                    // Crown Base
-                    this.ctx.fillStyle = '#1a1a1a'; this.ctx.fillRect(px, py, 64, 64);
-                    
-                    // Gold Crown Base
-                    this.ctx.fillStyle = '#FFC107';
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(px+10, py+15); this.ctx.lineTo(px+16, py+48); this.ctx.lineTo(px+48, py+48); this.ctx.lineTo(px+54, py+15);
-                    this.ctx.lineTo(px+42, py+32); this.ctx.lineTo(px+32, py+12); this.ctx.lineTo(px+22, py+32);
-                    this.ctx.fill();
-                    
-                    // Bottom rim
-                    this.ctx.fillStyle = '#FFA000';
-                    this.ctx.fillRect(px+14, py+48, 36, 6);
+                } else if (tile === 9 || tile === 10) { // BASE or BASE_DESTROYED
+                    if (frame.mapGrid[y][x-1] === 9 || frame.mapGrid[y][x-1] === 10 || 
+                       (frame.mapGrid[y-1] && (frame.mapGrid[y-1][x] === 9 || frame.mapGrid[y-1][x] === 10))) continue;
+                       
+                    if (tile === 9) {
+                        this.ctx.fillStyle = '#222'; this.ctx.fillRect(px, py, 64, 64);
+                        
+                        // Shield Background
+                        this.ctx.fillStyle = '#8B0000';
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(px+10, py+10); this.ctx.lineTo(px+54, py+10);
+                        this.ctx.lineTo(px+54, py+35); this.ctx.lineTo(px+32, py+58); this.ctx.lineTo(px+10, py+35);
+                        this.ctx.fill();
 
-                    // Jewels
-                    this.ctx.shadowBlur = 8;
-                    this.ctx.shadowColor = '#F00';
-                    this.ctx.fillStyle = '#F44336'; this.ctx.beginPath(); this.ctx.arc(px+32, py+42, 4, 0, Math.PI*2); this.ctx.fill();
-                    
-                    this.ctx.shadowColor = '#0F0';
-                    this.ctx.fillStyle = '#4CAF50'; this.ctx.beginPath(); this.ctx.arc(px+20, py+42, 3, 0, Math.PI*2); this.ctx.fill();
-                    
-                    this.ctx.shadowColor = '#00F';
-                    this.ctx.fillStyle = '#2196F3'; this.ctx.beginPath(); this.ctx.arc(px+44, py+42, 3, 0, Math.PI*2); this.ctx.fill();
-                    this.ctx.shadowBlur = 0;
-                } else if (tile === 10) { // BASE_DESTROYED
-                    this.ctx.fillStyle = '#222'; this.ctx.fillRect(px, py, 64, 64);
-                    
-                    // Broken Crown Base
-                    this.ctx.fillStyle = '#555';
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(px+10, py+15); this.ctx.lineTo(px+16, py+48); this.ctx.lineTo(px+48, py+48); this.ctx.lineTo(px+54, py+15);
-                    this.ctx.lineTo(px+42, py+32); this.ctx.lineTo(px+32, py+22); // Broken tip
-                    this.ctx.lineTo(px+22, py+32);
-                    this.ctx.fill();
-                    
-                    // Bottom rim
-                    this.ctx.fillStyle = '#444';
-                    this.ctx.fillRect(px+14, py+48, 36, 6);
+                        // Gold Eagle
+                        this.ctx.fillStyle = '#FFD700';
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(px+32, py+15);
+                        this.ctx.lineTo(px+50, py+20); this.ctx.lineTo(px+60, py+12); this.ctx.lineTo(px+52, py+35);
+                        this.ctx.lineTo(px+32, py+48);
+                        this.ctx.lineTo(px+12, py+35); this.ctx.lineTo(px+4, py+12); this.ctx.lineTo(px+14, py+20);
+                        this.ctx.fill();
+                        
+                        // Eagle Head
+                        this.ctx.fillStyle = '#FFF';
+                        this.ctx.beginPath(); this.ctx.arc(px+32, py+25, 5, 0, Math.PI*2); this.ctx.fill();
+                    } else {
+                        this.ctx.fillStyle = '#222'; this.ctx.fillRect(px, py, 64, 64);
+                        
+                        // Destroyed Shield Background
+                        this.ctx.fillStyle = '#330000';
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(px+10, py+10); this.ctx.lineTo(px+54, py+10);
+                        this.ctx.lineTo(px+54, py+35); this.ctx.lineTo(px+32, py+58); this.ctx.lineTo(px+10, py+35);
+                        this.ctx.fill();
 
-                    // Crack in the middle
-                    this.ctx.strokeStyle = '#111';
-                    this.ctx.lineWidth = 2;
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(px+25, py+20);
-                    this.ctx.lineTo(px+35, py+35);
-                    this.ctx.lineTo(px+30, py+48);
-                    this.ctx.stroke();
+                        // Broken Eagle
+                        this.ctx.fillStyle = '#555500';
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(px+32, py+15);
+                        this.ctx.lineTo(px+50, py+20); this.ctx.lineTo(px+60, py+12); this.ctx.lineTo(px+52, py+35);
+                        this.ctx.lineTo(px+32, py+48);
+                        this.ctx.lineTo(px+12, py+35); this.ctx.lineTo(px+4, py+12); this.ctx.lineTo(px+14, py+20);
+                        this.ctx.fill();
 
-                    // Dead Jewels
-                    this.ctx.fillStyle = '#333';
-                    this.ctx.beginPath(); this.ctx.arc(px+32, py+42, 4, 0, Math.PI*2); this.ctx.fill();
-                    this.ctx.beginPath(); this.ctx.arc(px+20, py+42, 3, 0, Math.PI*2); this.ctx.fill();
-                    this.ctx.beginPath(); this.ctx.arc(px+44, py+42, 3, 0, Math.PI*2); this.ctx.fill();
+                        // Crack
+                        this.ctx.strokeStyle = '#000'; this.ctx.lineWidth = 3;
+                        this.ctx.beginPath(); this.ctx.moveTo(px+25, py+15); this.ctx.lineTo(px+35, py+35); this.ctx.lineTo(px+30, py+50); this.ctx.stroke();
+                    }
                 }
             }
         }
