@@ -4,7 +4,7 @@
     <meta charset="UTF-8" data-page-node-id="fvct4kKB77qx0aDFZg0TFG">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="7cXFTDee52Hp5l8aujUlmz">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1788671489" data-page-node-id="Q5lrPWp6xqtldfdpxSWXxH">
+    <link rel="stylesheet" href="css/style.css?v=1788679127" data-page-node-id="Q5lrPWp6xqtldfdpxSWXxH">
 </head>
 <body data-page-node-id="lPg8spSQ9t6E6ZEWT8akzU">
     <div id="game-container" data-page-node-id="dle8H483OJAxh7uRwqXTVW">
@@ -13,30 +13,29 @@
         
         <!-- UI Layer -->
         <div id="ui-layer" data-page-node-id="g4Bg5wFM7xIdfQYyg5ij2z">
-            <div id="top-bar" style="width: 100%; display: flex; flex-wrap: nowrap; align-items: flex-start;" data-page-node-id="4WpGhq8U79jT82Cnv8NYVU">
-                <div id="sun-bank" data-page-node-id="N54o50nukAFpFsHne2m98m">
-                    <span id="sun-count" data-page-node-id="DCAt9dxphqriMZ32aAeAu9">50</span>
-                </div>
+            <div id="top-bar" data-page-node-id="4WpGhq8U79jT82Cnv8NYVU">
+                <!-- 种子选卡栏：占满剩余宽度，卡多时横向滚动 -->
                 <div id="seed-bank" data-page-node-id="ow8b2cxoiPifuvHd2BhkKe"></div>
                 
                 <div id="shovel-bank" data-page-node-id="lOC9KzEosohEYiG4Hqzp1T">
                     <div id="shovel" class="tool-card" title="铲子" data-page-node-id="HYthwILD1qznMnaHjMpMGI"></div>
                 </div>
                 
-                <div id="glove-bank" style="width: 70px; height: 72px; margin-left: 10px; background: rgba(0,0,0,0.5); border: 2px solid #a65; border-radius: 10px; display: none; cursor: pointer; justify-content: center; align-items: center; box-sizing: border-box;" data-page-node-id="WlyvdPw9xGD9tGGgYDAnlC">
-                    <div style="font-size: 36px; line-height: 72px;" data-page-node-id="l84jKQwFjaDF1cpAsVUHgL">🧤</div>
+                <div id="glove-bank" title="融合手套" data-page-node-id="WlyvdPw9xGD9tGGgYDAnlC">
+                    <div class="tool-emoji" data-page-node-id="l84jKQwFjaDF1cpAsVUHgL">🧤</div>
                 </div>
                 
-                <div id="recipe-book-btn" style="width: 70px; height: 72px; margin-left: 10px; background: rgba(0,0,0,0.5); border: 2px solid #a65; border-radius: 10px; display: none; cursor: pointer; justify-content: center; align-items: center; box-sizing: border-box;" title="融合图鉴" data-page-node-id="sC5gKcjlnQJHlw9ffTH3jR">
-                    <div style="font-size: 36px; line-height: 72px;" data-page-node-id="DaZDG2maXWaImSREBEpDJo">📖</div>
+                <div id="recipe-book-btn" title="融合图鉴" data-page-node-id="sC5gKcjlnQJHlw9ffTH3jR">
+                    <div class="tool-emoji" data-page-node-id="DaZDG2maXWaImSREBEpDJo">📖</div>
                 </div>
-                <div id="score-bank" style="margin-left: auto; background-color: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; color: white; font-family: monospace; font-size: 20px; display: flex; align-items: center; border: 2px solid #8b5a2b; height: 34px;" data-page-node-id="j1D6U9P6UtyfaCYO2LmRtV">
-                    Score: <span id="score-count" style="margin-left: 10px; font-weight: bold; color: #ffd700;" data-page-node-id="mYcjQvG6T0hdaYC33SElQP">0</span>
+                <!-- 右侧双行仪表：上行=太阳数量，下行=分数 -->
+                <div id="meta-bank" data-page-node-id="j1D6U9P6UtyfaCYO2LmRtV">
+                    <div id="sun-bank" data-page-node-id="N54o50nukAFpFsHne2m98m">
+                        <span id="sun-count" data-page-node-id="DCAt9dxphqriMZ32aAeAu9">50</span>
+                    </div>
+                    <div id="score-bank" data-page-node-id="mYcjQvG6T0hdaYC33SElQP">分数 <span id="score-count">0</span></div>
                 </div>
-                <div id="version-bank" title="当前游戏版本（变更后请刷新页面）" style="margin-left: 10px; background-color: rgba(0,80,40,0.7); padding: 5px 12px; border-radius: 20px; color: #bdf; font-family: monospace; font-size: 14px; display: flex; align-items: center; border: 2px solid #4a8; height: 34px; cursor: help;" data-page-node-id="mvFES5IHvETsDlJkV7zb5b">
-                    🏷️ <span id="version-display" style="margin-left: 6px; font-weight: bold;" data-page-node-id="r1tebpIQEV13kYgYlOta9I">v?.?.?</span>
-                </div>
-                <button id="btn-speed" style="margin-left: 15px; padding: 5px 15px; border-radius: 20px; font-family: monospace; font-size: 18px; font-weight: bold; background: rgba(0,0,0,0.5); color: #fff; border: 2px solid #8b5a2b; cursor: pointer; text-shadow: 1px 1px 2px black;" data-page-node-id="QJADFcmyv9Nd53wK5eTBjm">Speed: 1x</button>
+                <button id="btn-speed" data-page-node-id="QJADFcmyv9Nd53wK5eTBjm">Speed: 1x</button>
             </div>
         <!-- Recipe Modal -->
         <div id="recipe-modal" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; background: #c69c6d; border: 4px solid #4a3018; border-radius: 10px; z-index: 3000; padding: 20px; box-shadow: 0 0 20px #000; pointer-events: auto;" data-page-node-id="AsNVcorOLT06Lkm66PukyA">
@@ -128,14 +127,23 @@
                 position: relative;
             }
             .pkt-art img { height: 96px; width: auto; image-rendering: pixelated; }
-            /* 融合卡：双植物 + 加号 */
-            .pkt-art.fusion .img-a { height: 78px; margin-right: -6px; }
-            .pkt-art.fusion .img-b { height: 78px; margin-left: -6px; }
-            .pkt-art.fusion .plus {
-                position: absolute; right: 34px; top: 6px;
-                font-family: Impact, sans-serif; font-size: 30px; font-weight: bold;
-                color: #fff; text-shadow: 2px 2px 0 #a12b1e, 0 0 6px rgba(0,0,0,0.5);
+            /* 融合卡：公式排版（两行：植物+植物  / = ？）*/
+            .pkt-art.formula {
+                flex-direction: column; gap: 6px;
+                font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif;
+                color: #3a2a10;
             }
+            .pkt-art.formula .row { display: flex; align-items: center; justify-content: center; }
+            .pkt-art.formula .row.plants  { gap: 10px; }
+            .pkt-art.formula .row.result  { gap: 4px; }
+            .pkt-art.formula .formula-line { font-size: 22px; font-weight: 900; letter-spacing: 2px; }
+            .pkt-art.formula .formula-op   { font-size: 22px; font-weight: 900; color: #a14b18; }
+            .pkt-art.formula .formula-eq   { font-size: 28px; font-weight: 900; color: #4a3414; }
+            .pkt-art.formula .formula-q    { font-size: 32px; font-weight: 900; color: #c0211e;
+                text-shadow: 1px 1px 0 #fff, 2px 2px 0 rgba(0,0,0,0.25);
+                animation: q-pulse 2.2s ease-in-out infinite;
+                display: inline-block; transform-origin: center; }
+            @keyframes q-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
             .pkt-name {
                 margin-top: 14px;
                 font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif;
@@ -182,7 +190,7 @@
                 <div class="menu-cards">
                     <button id="btn-adventure" class="mode-card" data-page-node-id="Zc9WnR1xZmY7aZgJ6ZIpx6">
                         <div class="pkt-art">
-                            <img src="assets/images/Card/Plants/SunFlower.png" alt="sunflower">
+                            <img src="assets/images/Plants/Sunflower/0.gif" alt="向日葵" class="solo">
                         </div>
                         <div class="pkt-name">经典冒险</div>
                         <div class="pkt-tag">ADVENTURE</div>
@@ -190,10 +198,16 @@
                     </button>
 
                     <button id="btn-fusion" class="mode-card" data-page-node-id="UE84l3WS1QiAcXOo4VOGWQ">
-                        <div class="pkt-art fusion">
-                            <span class="plus">✦</span>
-                            <img class="img-a" src="assets/images/Card/Plants/Peashooter.png" alt="pea">
-                            <img class="img-b" src="assets/images/Card/Plants/Garlic.png" alt="garlic">
+                        <div class="pkt-art fusion formula">
+                            <div class="row plants">
+                                <span class="formula-line">豌豆射手</span>
+                                <span class="formula-op">+</span>
+                                <span class="formula-line">大蒜</span>
+                            </div>
+                            <div class="row result">
+                                <span class="formula-eq">=</span>
+                                <span class="formula-q">？</span>
+                            </div>
                         </div>
                         <div class="pkt-name">融合进化</div>
                         <div class="pkt-tag">FUSION</div>
@@ -224,39 +238,38 @@
         window.addEventListener('resize', resizeGame);
         resizeGame();
 
-        // ===== 加载版本号（用户用以判断是否运行最新代码）=====
+        // ===== 加载版本号：仅开始菜单左下角展示（游戏内 HUD 不再显示）=====
         (function loadVersion() {
-            const el = document.getElementById('version-display');
-            if (!el) return;
+            const sv = document.getElementById('start-version');
+            const el = document.getElementById('version-display'); // 兼容旧引用（游戏中徽标已移除，恒为 null）
+            if (!sv && !el) return;
             fetch('version.json?t=' + Date.now())
                 .then(r => r.ok ? r.json() : null)
                 .then(v => {
                     if (v && v.version) {
-                        el.textContent = v.version + ' (build ' + (v.build || '?') + ')';
-                        el.title = (v.feature || '') + '\nasset version: ' + (v.assetVersion || '?');
-                        // 同步更新开始菜单左下角的版本号，避免两处不一致
-                        const sv = document.getElementById('start-version');
-                        if (sv) sv.textContent = v.version + ' (build ' + (v.build || '?') + ')';
-                    } else {
-                        el.textContent = 'no version.json';
+                        const label = v.version + ' (build ' + (v.build || '?') + ')';
+                        if (sv) sv.textContent = label;
+                        if (el) { el.textContent = label; el.title = (v.feature || '') + '\nasset version: ' + (v.assetVersion || '?'); }
+                    } else if (sv) {
+                        sv.textContent = 'no version.json';
                     }
                 })
                 .catch(err => {
-                    el.textContent = 'load err';
+                    if (sv) sv.textContent = 'load err';
                     console.warn('version.json load failed:', err);
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1788671489"></script>
-    <script src="js/Board.js?v=1788671489"></script>
-    <script src="js/entities/Entity.js?v=1788671489"></script>
-    <script src="js/entities/Plant.js?v=1788671489"></script>
-    <script src="js/entities/Zombie.js?v=1788671489"></script>
-    <script src="js/entities/Projectile.js?v=1788671489"></script>
-    <script src="js/entities/Sun.js?v=1788671489"></script>
-    <script src="js/managers/WaveManager.js?v=1788671489"></script>
-    <script src="js/managers/CollisionManager.js?v=1788671489"></script>
-    <script src="js/managers/EventManager.js?v=1788671489"></script>
-    <script src="js/GameLoop.js?v=1788671489"></script>
+    <script src="js/InputManager.js?v=1788679127"></script>
+    <script src="js/Board.js?v=1788679127"></script>
+    <script src="js/entities/Entity.js?v=1788679127"></script>
+    <script src="js/entities/Plant.js?v=1788679127"></script>
+    <script src="js/entities/Zombie.js?v=1788679127"></script>
+    <script src="js/entities/Projectile.js?v=1788679127"></script>
+    <script src="js/entities/Sun.js?v=1788679127"></script>
+    <script src="js/managers/WaveManager.js?v=1788679127"></script>
+    <script src="js/managers/CollisionManager.js?v=1788679127"></script>
+    <script src="js/managers/EventManager.js?v=1788679127"></script>
+    <script src="js/GameLoop.js?v=1788679127"></script>
 </body>
 </html>

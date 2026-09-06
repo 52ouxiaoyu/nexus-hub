@@ -60,34 +60,71 @@ body {
 
 #top-bar {
     display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    width: 100%;
     padding: 5px;
+    box-sizing: border-box;
     pointer-events: auto;
-    transform: scale(0.85);
+    transform: scale(0.9);
     transform-origin: top center;
 }
+
+/* 除种子栏外的固定区块都不允许被 flex 压缩变形 */
+#top-bar > div { flex-shrink: 0; }
 
 #sun-bank {
     background-image: url('../assets/images/interface/SunBack.png');
     background-size: 100% 100%;
-    width: 123px;
-    height: 34px;
+    width: 116px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-right: 10px;
 }
 
 #sun-count {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: bold;
     color: black;
-    margin-left: 20px;
+    margin-left: 24px;
+}
+
+/* 右侧双行仪表：上行太阳 / 下行分数 */
+#meta-bank {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-self: center;
+}
+
+#score-bank {
+    width: 116px;
+    height: 21px;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid #8b5a2b;
+    border-radius: 10px;
+    color: #fff;
+    font-family: monospace;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    box-sizing: border-box;
+}
+
+#score-count {
+    font-weight: bold;
+    color: #ffd700;
 }
 
 #seed-bank {
     display: flex;
     gap: 5px;
-    flex-grow: 1;
+    flex: 1 1 0;          /* 吃掉全部剩余宽度 */
+    min-width: 0;         /* 允许收窄，配合 overflow 触发横向滚动 */
     overflow-x: auto;
     overflow-y: hidden;
     padding-bottom: 5px;
@@ -106,6 +143,7 @@ body {
 }
 
 .seed-card {
+    flex: 0 0 auto; /* 关键：卡片固定尺寸，容器放不下时滚动而非被压扁 */
     width: 65px;
     height: 39px;
     cursor: pointer;
@@ -133,7 +171,7 @@ body {
 }
 
 #shovel-bank {
-    margin-left: 10px;
+    margin-left: 6px;
     background-image: url('../assets/images/interface/ShovelBack.png');
     background-size: 100% 100%;
     width: 70px;
@@ -141,6 +179,44 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/* 融合模式工具：手套 / 图鉴（经典模式隐藏，JS 置 display:flex 显示） */
+#glove-bank, #recipe-book-btn {
+    width: 64px;
+    height: 72px;
+    margin-left: 6px;
+    background: rgba(0,0,0,0.5);
+    border: 2px solid #a65;
+    border-radius: 10px;
+    display: none;
+    cursor: pointer;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.tool-emoji {
+    font-size: 34px;
+    line-height: 72px;
+    user-select: none;
+}
+
+#btn-speed {
+    align-self: center;
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-family: monospace;
+    font-size: 16px;
+    font-weight: bold;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    border: 2px solid #8b5a2b;
+    cursor: pointer;
+    text-shadow: 1px 1px 2px black;
 }
 
 .tool-card {
