@@ -5,7 +5,7 @@ const CANVAS_SIZE = TILE_SIZE * GRID_SIZE; // 832px
 
 const TILE_TYPES = { EMPTY: 0, BRICK: 1, STEEL: 2, WATER: 3, FOREST: 4, ICE: 5, HARD_BRICK: 6, UNBREAKABLE: 7, BARREL: 8, BASE: 9, BASE_DESTROYED: 10 };
 const COLORS = { BRICK: '#B53120', BRICK_LIGHT: '#DC5341', STEEL: '#AAAAAA', STEEL_LIGHT: '#EEEEEE', WATER: '#2131E7', FOREST: '#21B521', PLAYER1: '#E7E721', PLAYER2: '#63C6FF', ENEMY: '#E7E7E7', BASE: '#E79C21', BARREL: '#FF4400' };
-const POWERUP_TYPES = { SHIELD: '🛡️', BOMB: '💣', STAR: '⭐', SHOVEL: '🏗️', LIFE: '❤️', TIME: '⏳', MAX_WEAPON: '🚀', BOAT: '🚤', FLY: '🚁', W_MISSILE: '🎯', W_LASER: '⚡', W_EXPLOSIVE: '💥', FAKE_BOMB: '🧨' };
+const POWERUP_TYPES = { SHIELD: '🛡️', BOMB: '💣', STAR: '⭐', SHOVEL: '🏗️', LIFE: '❤️', TIME: '⏳', MAX_WEAPON: '🚀', BOAT: '🚤', FLY: '🚁', W_MISSILE: '🎯', W_LASER: '⚡', W_EXPLOSIVE: '💥', FAKE_BOMB: '🧨', ULTIMATE: '🔮' };
 
 function seededRandom(seed) {
     let s = seed;
@@ -370,6 +370,14 @@ class PowerUp {
             player.canFly = true;
             player.flyTimer = 1800;
             this.game.showAnnouncement('获得飞行能力 CAN FLY!', '#ccc');
+        }
+        else if (this.type === POWERUP_TYPES.ULTIMATE) {
+            if (isPlayer) {
+                player.ultimate = window.getTankUltimate ? window.getTankUltimate() : { name: "天降正义", cd: 600, effect: (p, g) => { g.showAnnouncement('Boom!', '#ff0'); } };
+                player.ultCooldown = 0;
+                this.game.showAnnouncement(`⭐ 获得大招: ${player.ultimate.name}!`, '#ff0');
+                this.game.updateHUD();
+            }
         }
         this.game.updateHUD();
     }
@@ -966,26 +974,26 @@ class Tank {
             } else {
                 let dropTypes = [
                     POWERUP_TYPES.SHIELD, POWERUP_TYPES.BOMB, POWERUP_TYPES.SHOVEL, 
-                    POWERUP_TYPES.TIME, POWERUP_TYPES.STAR, 
-                    POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.W_MISSILE,
+                    POWERUP_TYPES.TIME, POWERUP_TYPES.STAR, POWERUP_TYPES.ULTIMATE,
+                    POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.W_MISSILE,
                     POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_EXPLOSIVE
                 ];
                 
                 if (this.variant === 'HEAVY') {
                     dropChance = 0.3;
-                    dropTypes = [POWERUP_TYPES.LIFE, POWERUP_TYPES.SHOVEL, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.BOMB];
+                    dropTypes = [POWERUP_TYPES.LIFE, POWERUP_TYPES.SHOVEL, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.BOMB, POWERUP_TYPES.ULTIMATE];
                 } else if (this.variant === 'FAST') {
                     dropChance = 0.25;
-                    dropTypes = [POWERUP_TYPES.TIME, POWERUP_TYPES.SHIELD, POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_MISSILE];
+                    dropTypes = [POWERUP_TYPES.TIME, POWERUP_TYPES.SHIELD, POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.ULTIMATE];
                 } else if (this.variant === 'ELITE') {
                     dropChance = 0.5;
-                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.STAR, POWERUP_TYPES.LIFE, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.W_MISSILE];
+                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.STAR, POWERUP_TYPES.LIFE, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.ULTIMATE, POWERUP_TYPES.ULTIMATE];
                 } else if (this.variant === 'SMART') {
                     dropChance = 0.35;
-                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.SHIELD, POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_MISSILE];
+                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.SHIELD, POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.ULTIMATE];
                 } else if (this.variant === 'RAPID') {
                     dropChance = 0.3;
-                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.W_MISSILE];
+                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.ULTIMATE];
                 }
                 type = dropTypes[Math.floor(Math.random() * dropTypes.length)];
             }
@@ -1082,6 +1090,9 @@ class Player extends Tank {
         this.killStreak = 0;
         this.lastKillTime = 0;
         this.lives = 2;
+        this.ultimate = null;
+        this.ultCooldown = 0;
+        this.ultPressed = false;
     }
     
     draw(ctx) {
@@ -1122,7 +1133,31 @@ class Player extends Tank {
         
         if (this.comboTimer > 0) this.comboTimer--; else this.combo = 0;
         
+        if (this.ultCooldown > 0) {
+            this.ultCooldown--;
+            if (this.ultCooldown % 60 === 0) this.game.updateHUD();
+        }
+
+        let ultKey = this.id === 1 ? 'KeyM' : 'Equal';
+        let ultKey2 = this.id === 1 ? 'KeyM' : 'NumpadAdd';
         
+        if (!this.aiActive && (this.game.input.isDown(ultKey) || this.game.input.isDown(ultKey2))) {
+            if (!this.ultPressed) {
+                this.ultPressed = true;
+                if (this.ultimate && this.ultCooldown <= 0) {
+                    this.ultimate.effect(this, this.game);
+                    this.ultCooldown = this.ultimate.cd;
+                    this.game.showFloatingText('🔥 ' + this.ultimate.name + '!', this.x, this.y - 20, '#ff0');
+                    this.game.updateHUD();
+                } else if (!this.ultimate) {
+                    this.game.showFloatingText('没有大招!', this.x, this.y, '#ccc');
+                } else {
+                    this.game.showFloatingText(`冷却中(${Math.ceil(this.ultCooldown/60)}s)`, this.x, this.y, '#f00');
+                }
+            }
+        } else {
+            this.ultPressed = false;
+        }
 
         super.update();
         if (this.canFly && this.flyTimer > 0) {
@@ -1768,7 +1803,7 @@ class Boss extends Enemy {
         if (this.health <= 0) {
             this.alive = false; this.game.weather = 'NONE';
             for (let i = 0; i < 12; i++) {
-                const standardTypes = [POWERUP_TYPES.SHIELD, POWERUP_TYPES.BOMB, POWERUP_TYPES.SHOVEL, POWERUP_TYPES.TIME, POWERUP_TYPES.LIFE, POWERUP_TYPES.STAR, POWERUP_TYPES.STAR, POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_EXPLOSIVE];
+                const standardTypes = [POWERUP_TYPES.SHIELD, POWERUP_TYPES.BOMB, POWERUP_TYPES.SHOVEL, POWERUP_TYPES.TIME, POWERUP_TYPES.LIFE, POWERUP_TYPES.STAR, POWERUP_TYPES.STAR, POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.ULTIMATE, POWERUP_TYPES.ULTIMATE];
                 const angle = (i / 12) * Math.PI * 2;
                 const dist = TILE_SIZE * 3;
                 let px = this.x + this.width/2 + Math.cos(angle) * dist - 32;
@@ -2011,6 +2046,24 @@ class Game {
         };
         if(p1LvlEl) p1LvlEl.innerHTML = this.players[0].alive ? `火力: Lv.${this.players[0].level} [${getWeaponHTML(this.players[0])}]` : `DEAD`;
         if(p2LvlEl) p2LvlEl.innerHTML = this.players[1].alive ? `火力: Lv.${this.players[1].level} [${getWeaponHTML(this.players[1])}]` : `DEAD`;
+
+        const updateUltHUD = (playerId, player) => {
+            const el = document.getElementById(`p${playerId}-ult`);
+            if (el) {
+                if (!player.alive) {
+                    el.innerText = `大招: DEAD`;
+                } else if (player.ultimate) {
+                    let cdSec = Math.ceil(player.ultCooldown / 60);
+                    let key = playerId === 1 ? 'M' : '+';
+                    el.innerText = `大招: ${player.ultimate.name} ` + (cdSec > 0 ? `[CD: ${cdSec}s]` : `(按${key}键)`);
+                } else {
+                    let key = playerId === 1 ? 'M' : '+';
+                    el.innerText = `大招: 无 (打怪获取)`;
+                }
+            }
+        };
+        updateUltHUD(1, this.players[0]);
+        updateUltHUD(2, this.players[1]);
 
         document.getElementById('p1-lives').innerText = '❤️x' + this.players[0].lives;
         document.getElementById('p2-lives').innerText = '❤️x' + this.players[1].lives;
