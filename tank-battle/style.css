@@ -197,9 +197,21 @@ button {
     margin: 0;
 }
 
+.diff-btn:hover {
+    background: #666;
+}
+
 .diff-btn.active {
-    background: #f00;
-    border-color: #fff;
+    background: #ffcc00;
+    color: #000;
+    font-weight: bold;
+    border-color: #ff9900;
+}
+
+.menu-selected {
+    outline: 3px solid #0f0 !important;
+    outline-offset: 3px;
+    box-shadow: 0 0 15px #0f0;
 }
 
 #tips-banner {

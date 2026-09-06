@@ -2265,6 +2265,14 @@ class Game {
             };
         });
         this.difficulty = 'normal';
+        this.menuRow = 2; // Default select start button
+        this.updateMenuHighlight();
+        
+        // Remove existing listener if any to avoid duplicates in hot reload, though it's bound to window
+        if (window._tankMenuListener) window.removeEventListener('keydown', window._tankMenuListener);
+        window._tankMenuListener = (e) => this.handleMenuInput(e);
+        window.addEventListener('keydown', window._tankMenuListener);
+
         this.canvas.setAttribute('tabindex', '0');
         this.canvas.focus();
         this.canvas.addEventListener('click', () => this.canvas.focus());
@@ -2283,6 +2291,77 @@ class Game {
             this.tipTimer = duration;
         }
     }
+    
+    updateMenuHighlight() {
+        if (this.gameState !== 'START') return;
+        const els = [
+            document.getElementById('start-level'),
+            document.querySelector('.difficulty'),
+            document.getElementById('start-btn')
+        ];
+        els.forEach((el, i) => {
+            if (el) {
+                if (i === this.menuRow) el.classList.add('menu-selected');
+                else el.classList.remove('menu-selected');
+            }
+        });
+    }
+
+    handleMenuInput(e) {
+        if (this.gameState === 'START') {
+            if (e.key === 'ArrowUp' || e.key === 'w') {
+                this.menuRow = Math.max(0, (this.menuRow || 0) - 1);
+                this.updateMenuHighlight();
+                e.preventDefault();
+            } else if (e.key === 'ArrowDown' || e.key === 's') {
+                this.menuRow = Math.min(2, (this.menuRow || 0) + 1);
+                this.updateMenuHighlight();
+                e.preventDefault();
+            } else if (e.key === 'ArrowLeft' || e.key === 'a') {
+                if (this.menuRow === 0) {
+                    const input = document.getElementById('start-level');
+                    input.value = Math.max(1, parseInt(input.value || 1) - 1);
+                } else if (this.menuRow === 1) {
+                    const diffs = ['easy', 'normal', 'hard'];
+                    let idx = diffs.indexOf(this.difficulty);
+                    if (idx > 0) {
+                        this.difficulty = diffs[idx - 1];
+                        document.querySelectorAll('.diff-btn').forEach(b => {
+                            b.classList.toggle('active', b.dataset.diff === this.difficulty);
+                        });
+                    }
+                }
+                e.preventDefault();
+            } else if (e.key === 'ArrowRight' || e.key === 'd') {
+                if (this.menuRow === 0) {
+                    const input = document.getElementById('start-level');
+                    input.value = Math.min(1000, parseInt(input.value || 1) + 1);
+                } else if (this.menuRow === 1) {
+                    const diffs = ['easy', 'normal', 'hard'];
+                    let idx = diffs.indexOf(this.difficulty);
+                    if (idx < 2) {
+                        this.difficulty = diffs[idx + 1];
+                        document.querySelectorAll('.diff-btn').forEach(b => {
+                            b.classList.toggle('active', b.dataset.diff === this.difficulty);
+                        });
+                    }
+                }
+                e.preventDefault();
+            } else if (e.key === 'Enter' || e.key === ' ') {
+                this.startGame();
+                e.preventDefault();
+            }
+        } else if (this.gameState === 'GAME_OVER' || this.gameState === 'MVP_SHOWCASE') {
+            if (e.key === 'Enter' || e.key === ' ') {
+                this.startGame();
+                e.preventDefault();
+            } else if (e.key === 'Escape') {
+                // Quit game / Reload
+                window.location.reload();
+            }
+        }
+    }
+
     startGame() {
         audio.init();
         audio.play('start');
