@@ -111,7 +111,7 @@ canvas {
 .tower-icon { font-size: 36px; text-shadow: 0 2px 5px #000; }
 .tower-cost { background: #111; color: #d4af37; padding: 2px 8px; border-radius: 4px; font-size: 14px; position: absolute; bottom: -12px; border: 1px solid #d4af37; box-shadow: 0 2px 5px #000;}
 
-#grid-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: auto; }
+
 
 /* In-game upgrade menu */
 #upgrade-menu {
