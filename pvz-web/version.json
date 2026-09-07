@@ -1,6 +1,6 @@
 {
-  "version": "v3.4.0-vasebreaker",
+  "version": "v3.4.1-vase-click-fix",
   "build": "2026-09-07",
-  "feature": "v3.4.0 新增第三种模式「砸罐子」(Vasebreaker): 主菜单新增第三张 .mode-card, 绿色方框插图是官方 PvZ3 vaseIcon「问号罐」(vaseIcon.png 220×279 RGBA 透明); 罐子分三类: 植物罐(必出植物)/ 问号罐(55% 植物 45% 僵尸)/ 僵尸罐(必出僵尸); 5×9 棋盘避开第一排 row0 与第一列 col0, 数量随机 20-28, 类型分布 7 植物/4 问号/3 僵尸为基线再随机补足; WaveManager.update 在 vaseMode 直接 return 停刷怪(所有僵尸来自罐子), 随机事件同样关掉, fusion/事件相关 gate 同步更新; 植物罐砸出 PVZ1 全集植物(攻击型权重高, 少量坚果/向日葵); 僵尸罐砸出 normal/conehead/buckethead/flag/polevaulting/newspaper 随机, 出生 x 设为罐子所在列中心(非默认 950); 全部罐子砸完且场上无活跃僵尸 → VICTORY 横幅 + Final Score + 回主菜单按钮; 失败沿用原 gameOver(ZombiesWon)流程; 新 sprite 资源: assets/images/Vase/Vase_Question.png / Vase_Plant.png(罐身贴 PvZ1 向日葵头)/ Vase_Zombie.png(罐身贴白描边 Z 字), 均 90×100 RGBA 透明",
-  "assetVersion": 1788788418
+  "feature": "v3.4.1 修复「砸罐子」模式无法启动: v3.4.0 的 GameLoop.js 存在两处遗漏导致主页第三张卡(btn-vase)点击无反应——(1) showMenu() 只给 btn-adventure/btn-fusion 绑定了 onclick, btn-vase 没绑;(2) this.vaseMode 标志从未在任何地方被赋值(=true), 而 WaveManager.update(停刷怪闸门)/ GameLoop.startGame:202(if vaseMode setupVases)/ InputManager(点击砸罐分支) 三处都在读它, 永远为 falsy。本次修复: 构造函数补默认 this.vaseMode=false; showMenu() 补 btnVase.onclick (fusionMode=false, vaseMode=true, 跳过选卡直接 startGame——PVZ 原版 Vasebreaker 无需选卡, 植物都藏在罐子里); 经典冒险/融合进化按钮同步补 vaseMode=false 重置, 防止砸罐后回主菜单再进其他模式误触发 setupVases。v3.4.0 本体: 新增第三张 .mode-card, 绿框插图为官方 PvZ3 vaseIcon「问号罐」; 罐子三类: 植物罐(必出植物)/问号罐(55%植物)/僵尸罐(必出僵尸); 5×9 棋盘避开 row0+col0, 数量 20-28, 分布 plant 53% / question 27% / zombie 20%; WaveManager vaseMode 停刷, 随机事件关闭; 植物池 PVZ1 全集(攻击型加权), 僵尸池 6 种, 出生 x=罐子列中心; 全砸完+僵尸清空 → VICTORY 横幅; sprite: assets/images/Vase/Vase_Question.png / Vase_Plant.png(向日葵头)/ Vase_Zombie.png(Z 字), 90×100 RGBA",
+  "assetVersion": 1788789889
 }
