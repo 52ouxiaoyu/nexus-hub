@@ -148,12 +148,13 @@ class InputManager {
             else if (type === 'melonpult') imgName = 'MelonPult/MelonPult';
             else if (type === 'wintermelon') imgName = 'WinterMelon/WinterMelon';
             else if (type === 'cattail') imgName = 'Cattail/Cattail';
+            else if (type === 'plantern') imgName = 'Plantern/0';   // 路灯花用 0.gif 透明大画布(白天),Plantern.gif 是夜版
 
             // Melon / Winter Melon 图是 PNG，其他植物是 GIF
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1788790452`
-                : `assets/images/Plants/${imgName}.gif?v=1788790452`;
+                ? `assets/images/Plants/${imgName}.png?v=1788791838`
+                : `assets/images/Plants/${imgName}.gif?v=1788791838`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
         }
     }

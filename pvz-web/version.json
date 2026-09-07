@@ -1,6 +1,6 @@
 {
-  "version": "v3.4.2-vase-colors-cards",
+  "version": "v3.4.3-vase-lantern-rebalance",
   "build": "2026-09-07",
-  "feature": "v3.4.2 砸罐子罐子外观 + 植物罐机制重做: (1) 罐子配色改为纯色陶罐——植物罐=问号罐整罐染绿(HSV 换色相 98° 保留明暗/饱和度), 僵尸罐=问号罐整罐染紫(272°), 问号罐保持原橙陶色, 罐身类别一眼可辨(视觉不再靠贴图标签); (2) 砸植物罐不再原地自动种植物, 而是获得一张免费一次性「植物卡片」加入顶部种子栏(金黄色描边标识, 无阳光无冷却), 玩家可拖到草坪任意空格种植, 种下即消耗该卡; 问号罐砸出植物同样发卡。实现: grantVasePlantCard(type 池抽签→Card/Plants/<Name>.png 卡面+dataset cost=0, push vaseFreeCards), tryPlanting 顶部新增免费卡分支(canPlant 成功才扣卡, 失败不消耗), plantCardArt() 类型→卡图文件名严格大小写映射, startGame/constructor 重置 vaseFreeCards, CSS .seed-card.vase-free-card 金圈高亮。v3.4.1 修复: btn-vase 从未绑定 onclick + this.vaseMode 从未被赋值(三处读它), 补默认值与 btnVase.onclick(跳过选卡直接开局); seed-chooser 内联 display:none/flex 冲突修复。v3.4.0 本体: 新增砸罐子模式, 三类罐子 20-28 个避开 row0/col0, WaveManager vaseMode 停刷, 全砸完+僵尸清空 VICTORY",
-  "assetVersion": 1788790452
+  "feature": "v3.4.3 砸罐子模式大改: (1) 类型分布重新平衡——植物罐 5/20(25%, 显著减少)、问号罐 11/20(55%, 绝对多数, 加大随机性)、僵尸罐 4/20(20%)；问号罐内部 60% 出僵尸 / 40% 出植物(出僵尸概率比 v3.4.2 的 45% 明显提高), 关卡总僵尸数 ~12 只, 需靠 plantern 揭示或问号冒险双线决策。 (2) 所有罐子内容在 setupVases 阶段预掷生成(v.content = {kind, type}), smash 时直接读取, 以便 plantern 揭示与实际砸出完全一致; _grantVasePlantCard / _revealZombieFromVase 重构接受 (type, vase) 参数, 公告前缀区分 '植物罐/僵尸罐/问号罐'。 (3) 植物奖励池扩充, 大量一次性植物(樱桃炸弹/火爆辣椒/土豆地雷/窝瓜/寒冰菇)+ 强力射手(西瓜投手/冰西瓜投手/猫尾草)抬升奖池天花板; 问号罐 0 plantern 防 '白白挖坑'。 (4) 新增植物 plantern(路灯花): 砸植物罐 ~12.9% 概率掉落, 加入 Plant 实体 stats(0.gif 250×237 白天透明大画布→90×90 objectFit:contain), getPlantName 映射 '路灯花', plantCardArt 映射 'Plantern'(原版 Card/Plants/Plantern.png 100×120 双段卡已就位, 无需自绘), InputManager dragGhost 用 Plantern/0 透明大画布。 (5) 路灯花种植瞬间调用 lightUpNeighbors(row,col), 对 8 邻居中未砸未揭示的罐子打 content badge: 植物内容显示 Card/Plants/<Art>.png 缩 46×55 卡图预览, 僵尸内容显示该僵尸 in-game 小立绘(46-50px), badge 浮在罐子上方 (cy-38), 砸罐时与 v.element 一起消失。tryPlanting 免费分支新增 type==='plantern' → lightUpNeighbors 钩子。bump cache-buster 56 处。",
+  "assetVersion": 1788791838
 }
