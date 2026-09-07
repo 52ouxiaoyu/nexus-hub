@@ -2597,7 +2597,7 @@ class Game {
                 if (this.difficulty === 'hard') interval = Math.floor(interval * 0.7);
                 this.spawnTimer = interval;
             }
-        } else if (this.enemiesRemaining === 0 && this.enemies.length === 0 && (!this.spawningEnemies || this.spawningEnemies === 0)) {
+        } else if (this.enemiesRemaining <= 0 && this.enemies.length === 0 && (!this.spawningEnemies || this.spawningEnemies === 0)) {
             if (this.stageClearTimer === 0) {
                 this.stageClearTimer = 300;
                 this.showAnnouncement('奖励时间 BONUS TIME: 5s!', '#0f0');

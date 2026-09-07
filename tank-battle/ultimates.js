@@ -104,7 +104,6 @@ ULTIMATES_POOL.push({
             if (!e.isBoss) {
                 g.powerUps.push(new PowerUp(g, e.x, e.y, POWERUP_TYPES.STAR));
                 e.alive = false; // instantly remove without triggering normal drops
-                g.enemiesRemaining--;
             } else {
                 e.destroy(p, 20); // Just damage the boss
             }
