@@ -198,6 +198,10 @@ class Game {
             document.getElementById('glove-bank').style.display = 'none';
             document.getElementById('recipe-book-btn').style.display = 'none';
         }
+
+        if (this.vaseMode) {
+            this.setupVases();
+        }
         
         // Setup random events (Delay time-based events, favor score-based)
         this.eventTimer = 150 + Math.random() * 60; // First time-based event between 2.5 to 3.5 minutes
@@ -227,32 +231,32 @@ class Game {
     initUI() {
         // Just define the seeds, don't populate the top bar yet
         this.seeds = [
-            { type: 'sunflower', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/SunFlower.png?v=1788698565' },
-            { type: 'twinsunflower', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/TwinSunflower.png?v=1788698565' },
-            { type: 'sunshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/SunShroom.png?v=1788698565' },
-            { type: 'peashooter', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Peashooter.png?v=1788698565' },
-            { type: 'repeater', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/Repeater.png?v=1788698565' },
-            { type: 'threepeater', cost: 300, cooldown: 7.5, img: 'assets/images/Card/Plants/Threepeater.png?v=1788698565' },
-            { type: 'gatlingpea', cost: 250, cooldown: 50, img: 'assets/images/Card/Plants/GatlingPea.png?v=1788698565' },
-            { type: 'snowpea', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/SnowPea.png?v=1788698565' },
-            { type: 'splitpea', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/SplitPea.png?v=1788698565' },
-            { type: 'torchwood', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/Torchwood.png?v=1788698565' },
-            { type: 'wallnut', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/WallNut.png?v=1788698565' },
-            { type: 'cherrybomb', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/CherryBomb.png?v=1788698565' },            { type: 'squash', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/Squash.png?v=1788698565' },
-            { type: 'jalapeno', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/Jalapeno.png?v=1788698565' },
-            { type: 'potatomine', cost: 25, cooldown: 30, img: 'assets/images/Card/Plants/PotatoMine.png?v=1788698565' },
-            { type: 'chomper', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/Chomper.png?v=1788698565' },
-            { type: 'tallnut', cost: 125, cooldown: 30, img: 'assets/images/Card/Plants/TallNut.png?v=1788698565' },
-            { type: 'puffshroom', cost: 0, cooldown: 7.5, img: 'assets/images/Card/Plants/PuffShroom.png?v=1788698565' },
-            { type: 'fumeshroom', cost: 75, cooldown: 7.5, img: 'assets/images/Card/Plants/FumeShroom.png?v=1788698565' },
-            { type: 'scaredyshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/ScaredyShroom.png?v=1788698565' },
-            { type: 'gloomshroom', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/GloomShroom.png?v=1788698565' },
-            { type: 'spikerock', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikerock.png?v=1788698565' },
-            { type: 'cattail', cost: 225, cooldown: 7.5, img: 'assets/images/Card/Plants/Cattail.png?v=1788698565' },
-            { type: 'melonpult', cost: 300, cooldown: 7.5, img: 'assets/images/Card/Plants/MelonPult.png?v=1788698565' },{ type: 'iceshroom', cost: 75, cooldown: 50, img: 'assets/images/Card/Plants/IceShroom.png?v=1788698565' },
-            { type: 'doomshroom', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/DoomShroom.png?v=1788698565' },
-            { type: 'spikeweed', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikeweed.png?v=1788698565' },
-            { type: 'garlic', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/Garlic.png?v=1788698565' }
+            { type: 'sunflower', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/SunFlower.png?v=1788788418' },
+            { type: 'twinsunflower', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/TwinSunflower.png?v=1788788418' },
+            { type: 'sunshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/SunShroom.png?v=1788788418' },
+            { type: 'peashooter', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Peashooter.png?v=1788788418' },
+            { type: 'repeater', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/Repeater.png?v=1788788418' },
+            { type: 'threepeater', cost: 300, cooldown: 7.5, img: 'assets/images/Card/Plants/Threepeater.png?v=1788788418' },
+            { type: 'gatlingpea', cost: 250, cooldown: 50, img: 'assets/images/Card/Plants/GatlingPea.png?v=1788788418' },
+            { type: 'snowpea', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/SnowPea.png?v=1788788418' },
+            { type: 'splitpea', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/SplitPea.png?v=1788788418' },
+            { type: 'torchwood', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/Torchwood.png?v=1788788418' },
+            { type: 'wallnut', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/WallNut.png?v=1788788418' },
+            { type: 'cherrybomb', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/CherryBomb.png?v=1788788418' },            { type: 'squash', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/Squash.png?v=1788788418' },
+            { type: 'jalapeno', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/Jalapeno.png?v=1788788418' },
+            { type: 'potatomine', cost: 25, cooldown: 30, img: 'assets/images/Card/Plants/PotatoMine.png?v=1788788418' },
+            { type: 'chomper', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/Chomper.png?v=1788788418' },
+            { type: 'tallnut', cost: 125, cooldown: 30, img: 'assets/images/Card/Plants/TallNut.png?v=1788788418' },
+            { type: 'puffshroom', cost: 0, cooldown: 7.5, img: 'assets/images/Card/Plants/PuffShroom.png?v=1788788418' },
+            { type: 'fumeshroom', cost: 75, cooldown: 7.5, img: 'assets/images/Card/Plants/FumeShroom.png?v=1788788418' },
+            { type: 'scaredyshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/ScaredyShroom.png?v=1788788418' },
+            { type: 'gloomshroom', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/GloomShroom.png?v=1788788418' },
+            { type: 'spikerock', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikerock.png?v=1788788418' },
+            { type: 'cattail', cost: 225, cooldown: 7.5, img: 'assets/images/Card/Plants/Cattail.png?v=1788788418' },
+            { type: 'melonpult', cost: 300, cooldown: 7.5, img: 'assets/images/Card/Plants/MelonPult.png?v=1788788418' },{ type: 'iceshroom', cost: 75, cooldown: 50, img: 'assets/images/Card/Plants/IceShroom.png?v=1788788418' },
+            { type: 'doomshroom', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/DoomShroom.png?v=1788788418' },
+            { type: 'spikeweed', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikeweed.png?v=1788788418' },
+            { type: 'garlic', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/Garlic.png?v=1788788418' }
         ];
         // The top bar will be populated in startGame() after selection
     }
@@ -284,7 +288,7 @@ class Game {
             { a: 'puffshroom', b: 'sunflower', result: '阳光菇', img: 'assets/images/Plants/SunShroom/SunShroom.gif', css: false },
             { a: 'puffshroom', b: 'peashooter', result: '胆小菇', img: 'assets/images/Plants/ScaredyShroom/ScaredyShroom.gif', css: false },
             { a: 'wallnut', b: 'jalapeno', result: '火炬树桩', img: 'assets/images/Plants/Torchwood/Torchwood.gif', css: false },
-            { a: 'chomper', b: 'tallnut', result: '西瓜投手', img: 'assets/images/Plants/MelonPult/MelonPult.png?v=1788698565', css: false },
+            { a: 'chomper', b: 'tallnut', result: '西瓜投手', img: 'assets/images/Plants/MelonPult/MelonPult.png?v=1788788418', css: false },
             { a: 'peashooter', b: 'sunflower', result: '豌豆向日葵', base: 'assets/images/Plants/SunFlower/SunFlower1.gif', over: 'assets/images/Plants/Peashooter/Peashooter.gif', overClip: 'polygon(0 0, 100% 0, 100% 65%, 0 65%)', overTransform: 'translate(0px, -20px) scale(1.0)' },
             { a: 'peashooter', b: 'wallnut', result: '坚果射手', base: 'assets/images/Plants/WallNut/WallNut.gif', over: 'assets/images/Plants/Peashooter/Peashooter.gif', overClip: 'polygon(0 0, 100% 0, 100% 65%, 0 65%)', overTransform: 'translate(5px, -15px) scale(1.0)' },
             { a: 'snowpea', b: 'cherrybomb', result: '寒冰炸弹', img: 'assets/images/Plants/CherryBomb/CherryBomb.gif', filter: 'hue-rotate(180deg) saturate(1.5)', css: false },
@@ -293,7 +297,7 @@ class Game {
             { a: 'snowpea', b: 'wallnut', result: '寒冰坚果', img: 'assets/images/Plants/WallNut/WallNut.gif', filter: 'hue-rotate(180deg) saturate(1.5) brightness(1.2)', css: false },
             { a: 'peashooter', b: 'cherrybomb', result: '樱桃射手', img: 'assets/images/Plants/Peashooter/Peashooter.gif', filter: 'hue-rotate(-45deg) saturate(2.0)', css: false },
             { a: 'sunflower', b: 'doomshroom', result: '毁灭向日葵', img: 'assets/images/Plants/SunFlower/SunFlower1.gif', filter: 'grayscale(0.8) brightness(0.6) sepia(1) hue-rotate(240deg) saturate(3)', css: false },
-            { a: 'melonpult', b: 'iceshroom', result: '冰西瓜投手', img: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788698565', css: false },
+            { a: 'melonpult', b: 'iceshroom', result: '冰西瓜投手', img: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788788418', css: false },
             { a: 'repeater', b: 'spikeweed', result: '猫尾草', img: 'assets/images/Plants/Cattail/Cattail.gif', css: false },
             { a: 'fumeshroom', b: 'fumeshroom', result: '忧郁菇', img: 'assets/images/Plants/GloomShroom/GloomShroom.gif', css: false },
             { a: 'spikeweed', b: 'spikeweed', result: '钢地刺', img: 'assets/images/Plants/Spikerock/Spikerock.gif', css: false },
@@ -303,8 +307,8 @@ class Game {
             { a: 'splitpea', b: 'sunflower', result: '杨桃', img: 'assets/images/Plants/Starfruit/Starfruit.gif', css: false },
             { a: 'puffshroom', b: 'garlic', result: '魅惑菇', img: 'assets/images/Plants/HypnoShroom/HypnoShroom.gif', css: false },
             { a: 'wallnut', b: 'tallnut', result: '南瓜壳（可套在任意植物上）', img: 'assets/images/Plants/PumpkinHead/PumpkinHead.gif', css: false },
-            { a: 'melonpult', b: 'cattail', result: '西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/MelonPult/MelonPult.png?v=1788698565', overTransform: 'translate(-5px, -30px) scale(0.7)' },
-            { a: 'wintermelon', b: 'cattail', result: '冰西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788698565', overTransform: 'translate(-5px, -30px) scale(0.7)' }
+            { a: 'melonpult', b: 'cattail', result: '西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/MelonPult/MelonPult.png?v=1788788418', overTransform: 'translate(-5px, -30px) scale(0.7)' },
+            { a: 'wintermelon', b: 'cattail', result: '冰西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788788418', overTransform: 'translate(-5px, -30px) scale(0.7)' }
         ];
         
         const list = document.getElementById('recipe-list');
@@ -335,8 +339,8 @@ class Game {
                     'fumeshroom': 'assets/images/Plants/FumeShroom/FumeShroom.gif',
                     'spikeweed': 'assets/images/Plants/Spikeweed/Spikeweed.gif',
                     'tallnut': 'assets/images/Plants/TallNut/TallNut.gif',
-                    'melonpult': 'assets/images/Plants/MelonPult/MelonPult.png?v=1788698565',
-                    'wintermelon': 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788698565',
+                    'melonpult': 'assets/images/Plants/MelonPult/MelonPult.png?v=1788788418',
+                    'wintermelon': 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788788418',
                     'cattail': 'assets/images/Plants/Cattail/Cattail.gif',
                     'gloomshroom': 'assets/images/Plants/GloomShroom/GloomShroom.gif',
                     'spikerock': 'assets/images/Plants/Spikerock/Spikerock.gif',
@@ -943,9 +947,180 @@ class Game {
     }
 
     triggerRandomEvent() {
-        if (this.fusionMode) return; // 融合进化模式：不触发全局随机事件
+        if (this.fusionMode || this.vaseMode) return; // 融合进化 / 砸罐子模式 不触发全局随机事件
         if (!this.eventManager) this.eventManager = new EventManager(this);
         this.eventManager.trigger();
+    }
+
+    // ===== 砸罐子模式（Vasebreaker） =====
+    // 在 5x9 棋盘上随机摆 20-28 个罐子，避开第一排 row0 与第一列 col0。
+    // 罐子类型：plant（必出植物）、zombie（必出僵尸）、question（问号：55% 植物 / 45% 僵尸）。
+    // 所有僵尸都由砸罐产生（WaveManager 已被禁刷），玩家可继续用种子栏种植物辅助防守。
+    setupVases() {
+        // 候选格子：rows 1..4, cols 1..8
+        const candidates = [];
+        for (let r = 1; r < this.board.rows; r++) {
+            for (let c = 1; c < this.board.cols; c++) candidates.push([r, c]);
+        }
+        // 数量：20-28 随机
+        const total = 20 + Math.floor(Math.random() * 9);
+        // 洗牌 Fisher-Yates 取前 total 个
+        for (let i = candidates.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+        }
+        const chosen = candidates.slice(0, total);
+
+        // 类型分布：保证 plant/question/zombie 各至少 1 个
+        // 抽签桶：plant 占 8/15 ≈ 53%（植物资源充足），question 占 4/15 ≈ 27%，zombie 占 3/15 ≈ 20%
+        const types = ['plant', 'question', 'zombie'];
+        const drawBag = [
+            'plant','plant','plant','plant','plant','plant','plant','plant',
+            'question','question','question','question',
+            'zombie','zombie','zombie'
+        ];
+        while (types.length < total) {
+            types.push(drawBag[Math.floor(Math.random() * drawBag.length)]);
+        }
+        for (let i = types.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [types[i], types[j]] = [types[j], types[i]];
+        }
+
+        this.vases = [];
+        this.vasesTotal = total;
+        this.vasesSmashed = 0;
+        this.score = 0;
+        this.updateScore();
+
+        chosen.forEach((pos, i) => {
+            const v = { row: pos[0], col: pos[1], type: types[i], smashed: false, element: null };
+            const sprite = types[i] === 'plant' ? 'Vase_Plant.png'
+                          : types[i] === 'zombie' ? 'Vase_Zombie.png'
+                          : 'Vase_Question.png';
+            const img = document.createElement('img');
+            img.src = 'assets/images/Vase/' + sprite + '?v=1788788418'; // v= 占位，bump_version 替换为新 cache-buster
+            img.className = 'entity vase-entity';
+            img.style.pointerEvents = 'none';
+            const cx = this.board.offsetX + v.col * this.board.cellWidth + this.board.cellWidth / 2;
+            const cy = this.board.offsetY + v.row * this.board.cellHeight + this.board.cellHeight / 2 + 12;
+            img.style.left = cx + 'px';
+            img.style.top = cy + 'px';
+            img.style.zIndex = Math.floor(cy) - 1;
+            this.entityLayer.appendChild(img);
+            v.element = img;
+            this.vases.push(v);
+        });
+
+        this.showAnnouncement(`砸罐子关卡：场上有 ${total} 个罐子（绿罐=植物，紫罐=僵尸，问号罐=?）`, '#ffdd66');
+    }
+
+    smashVase(row, col) {
+        if (this.state !== 'PLAYING') return;
+        const v = this.vases.find(x => !x.smashed && x.row === row && x.col === col);
+        if (!v) return;
+        v.smashed = true;
+        this.vasesSmashed++;
+        // 罐子破碎动画：放大 + 淡出
+        if (v.element && v.element.parentNode) {
+            const el = v.element;
+            el.style.transition = 'transform 0.18s ease-out, opacity 0.18s ease-out';
+            el.style.transform = 'translate(-50%, -50%) scale(1.5)';
+            el.style.opacity = '0';
+            setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 200);
+        }
+        // 按类型揭示内容
+        if (v.type === 'plant') {
+            this.revealPlantFromVase(v);
+        } else if (v.type === 'zombie') {
+            this.revealZombieFromVase(v);
+        } else {
+            // question：55% 植物 / 45% 僵尸
+            if (Math.random() < 0.55) this.revealPlantFromVase(v);
+            else this.revealZombieFromVase(v);
+        }
+        // 罐子减少提示
+        this.showAnnouncement(`已砸开 ${this.vasesSmashed}/${this.vasesTotal}`, '#ffdd66');
+        this.checkVaseVictory();
+    }
+
+    revealPlantFromVase(vase) {
+        // 砸出植物池：偏向战斗型，少数防御/经济
+        const pool = [
+            'peashooter','peashooter','peashooter',
+            'snowpea','snowpea',
+            'repeater',
+            'sunflower',
+            'wallnut','wallnut',
+            'cherrybomb',
+            'squash',
+            'jalapeno',
+            'potatomine',
+            'chomper',
+            'puffshroom','fumeshroom',
+            'spikeweed',
+            'threepeater',
+            'splitpea',
+            'gatlingpea',
+            'melonpult',
+            'tallnut'
+        ];
+        const type = pool[Math.floor(Math.random() * pool.length)];
+        const plant = new Plant(this, type);
+        if (this.board.addPlant(plant, vase.row, vase.col)) {
+            this.audioManager.play('plant');
+            this.score += 20;
+            this.updateScore();
+            this.showAnnouncement(`植物罐：${this.getPlantName(type)} 加入战斗！`, '#66ff66');
+        }
+    }
+
+    revealZombieFromVase(vase) {
+        // 僵尸池：以轻中为主
+        const pool = [
+            'normal','normal','normal','normal',
+            'conehead','conehead',
+            'buckethead',
+            'flag',
+            'polevaulting',
+            'newspaper'
+        ];
+        const type = pool[Math.floor(Math.random() * pool.length)];
+        const z = new Zombie(this, vase.row, type);
+        // 让僵尸从罐子格 x 出现（默认 950 太靠右，不合理）
+        z.x = this.board.offsetX + vase.col * this.board.cellWidth + this.board.cellWidth / 2;
+        z.element.style.left = z.x + 'px';
+        this.entities.push(z);
+        this.score = Math.max(0, this.score - 5);
+        this.updateScore();
+        const zhName = { normal:'普通僵尸', conehead:'路障僵尸', buckethead:'铁桶僵尸', flag:'旗手僵尸', polevaulting:'撑杆僵尸', newspaper:'读报僵尸' }[type] || type;
+        this.showAnnouncement(`僵尸罐：${zhName} 来了！`, '#ff6666');
+    }
+
+    checkVaseVictory() {
+        if (this.state !== 'PLAYING') return;
+        if (this.vases.length === 0) return;
+        if (!this.vases.every(v => v.smashed)) return;
+        // 等场上僵尸清空（Dying 动画允许播放）
+        const live = this.entities.some(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+        if (live) return;
+        this.state = 'GAMEOVER';
+        this.audioManager.stop('bgm');
+        // 胜利横幅 + 分数 + 回主菜单按钮
+        const container = this.container;
+        const title = document.createElement('div');
+        title.innerHTML = 'VICTORY!<br>砸罐子完成！';
+        title.style.cssText = 'position:absolute;top:28%;left:50%;transform:translate(-50%,-50%);z-index:1000;text-align:center;font-family:"Kaiti SC", "STKaiti", "KaiTi", "楷体", serif;font-size:64px;color:#ffdd66;text-shadow:3px 3px 0 #2e6b1e, -2px 2px 0 #2e6b1e, 2px -2px 0 #2e6b1e, -2px -2px 0 #2e6b1e, 0 6px 14px rgba(0,0,0,0.45);';
+        container.appendChild(title);
+        const sc = document.createElement('div');
+        sc.innerText = `Final Score: ${this.score}`;
+        sc.style.cssText = 'position:absolute;top:48%;left:50%;transform:translate(-50%,-50%);z-index:1001;color:white;font-size:36px;font-weight:bold;text-shadow:2px 2px 4px black;';
+        container.appendChild(sc);
+        const menuBtn = document.createElement('button');
+        menuBtn.innerText = '回主菜单';
+        menuBtn.style.cssText = 'position:absolute;top:65%;left:50%;transform:translate(-50%,-50%);font-size:24px;padding:10px 30px;z-index:1002;cursor:pointer;';
+        menuBtn.onclick = () => location.reload();
+        container.appendChild(menuBtn);
     }
 }
 

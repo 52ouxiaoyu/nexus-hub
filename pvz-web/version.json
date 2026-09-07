@@ -1,6 +1,6 @@
 {
-  "version": "v3.3.11-card-hd",
-  "build": "2026-09-06",
-  "feature": "v3.3.10 改的是 Plants/MelonPult/MelonPult.png 与  /WinterMelon.png(游戏内种植、融合图鉴用图)——但选卡 modal / HUD 种子栏走的另一套 Card/Plants/MelonPult.png /WinterMelon.png(100×120 PVZ1 双段式种子卡: 上半彩色立绘 + 下半灰度图标)漏换, 视觉上仍是糊图; v3.3.11 补这一刀: 用 Peashooter.png 作为版式模板(标准 96×58 上半 + 96×58 下半灰底), 把上半像素抠掉换成新 HD 西瓜投手彩色立绘, 下半灰底 (174,174,174) + alpha 硬 255 的灰度新立绘, 风格与其它清晰卡片一致; 同时覆盖融合模式 选植物页面 (chooser-grid backgroundImage) 与经典/HUD 顶部种子栏 (seed-card backgroundImage); Card 锐度(拉普拉斯方差) MelonPult 6692→7706 (+15%)、WinterMelon 7078→7410 (+5%)",
-  "assetVersion": 1788698565
+  "version": "v3.4.0-vasebreaker",
+  "build": "2026-09-07",
+  "feature": "v3.4.0 新增第三种模式「砸罐子」(Vasebreaker): 主菜单新增第三张 .mode-card, 绿色方框插图是官方 PvZ3 vaseIcon「问号罐」(vaseIcon.png 220×279 RGBA 透明); 罐子分三类: 植物罐(必出植物)/ 问号罐(55% 植物 45% 僵尸)/ 僵尸罐(必出僵尸); 5×9 棋盘避开第一排 row0 与第一列 col0, 数量随机 20-28, 类型分布 7 植物/4 问号/3 僵尸为基线再随机补足; WaveManager.update 在 vaseMode 直接 return 停刷怪(所有僵尸来自罐子), 随机事件同样关掉, fusion/事件相关 gate 同步更新; 植物罐砸出 PVZ1 全集植物(攻击型权重高, 少量坚果/向日葵); 僵尸罐砸出 normal/conehead/buckethead/flag/polevaulting/newspaper 随机, 出生 x 设为罐子所在列中心(非默认 950); 全部罐子砸完且场上无活跃僵尸 → VICTORY 横幅 + Final Score + 回主菜单按钮; 失败沿用原 gameOver(ZombiesWon)流程; 新 sprite 资源: assets/images/Vase/Vase_Question.png / Vase_Plant.png(罐身贴 PvZ1 向日葵头)/ Vase_Zombie.png(罐身贴白描边 Z 字), 均 90×100 RGBA 透明",
+  "assetVersion": 1788788418
 }

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" data-page-node-id="fvct4kKB77qx0aDFZg0TFG">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="7cXFTDee52Hp5l8aujUlmz">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1788698565" data-page-node-id="Q5lrPWp6xqtldfdpxSWXxH">
+    <link rel="stylesheet" href="css/style.css?v=1788788418" data-page-node-id="Q5lrPWp6xqtldfdpxSWXxH">
 </head>
 <body data-page-node-id="lPg8spSQ9t6E6ZEWT8akzU">
     <div id="game-container" data-page-node-id="dle8H483OJAxh7uRwqXTVW">
@@ -94,7 +94,7 @@
                 text-shadow: 1px 1px 0 #1a4a10, 0 3px 8px rgba(0,0,0,0.5);
             }
             /* ===== 模式卡（种子包样式） ===== */
-            .menu-cards { position: relative; z-index: 2; display: flex; gap: 46px; margin-top: 46px; }
+            .menu-cards { position: relative; z-index: 2; display: flex; gap: 36px; margin-top: 46px; flex-wrap: wrap; justify-content: center; max-width: 920px; }
             .mode-card {
                 width: 268px; height: 292px;
                 background: linear-gradient(180deg, #fdf3d0 0%, #f3e2ab 78%, #e6cf8c 100%);
@@ -211,6 +211,15 @@
                         <div class="pkt-tag">FUSION</div>
                         <div class="pkt-sub">两种植物合二为一 · 进化新形态<br>手套融合 · 探索 15+ 秘密配方</div>
                     </button>
+
+                    <button id="btn-vase" class="mode-card" data-page-node-id="VasebreakerBtn">
+                        <div class="pkt-art vase">
+                            <img src="assets/images/Vase/Vase_Question.png" alt="问号罐子" class="vase-hero" style="height: 102px; width: auto; image-rendering: pixelated;">
+                        </div>
+                        <div class="pkt-name">砸罐子</div>
+                        <div class="pkt-tag">VASEBREAKER</div>
+                        <div class="pkt-sub">锤开罐子 · 里面是植物还是僵尸？<br>植物罐稳赚 · 僵尸罐提防 · 问号罐惊喜</div>
+                    </button>
                 </div>
             </div>
 
@@ -258,16 +267,16 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1788698565"></script>
-    <script src="js/Board.js?v=1788698565"></script>
-    <script src="js/entities/Entity.js?v=1788698565"></script>
-    <script src="js/entities/Plant.js?v=1788698565"></script>
-    <script src="js/entities/Zombie.js?v=1788698565"></script>
-    <script src="js/entities/Projectile.js?v=1788698565"></script>
-    <script src="js/entities/Sun.js?v=1788698565"></script>
-    <script src="js/managers/WaveManager.js?v=1788698565"></script>
-    <script src="js/managers/CollisionManager.js?v=1788698565"></script>
-    <script src="js/managers/EventManager.js?v=1788698565"></script>
-    <script src="js/GameLoop.js?v=1788698565"></script>
+    <script src="js/InputManager.js?v=1788788418"></script>
+    <script src="js/Board.js?v=1788788418"></script>
+    <script src="js/entities/Entity.js?v=1788788418"></script>
+    <script src="js/entities/Plant.js?v=1788788418"></script>
+    <script src="js/entities/Zombie.js?v=1788788418"></script>
+    <script src="js/entities/Projectile.js?v=1788788418"></script>
+    <script src="js/entities/Sun.js?v=1788788418"></script>
+    <script src="js/managers/WaveManager.js?v=1788788418"></script>
+    <script src="js/managers/CollisionManager.js?v=1788788418"></script>
+    <script src="js/managers/EventManager.js?v=1788788418"></script>
+    <script src="js/GameLoop.js?v=1788788418"></script>
 </body>
 </html>

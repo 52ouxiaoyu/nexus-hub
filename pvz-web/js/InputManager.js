@@ -84,13 +84,22 @@ class InputManager {
                 this.isShovelSelected = false;
                 this.dragGhost.style.display = 'none';
             } else {
-                // 普通点击：点击已种下的炸弹可立即引爆（不点也会自动爆炸）
+                // 普通点击：优先砸罐子（vaseMode），再引爆已种下的炸弹
                 const rect = this.container.getBoundingClientRect();
                 const scale = window.gameScale || 1;
                 const mouseX = (e.clientX - rect.left) / scale;
                 const mouseY = (e.clientY - rect.top) / scale;
                 const gridPos = this.game.board.getGridPos(mouseX, mouseY);
                 if (gridPos) {
+                    // 砸罐子模式：点击未砸罐子 → smashVase（不消耗阳光也不引爆炸弹）
+                    if (this.game.vaseMode && this.game.vases && this.game.vases.length) {
+                        const v = this.game.vases.find(x => !x.smashed && x.row === gridPos.row && x.col === gridPos.col);
+                        if (v) {
+                            this.game.smashVase(gridPos.row, gridPos.col);
+                            return;
+                        }
+                    }
+                    // 点击已种下的炸弹可立即引爆（不点也会自动爆炸）
                     const p = this.game.board.grid[gridPos.row][gridPos.col];
                     if (p && p.autoExplode && !p.isDead) {
                         p.explodeNow();
@@ -143,8 +152,8 @@ class InputManager {
             // Melon / Winter Melon 图是 PNG，其他植物是 GIF
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1788698565`
-                : `assets/images/Plants/${imgName}.gif?v=1788698565`;
+                ? `assets/images/Plants/${imgName}.png?v=1788788418`
+                : `assets/images/Plants/${imgName}.gif?v=1788788418`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
         }
     }

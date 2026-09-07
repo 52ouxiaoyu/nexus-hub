@@ -8,6 +8,7 @@ class WaveManager {
     }
     
     update(deltaTime) {
+        if (this.game.vaseMode) return; // 砸罐子模式：所有僵尸来自罐子，waveManager 不刷怪
         this.timeElapsed += deltaTime;
         
         if (this.timeElapsed >= this.nextSpawnTime) {
