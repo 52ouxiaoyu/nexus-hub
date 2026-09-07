@@ -1,6 +1,6 @@
 {
-  "version": "v3.4.1-vase-click-fix",
+  "version": "v3.4.2-vase-colors-cards",
   "build": "2026-09-07",
-  "feature": "v3.4.1 修复「砸罐子」模式无法启动: v3.4.0 的 GameLoop.js 存在两处遗漏导致主页第三张卡(btn-vase)点击无反应——(1) showMenu() 只给 btn-adventure/btn-fusion 绑定了 onclick, btn-vase 没绑;(2) this.vaseMode 标志从未在任何地方被赋值(=true), 而 WaveManager.update(停刷怪闸门)/ GameLoop.startGame:202(if vaseMode setupVases)/ InputManager(点击砸罐分支) 三处都在读它, 永远为 falsy。本次修复: 构造函数补默认 this.vaseMode=false; showMenu() 补 btnVase.onclick (fusionMode=false, vaseMode=true, 跳过选卡直接 startGame——PVZ 原版 Vasebreaker 无需选卡, 植物都藏在罐子里); 经典冒险/融合进化按钮同步补 vaseMode=false 重置, 防止砸罐后回主菜单再进其他模式误触发 setupVases。v3.4.0 本体: 新增第三张 .mode-card, 绿框插图为官方 PvZ3 vaseIcon「问号罐」; 罐子三类: 植物罐(必出植物)/问号罐(55%植物)/僵尸罐(必出僵尸); 5×9 棋盘避开 row0+col0, 数量 20-28, 分布 plant 53% / question 27% / zombie 20%; WaveManager vaseMode 停刷, 随机事件关闭; 植物池 PVZ1 全集(攻击型加权), 僵尸池 6 种, 出生 x=罐子列中心; 全砸完+僵尸清空 → VICTORY 横幅; sprite: assets/images/Vase/Vase_Question.png / Vase_Plant.png(向日葵头)/ Vase_Zombie.png(Z 字), 90×100 RGBA",
-  "assetVersion": 1788789889
+  "feature": "v3.4.2 砸罐子罐子外观 + 植物罐机制重做: (1) 罐子配色改为纯色陶罐——植物罐=问号罐整罐染绿(HSV 换色相 98° 保留明暗/饱和度), 僵尸罐=问号罐整罐染紫(272°), 问号罐保持原橙陶色, 罐身类别一眼可辨(视觉不再靠贴图标签); (2) 砸植物罐不再原地自动种植物, 而是获得一张免费一次性「植物卡片」加入顶部种子栏(金黄色描边标识, 无阳光无冷却), 玩家可拖到草坪任意空格种植, 种下即消耗该卡; 问号罐砸出植物同样发卡。实现: grantVasePlantCard(type 池抽签→Card/Plants/<Name>.png 卡面+dataset cost=0, push vaseFreeCards), tryPlanting 顶部新增免费卡分支(canPlant 成功才扣卡, 失败不消耗), plantCardArt() 类型→卡图文件名严格大小写映射, startGame/constructor 重置 vaseFreeCards, CSS .seed-card.vase-free-card 金圈高亮。v3.4.1 修复: btn-vase 从未绑定 onclick + this.vaseMode 从未被赋值(三处读它), 补默认值与 btnVase.onclick(跳过选卡直接开局); seed-chooser 内联 display:none/flex 冲突修复。v3.4.0 本体: 新增砸罐子模式, 三类罐子 20-28 个避开 row0/col0, WaveManager vaseMode 停刷, 全砸完+僵尸清空 VICTORY",
+  "assetVersion": 1788790452
 }

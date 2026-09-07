@@ -161,6 +161,16 @@ body {
     cursor: not-allowed;
 }
 
+/* 砸罐子：植物罐砸出的免费一次性植物卡 */
+.seed-card.vase-free-card {
+    box-shadow: 0 0 6px 1px rgba(255, 220, 120, 0.95), 1px 1px 3px rgba(0,0,0,0.5);
+    outline: 1px solid rgba(255, 200, 60, 0.8);
+    outline-offset: 1px;
+}
+.seed-card.vase-free-card:hover {
+    filter: brightness(1.15);
+}
+
 .cooldown-overlay {
     position: absolute;
     bottom: 0;
