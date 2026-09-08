@@ -1,6 +1,6 @@
 {
-  "version": "v3.5.2-vase-win-music-modal",
+  "version": "v3.5.3-vase-reveal-color-crop",
   "build": "2026-09-08",
-  "feature": "v3.5.2 修复胜利音乐错放为失败音乐 + 胜利画面升级为居中弹窗(玩家反馈: 游戏胜利后播放的是输掉的音乐): (1) 音乐修复 —— 根因: checkVaseVictory()(砸罐胜利)误调 audioManager.play('lose') 且 AudioManager 从未注册 win 频道, 仓库 assets/audio/winmusic.mp3(官方 4.75s)一直闲置; 现 AudioManager 新增 win 频道并让 checkVaseVictory 改播 'win' 音乐; play() 克隆特判把 win 加入不克隆名单(长音乐播原对象以便 stop); startGame 播 bgm 前统一 stop(lose/win) 防止\"再玩一局\"后输赢音乐与 BGM 叠播。 (2) 胜利弹窗 —— 原胜利画面是 3 个分散绝对定位 div(标题/分数/按钮), 现重构为居中 modal: 半透明黑幕遮罩(.vase-win-overlay z2400 flex 居中) + 奶油纸木框面板(.vase-win-panel)含 LEVEL CLEAR 小标 + VICTORY! 大字 + \"砸罐子完成!\" + 难度角标 + Final Score: N + 「再玩一局」(绿)/「退出」(棕) 双按钮, restartVaseLevel 沿用 _vaseWinEls 清理整块 overlay。 (3) 顺带修复 v3.5.0 漏加 vasebreak 频道 —— 当时只加了 play('vasebreak') 调用却没在 AudioManager.sounds 注册(被 if(sounds[name]) 守卫静默吞掉), 罐子破碎音效实际从未响起; 现补注册 assets/audio/vase_breaking.mp3。 验证: puppeteer 真实点击进入困难局→置全罐 smashed+清僵尸→下一帧 checkVaseVictory 触发: .vase-win-overlay/panel 出现、文本含 VICTORY!/Final Score/再玩一局/退出、sounds.win.paused=false 且 sounds.lose.paused=true(播的是赢音乐), gameOver() 失败路径仍播 lose; 真实点击\"再玩一局\" overlay 消失且 win 已停、bgm 重播无叠播; 0 pageerror。bump cache-buster 56 处。",
-  "assetVersion": 1788878708
+  "feature": "v3.5.3 修复路灯花照亮罐子时植物图片\"上面彩色、下面黑白\"问题(玩家反馈: 罐子里图片上方彩色下方黑白, 只希望显示彩色): 根因 —— 种子卡素材 assets/images/Card/Plants/<Name>.png 是 100×120 上下双段(实测 53/57 张分界线在 y=60: 上 60px 彩色卡面 + 下 60px 灰度种子图标), 种子栏卡片用 background-size:100% 200% + background-position:top 只露出上半段彩色, 但 v3.4.4 路灯花揭示(lightUpNeighbors)把整图当 <img> 直出, 下半截灰度图标也随之显示, 罐子里就出现\"上彩下灰\"。修复 —— 罐内植物预览改为 div 背景 + .vase-reveal-card 裁切类(overflow hidden / background-size 100% 200% / position top / 圆角+微阴影), 与种子栏卡面观感一致, 只显示彩色卡面; 僵尸/阳光预览不变。验证: puppeteer 真实点击(选简单难度开局→置阳光→点击路灯花商店卡购买→拖动路灯花种到含植物罐邻格)→ 揭示元素均为 div.vase-reveal-card 背景图且 computed background-size/position 正确、全场无 <img> 直出 Card/Plants 卡图、无 pageerror; 截图人工比对上半彩色下半灰度问题消失。bump cache-buster 56 处。",
+  "assetVersion": 1788879295
 }
