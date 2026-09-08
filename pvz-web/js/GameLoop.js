@@ -48,6 +48,8 @@ class Game {
         this.fusionMode = false;
         this.vaseMode = false; // 砸罐子模式标志（v3.4.1 修复：此前从未被赋值，导致砸罐模式无法启动）
         this.vaseFreeCards = []; // 砸罐子：植物罐砸出的免费一次性植物卡 {type, element, consumed}
+        this.vaseDifficulty = null; // 砸罐子难度: 'easy' 简单 | 'hard' 困难 | 'hell' 地狱（null 时按 hard 配置兜底）
+        this._sigEl = null; // 战场左侧"区耀丁"署名 DOM（vase 模式专属）
         
         this.lastTime = 0;
         
@@ -130,17 +132,94 @@ class Game {
             this.showSeedChooser();
         };
         
-        // 砸罐子：无需选卡，点击即开局（PVZ 原版 Vasebreaker 规则——植物都藏在罐子里）
+        // 砸罐子：先弹难度选择（简单/困难/地狱），选定后免选卡直接开局
         btnVase.onclick = () => {
             this.audioManager.play('btn');
-            menu.style.display = 'none';
-            const chooser = document.getElementById('seed-chooser');
-            if (chooser) chooser.style.display = 'none'; // 防止选卡面板黑幕盖住战场
-            this.fusionMode = false;
-            this.vaseMode = true;
-            this.selectedSeeds = [];
-            this.startGame();
+            this._openVaseDifficulty();
         };
+
+        // 难度选择弹窗按钮绑定（HTML 静态节点，仅绑定一次）
+        const dModal = document.getElementById('difficulty-modal');
+        const bindDiff = (id, diff) => {
+            const b = document.getElementById(id);
+            if (b) b.onclick = () => this._chooseVaseDifficulty(diff);
+        };
+        bindDiff('diff-easy', 'easy');
+        bindDiff('diff-hard', 'hard');
+        bindDiff('diff-hell', 'hell');
+        const dBack = document.getElementById('diff-back');
+        if (dBack) {
+            dBack.onclick = () => {
+                this.audioManager.play('btn');
+                if (dModal) dModal.style.display = 'none'; // 返回主菜单
+            };
+        }
+    }
+
+    // ===== 砸罐子难度选择（v3.5.0）：简单 / 困难 / 地狱 =====
+    _openVaseDifficulty() {
+        const modal = document.getElementById('difficulty-modal');
+        if (!modal) { this._beginVaseGame(); return; } // 兜底：找不到弹窗直接开默认局
+        modal.style.display = 'flex';
+    }
+
+    _chooseVaseDifficulty(diff) {
+        this.vaseDifficulty = diff; // 'easy' | 'hard' | 'hell'
+        this._beginVaseGame();
+    }
+
+    // 统一开局入口：隐藏菜单/选卡/难度弹窗 → 进入 vase 模式
+    _beginVaseGame() {
+        this.audioManager.play('btn');
+        const menu = document.getElementById('start-menu');
+        if (menu) menu.style.display = 'none';
+        const chooser = document.getElementById('seed-chooser');
+        if (chooser) chooser.style.display = 'none';
+        const modal = document.getElementById('difficulty-modal');
+        if (modal) modal.style.display = 'none';
+        this.fusionMode = false;
+        this.vaseMode = true;
+        this.selectedSeeds = [];
+        this.startGame();
+    }
+
+    // 三档难度的完整配置：罐子数量 / 类型抽签桶 / 问号罐出僵尸概率 / 植物罐出植物概率 / 僵尸池 / 僵尸血量倍率
+    _vaseDiffCfg() {
+        const d = this.vaseDifficulty || 'hard';
+        const map = {
+            easy: {
+                key: 'easy', label: '简单', totalMin: 16, totalMax: 20,
+                bag: ['plant','plant','plant','plant','plant','plant','plant','plant',
+                      'question','question','question','question','question',
+                      'zombie','zombie'], // 植物罐绝对多数 8/15≈53%, 僵尸罐最少
+                qZombie: 0.35,   // 问号罐只有 35% 出僵尸(多数是植物, 友好)
+                pCard: 0.78,     // 植物罐 78% 植物卡 / 22% 阳光
+                zPool: ['normal','normal','normal','normal','normal','normal','conehead','conehead','flag'],
+                hpMul: 1.0
+            },
+            hard: {
+                key: 'hard', label: '困难', totalMin: 22, totalMax: 26,
+                bag: ['plant','plant','plant','plant','plant',
+                      'question','question','question','question','question',
+                      'question','question','question','question','question',
+                      'zombie','zombie','zombie','zombie'], // 问号占多数 11/20≈55%
+                qZombie: 0.6,    // 问号罐 60% 僵尸(比 v3.4.2 的 45% 更高)
+                pCard: 0.55,
+                zPool: ['normal','normal','normal','normal','conehead','conehead','buckethead','flag','polevaulting','newspaper'],
+                hpMul: 1.0
+            },
+            hell: {
+                key: 'hell', label: '地狱', totalMin: 26, totalMax: 28,
+                bag: ['plant','plant','plant',
+                      'question','question','question','question','question','question','question','question','question','question','question',
+                      'zombie','zombie','zombie','zombie','zombie','zombie'], // 植物罐仅 3/20≈15%, 僵尸罐高达 6/20≈30%
+                qZombie: 0.75,   // 问号罐 75% 是僵尸
+                pCard: 0.45,     // 植物罐过半是阳光 —— 植物稀缺, 全靠路灯花先侦察
+                zPool: ['normal','normal','normal','conehead','conehead','buckethead','buckethead','newspaper','polevaulting','flag','screendoor'],
+                hpMul: 1.35      // 所有砸出僵尸血量 +35%
+            }
+        };
+        return map[d] || map.hard;
     }
 
     showSeedChooser() {
@@ -224,8 +303,10 @@ class Game {
             // 天降阳光已在 update() 中对 vase 模式关闭
             this.sunCount = 0;
             this.sunCountElement.innerText = '0';
-            this.setupVases();
-            this.insertPlanternShop(); // 路灯花商店：常驻种子栏首位
+            this.setupVases();           // 按 this.vaseDifficulty 配置摆罐
+            this.insertPlanternShop();   // 路灯花商店：常驻种子栏首位
+            this._showVaseSignature();   // 战场左侧(罐子区的左边)打出帅气的「区耀丁」署名
+            this._syncVaseHud();         // HUD 常驻难度角标
         }
         
         // Setup random events (Delay time-based events, favor score-based)
@@ -262,32 +343,32 @@ class Game {
     initUI() {
         // Just define the seeds, don't populate the top bar yet
         this.seeds = [
-            { type: 'sunflower', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/SunFlower.png?v=1788874414' },
-            { type: 'twinsunflower', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/TwinSunflower.png?v=1788874414' },
-            { type: 'sunshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/SunShroom.png?v=1788874414' },
-            { type: 'peashooter', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Peashooter.png?v=1788874414' },
-            { type: 'repeater', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/Repeater.png?v=1788874414' },
-            { type: 'threepeater', cost: 300, cooldown: 7.5, img: 'assets/images/Card/Plants/Threepeater.png?v=1788874414' },
-            { type: 'gatlingpea', cost: 250, cooldown: 50, img: 'assets/images/Card/Plants/GatlingPea.png?v=1788874414' },
-            { type: 'snowpea', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/SnowPea.png?v=1788874414' },
-            { type: 'splitpea', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/SplitPea.png?v=1788874414' },
-            { type: 'torchwood', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/Torchwood.png?v=1788874414' },
-            { type: 'wallnut', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/WallNut.png?v=1788874414' },
-            { type: 'cherrybomb', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/CherryBomb.png?v=1788874414' },            { type: 'squash', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/Squash.png?v=1788874414' },
-            { type: 'jalapeno', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/Jalapeno.png?v=1788874414' },
-            { type: 'potatomine', cost: 25, cooldown: 30, img: 'assets/images/Card/Plants/PotatoMine.png?v=1788874414' },
-            { type: 'chomper', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/Chomper.png?v=1788874414' },
-            { type: 'tallnut', cost: 125, cooldown: 30, img: 'assets/images/Card/Plants/TallNut.png?v=1788874414' },
-            { type: 'puffshroom', cost: 0, cooldown: 7.5, img: 'assets/images/Card/Plants/PuffShroom.png?v=1788874414' },
-            { type: 'fumeshroom', cost: 75, cooldown: 7.5, img: 'assets/images/Card/Plants/FumeShroom.png?v=1788874414' },
-            { type: 'scaredyshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/ScaredyShroom.png?v=1788874414' },
-            { type: 'gloomshroom', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/GloomShroom.png?v=1788874414' },
-            { type: 'spikerock', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikerock.png?v=1788874414' },
-            { type: 'cattail', cost: 225, cooldown: 7.5, img: 'assets/images/Card/Plants/Cattail.png?v=1788874414' },
-            { type: 'melonpult', cost: 300, cooldown: 7.5, img: 'assets/images/Card/Plants/MelonPult.png?v=1788874414' },{ type: 'iceshroom', cost: 75, cooldown: 50, img: 'assets/images/Card/Plants/IceShroom.png?v=1788874414' },
-            { type: 'doomshroom', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/DoomShroom.png?v=1788874414' },
-            { type: 'spikeweed', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikeweed.png?v=1788874414' },
-            { type: 'garlic', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/Garlic.png?v=1788874414' }
+            { type: 'sunflower', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/SunFlower.png?v=1788876446' },
+            { type: 'twinsunflower', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/TwinSunflower.png?v=1788876446' },
+            { type: 'sunshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/SunShroom.png?v=1788876446' },
+            { type: 'peashooter', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Peashooter.png?v=1788876446' },
+            { type: 'repeater', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/Repeater.png?v=1788876446' },
+            { type: 'threepeater', cost: 300, cooldown: 7.5, img: 'assets/images/Card/Plants/Threepeater.png?v=1788876446' },
+            { type: 'gatlingpea', cost: 250, cooldown: 50, img: 'assets/images/Card/Plants/GatlingPea.png?v=1788876446' },
+            { type: 'snowpea', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/SnowPea.png?v=1788876446' },
+            { type: 'splitpea', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/SplitPea.png?v=1788876446' },
+            { type: 'torchwood', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/Torchwood.png?v=1788876446' },
+            { type: 'wallnut', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/WallNut.png?v=1788876446' },
+            { type: 'cherrybomb', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/CherryBomb.png?v=1788876446' },            { type: 'squash', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/Squash.png?v=1788876446' },
+            { type: 'jalapeno', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/Jalapeno.png?v=1788876446' },
+            { type: 'potatomine', cost: 25, cooldown: 30, img: 'assets/images/Card/Plants/PotatoMine.png?v=1788876446' },
+            { type: 'chomper', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/Chomper.png?v=1788876446' },
+            { type: 'tallnut', cost: 125, cooldown: 30, img: 'assets/images/Card/Plants/TallNut.png?v=1788876446' },
+            { type: 'puffshroom', cost: 0, cooldown: 7.5, img: 'assets/images/Card/Plants/PuffShroom.png?v=1788876446' },
+            { type: 'fumeshroom', cost: 75, cooldown: 7.5, img: 'assets/images/Card/Plants/FumeShroom.png?v=1788876446' },
+            { type: 'scaredyshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/ScaredyShroom.png?v=1788876446' },
+            { type: 'gloomshroom', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/GloomShroom.png?v=1788876446' },
+            { type: 'spikerock', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikerock.png?v=1788876446' },
+            { type: 'cattail', cost: 225, cooldown: 7.5, img: 'assets/images/Card/Plants/Cattail.png?v=1788876446' },
+            { type: 'melonpult', cost: 300, cooldown: 7.5, img: 'assets/images/Card/Plants/MelonPult.png?v=1788876446' },{ type: 'iceshroom', cost: 75, cooldown: 50, img: 'assets/images/Card/Plants/IceShroom.png?v=1788876446' },
+            { type: 'doomshroom', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/DoomShroom.png?v=1788876446' },
+            { type: 'spikeweed', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikeweed.png?v=1788876446' },
+            { type: 'garlic', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/Garlic.png?v=1788876446' }
         ];
         // The top bar will be populated in startGame() after selection
     }
@@ -319,7 +400,7 @@ class Game {
             { a: 'puffshroom', b: 'sunflower', result: '阳光菇', img: 'assets/images/Plants/SunShroom/SunShroom.gif', css: false },
             { a: 'puffshroom', b: 'peashooter', result: '胆小菇', img: 'assets/images/Plants/ScaredyShroom/ScaredyShroom.gif', css: false },
             { a: 'wallnut', b: 'jalapeno', result: '火炬树桩', img: 'assets/images/Plants/Torchwood/Torchwood.gif', css: false },
-            { a: 'chomper', b: 'tallnut', result: '西瓜投手', img: 'assets/images/Plants/MelonPult/MelonPult.png?v=1788874414', css: false },
+            { a: 'chomper', b: 'tallnut', result: '西瓜投手', img: 'assets/images/Plants/MelonPult/MelonPult.png?v=1788876446', css: false },
             { a: 'peashooter', b: 'sunflower', result: '豌豆向日葵', base: 'assets/images/Plants/SunFlower/SunFlower1.gif', over: 'assets/images/Plants/Peashooter/Peashooter.gif', overClip: 'polygon(0 0, 100% 0, 100% 65%, 0 65%)', overTransform: 'translate(0px, -20px) scale(1.0)' },
             { a: 'peashooter', b: 'wallnut', result: '坚果射手', base: 'assets/images/Plants/WallNut/WallNut.gif', over: 'assets/images/Plants/Peashooter/Peashooter.gif', overClip: 'polygon(0 0, 100% 0, 100% 65%, 0 65%)', overTransform: 'translate(5px, -15px) scale(1.0)' },
             { a: 'snowpea', b: 'cherrybomb', result: '寒冰炸弹', img: 'assets/images/Plants/CherryBomb/CherryBomb.gif', filter: 'hue-rotate(180deg) saturate(1.5)', css: false },
@@ -328,7 +409,7 @@ class Game {
             { a: 'snowpea', b: 'wallnut', result: '寒冰坚果', img: 'assets/images/Plants/WallNut/WallNut.gif', filter: 'hue-rotate(180deg) saturate(1.5) brightness(1.2)', css: false },
             { a: 'peashooter', b: 'cherrybomb', result: '樱桃射手', img: 'assets/images/Plants/Peashooter/Peashooter.gif', filter: 'hue-rotate(-45deg) saturate(2.0)', css: false },
             { a: 'sunflower', b: 'doomshroom', result: '毁灭向日葵', img: 'assets/images/Plants/SunFlower/SunFlower1.gif', filter: 'grayscale(0.8) brightness(0.6) sepia(1) hue-rotate(240deg) saturate(3)', css: false },
-            { a: 'melonpult', b: 'iceshroom', result: '冰西瓜投手', img: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788874414', css: false },
+            { a: 'melonpult', b: 'iceshroom', result: '冰西瓜投手', img: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788876446', css: false },
             { a: 'repeater', b: 'spikeweed', result: '猫尾草', img: 'assets/images/Plants/Cattail/Cattail.gif', css: false },
             { a: 'fumeshroom', b: 'fumeshroom', result: '忧郁菇', img: 'assets/images/Plants/GloomShroom/GloomShroom.gif', css: false },
             { a: 'spikeweed', b: 'spikeweed', result: '钢地刺', img: 'assets/images/Plants/Spikerock/Spikerock.gif', css: false },
@@ -338,8 +419,8 @@ class Game {
             { a: 'splitpea', b: 'sunflower', result: '杨桃', img: 'assets/images/Plants/Starfruit/Starfruit.gif', css: false },
             { a: 'puffshroom', b: 'garlic', result: '魅惑菇', img: 'assets/images/Plants/HypnoShroom/HypnoShroom.gif', css: false },
             { a: 'wallnut', b: 'tallnut', result: '南瓜壳（可套在任意植物上）', img: 'assets/images/Plants/PumpkinHead/PumpkinHead.gif', css: false },
-            { a: 'melonpult', b: 'cattail', result: '西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/MelonPult/MelonPult.png?v=1788874414', overTransform: 'translate(-5px, -30px) scale(0.7)' },
-            { a: 'wintermelon', b: 'cattail', result: '冰西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788874414', overTransform: 'translate(-5px, -30px) scale(0.7)' }
+            { a: 'melonpult', b: 'cattail', result: '西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/MelonPult/MelonPult.png?v=1788876446', overTransform: 'translate(-5px, -30px) scale(0.7)' },
+            { a: 'wintermelon', b: 'cattail', result: '冰西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788876446', overTransform: 'translate(-5px, -30px) scale(0.7)' }
         ];
         
         const list = document.getElementById('recipe-list');
@@ -370,8 +451,8 @@ class Game {
                     'fumeshroom': 'assets/images/Plants/FumeShroom/FumeShroom.gif',
                     'spikeweed': 'assets/images/Plants/Spikeweed/Spikeweed.gif',
                     'tallnut': 'assets/images/Plants/TallNut/TallNut.gif',
-                    'melonpult': 'assets/images/Plants/MelonPult/MelonPult.png?v=1788874414',
-                    'wintermelon': 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788874414',
+                    'melonpult': 'assets/images/Plants/MelonPult/MelonPult.png?v=1788876446',
+                    'wintermelon': 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788876446',
                     'cattail': 'assets/images/Plants/Cattail/Cattail.gif',
                     'gloomshroom': 'assets/images/Plants/GloomShroom/GloomShroom.gif',
                     'spikerock': 'assets/images/Plants/Spikerock/Spikerock.gif',
@@ -1019,35 +1100,28 @@ class Game {
         this.eventManager.trigger();
     }
 
-    // ===== 砸罐子模式（Vasebreaker）v3.4.4 阳光经济 + 路灯花商店 + 半透明揭示 =====
-    // 罐子总数 20-28（避开 row0 / col0）。
-    // 类型分布抽签桶: plant 5/20(25%)、question 11/20(55%, 绝对多数)、zombie 4/20(20%)。
-    //   问号罐内部 60% 概率出僵尸、40% 出植物（"出僵尸概率更高"）。
-    //   植物罐不再必出植物卡——约 45% 概率变成"阳光罐"（砸出 50 阳光，供购买路灯花），
-    //     其余 55% 才给植物卡；任何罐子（植物/问号/僵尸罐）都不再掉路灯花——
-    //     路灯花唯一获得方式是种子栏首位的「路灯花商店」(75 阳光购买)。
+    // ===== 砸罐子模式（Vasebreaker）v3.5.0 难度分级：简单 / 困难 / 地狱 =====
+    // 全部难度参数见 _vaseDiffCfg():
+    //   罐子总数范围、类型抽签桶(plant/question/zombie 权重)、问号罐内部出僵尸概率、
+    //   植物罐内部出植物卡概率、僵尸池强度、僵尸血量倍率(hpMul)。
     // 所有罐子的具体内容(植物种/僵尸种/阳光)都在本阶段预掷生成(v.content),
     //   smash 时直接读取, 这样路灯花揭示出来的就是真正会砸出来的东西。
     setupVases() {
+        const cfg = this._vaseDiffCfg();
         const candidates = [];
         for (let r = 1; r < this.board.rows; r++) {
             for (let c = 1; c < this.board.cols; c++) candidates.push([r, c]);
         }
-        const total = 20 + Math.floor(Math.random() * 9);
+        const total = cfg.totalMin + Math.floor(Math.random() * (cfg.totalMax - cfg.totalMin + 1));
         for (let i = candidates.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
         }
         const chosen = candidates.slice(0, total);
 
-        // 类型分布: 5 植物 / 11 问号 / 4 僵尸 (问号占多数, 植物显著减少, 僵尸小幅下降)
+        // 类型分布: 先保证 plant/question/zombie 各至少 1 个, 其余按难度抽签桶加权抽取
         const types = ['plant', 'question', 'zombie'];
-        const drawBag = [
-            'plant','plant','plant','plant','plant',
-            'question','question','question','question','question','question',
-            'question','question','question','question','question',
-            'zombie','zombie','zombie','zombie'
-        ];
+        const drawBag = cfg.bag;
         while (types.length < total) {
             types.push(drawBag[Math.floor(Math.random() * drawBag.length)]);
         }
@@ -1064,18 +1138,18 @@ class Game {
 
         chosen.forEach((pos, i) => {
             const vType = types[i];
-            // 预掷罐内内容:
-            //   植物罐: 55% 植物卡 / 45% 阳光罐(50 阳光, 供买路灯花)
-            //   问号罐: 60% 僵尸 / 40% 植物卡
+            // 预掷罐内内容（概率全部取自当前难度配置）:
+            //   植物罐: pCard 概率出植物卡 / 其余出阳光罐(50 阳光, 供买路灯花)
+            //   问号罐: qZombie 概率出僵尸 / 其余出植物卡
             //   僵尸罐: 必出僵尸
             //   任何罐子都不再出 plantern —— 路灯花只能从商店购买
             const content = (vType === 'zombie')
                 ? { kind: 'zombie', type: this._rollVaseZombieType() }
                 : (vType === 'plant')
-                    ? (Math.random() < 0.55)
+                    ? (Math.random() < cfg.pCard)
                         ? { kind: 'plant', type: this._rollVasePlantContent() }
                         : { kind: 'sun', value: 50 }
-                    : (Math.random() < 0.6)
+                    : (Math.random() < cfg.qZombie)
                         ? { kind: 'zombie', type: this._rollVaseZombieType() }
                         : { kind: 'plant', type: this._rollVasePlantContent() };
 
@@ -1084,7 +1158,7 @@ class Game {
                           : vType === 'zombie' ? 'Vase_Zombie.png'
                           : 'Vase_Question.png';
             const img = document.createElement('img');
-            img.src = 'assets/images/Vase/' + sprite + '?v=1788874414'; // v= 占位,bump_version 替换为新 cache-buster
+            img.src = 'assets/images/Vase/' + sprite + '?v=1788876446'; // v= 占位,bump_version 替换为新 cache-buster
             img.className = 'entity vase-entity';
             img.style.pointerEvents = 'none';
             const cx = this.board.offsetX + v.col * this.board.cellWidth + this.board.cellWidth / 2;
@@ -1097,7 +1171,10 @@ class Game {
             this.vases.push(v);
         });
 
-        this.showAnnouncement(`砸罐子关卡：场上有 ${total} 个罐子（绿罐=植物/阳光，紫罐=僵尸，问号罐=？）；路灯花用阳光在种子栏首位购买`, '#ffdd66');
+        const warn = cfg.key === 'hell'
+            ? '僵尸血厚 +35%，祝你好运！'
+            : (cfg.key === 'easy' ? '绿罐很多，放心砸～' : '路灯花=75阳光，在种子栏首位购买');
+        this.showAnnouncement(`【${cfg.label}】砸罐子：场上有 ${total} 个罐子（绿罐=植物/阳光，紫罐=僵尸，问号罐=？）。${warn}`, '#ffdd66');
     }
 
     // 砸罐子植物奖励池(不含 plantern —— 路灯花只能商店购买,任何罐子都打不出)
@@ -1145,6 +1222,8 @@ class Game {
         if (!v) return;
         v.smashed = true;
         this.vasesSmashed++;
+        // 罐子破碎音效（原版 PvZ 陶瓷破碎声，与破碎动画同步响起）
+        this.audioManager.play('vasebreak');
         // 罐子破碎动画：放大 + 淡出
         if (v.element && v.element.parentNode) {
             const el = v.element;
@@ -1277,10 +1356,16 @@ class Game {
         // 让僵尸从罐子格 x 出现(默认 950 太靠右,不合理)
         z.x = this.board.offsetX + vase.col * this.board.cellWidth + this.board.cellWidth / 2;
         z.element.style.left = z.x + 'px';
+        // 地狱难度: 血量 ×1.35（简单/困难为 1.0 不生效）
+        const hpMul = this._vaseDiffCfg().hpMul;
+        if (hpMul > 1) {
+            z.hp = Math.round(z.hp * hpMul);
+            z.maxHp = z.hp;
+        }
         this.entities.push(z);
         this.score = Math.max(0, this.score - 5);
         this.updateScore();
-        const zhName = { normal:'普通僵尸', conehead:'路障僵尸', buckethead:'铁桶僵尸', flag:'旗手僵尸', polevaulting:'撑杆僵尸', newspaper:'读报僵尸' }[type] || type;
+        const zhName = { normal:'普通僵尸', conehead:'路障僵尸', buckethead:'铁桶僵尸', flag:'旗手僵尸', polevaulting:'撑杆僵尸', newspaper:'读报僵尸', screendoor:'铁门僵尸' }[type] || type;
         const prefix = vase.type === 'plant' ? '植物罐' : (vase.type === 'zombie' ? '僵尸罐' : '问号罐');
         this.showAnnouncement(`${prefix}：${zhName} 来了！`, '#ff6666');
     }
@@ -1297,7 +1382,8 @@ class Game {
             conehead:  'ConeheadZombie/ConeheadZombie.gif',
             buckethead:'BucketheadZombie/BucketheadZombie.gif',
             polevaulting:'PoleVaultingZombie/PoleVaultingZombie.gif',
-            newspaper: 'NewspaperZombie/HeadWalk1.gif'
+            newspaper: 'NewspaperZombie/HeadWalk1.gif',
+            screendoor:'ScreenDoorZombie/HeadWalk1.gif' // 地狱难度专用
         };
         let lit = 0;
         for (let dr = -1; dr <= 1; dr++) {
@@ -1352,6 +1438,39 @@ class Game {
         }
     }
 
+    // 战场左侧打出帅气的「区耀丁」署名（vase 模式专属）：
+    // 罐子从 col1 起摆，其左边正是第一列 col0 —— 该列永远不会出现罐子，
+    // 竖排金字署名固定浮在那里，作为玩家签名水印（种植物/僵尸经过都在其上，不影响游戏）
+    _showVaseSignature() {
+        if (!this.vaseMode) return;
+        if (this._sigEl && this._sigEl.parentNode) this._sigEl.parentNode.removeChild(this._sigEl);
+        this._sigEl = null;
+        const sig = document.createElement('div');
+        sig.className = 'vase-sign';
+        sig.textContent = '区耀丁';
+        const x = this.board.offsetX + this.board.cellWidth / 2; // col0 中心
+        const y = this.board.offsetY + (this.board.rows * this.board.cellHeight) / 2; // 战场垂直中点
+        sig.style.left = x + 'px';
+        sig.style.top = y + 'px';
+        this.entityLayer.appendChild(sig);
+        this._sigEl = sig;
+    }
+
+    // HUD 常驻难度角标（右上角 Speed 按钮旁），仅 vase 模式显示
+    _syncVaseHud() {
+        const old = document.getElementById('vase-diff-chip');
+        if (old && old.parentNode) old.parentNode.removeChild(old);
+        if (!this.vaseMode) return;
+        const cfg = this._vaseDiffCfg();
+        const chip = document.createElement('div');
+        chip.id = 'vase-diff-chip';
+        chip.className = 'diff-chip diff-' + cfg.key;
+        chip.innerHTML = `难度 · ${cfg.label}<span class="diff-chip-en">${cfg.key.toUpperCase()}</span>`;
+        chip.title = `砸罐子 · ${cfg.label}难度`;
+        const top = document.getElementById('top-bar');
+        if (top) top.appendChild(chip);
+    }
+
     checkVaseVictory() {
         if (this.state !== 'PLAYING') return;
         if (this.vases.length === 0) return;
@@ -1365,8 +1484,9 @@ class Game {
         // 胜利画面：仅一个画面, 两个选项 —— 再玩一局 / 退出(回主菜单)
         const container = this.container;
         this._vaseWinEls = [];
+        const diffLabel = this._vaseDiffCfg().label; // 简单/困难/地狱
         const title = document.createElement('div');
-        title.innerHTML = 'VICTORY!<br>砸罐子完成！';
+        title.innerHTML = `VICTORY!<br>砸罐子完成！<span style="display:block;font-size:26px;margin-top:8px;">难度 · ${diffLabel}</span>`;
         title.style.cssText = 'position:absolute;top:26%;left:50%;transform:translate(-50%,-50%);z-index:1000;text-align:center;font-family:"Kaiti SC", "STKaiti", "KaiTi", "楷体", serif;font-size:64px;color:#ffdd66;text-shadow:3px 3px 0 #2e6b1e, -2px 2px 0 #2e6b1e, 2px -2px 0 #2e6b1e, -2px -2px 0 #2e6b1e, 0 6px 14px rgba(0,0,0,0.45);';
         container.appendChild(title);
         this._vaseWinEls.push(title);
