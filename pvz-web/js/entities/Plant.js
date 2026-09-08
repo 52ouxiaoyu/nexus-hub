@@ -153,18 +153,18 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788791838';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788874414';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788791838';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788874414';
         } else if (type === 'plantern') {
             // 路灯花（v3.4.3 新增）: 砸罐子模式下植物罐小概率砸出。
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1788791838';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1788874414';
             stat.yOffset = 0;
         }
 

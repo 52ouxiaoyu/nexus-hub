@@ -12,6 +12,12 @@ class InputManager {
     
     bindEvents() {
         document.getElementById('seed-bank').addEventListener('mousedown', (e) => {
+            // 路灯花商店卡：点击=购买（不走拖拽）；阳光不足时给提示
+            const shopCard = e.target.closest('.plantern-shop-card');
+            if (shopCard) {
+                this.game.buyPlantern();
+                return;
+            }
             const card = e.target.closest('.seed-card');
             if (card && !card.classList.contains('disabled')) {
                 const type = card.dataset.type;
@@ -153,8 +159,8 @@ class InputManager {
             // Melon / Winter Melon 图是 PNG，其他植物是 GIF
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1788791838`
-                : `assets/images/Plants/${imgName}.gif?v=1788791838`;
+                ? `assets/images/Plants/${imgName}.png?v=1788874414`
+                : `assets/images/Plants/${imgName}.gif?v=1788874414`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
         }
     }

@@ -171,6 +171,31 @@ body {
     filter: brightness(1.15);
 }
 
+/* 砸罐子：路灯花商店卡（种子栏首位常驻, 点击=花 75 阳光购买） */
+.seed-card.plantern-shop-card {
+    outline: 2px solid #ffd54a;
+    outline-offset: 1px;
+    box-shadow: 0 0 8px 1px rgba(255, 213, 74, 0.7), 1px 1px 3px rgba(0,0,0,0.5);
+}
+.seed-card.plantern-shop-card:hover {
+    filter: brightness(1.2);
+}
+.seed-card.plantern-shop-card .shop-price {
+    position: absolute;
+    right: -5px;
+    bottom: -5px;
+    z-index: 5;
+    background: #ffe45c;
+    color: #4a2d00;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1.15;
+    padding: 0 5px;
+    border-radius: 10px;
+    border: 2px solid #9a6b00;
+    box-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+}
+
 .cooldown-overlay {
     position: absolute;
     bottom: 0;
