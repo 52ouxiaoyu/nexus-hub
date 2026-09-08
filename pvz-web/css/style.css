@@ -443,3 +443,96 @@ body {
 }
 #diff-back:hover { filter: brightness(1.15); }
 #diff-back:active { transform: translateY(2px); box-shadow: 0 1px 0 #241708; }
+
+/* ================= v3.5.2 砸罐子胜利弹窗(居中 modal) ================= */
+.vase-win-overlay {
+    position: absolute;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    z-index: 2400;
+    background: rgba(24, 12, 2, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.vase-win-panel {
+    min-width: 560px;
+    text-align: center;
+    padding: 26px 44px 30px;
+    background: linear-gradient(180deg, #fdf4dc 0%, #f2ddab 55%, #e3c688 100%);
+    border: 6px solid #7a4a1e;
+    border-radius: 20px;
+    box-shadow: inset 0 0 0 3px rgba(255,255,255,0.65),
+                inset 0 0 26px rgba(122,74,30,0.18),
+                0 18px 44px rgba(0,0,0,0.65);
+    font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif;
+}
+.vase-win-lv {
+    font-family: Impact, 'Arial Black', sans-serif;
+    font-size: 15px;
+    letter-spacing: 8px;
+    color: #9c6b2f;
+    margin-bottom: 2px;
+}
+.vase-win-title {
+    font-size: 72px;
+    font-weight: 900;
+    letter-spacing: 6px;
+    line-height: 1.05;
+    color: #a05a00;
+    text-shadow: 2px 2px 0 #fff7e0, -1px 1px 0 #fff7e0, 1px -1px 0 #fff7e0, -1px -1px 0 #fff7e0,
+                 0 4px 14px rgba(160,90,0,0.35);
+}
+.vase-win-sub {
+    margin-top: 6px;
+    font-size: 27px;
+    font-weight: 900;
+    color: #5a3a12;
+    text-shadow: 1px 1px 0 rgba(255,255,255,0.6);
+}
+.vase-win-diff {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 15px;
+    font-weight: bold;
+    color: #8a5a2b;
+    background: rgba(122,74,30,0.12);
+    border: 1px solid rgba(122,74,30,0.35);
+    border-radius: 10px;
+    padding: 1px 12px;
+    vertical-align: middle;
+}
+.vase-win-score {
+    margin-top: 14px;
+    font-size: 22px;
+    font-weight: bold;
+    color: #4a2f0c;
+}
+.vase-win-score b {
+    font-size: 34px;
+    color: #7e3d00;
+    margin-left: 6px;
+}
+.vase-win-btns {
+    margin-top: 22px;
+    display: flex;
+    justify-content: center;
+    gap: 44px;
+}
+.vase-win-btn {
+    font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif;
+    font-size: 25px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    padding: 11px 38px;
+    cursor: pointer;
+    border-radius: 10px;
+    border: 3px solid #3c2a11;
+    box-shadow: 0 5px 0 #3c2a11, 0 8px 16px rgba(0,0,0,0.35);
+    transition: transform 0.12s ease, filter 0.12s ease;
+}
+.vase-win-btn:hover { filter: brightness(1.08); }
+.vase-win-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #3c2a11; }
+.vase-win-btn.again { background: linear-gradient(180deg, #9ee06b, #6fbf3c); color: #143203; border-color: #2e5c12; box-shadow: 0 5px 0 #2e5c12, 0 8px 16px rgba(0,0,0,0.35); }
+.vase-win-btn.again:active { box-shadow: 0 1px 0 #2e5c12; }
+.vase-win-btn.exit  { background: linear-gradient(180deg, #d98a5f, #b56035); color: #fff; }
