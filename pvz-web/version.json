@@ -1,6 +1,6 @@
 {
-  "version": "v3.6.2-restore-wintermelon-blue",
+  "version": "v3.6.3-wintermelon-bg-grass",
   "build": "2026-09-09",
-  "feature": "v3.6.2 回滚 v3.6.1：冰西瓜(WinterMelon)种子卡面恢复 PVZ1 原版冰蓝画面(玩家反馈: 请不要改变西瓜投手的画面, 原来蓝色图片长什么样子这里就长什么样子——上轮 HSV 染绿时把冰瓜本体上的冰蓝高光/冰霜也一起误染成绿色, 画面观感不对)。改动 —— 从备份 /tmp/WinterMelon.png.bak 字节级恢复 assets/images/Card/Plants/WinterMelon.png(cmp 验证与原版一致; 恢复后上半 60px 主色回归 #48b8d8 冰蓝雪地 3020 像素, 与 v3.6.1 之前完全相同); CSS/JS 零改动。游戏内种下的冰西瓜立绘(Plants/WinterMelon/WinterMelon.png)与投出的冰瓜弹道(Plants/MelonPult/WinterMelon.png)一直是原版蓝色素材, 从未被改动。教训: 背景染绿这种『整图按颜色范围改写』的手法对底色与本体颜色相近的素材(冰蓝底 + 冰蓝高光瓜)必然误伤本体, 已回滚并沉淀 MEMORY(卡底色/植物本体分层: 需要精确蒙版或只改被植物轮廓排除的底色区域, 若无法精确分离宁可整体不改)。验证: puppeteer 打开选卡界面, WinterMelon 卡面上半冰蓝像素重新占 ~50%, 绿像素≈0; 0 pageerror。bump cache-buster 60 处。",
-  "assetVersion": 1788958599
+  "feature": "v3.6.3 冰西瓜(WinterMelon)卡面背景从 PVZ1 原版冰蓝雪地换成西瓜投手(MelonPult)的绿色草地背景, 冰西瓜造型完全不动(玩家反馈: 只要把背景换成西瓜投手的背景, 主体不动。不需要改变冰西瓜投手的造型, 只需要改动它的背景即可)。根因与算法 —— Card/Plants/WinterMelon.png 与 MelonPult.png 同为 100×120 双段素材, 且 PVZ 原版设计为同模板改色(构图完全一致: 左上方大瓜+右前方抛投小瓜+地面), 因此逐像素合成可精确分离\"背景区\"与\"造型区\"。算法: 对 WinterMelon 上半 60px 每个像素, 若它是\"雪地蓝\"(色距 #4ab2d3 雪地主色 ≤50)且同位置 MelonPult 是\"草地绿\"(色距 #08c828 草地主色 ≤50)→ 替换为 MelonPult 同位置像素(真正的背景区); 若 WinterMelon 是雪地蓝但 MelonPult 同位置是瓜本体/台座/暗影 → 保留 WinterMelon 原值(保护冰瓜造型不被挖坑); 若 WinterMelon 不是雪地(瓜本体/暗影/叶) → 保留原值。实测: 背景区 3095 像素换成 MelonPult 草地像素(主色 #08c828 进入 3016 像素), 632 像素\"雪地+本体同位\"被保护保留, 冰瓜暗蓝 #185888/#186898 像素数与 v3.6.2 完全一致(造型未动), 投石器轮廓蓝 #2878a8 保留。/tmp/WinterMelon.png.v362_bak 留作再回滚保险。验证: puppeteer 加载 PNG 到 canvas 取像素, WinterMelon 卡上半绿像素 ~55% (改前 0%, MelonPult 卡参考 70% 草地+瓜绿); 蓝像素只剩冰瓜本体暗色 (改前 70% 雪地); 0 pageerror。bump cache-buster 60 处。",
+  "assetVersion": 1788959180
 }

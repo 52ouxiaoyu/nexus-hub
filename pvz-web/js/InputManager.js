@@ -162,8 +162,8 @@ class InputManager {
             // Melon / Winter Melon 图是 PNG，其他植物是 GIF
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1788958599`
-                : `assets/images/Plants/${imgName}.gif?v=1788958599`;
+                ? `assets/images/Plants/${imgName}.png?v=1788959180`
+                : `assets/images/Plants/${imgName}.gif?v=1788959180`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
         }
     }
