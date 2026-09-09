@@ -1,6 +1,6 @@
 {
-  "version": "v3.6.1-wintermelon-bg-green",
+  "version": "v3.6.2-restore-wintermelon-blue",
   "build": "2026-09-09",
-  "feature": "v3.6.1 冰西瓜(WinterMelon)卡面背景由冰蓝色改为草地绿色, 与其他植物统一(玩家反馈: 冰西瓜的背景画面不要是蓝色的, 改成绿色, 跟其他植物一样)。根因 —— Card/Plants/WinterMelon.png 是 100×120 上下双段素材(上 60px 彩色卡面 + 下 60px 灰度种子图标), PIL 实测其上半 60px 主色 #48b8d8(冰蓝雪地, ~3020 像素) 占据卡面约 50%, 与 Peashooter 上半主色 #08c828(绿草地, 558 像素 + 多档绿)对比明显; 选卡界面与种子栏均按 background-size 100% 200% + position top 裁切, 因此卡底色直接决定卡片视觉——冰西瓜整张卡面呈冰蓝调, 与其它植物的绿草底格格不入。改动 —— 用 PIL 仅修改 assets/images/Card/Plants/WinterMelon.png 上半 60px 中'亮冰蓝底色'像素(B>180、B-R>60、R<110、RGB 总和>280): HSV H 改写为 110° 草地绿, S/V 保留使纹理明暗延续; 深蓝瓜主体(R+G+B 偏低)与绿色叶(已绿)不动, 下半 60px 灰度种子图标原样保留。实测 3662 像素重写, 卡底主色 #48b8d8 → #68d848(草地绿), 深蓝瓜 #185888 像素数不变, 瓜轮廓清晰; 原图备份 /tmp/WinterMelon.png.bak 防止回滚需求。验证: puppeteer 真实打开选卡界面, WinterMelon 卡与其余 31 张卡同框——卡底色与 Peashooter/MelonPult 等草地色一致, 冰瓜本体深蓝保留; 0 pageerror。bump cache-buster 60 处。",
-  "assetVersion": 1788958195
+  "feature": "v3.6.2 回滚 v3.6.1：冰西瓜(WinterMelon)种子卡面恢复 PVZ1 原版冰蓝画面(玩家反馈: 请不要改变西瓜投手的画面, 原来蓝色图片长什么样子这里就长什么样子——上轮 HSV 染绿时把冰瓜本体上的冰蓝高光/冰霜也一起误染成绿色, 画面观感不对)。改动 —— 从备份 /tmp/WinterMelon.png.bak 字节级恢复 assets/images/Card/Plants/WinterMelon.png(cmp 验证与原版一致; 恢复后上半 60px 主色回归 #48b8d8 冰蓝雪地 3020 像素, 与 v3.6.1 之前完全相同); CSS/JS 零改动。游戏内种下的冰西瓜立绘(Plants/WinterMelon/WinterMelon.png)与投出的冰瓜弹道(Plants/MelonPult/WinterMelon.png)一直是原版蓝色素材, 从未被改动。教训: 背景染绿这种『整图按颜色范围改写』的手法对底色与本体颜色相近的素材(冰蓝底 + 冰蓝高光瓜)必然误伤本体, 已回滚并沉淀 MEMORY(卡底色/植物本体分层: 需要精确蒙版或只改被植物轮廓排除的底色区域, 若无法精确分离宁可整体不改)。验证: puppeteer 打开选卡界面, WinterMelon 卡面上半冰蓝像素重新占 ~50%, 绿像素≈0; 0 pageerror。bump cache-buster 60 处。",
+  "assetVersion": 1788958599
 }
