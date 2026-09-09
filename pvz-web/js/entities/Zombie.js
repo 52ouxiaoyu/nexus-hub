@@ -420,7 +420,13 @@ class Zombie extends Entity {
             this.x -= currentSpeed * deltaTime;
             
             if (this.x < 40) { 
-                this.game.gameOver();
+                // 我是僵尸模式：我方僵尸到达最左端 = 吃到脑子 → 通关（我方阵营的胜利）
+                // 非僵尸模式保持原逻辑：僵尸进入房子 → 玩家(植物方)失败
+                if (this.game.zombieMode && this.game.zombieWin) {
+                    this.game.zombieWin(this.row);
+                } else {
+                    this.game.gameOver();
+                }
             }
             
             const plant = this.game.entities.find(e => 
@@ -504,7 +510,12 @@ class Zombie extends Entity {
                     this.eatTarget._hypnoUsed = true;
                     this.eatTarget.hp = 0;      // 蘑菇被吃掉
                     this.game.audioManager.play('chomp');
-                    if (this.game.showAnnouncement) this.game.showAnnouncement('魅惑成功！这只僵尸现在为你而战', '#ff69b4');
+                    if (this.game.showAnnouncement) {
+                        // 我是僵尸模式：玩家方的僵尸被策反 = 倒戈损失（措辞随模式区分）
+                        this.game.showAnnouncement(this.game.zombieMode
+                            ? '倒戈！这只僵尸被植物策反，向右逃走了'
+                            : '魅惑成功！这只僵尸现在为你而战', '#ff69b4');
+                    }
                     this.hypnotize();
                 } else if (this.eatTarget.type === 'garlic') {
                     // Bite garlic and switch row!
@@ -576,6 +587,8 @@ class Zombie extends Entity {
                             this.smashTimer = 1.0;
                         }
                     } else {
+                        // 我是僵尸模式：标记"植物正被僵尸啃食"，向日葵被啃死时据此发阳光奖励
+                        this.eatTarget._zombieKill = true;
                         this.eatTarget.hp -= currentDamage * deltaTime;
                     }
                     

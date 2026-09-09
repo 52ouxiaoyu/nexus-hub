@@ -153,12 +153,12 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788959180';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788961993';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788959180';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788961993';
         } else if (type === 'starfruit') {
             // 杨桃（v3.6.0 经典模式可种）：五向星光射击，弹道复用融合版（Projectile 'star'）
             stat.hp = 300;
@@ -182,7 +182,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1788959180';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1788961993';
             stat.yOffset = 0;
         }
 
@@ -592,6 +592,13 @@ class Plant extends Entity {
         
         if (this.hp <= 0 && !this.isDead) {
             this.isDead = true;
+
+            // 我是僵尸模式：我方僵尸啃死向日葵 → 立即发阳光奖励（普通 200 / 双子 500）
+            // 由 Zombie EATING 分支打 _zombieKill 标记，确保只有"被啃死"才触发（爆炸/冻伤不触发）
+            if (this.game.zombieMode && this._zombieKill &&
+                (this.type === 'sunflower' || this.type === 'twinsunflower')) {
+                this.game.zombieEatSunflowerReward(this.type);
+            }
             
             if (this.type === 'fusion_cherrybomb_peashooter' || this.type === 'fusion_doomshroom_sunflower') {
                 let boom = document.createElement('img');
@@ -799,7 +806,8 @@ class Plant extends Entity {
                 this.growthTimer = 0;
             }
         }
-        if ((this.hasTrait('sunflower') || this.hasTrait('sunshroom') || this.hasTrait('twinsunflower'))) {
+        // 我是僵尸模式：敌方向日葵不产阳光球（我方阳光只来自"啃死向日葵 +200/双子 +500"的奖励，见死亡分支）
+        if (!this.game.zombieMode && (this.hasTrait('sunflower') || this.hasTrait('sunshroom') || this.hasTrait('twinsunflower'))) {
             this.sunTimer += deltaTime;
             if (this.sunTimer >= this.sunRate) {
                 this.sunTimer = 0;

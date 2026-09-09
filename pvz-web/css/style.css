@@ -547,3 +547,62 @@ body {
 .vase-win-btn.again { background: linear-gradient(180deg, #9ee06b, #6fbf3c); color: #143203; border-color: #2e5c12; box-shadow: 0 5px 0 #2e5c12, 0 8px 16px rgba(0,0,0,0.35); }
 .vase-win-btn.again:active { box-shadow: 0 1px 0 #2e5c12; }
 .vase-win-btn.exit  { background: linear-gradient(180deg, #d98a5f, #b56035); color: #fff; }
+
+/* ================= v3.7.0 我是僵尸（I, ZOMBIE）模式 ================= */
+/* 僵尸卡带：点击卡片选中（高亮金框），再点草坪任意行 → 该行最右放僵尸 */
+#zombie-bank { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 0; min-width: 0; align-items: center; }
+.zcard {
+    width: 92px; height: 52px;
+    position: relative;
+    background: linear-gradient(180deg, #4a3a5a 0%, #2e2438 100%);
+    border: 2px solid #7c6a94;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.6), inset 0 0 10px rgba(0,0,0,0.4);
+    transition: transform 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease;
+    overflow: hidden;
+}
+.zcard:hover { transform: translateY(-2px); filter: brightness(1.1); }
+.zcard img { height: 44px; width: auto; image-rendering: pixelated; pointer-events: none; }
+.zcard .z-cost {
+    position: absolute; right: 3px; bottom: 1px;
+    font-family: 'Kaiti SC','STKaiti',serif; font-size: 14px; font-weight: 900;
+    color: #ffe45c; text-shadow: 1px 1px 0 #000, -1px 0 0 #000;
+    pointer-events: none; line-height: 1;
+}
+.zcard .z-name {
+    position: absolute; left: 4px; top: 1px;
+    font-family: 'PingFang SC','Microsoft YaHei',sans-serif; font-size: 10px;
+    color: #cfc4e0; text-shadow: 1px 1px 0 #000; pointer-events: none; line-height: 1;
+}
+.zcard.selected {
+    outline: 3px solid #ffd54a; outline-offset: 1px;
+    box-shadow: 0 0 10px 1px rgba(255,213,74,0.8), 1px 1px 3px rgba(0,0,0,0.6);
+}
+.zcard.disabled { filter: brightness(45%); cursor: not-allowed; }
+
+/* 战场左端（房子侧）每行的脑子：僵尸啃到即通关 */
+.z-brain {
+    position: absolute;
+    font-size: 26px; line-height: 1;
+    transform: translate(-50%, -50%);
+    filter: drop-shadow(0 0 6px rgba(180,60,120,0.6));
+    animation: brain-glow 1.6s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 900;
+}
+@keyframes brain-glow {
+    0%, 100% { filter: drop-shadow(0 0 4px rgba(180,60,120,0.5)); }
+    50%      { filter: drop-shadow(0 0 11px rgba(255,90,170,0.9)); }
+}
+/* 僵尸被啃死/胜利时的浮字（+200 阳光等） */
+.z-float {
+    position: absolute;
+    font-family: 'Kaiti SC','STKaiti','KaiTi',serif;
+    font-size: 22px; font-weight: 900;
+    color: #ffe45c; text-shadow: 2px 2px 0 #000, -1px -1px 0 #000;
+    pointer-events: none; z-index: 3000;
+    white-space: nowrap;
+    transition: transform 1.2s ease-out, opacity 1.2s ease-out;
+}

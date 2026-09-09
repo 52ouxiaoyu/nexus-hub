@@ -11,6 +11,21 @@ class InputManager {
     }
     
     bindEvents() {
+        // 我是僵尸模式（v3.7.0）：点僵尸卡选中 → 点草坪任意行释放（该行最右进场）
+        const zombieBank = document.getElementById('zombie-bank');
+        if (zombieBank) {
+            zombieBank.addEventListener('mousedown', (e) => {
+                const card = e.target.closest('.zcard');
+                if (!card || card.classList.contains('disabled')) return;
+                if (!this.game.zombieMode) return;
+                // 再点同一张卡 = 取消选中
+                this.game.pendingZombie = (this.game.pendingZombie === card.dataset.type) ? null : card.dataset.type;
+                this.game._refreshZombieBank();
+                this.game.audioManager.play('btn');
+                this.dragGhost.style.display = 'none';
+            });
+        }
+
         document.getElementById('seed-bank').addEventListener('mousedown', (e) => {
             // 路灯花商店卡：点击=购买（不走拖拽）；阳光不足时给提示
             const shopCard = e.target.closest('.plantern-shop-card');
@@ -59,6 +74,20 @@ class InputManager {
         });
         
         this.container.addEventListener('mouseup', (e) => {
+            // ===== 我是僵尸模式：点草坪行 = 在该行最右释放选中的僵尸（v3.7.0）=====
+            if (this.game.zombieMode) {
+                const rect = this.container.getBoundingClientRect();
+                const scale = window.gameScale || 1;
+                const gridPos = this.game.board.getGridPos(
+                    (e.clientX - rect.left) / scale, (e.clientY - rect.top) / scale
+                );
+                if (this.game.pendingZombie && gridPos) {
+                    this.game.deployZombie(this.game.pendingZombie, gridPos.row);
+                }
+                // 点卡片本身/其它非草坪区域：不取消选中（取消 = 再点一次同一张僵尸卡）
+                this.dragGhost.style.display = 'none';
+                return; // 僵尸模式下不走植物侧任何逻辑
+            }
             if (this.game.isGloveActive) {
                 const rect = this.container.getBoundingClientRect();
                 const scale = window.gameScale || 1;
@@ -162,8 +191,8 @@ class InputManager {
             // Melon / Winter Melon 图是 PNG，其他植物是 GIF
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1788959180`
-                : `assets/images/Plants/${imgName}.gif?v=1788959180`;
+                ? `assets/images/Plants/${imgName}.png?v=1788961993`
+                : `assets/images/Plants/${imgName}.gif?v=1788961993`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
         }
     }

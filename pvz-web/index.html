@@ -4,7 +4,7 @@
     <meta charset="UTF-8" data-page-node-id="fvct4kKB77qx0aDFZg0TFG">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="7cXFTDee52Hp5l8aujUlmz">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1788959180" data-page-node-id="Q5lrPWp6xqtldfdpxSWXxH">
+    <link rel="stylesheet" href="css/style.css?v=1788961993" data-page-node-id="Q5lrPWp6xqtldfdpxSWXxH">
 </head>
 <body data-page-node-id="lPg8spSQ9t6E6ZEWT8akzU">
     <div id="game-container" data-page-node-id="dle8H483OJAxh7uRwqXTVW">
@@ -16,6 +16,9 @@
             <div id="top-bar" data-page-node-id="4WpGhq8U79jT82Cnv8NYVU">
                 <!-- 种子选卡栏：占满剩余宽度，卡多时横向滚动 -->
                 <div id="seed-bank" data-page-node-id="ow8b2cxoiPifuvHd2BhkKe"></div>
+
+                <!-- 我是僵尸（v3.7.0）：僵尸卡带，点击选僵尸 → 点草坪行释放（与 seed-bank 互斥显示） -->
+                <div id="zombie-bank" style="display:none; flex:1 1 0; min-width:0; flex-wrap:wrap; gap:6px; align-items:center;" data-page-node-id="ZombieBank"></div>
                 
                 <div id="shovel-bank" data-page-node-id="lOC9KzEosohEYiG4Hqzp1T">
                     <div id="shovel" class="tool-card" title="铲子" data-page-node-id="HYthwILD1qznMnaHjMpMGI"></div>
@@ -78,10 +81,10 @@
                 background: linear-gradient(180deg, rgba(120,190,255,0.28) 0%, rgba(120,190,255,0.05) 34%, transparent 50%);
             }
             /* ===== 标题 ===== */
-            .menu-title { position: relative; z-index: 2; margin-top: 58px; text-align: center; }
+            .menu-title { position: relative; z-index: 2; margin-top: 34px; text-align: center; }
             .menu-title .game-title {
                 font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif;
-                font-size: 56px; font-weight: 900; letter-spacing: 6px; line-height: 1.1;
+                font-size: 48px; font-weight: 900; letter-spacing: 5px; line-height: 1.1;
                 color: #f7ffc4;
                 text-shadow: 3px 3px 0 #2e6b1e, -2px 2px 0 #2e6b1e, 2px -2px 0 #2e6b1e, -2px -2px 0 #2e6b1e,
                              0 6px 14px rgba(0,0,0,0.45);
@@ -93,17 +96,17 @@
                 font-size: 20px; letter-spacing: 3px; color: rgba(255,255,255,0.95);
                 text-shadow: 1px 1px 0 #1a4a10, 0 3px 8px rgba(0,0,0,0.5);
             }
-            /* ===== 模式卡（种子包样式） ===== */
-            .menu-cards { position: relative; z-index: 2; display: flex; gap: 36px; margin-top: 46px; flex-wrap: wrap; justify-content: center; max-width: 920px; }
+            /* ===== 模式卡（种子包样式）：v3.7.0 起 4 卡一行 ===== */
+            .menu-cards { position: relative; z-index: 2; display: flex; gap: 18px; margin-top: 34px; flex-wrap: wrap; justify-content: center; max-width: 920px; }
             .mode-card {
-                width: 268px; height: 292px;
+                width: 208px; height: 282px;
                 background: linear-gradient(180deg, #fdf3d0 0%, #f3e2ab 78%, #e6cf8c 100%);
                 border: 6px solid #6b4a22;
                 border-radius: 18px;
                 box-shadow: inset 0 0 0 2px #caa95f, inset 0 0 24px rgba(120,80,20,0.18),
                             0 12px 26px rgba(0,0,0,0.45);
                 cursor: pointer;
-                padding: 14px 14px 16px;
+                padding: 12px 12px 14px;
                 display: flex; flex-direction: column; align-items: center;
                 font-family: inherit;
                 transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
@@ -143,20 +146,20 @@
                 display: inline-block; transform-origin: center; }
             @keyframes q-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
             .pkt-name {
-                margin-top: 14px;
+                margin-top: 10px;
                 font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif;
-                font-size: 30px; font-weight: 900; letter-spacing: 6px; color: #4a3414;
+                font-size: 26px; font-weight: 900; letter-spacing: 4px; color: #4a3414;
                 text-shadow: 1px 1px 0 rgba(255,255,255,0.7);
             }
             .pkt-tag {
-                margin-top: 4px; font-family: monospace; font-size: 13px; font-weight: bold;
+                margin-top: 3px; font-family: monospace; font-size: 12px; font-weight: bold;
                 letter-spacing: 2px; color: #7a5c22;
-                background: rgba(255,255,255,0.35); border-radius: 9px; padding: 2px 10px;
+                background: rgba(255,255,255,0.35); border-radius: 9px; padding: 2px 9px;
             }
             .pkt-sub {
-                margin-top: 8px; text-align: center;
+                margin-top: 6px; text-align: center;
                 font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
-                font-size: 13px; line-height: 1.55; color: #6d5626;
+                font-size: 12px; line-height: 1.5; color: #6d5626;
             }
             .pkt-sub b { color: #3f6e1f; }
             /* 底部信息行 */
@@ -220,6 +223,15 @@
                         <div class="pkt-tag">VASEBREAKER</div>
                         <div class="pkt-sub">锤开罐子 · 里面是植物还是僵尸？<br>植物罐稳赚 · 僵尸罐提防 · 问号罐惊喜</div>
                     </button>
+
+                    <button id="btn-zombie" class="mode-card" data-page-node-id="IZombieBtn">
+                        <div class="pkt-art zombie">
+                            <img src="assets/images/Zombies/Zombie/Zombie.gif" alt="我是僵尸" style="height: 104px; width: auto; image-rendering: pixelated; transform: translateY(4px);">
+                        </div>
+                        <div class="pkt-name">我是僵尸</div>
+                        <div class="pkt-tag">I, ZOMBIE</div>
+                        <div class="pkt-sub">这次换你当僵尸 · 指挥僵尸大军<br>啃穿植物防线 · 吃掉脑子即可通关</div>
+                    </button>
                 </div>
             </div>
 
@@ -253,6 +265,34 @@
                 </div>
                 <div class="diff-foot">
                     <button id="diff-back">返回主菜单</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 我是僵尸难度选择（v3.7.0：简单 / 困难 / 地狱 —— 初始阳光递减 + 僵尸解锁递增 + 敌阵强度递增） -->
+        <div id="zdiff-modal" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.78); z-index:2400; align-items:center; justify-content:center; flex-direction:column;">
+            <div class="diff-panel">
+                <div class="diff-title">我是僵尸<span>I, ZOMBIE · 难度选择</span></div>
+                <div class="diff-sub">换个阵营啃脑子 —— 阳光多寡与僵尸兵种随难度而变</div>
+                <div class="diff-row">
+                    <button id="zdiff-easy" class="diff-btn diff-easy">
+                        <span class="diff-name">简单</span>
+                        <span class="diff-en">EASY</span>
+                        <span class="diff-desc">600 阳光 · 基础僵尸<br>敌阵温和 · 轻松开啃</span>
+                    </button>
+                    <button id="zdiff-hard" class="diff-btn diff-hard">
+                        <span class="diff-name">困难</span>
+                        <span class="diff-en">HARD</span>
+                        <span class="diff-desc">400 阳光 · 解锁铁桶<br>敌阵加强 · 标准挑战</span>
+                    </button>
+                    <button id="zdiff-hell" class="diff-btn diff-hell">
+                        <span class="diff-name">地狱</span>
+                        <span class="diff-en">HELL</span>
+                        <span class="diff-desc">250 阳光 · 全兵种开放<br>敌阵凶悍 · 只为勇者</span>
+                    </button>
+                </div>
+                <div class="diff-foot">
+                    <button id="zdiff-back">返回主菜单</button>
                 </div>
             </div>
         </div>
@@ -295,16 +335,16 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1788959180"></script>
-    <script src="js/Board.js?v=1788959180"></script>
-    <script src="js/entities/Entity.js?v=1788959180"></script>
-    <script src="js/entities/Plant.js?v=1788959180"></script>
-    <script src="js/entities/Zombie.js?v=1788959180"></script>
-    <script src="js/entities/Projectile.js?v=1788959180"></script>
-    <script src="js/entities/Sun.js?v=1788959180"></script>
-    <script src="js/managers/WaveManager.js?v=1788959180"></script>
-    <script src="js/managers/CollisionManager.js?v=1788959180"></script>
-    <script src="js/managers/EventManager.js?v=1788959180"></script>
-    <script src="js/GameLoop.js?v=1788959180"></script>
+    <script src="js/InputManager.js?v=1788961993"></script>
+    <script src="js/Board.js?v=1788961993"></script>
+    <script src="js/entities/Entity.js?v=1788961993"></script>
+    <script src="js/entities/Plant.js?v=1788961993"></script>
+    <script src="js/entities/Zombie.js?v=1788961993"></script>
+    <script src="js/entities/Projectile.js?v=1788961993"></script>
+    <script src="js/entities/Sun.js?v=1788961993"></script>
+    <script src="js/managers/WaveManager.js?v=1788961993"></script>
+    <script src="js/managers/CollisionManager.js?v=1788961993"></script>
+    <script src="js/managers/EventManager.js?v=1788961993"></script>
+    <script src="js/GameLoop.js?v=1788961993"></script>
 </body>
 </html>
