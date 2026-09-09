@@ -153,18 +153,36 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788879295';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788957642';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788879295';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788957642';
+        } else if (type === 'starfruit') {
+            // 杨桃（v3.6.0 经典模式可种）：五向星光射击，弹道复用融合版（Projectile 'star'）
+            stat.hp = 300;
+            stat.fireRate = 1.5;
+            stat.fireTimer = 0;
+            stat.src = 'assets/images/Plants/Starfruit/Starfruit.gif';
+            stat.yOffset = -10;
+        } else if (type === 'hypnoshroom') {
+            // 魅惑菇（v3.6.0 经典模式可种）：被动植物——僵尸啃食即被策反（见 Zombie EATING）
+            stat.hp = 300;
+            stat.src = 'assets/images/Plants/HypnoShroom/HypnoShroom.gif';
+            stat.yOffset = -10;
+        } else if (type === 'pumpkinhead') {
+            // 南瓜壳（v3.6.0 经典模式可种）：正常玩法=套在已有植物上（GameLoop.tryPlanting），
+            // 此兜底属性仅供异常路径（独立成株时 = 高耐久壳墙，三阶段裂纹见 update）
+            stat.hp = 4000;
+            stat.src = 'assets/images/Plants/PumpkinHead/PumpkinHead.gif';
+            stat.yOffset = -15;
         } else if (type === 'plantern') {
             // 路灯花（v3.4.3 新增）: 砸罐子模式下植物罐小概率砸出。
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1788879295';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1788957642';
             stat.yOffset = 0;
         }
 
@@ -648,8 +666,8 @@ class Plant extends Entity {
             if (this.hasTrait('scaredyshroom') && this.isHiding) skipShooting = true;
             if (this.hasTrait('potatomine') && !this.isArmed) skipShooting = true;
             // 魅惑菇是被动植物（不走射击逻辑）；杨桃走专属五星分支（见下方 type 特判）
-            if (this.type === 'fusion_hypnoshroom') skipShooting = true;
-            if (this.type === 'fusion_starfruit') skipShooting = true;
+            if (this.type === 'fusion_hypnoshroom' || this.type === 'hypnoshroom') skipShooting = true;
+            if (this.type === 'fusion_starfruit' || this.type === 'starfruit') skipShooting = true;
             
             if (!skipShooting) {
                 this.fireTimer += deltaTime;
@@ -744,9 +762,9 @@ class Plant extends Entity {
         }
             }
         
-        // 杨桃（裂荚射手+向日葵）：PVZ 原版五向星光射击（独立分支，避免触发三线/后射逻辑）。
+        // 杨桃（融合版/经典版通用）：PVZ 原版五向星光射击（独立分支，避免触发三线/后射逻辑）。
         // 五颗星星分别飞向 → / ↗ / ↘ / ↑ / ↓；穿透、可跨行命中（命中逻辑在 Projectile 'star' 类型里）。
-        if (this.type === 'fusion_starfruit') {
+        if (this.type === 'fusion_starfruit' || this.type === 'starfruit') {
             this.fireTimer += deltaTime;
             if (this.fireTimer >= this.fireRate) {
                 // 只要前方（含斜向可及范围）有敌方僵尸就齐射五颗
@@ -927,8 +945,8 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
             }
         }
         
-        if (this.type === 'fusion_pumpkinhead') {
-            // 南瓜壳（兜底立绘）自身三阶段裂纹，素材直接沿用 PumpkinHead 目录
+        if (this.type === 'fusion_pumpkinhead' || this.type === 'pumpkinhead') {
+            // 南瓜壳（独立成株兜底形态）自身三阶段裂纹，素材直接沿用 PumpkinHead 目录
             const ratio = this.hp / this.maxHp;
             const img = ratio < 0.34 ? 'PumpkinHead2.gif' : (ratio < 0.67 ? 'PumpkinHead1.gif' : 'PumpkinHead.gif');
             if (this.element.src.indexOf(img) === -1) {

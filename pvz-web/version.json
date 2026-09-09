@@ -1,6 +1,6 @@
 {
-  "version": "v3.5.3-vase-reveal-color-crop",
-  "build": "2026-09-08",
-  "feature": "v3.5.3 修复路灯花照亮罐子时植物图片\"上面彩色、下面黑白\"问题(玩家反馈: 罐子里图片上方彩色下方黑白, 只希望显示彩色): 根因 —— 种子卡素材 assets/images/Card/Plants/<Name>.png 是 100×120 上下双段(实测 53/57 张分界线在 y=60: 上 60px 彩色卡面 + 下 60px 灰度种子图标), 种子栏卡片用 background-size:100% 200% + background-position:top 只露出上半段彩色, 但 v3.4.4 路灯花揭示(lightUpNeighbors)把整图当 <img> 直出, 下半截灰度图标也随之显示, 罐子里就出现\"上彩下灰\"。修复 —— 罐内植物预览改为 div 背景 + .vase-reveal-card 裁切类(overflow hidden / background-size 100% 200% / position top / 圆角+微阴影), 与种子栏卡面观感一致, 只显示彩色卡面; 僵尸/阳光预览不变。验证: puppeteer 真实点击(选简单难度开局→置阳光→点击路灯花商店卡购买→拖动路灯花种到含植物罐邻格)→ 揭示元素均为 div.vase-reveal-card 背景图且 computed background-size/position 正确、全场无 <img> 直出 Card/Plants 卡图、无 pageerror; 截图人工比对上半彩色下半灰度问题消失。bump cache-buster 56 处。",
-  "assetVersion": 1788879295
+  "version": "v3.6.0-classic-four-plants",
+  "build": "2026-09-09",
+  "feature": "v3.6.0 经典冒险模式种子栏新增 4 种植物：冰西瓜、杨桃、魅惑菇、南瓜壳(玩家需求: 必须加在经典模式)。现状 —— 这 4 种此前仅存在于融合进化(杨桃/魅惑菇/南瓜壳是融合结果、冰西瓜是西瓜+寒冰菇进化目标), 经典模式不可选。改动: (1) this.seeds 追加 4 张种子卡(数值取 PVZ1 原版: 冰西瓜200/冷却7.5、杨桃125/7.5、魅惑菇75/30、南瓜壳125/30; 融合模式选卡仍过滤 15 张基础牌故不受影响); (2) 冰西瓜 = 复用既有基础类型(300血/1.0射速/wintermelon 弹道含溅射+减速), 仅补种子数据; (3) 杨桃 = Plant.getStats 增 starfruit 基础属性, 五向星光射击分支(fusion_starfruit)扩展接受基础 starfruit, Projectile 'star' 穿透跨行弹道复用; (4) 魅惑菇 = getStats 增基础类型(被动植物), Zombie EATING 的\"被吃即策反\"判定从 fusion_hypnoshroom 扩展接受基础 hypnoshroom(巨人与冰车仍不吃只砸); (5) 南瓜壳 = PVZ 原版\"套壳\"玩法: tryPlanting 新增专用分支——种在已有常驻植物上 → attachShield 套 +4000 耐久护甲(与融合手套同套机制, 僵尸先啃穿外壳才伤植物), 空地与一次性/爆炸植物禁止; Plant/InputManager/ghost 补基础类型属性与大小写映射(Starfruit/HypnoShroom/PumpkinHead 目录)。验证: puppeteer 真实点击进入经典冒险选卡(31 卡含新增 4 张)→真实拖拽种植四植物均成功→杨桃对僵尸射击出 star 弹、冰西瓜射出 wintermelon 弹并减速、魅惑菇被啃后僵尸 hypnotized=true 且植物消失、南瓜壳套在豌豆上后 shield=4000/壳视觉存在/空格被拒; 融合模式选卡仍 15 张; 0 pageerror。bump cache-buster 60 处。",
+  "assetVersion": 1788957642
 }

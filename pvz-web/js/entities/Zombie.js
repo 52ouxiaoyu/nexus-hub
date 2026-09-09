@@ -498,9 +498,9 @@ class Zombie extends Entity {
         }
         else if (this.state === 'EATING') {
             if (this.eatTarget && !this.eatTarget.isDead) {
-                if (this.eatTarget.type === 'fusion_hypnoshroom' && !this.eatTarget._hypnoUsed &&
+                if ((this.eatTarget.type === 'fusion_hypnoshroom' || this.eatTarget.type === 'hypnoshroom') && !this.eatTarget._hypnoUsed &&
                     this.type !== 'gargantuar' && this.type !== 'zomboni' && this.type !== 'lgboss') {
-                    // 魅惑菇：吃下即被策反，转为友方僵尸（巨人与冰车不会"吃"，只会砸烂，故不触发）
+                    // 魅惑菇（融合版/经典版通用）：吃下即被策反，转为友方僵尸（巨人与冰车不会"吃"，只会砸烂，故不触发）
                     this.eatTarget._hypnoUsed = true;
                     this.eatTarget.hp = 0;      // 蘑菇被吃掉
                     this.game.audioManager.play('chomp');
