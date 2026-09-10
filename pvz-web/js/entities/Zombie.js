@@ -420,10 +420,10 @@ class Zombie extends Entity {
             this.x -= currentSpeed * deltaTime;
             
             if (this.x < 40) { 
-                // 我是僵尸模式：我方僵尸到达最左端 = 吃到脑子 → 通关（我方阵营的胜利）
+                // 我是僵尸模式：我方僵尸到达最左端 = 吃掉该行脑子（必须吃光全部 5 行才通关，v3.7.1）
                 // 非僵尸模式保持原逻辑：僵尸进入房子 → 玩家(植物方)失败
-                if (this.game.zombieMode && this.game.zombieWin) {
-                    this.game.zombieWin(this.row);
+                if (this.game.zombieMode && this.game.zombieEatBrain) {
+                    this.game.zombieEatBrain(this.row, this);
                 } else {
                     this.game.gameOver();
                 }

@@ -153,12 +153,12 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1788961993';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789046042';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1788961993';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789046042';
         } else if (type === 'starfruit') {
             // 杨桃（v3.6.0 经典模式可种）：五向星光射击，弹道复用融合版（Projectile 'star'）
             stat.hp = 300;
@@ -182,7 +182,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1788961993';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789046042';
             stat.yOffset = 0;
         }
 
@@ -345,7 +345,9 @@ class Plant extends Entity {
             this.traits = [type];
             const s = getStats(type);
             Object.assign(this, s);
-            this.element.src = s.src;
+            // 守卫：getStats 无匹配分支时 s.src 为 undefined，直接赋值会请求 "undefined" 并在
+            // 僵尸模式敌阵里留下空格子 → 仅在有素材时设置（外部可据 getAttribute('src') 判定）
+            if (s.src) this.element.src = s.src;
         }
         // 融合特调（兜底）：南瓜壳=PVZ"南瓜(4000)+高坚果(8000)叠放"等效总护甲 12000。
         // 正常游戏里南瓜壳由手套融合"套"在已有植物上（不会作为独立 Plant 出现），此兜底仅防御异常路径。
