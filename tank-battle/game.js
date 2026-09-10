@@ -7,6 +7,16 @@ const TILE_TYPES = { EMPTY: 0, BRICK: 1, STEEL: 2, WATER: 3, FOREST: 4, ICE: 5, 
 const COLORS = { BRICK: '#B53120', BRICK_LIGHT: '#DC5341', STEEL: '#AAAAAA', STEEL_LIGHT: '#EEEEEE', WATER: '#2131E7', FOREST: '#21B521', PLAYER1: '#E7E721', PLAYER2: '#63C6FF', ENEMY: '#E7E7E7', BASE: '#E79C21', BARREL: '#FF4400' };
 const POWERUP_TYPES = { SHIELD: '🛡️', BOMB: '💣', STAR: '⭐', SHOVEL: '🏗️', LIFE: '❤️', TIME: '⏳', MAX_WEAPON: '🚀', BOAT: '🚤', FLY: '🚁', W_MISSILE: '🎯', W_LASER: '⚡', W_EXPLOSIVE: '💥', FAKE_BOMB: '🧨', ULTIMATE: '🔮' };
 
+// ===== 漫画式反馈文案池（纯数据驱动，想加梗直接往数组里塞即可）=====
+// 玩家坦克被击毁时的求救台词
+const COMIC_SOS_TEXTS = ['救救我救救我！', '快拉我一把！', '别丢下我啊！', '我还能抢救一下！', '兄弟，捞我一下！', '救命啊——！', '我不行了……', '拉兄弟一把！'];
+// 击毁敌方坦克时的口号（趾高气昂 / 振奋士气）
+const COMIC_SHOUT_TEXTS = ['奥利给！', '干得漂亮！', '还有谁？！', '就这？', '拿捏了！', '给我冲！', '一个能打的都没有！', 'NB！', '好耶！', '稳了！', '打得好！', '下去吧你！'];
+// 击杀 Boss 专属口号（更夸张）
+const COMIC_BOSS_SHOUT_TEXTS = ['奥利给——！！', 'BOSS 拿下！', '这波无敌！', '还有谁？！', '封神了！'];
+// 口号配色（轮换用，营造漫画彩页感）
+const COMIC_SHOUT_COLORS = ['#ffcc00', '#ff5a3c', '#5affc8', '#7cc6ff', '#ff8ae0', '#b0ff5a'];
+
 function seededRandom(seed) {
     let s = seed;
     return function() {
@@ -1134,6 +1144,8 @@ class Tank {
             
             // Combo
             if (killer instanceof Player) {
+                // 漫画式口号：干掉敌方坦克时来一嗓子（Boss 另有专属文案）
+                this.game.showBattleCry(false);
                 this.game.comboCount++;
                 this.game.comboTimer = 180;
                 let comboMsg = '';
@@ -2110,7 +2122,11 @@ class Boss extends Enemy {
             }
             this.game.effects.push(new Effect(this.x + this.width/2, this.y + this.height/2, 'EXPLOSION', 8));
             this.game.shakeScreen(40);
-            
+
+            // 漫画式口号：Boss 击杀专属（无视节流，确保必弹）
+            this.game.shoutCooldown = 0;
+            this.game.showBattleCry(true);
+
             this.game.baseHealth = this.game.maxBaseHealth;
             this.game.fortifyBase();
             this.game.enemies.forEach(e => { if (e !== this && e.alive) e.destroy(killer, 999); });
@@ -2228,6 +2244,7 @@ class Boss extends Enemy {
 class Game {
     constructor() {
         this.canvas = document.getElementById('game-canvas'); this.ctx = this.canvas.getContext('2d');
+        window._tankGame = this; // 调试/自测句柄
         this.canvas.width = CANVAS_SIZE; this.canvas.height = CANVAS_SIZE; this.input = new InputHandler(); this.map = new GameMap(this);
         this.players = []; this.enemies = []; this.bullets = []; this.effects = []; this.powerUps = []; this.fortifyTimer = 0; this.spawnTimer = 0; this.enemyFrozenTimer = 0; this.playerFrozenTimer = 0;
         this.currentStage = 0; this.gameState = 'START'; this.lives = 3;
@@ -2243,6 +2260,10 @@ class Game {
         this.shakeX = 0; this.shakeY = 0; this.shakeTimer = 0;
         this.announcements = [];
         this.floatingTexts = [];
+        this.speechBubbles = [];   // 漫画式求生气泡（世界坐标，锚定残骸）
+        this.battleCries = [];      // 漫画式口号弹字（屏幕坐标）
+        this.shoutCooldown = 0;     // 口号节流，避免连杀刷屏
+        this.lastShoutIndex = -1;   // 避免连续弹出同一句
         this.shownTips = new Set();
         this.pausePressed = false;
         this.bossWarning = 0;
@@ -2273,6 +2294,190 @@ class Game {
     shakeScreen(intensity) { this.shakeTimer = intensity; this.shakeIntensity = intensity; }
     showAnnouncement(text, color = '#fff') { this.announcements.push({ text, color, timer: 120, y: CANVAS_SIZE / 2 }); }
     showFloatingText(text, x, y, color = '#fff') { this.floatingTexts.push({ text, x, y, color, timer: 60, vy: -2 }); }
+
+    // ===================== 漫画式反馈系统 =====================
+    // 玩家阵亡：在残骸旁弹出求生气泡（世界坐标，锚点 = 气泡尾巴尖）
+    showSpeechBubble(x, y, text, duration = 200, color = '#c62828') {
+        if (this.speechBubbles.length >= 4) this.speechBubbles.shift();
+        this.speechBubbles.push({ x, y, text, timer: duration, maxTimer: duration, color });
+    }
+
+    // 击杀敌方：屏幕弹出趾高气昂的口号（带节流 + 防重复 + 并发上限）
+    showBattleCry(isBoss = false) {
+        if (this.shoutCooldown > 0) return;
+        const pool = isBoss ? COMIC_BOSS_SHOUT_TEXTS : COMIC_SHOUT_TEXTS;
+        // 近期出现过的句子不重复，避免连着喊同一句
+        const recent = this._shoutHistory || (this._shoutHistory = []);
+        let idx = 0, guard = 0;
+        do { idx = Math.floor(Math.random() * pool.length); guard++; }
+        while (pool.length > 1 && recent.includes(idx) && guard < 12);
+        recent.push(idx); if (recent.length > 3) recent.shift();
+        this.lastShoutIndex = idx;
+
+        if (this.battleCries.length >= 3) this.battleCries.shift();
+        const used = new Set(this.battleCries.map(c => c.slot));
+        let slot = 0; while (used.has(slot)) slot++;
+
+        const dur = isBoss ? 110 : 66;
+        this.battleCries.push({
+            text: pool[idx],
+            color: isBoss ? '#ff3b3b' : COMIC_SHOUT_COLORS[Math.floor(Math.random() * COMIC_SHOUT_COLORS.length)],
+            timer: dur, maxTimer: dur, slot, big: !!isBoss
+        });
+        this.shoutCooldown = 14; // ≈0.23s 节流，连杀也看得清
+    }
+
+    // 圆角矩形路径（兼容无 roundRect 的环境）
+    _roundRectPath(ctx, x, y, w, h, r) {
+        r = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+    }
+
+    // 尖刺爆炸形（漫画星芒）
+    _burstPath(ctx, cx, cy, spikes, outer, inner, rot) {
+        ctx.beginPath();
+        for (let i = 0; i < spikes * 2; i++) {
+            const rad = (i % 2 === 0) ? outer : inner;
+            const a = rot + i * Math.PI / spikes;
+            const px = cx + Math.cos(a) * rad, py = cy + Math.sin(a) * rad;
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+    }
+
+    // 绘制：求生气泡（世界坐标，inside shake-translate）
+    _drawSpeechBubble(ctx, b) {
+        const age = b.maxTimer - b.timer;
+        const fadeIn = Math.min(1, age / 8);
+        const fadeOut = Math.min(1, b.timer / 30);
+        const alpha = Math.max(0, Math.min(fadeIn, fadeOut));
+        if (alpha <= 0.01) return;
+
+        // 弹入：先放大到 1.12 再回弹到 1
+        const t = Math.min(1, age / 14);
+        const scale = t < 1 ? (1 + 0.55 * Math.sin(t * Math.PI) - 0.0) * (0.55 + 0.45 * t) : 1;
+        const wobble = Math.sin(age / 9) * 0.045; // 轻微摇晃，强化手绘感
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(b.x, b.y - 30);
+        ctx.scale(scale, scale);
+        ctx.rotate(wobble);
+
+        ctx.font = 'bold 17px Arial';
+        const textW = ctx.measureText(b.text).width;
+        const padX = 13, bw = textW + padX * 2, bh = 32, r = 11;
+        const bx = -bw / 2, by = -bh; // 气泡底部贴着 anchor
+
+        // 尾巴（指向残骸）
+        ctx.beginPath();
+        ctx.moveTo(-9, -1); ctx.lineTo(9, -1); ctx.lineTo(-1, 16);
+        ctx.closePath();
+        ctx.fillStyle = '#fff'; ctx.fill();
+        ctx.strokeStyle = '#111'; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.stroke();
+
+        // 气泡主体
+        this._roundRectPath(ctx, bx, by, bw, bh, r);
+        ctx.fillStyle = '#fff'; ctx.fill();
+        ctx.strokeStyle = '#111'; ctx.lineWidth = 3; ctx.stroke();
+
+        // 内描边，做出漫画双线手绘感
+        ctx.globalAlpha = alpha * 0.35;
+        this._roundRectPath(ctx, bx + 3, by + 3, bw - 6, bh - 6, r - 2);
+        ctx.strokeStyle = b.color; ctx.lineWidth = 2; ctx.stroke();
+        ctx.globalAlpha = alpha;
+
+        // 文字：黑描边 + 彩色填充
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.lineWidth = 3.5; ctx.strokeStyle = '#111';
+        ctx.strokeText(b.text, 0, by + bh / 2 + 1);
+        ctx.fillStyle = b.color;
+        ctx.fillText(b.text, 0, by + bh / 2 + 1);
+        ctx.restore();
+    }
+
+    // 绘制：口号弹字（屏幕坐标，带爆裂星芒 + 冲击线）
+    _drawBattleCry(ctx, c) {
+        const age = c.maxTimer - c.timer;
+        const inT = Math.min(1, age / 12);
+        const outT = Math.min(1, c.timer / 26);      // 末段缩放着消失
+        const alpha = outT;
+        if (alpha <= 0.01) return;
+
+        const cx = CANVAS_SIZE / 2;
+        const cy = 150 + c.slot * (c.big ? 88 : 70);
+        // 弹入弹性缩放 + 末段轻微放大淡出
+        const pop = inT < 1 ? (1 + 0.9 * Math.sin(inT * Math.PI) * (1 - inT) + 0.15 * inT) : 1;
+        const scale = pop * (0.85 + 0.35 * (1 - outT));
+        if (c.rot === undefined) c.rot = (c.slot % 2 === 0 ? -0.07 : 0.06);
+        const rot = c.rot;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(cx, cy);
+        ctx.scale(scale, scale);
+        ctx.rotate(rot + Math.sin(age / 7) * 0.02);
+
+        const fs = c.big ? 44 : 30;
+        ctx.font = `bold ${fs}px Arial`;
+        const textW = ctx.measureText(c.text).width;
+        const spikes = c.big ? 18 : 12;
+        const outer = textW * (c.big ? 0.62 : 0.58) + (c.big ? 46 : 30) + Math.sin(age / 5) * 4;
+        const inner = outer * 0.68;
+
+        if (c.big) {
+            // Boss 击杀：实心爆裂星芒，全力抢镜
+            this._burstPath(ctx, 0, 0, spikes, outer, inner, age / 40);
+            ctx.fillStyle = c.color; ctx.globalAlpha = alpha * 0.92; ctx.fill();
+            ctx.globalAlpha = alpha;
+            ctx.lineWidth = 5; ctx.strokeStyle = '#111'; ctx.lineJoin = 'round'; ctx.stroke();
+
+            // 内层白色星芒（衬托文字）
+            this._burstPath(ctx, 0, 0, spikes, outer * 0.72, inner * 0.72, -age / 55);
+            ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fill();
+
+            // 冲击线
+            ctx.strokeStyle = 'rgba(17,17,17,0.85)'; ctx.lineWidth = 3;
+            for (let i = 0; i < 6; i++) {
+                const a = (i / 6) * Math.PI * 2 + 0.4;
+                ctx.beginPath();
+                ctx.moveTo(Math.cos(a) * (outer + 6), Math.sin(a) * (outer + 6));
+                ctx.lineTo(Math.cos(a) * (outer + 22), Math.sin(a) * (outer + 22));
+                ctx.stroke();
+            }
+        } else {
+            // 普通击杀：仅描边星芒 + 冲击线，不遮挡战场视野
+            this._burstPath(ctx, 0, 0, spikes, outer, inner, age / 45);
+            ctx.lineJoin = 'round';
+            ctx.shadowBlur = 8; ctx.shadowColor = c.color;
+            ctx.lineWidth = 3.5; ctx.strokeStyle = c.color; ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = 'rgba(17,17,17,0.8)'; ctx.lineWidth = 2;
+            for (let i = 0; i < 4; i++) {
+                const a = (i / 4) * Math.PI * 2 + 0.6;
+                ctx.beginPath();
+                ctx.moveTo(Math.cos(a) * (outer + 4), Math.sin(a) * (outer + 4));
+                ctx.lineTo(Math.cos(a) * (outer + 16), Math.sin(a) * (outer + 16));
+                ctx.stroke();
+            }
+        }
+
+        // 文字：黑描边 + 白填充
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.lineWidth = c.big ? 7 : 6; ctx.strokeStyle = '#111';
+        ctx.strokeText(c.text, 0, 2);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(c.text, 0, 2);
+        ctx.restore();
+    }
+    // ==========================================================
+
     showTip(text, duration = 300) {
         if (this.shownTips.has(text)) return;
         this.shownTips.add(text);
@@ -2452,6 +2657,11 @@ class Game {
             player.maxHealth = 1;
         }
 
+        // 漫画式求生呼救：残骸停留 + 残骸旁冒泡喊话
+        const wcx = player.x + player.width / 2;
+        this.wreckages.push({ x: player.x, y: player.y, timer: 200, type: 'PLAYER' });
+        this.showSpeechBubble(wcx, player.y + 4, COMIC_SOS_TEXTS[Math.floor(Math.random() * COMIC_SOS_TEXTS.length)], 200);
+
         if (player.lives > 0) {
             player.lives--; this.updateHUD();
             player.respawning = true;
@@ -2542,6 +2752,9 @@ class Game {
 
         this.announcements = this.announcements.filter(a => { a.timer--; a.y -= 0.5; return a.timer > 0; });
         this.floatingTexts = this.floatingTexts.filter(t => { t.timer--; t.y += t.vy; return t.timer > 0; });
+        this.speechBubbles = this.speechBubbles.filter(b => { b.timer--; return b.timer > 0; });
+        this.battleCries = this.battleCries.filter(c => { c.timer--; return c.timer > 0; });
+        if (this.shoutCooldown > 0) this.shoutCooldown--;
         if (this.enemyFrozenTimer > 0) this.enemyFrozenTimer--;
         if (this.playerFrozenTimer > 0) {
             this.playerFrozenTimer--;
@@ -2636,6 +2849,8 @@ class Game {
                 effects: this.effects.map(e => ({ x: e.x, y: e.y, radius: e.radius, type: e.type, color: e.color })),
                 powerUps: this.powerUps.map(p => ({ x: p.x, y: p.y, type: p.type, timer: p.timer })),
                 wreckages: this.wreckages.map(w => ({ x: w.x, y: w.y, timer: w.timer, type: w.type })),
+                speechBubbles: this.speechBubbles.map(b => ({ x: b.x, y: b.y, text: b.text, timer: b.timer, maxTimer: b.maxTimer, color: b.color })),
+                battleCries: this.battleCries.map(c => ({ text: c.text, timer: c.timer, maxTimer: c.maxTimer, color: c.color, slot: c.slot, big: c.big })),
                 mapGrid: this.map.grid.map(row => [...row]),
                 shakeX: this.shakeX, shakeY: this.shakeY
             };
@@ -2772,6 +2987,8 @@ class Game {
                 this.ctx.restore();
             });
             this.drawForest();
+            // 漫画式求生气泡（世界坐标，压在地形之上保证始终可见）
+            this.speechBubbles.forEach(b => { try { this._drawSpeechBubble(this.ctx, b); } catch(e) {} });
             this.ctx.restore();
             if (this.baseHealth > 0 && this.baseHealth <= 2) {
                 this.ctx.save();
@@ -2786,6 +3003,8 @@ class Game {
                 this.ctx.restore();
             }
             this.floatingTexts.forEach(t => { this.ctx.save(); this.ctx.fillStyle = t.color; this.ctx.font = 'bold 16px Arial'; this.ctx.textAlign = 'center'; this.ctx.globalAlpha = t.timer / 60; this.ctx.fillText(t.text, t.x, t.y); this.ctx.restore(); });
+            // 漫画式口号弹字（屏幕坐标）
+            this.battleCries.forEach(c => { try { this._drawBattleCry(this.ctx, c); } catch(e) {} });
             this.announcements.forEach(a => { this.ctx.save(); const scale = 1 + Math.sin(a.timer / 10) * 0.1; this.ctx.translate(CANVAS_SIZE / 2, a.y); this.ctx.scale(scale, scale); this.ctx.fillStyle = '#000'; this.ctx.font = 'bold 48px Arial'; this.ctx.textAlign = 'center'; this.ctx.fillText(a.text, 2, 2); this.ctx.fillStyle = a.color; this.ctx.fillText(a.text, 0, 0); this.ctx.restore(); });
             if (this.gameState === 'STAGE_CLEAR') { this.ctx.fillStyle = 'rgba(0,0,0,0.5)'; this.ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE); this.ctx.fillStyle = '#fff'; this.ctx.font = '60px "Courier New"'; this.ctx.textAlign = 'center'; this.ctx.fillText("过关 STAGE CLEAR!", CANVAS_SIZE/2, CANVAS_SIZE/2); }
             if (this.paused) { this.ctx.fillStyle = 'rgba(0,0,0,0.7)'; this.ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE); this.ctx.fillStyle = '#fff'; this.ctx.font = '60px "Courier New"'; this.ctx.textAlign = 'center'; this.ctx.fillText("暂停 PAUSED", CANVAS_SIZE/2, CANVAS_SIZE/2 - 20); this.ctx.font = '24px "Courier New"'; this.ctx.fillText("按P键继续 Press P to resume", CANVAS_SIZE/2, CANVAS_SIZE/2 + 30); }
@@ -2993,7 +3212,12 @@ class Game {
             this.ctx.restore();
         });
         
+        // 漫画式反馈也要出现在死亡回放里
+        (frame.speechBubbles || []).forEach(b => { try { this._drawSpeechBubble(this.ctx, b); } catch(e) {} });
+
         this.ctx.restore();
+
+        (frame.battleCries || []).forEach(c => { try { this._drawBattleCry(this.ctx, c); } catch(e) {} });
         
         // Overlay Grayscale/Red Tint for Death Replay
         this.ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
