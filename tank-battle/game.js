@@ -3322,6 +3322,48 @@ class Game {
         }
     }
     
+    // 按可用宽度折行（CJK 逐字断行即可），超过 maxLines 则截断加省略号
+    _wrapText(ctx, text, maxWidth, maxLines) {
+        const chars = [...String(text)];
+        const lines = [];
+        let cur = '', i = 0;
+        for (; i < chars.length; i++) {
+            const ch = chars[i];
+            if (cur !== '' && ctx.measureText(cur + ch).width > maxWidth) {
+                lines.push(cur);
+                cur = '';
+                if (lines.length === maxLines) break;
+            }
+            cur += ch;
+        }
+        if (lines.length === maxLines) {
+            // 还有内容放不下 → 末行截断并加省略号
+            const hasMore = cur !== '' || i + 1 < chars.length;
+            if (hasMore) {
+                let last = lines[maxLines - 1];
+                while (last.length > 1 && ctx.measureText(last + '…').width > maxWidth) last = last.slice(0, -1);
+                lines[maxLines - 1] = last.replace(/[，。、；：,.;:!！?？]+$/, '') + '…';
+            }
+            return lines;
+        }
+        if (cur) lines.push(cur);
+        return lines;
+    }
+
+    // 折行 + 字号自适应：优先保持在 maxLines 行内，放不下就逐级缩小字号
+    _fitQuoteLines(ctx, raw, maxWidth, maxLines, baseSize = 22) {
+        const sizes = [baseSize, baseSize - 2, baseSize - 4, baseSize - 6];
+        let last = null;
+        for (const size of sizes) {
+            ctx.font = `bold ${size}px Arial`;
+            const lines = this._wrapText(ctx, raw, maxWidth, maxLines);
+            last = { size, lines };
+            const fits = lines.every(l => ctx.measureText(l).width <= maxWidth);
+            if (fits && !lines[lines.length - 1].endsWith('…')) return last; // 完整放下，不必再缩
+        }
+        return last; // 兜底：最小字号 + 截断，保证一定不出屏
+    }
+
     showMVPScreen() {
         this.gameState = 'MVP_SHOWCASE';
         this.mvpTimer = 0;
@@ -3396,22 +3438,40 @@ class Game {
             this.ctx.restore();
         }
         
-        // Draw Quotes at the bottom (only for losers)
-        this.ctx.font = 'bold 22px Arial';
+        // Draw Quotes at the bottom (only for losers) —— 自动折行 + 字号自适应 + 底部对齐，杜绝出屏
         this.ctx.shadowBlur = 4;
         this.ctx.shadowColor = '#000';
-        
-        let quoteY = 720;
-        if (this.players[0] && this.p1Quote) {
-            this.ctx.fillStyle = this.players[0].color;
-            this.ctx.fillText(`P1 锐评: “${this.p1Quote}”`, cx, quoteY);
-            quoteY += 40;
-        }
-        if (this.players[1] && this.p2Quote) {
-            this.ctx.fillStyle = this.players[1].color;
-            this.ctx.fillText(`P2 锐评: “${this.p2Quote}”`, cx, quoteY);
-        }
-        
+        this.ctx.textAlign = 'center';
+
+        const quoteMaxW = CANVAS_SIZE - 96;   // 左右各留 48px 安全边距
+        const blocks = [];
+        const addQuote = (player, quote) => {
+            if (!player || !quote) return;
+            blocks.push(Object.assign(
+                { color: player.color },
+                this._fitQuoteLines(this.ctx, `P${player.id} 锐评: “${quote}”`, quoteMaxW, 2)
+            ));
+        };
+        addQuote(this.players[0], this.p1Quote);
+        addQuote(this.players[1], this.p2Quote);
+
+        const lh = 28, gap = 8;
+        const rows = [];
+        blocks.forEach((b, bi) => {
+            if (bi > 0) rows.push({ spacer: gap });
+            b.lines.forEach(line => rows.push({ color: b.color, size: b.size, line }));
+        });
+        const totalH = rows.reduce((s, r) => s + (r.spacer || lh), 0);
+        const bottomBaseline = CANVAS_SIZE - 32;  // 末行基线
+        let qy = bottomBaseline - totalH + lh;
+        rows.forEach(r => {
+            if (r.spacer) { qy += r.spacer; return; }
+            this.ctx.font = `bold ${r.size}px Arial`;
+            this.ctx.fillStyle = r.color;
+            this.ctx.fillText(r.line, cx, qy);
+            qy += lh;
+        });
+
         this.ctx.shadowBlur = 0;
         
         if (this.mvpPlayer === 'DRAW') {

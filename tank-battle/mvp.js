@@ -1,37 +1,52 @@
 async function generateMVPReview(game, p1, p2, mvp) {
     function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
+    // 锐评总长度硬上限（按字符计）；绘制端另有折行 + 字号自适应兜底，双保险防出屏
+    const MAX_QUOTE_LEN = 28;
+
     const prefixes = [
-        "讲个笑话，", "难以置信，", "我奶奶闭着眼也比你强，", "建议去挂个眼科，", 
-        "叹为观止的操作，", "不出意外的话，", "看完你的操作，", "说实话，", 
-        "兄弟，", "绝了！", "真没看懂，", "惊为天人，", "你确定键盘没坏？",
+        "讲个笑话，", "难以置信，", "建议挂个眼科，",
+        "叹为观止，", "不出意外的话，", "看完你的操作，", "说实话，", 
+        "兄弟，", "绝了！", "真没看懂，", "你键盘没坏？",
         "我把手绑起来，", "闭上眼睛，", "不得不说，", "恭喜你，", "朋友，"
     ];
 
     const bodies = [
         "全程在地图边上梦游", "炮弹全往空地上扔", "被小怪按在地上摩擦",
-        "输出全靠挨打", "在基地门口当缩头乌龟", "走位像是在跳机器舞",
-        "疯狂接对面的子弹", "见怪就跑的速度堪比博尔特", "吃道具比谁都快但就是不输出",
-        "子弹连敌人的车尾灯都摸不到", "一直在墙角疯狂面壁思过", "逛街逛得像是在逛菜市场",
-        "不仅送人头还挡队友子弹", "开炮的频率比树懒还慢", "迷之走位把自己送进包围圈",
-        "一顿操作猛如虎，一看战绩零杠五", "躲在后面发呆", "全程仿佛在思考人生"
+        "输出全靠挨打", "在基地门口当乌龟", "走位像在跳机器舞",
+        "疯狂接对面的子弹", "见怪就跑得比谁都快", "吃道具最快就是不输出",
+        "连敌人车尾灯都摸不到", "在墙角疯狂面壁思过", "逛街像在逛菜市场",
+        "又送人头又挡队友子弹", "开炮比树懒还慢", "把自己走位进包围圈",
+        "操作猛如虎，战绩零杠五", "躲在后面发呆", "全程仿佛在思考人生"
     ];
 
     const suffixes = [
-        "堪称人体描边大师。", "看得我脑血栓都快犯了。", "简直是敌方派来的超级卧底。",
-        "下把去玩连连看吧。", "电子竞技不需要视力，更不需要你。", "你这技术是跟门口大爷学的吧？",
-        "这就是传说中的“退钱级”表现。", "我都替你感到尴尬。", "队友看了直呼内行（反义词）。",
-        "这波真是令人窒息的操作。", "把游戏删了吧，省点电费。", "你成功让我见识到了人类的下限。",
-        "求你别再坑队友了。", "建议把电脑捐给有需要的人。", "你是来做慈善的吗？",
-        "这把输了你全责！", "看得让人直呼辣眼睛。", "完美诠释了什么是“重在参与”。"
+        "堪称人体描边大师。", "看得我脑血栓都犯了。", "简直是敌方派来的卧底。",
+        "下把去玩连连看吧。", "电子竞技不需要视力。", "跟门口大爷学的吧？",
+        "这真是“退钱级”表现。", "我都替你尴尬。", "队友看了直呼内行。",
+        "真是令人窒息。", "把游戏删了吧。", "见识到人类下限了。",
+        "求你别坑队友。", "电脑捐给需要的人吧。", "你是来做慈善的？",
+        "这把输了你全责！", "看得人直呼辣眼睛。", "完美诠释重在参与。"
     ];
     
     const specificBodies = {
-        feeder: ["人头送得比外卖还快", "硬扛着对面火力冲锋", "化身为行走的提款机", "复活甲都救不回你的送死速度"],
+        feeder: ["人头送得比外卖还快", "硬扛着对面火力冲锋", "行走的提款机", "复活甲都救不回你"],
         wall: ["把地图上的墙拆了个精光", "对墙壁有着迷之执着", "不打坦克专门拆家"],
-        hoarder: ["贪吃蛇附体疯狂抢道具", "把地上的道具全舔干净了却不打怪", "捡神装打出刮痧伤害"],
+        hoarder: ["贪吃蛇附体狂抢道具", "道具舔干净了却不打怪", "捡神装打出刮痧伤害"],
         lowScore: ["全场存在感为零", "边缘OB的极限", "连个助攻都混不上"]
     };
+
+    // 优先保留完整三段（prefix + body + suffix），超长时逐级降级，最后硬截断
+    function composeQuote(p, b, suf) {
+        const fit = (s) => [...s].length <= MAX_QUOTE_LEN;
+        const full = `${p}${b}，${suf}`;
+        if (fit(full)) return full;
+        const twoClause = `${b}，${suf}`;
+        if (fit(twoClause)) return twoClause;
+        const twoPart = `${p}${b}`;
+        if (fit(twoPart)) return twoPart;
+        return [...b].slice(0, MAX_QUOTE_LEN - 1).join('') + '…';
+    }
 
     function getRuleBasedQuote(player, isMvp, isDraw) {
         if (!player) return "";
@@ -48,9 +63,9 @@ async function generateMVPReview(game, p1, p2, mvp) {
         else if (s.powerups > 8 && s.kills <= 3) b = pickRandom(specificBodies.hoarder);
         else if (player.score < 500) b = pickRandom(specificBodies.lowScore);
 
-        if (isDraw) return `【平局】${p}${b}，两人${suf}`;
+        if (isDraw) return `【平局】` + composeQuote(p, b, suf);
         
-        return `${p}${b}，${suf}`;
+        return composeQuote(p, b, suf);
     }
 
     let p1Quote = p1 ? getRuleBasedQuote(p1, mvp === p1, mvp === 'DRAW') : "";
@@ -65,8 +80,7 @@ async function generateMVPReview(game, p1, p2, mvp) {
                     systemPrompt: `你是一个毒舌又专业的电竞解说，现在要对一场《坦克大战》的失败玩家进行嘲讽（不超过30个字）。游戏规则是保护基地不被摧毁并击杀敌人。`
                 });
                 
-                let prompt = `游戏结果：${mvp === 'DRAW' ? '平局' : (mvp ? `P${mvp.id} 是 MVP` : '两人都很菜')}。\n`;
-                if (p1) prompt += `玩家1(P1)：得分为${p1.score}，击杀${p1.stats.kills}，死亡${p1.stats.deaths}，误伤队友${p1.stats.friendlyFires}次，吃道具${p1.stats.powerups}个，拆墙${p1.stats.blocks}块。\n`;
+                let prompt = `游戏结果：${mvp === 'DRAW' ? '平局' : (mvp ? `P${mvp.id} 是 MVP` : '两人都很菜')}。\n`;                if (p1) prompt += `玩家1(P1)：得分为${p1.score}，击杀${p1.stats.kills}，死亡${p1.stats.deaths}，误伤队友${p1.stats.friendlyFires}次，吃道具${p1.stats.powerups}个，拆墙${p1.stats.blocks}块。\n`;
                 if (p2) prompt += `玩家2(P2)：得分为${p2.score}，击杀${p2.stats.kills}，死亡${p2.stats.deaths}，误伤队友${p2.stats.friendlyFires}次，吃道具${p2.stats.powerups}个，拆墙${p2.stats.blocks}块。\n`;
                 
                 if (mvp === 'DRAW') {
@@ -82,8 +96,14 @@ async function generateMVPReview(game, p1, p2, mvp) {
                 let aiP1 = lines.find(l => l.startsWith('P1:'))?.substring(3).trim();
                 let aiP2 = lines.find(l => l.startsWith('P2:'))?.substring(3).trim();
                 
-                if (aiP1 && mvp !== p1) p1Quote = aiP1.replace(/["*]/g, '');
-                if (aiP2 && mvp !== p2) p2Quote = aiP2.replace(/["*]/g, '');
+                // AI 可能超长/带引号星号，统一清洗并硬截断，避免溢出结算画面
+                const sanitize = (s) => {
+                    let t = String(s).replace(/["*“”]/g, '').replace(/\s+/g, '').trim();
+                    if ([...t].length > MAX_QUOTE_LEN) t = [...t].slice(0, MAX_QUOTE_LEN - 1).join('') + '…';
+                    return t;
+                };
+                if (aiP1 && mvp !== p1) p1Quote = sanitize(aiP1);
+                if (aiP2 && mvp !== p2) p2Quote = sanitize(aiP2);
                 
                 // Double safe cleanup
                 if (mvp === p1 && mvp !== 'DRAW') p1Quote = "";
