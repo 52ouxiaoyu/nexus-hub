@@ -165,6 +165,17 @@ class Zombie extends Entity {
             this.dieSrc = 'assets/images/Zombies/LGBOSS/BoomDie.gif'; // Or 5.gif? 0.gif is probably idle
             this.yOffset = -80; // Assuming it's huge
         }
+
+        // ===== 我是僵尸模式（v3.7.2）：进攻方整体强化 =====
+        // 该模式玩家是"进攻方"，而敌阵是"左 6 列全满(30 株)"的密集防线 ——
+        // 僵尸从 x=950 走到阵前要 23s 全程挨打，原版 I,Zombie 每行只有 1~2 株植物。
+        // 所以对我方僵尸统一加成：血量 ×3、移动 ×1.5（啃食效率 ×3 在啃食分支里按模式加）。
+        // 其它模式（经典/融合/砸罐）完全不受影响，玩家用植物防守的手感保持原样。
+        if (game.zombieMode) {
+            this.hp = Math.round(this.hp * 3);
+            this.maxHp = this.hp;
+            this.speed *= 1.5;
+        }
     }
     
     // 植物头僵尸：把一颗基础植物顶在头上（独立 DOM 层，随僵尸同步移动）
@@ -292,9 +303,12 @@ class Zombie extends Entity {
         
         const currentSpeed = this.isSlowed ? this.speed * 0.3 : this.speed; // 70% slow!
         const currentDamage = this.isSlowed ? this.damage * 0.3 : this.damage;
+        // 我是僵尸模式僵尸血量整体 ×3，护甲/报纸的"掉落阈值"必须同比放大，
+        // 否则路障帽、铁桶、铁门会一直赖到生命值只剩 1/3 时才掉（视觉反馈与掉血脱节）。
+        const armorMul = this.game.zombieMode ? 3 : 1;
         
         // Handle cone falling off
-        if (this.type === 'conehead' && this.hp <= 200 && this.state !== 'DYING') {
+        if (this.type === 'conehead' && this.hp <= 200 * armorMul && this.state !== 'DYING') {
             this.type = 'normal';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
@@ -302,7 +316,7 @@ class Zombie extends Entity {
         }
         
         // Handle bucket falling off
-        if (this.type === 'buckethead' && this.hp <= 200 && this.state !== 'DYING') {
+        if (this.type === 'buckethead' && this.hp <= 200 * armorMul && this.state !== 'DYING') {
             this.type = 'normal';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
@@ -312,7 +326,7 @@ class Zombie extends Entity {
         // 植物头僵尸的头顶植物是纯外观：不提供装甲/不掉落，随僵尸一起行动直到死亡。
         
         // Handle newspaper falling off
-        if (this.type === 'newspaper' && this.hp <= 150 && !this.hasLostNewspaper && this.state !== 'DYING') {
+        if (this.type === 'newspaper' && this.hp <= 150 * armorMul && !this.hasLostNewspaper && this.state !== 'DYING') {
             this.hasLostNewspaper = true;
             this.speed = 45; // Gets very angry and fast
             this.walkSrc = 'assets/images/Zombies/NewspaperZombie/HeadWalk0.gif';
@@ -321,7 +335,7 @@ class Zombie extends Entity {
         }
 
         // Handle screendoor falling off
-        if (this.type === 'screendoor' && this.hp <= 200 && this.state !== 'DYING') {
+        if (this.type === 'screendoor' && this.hp <= 200 * armorMul && this.state !== 'DYING') {
             this.type = 'normal';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
@@ -370,6 +384,9 @@ class Zombie extends Entity {
                         const backup = new Zombie(this.game, pos.r, 'backup');
                         backup.x = Math.max(40, this.x + pos.dx); // prevent spawning behind game over line
                         backup.y = zombieY;
+                        // 我是僵尸模式：舞王僵尸召出的伴舞继承"我方"标记，
+                        // 否则 _checkZombieEnd 会漏判（场上还有伴舞在打，却判定我方僵尸全灭）
+                        if (this._playerZombie) backup._playerZombie = true;
                         this.game.entities.push(backup);
                     }
                 }
@@ -589,7 +606,11 @@ class Zombie extends Entity {
                     } else {
                         // 我是僵尸模式：标记"植物正被僵尸啃食"，向日葵被啃死时据此发阳光奖励
                         this.eatTarget._zombieKill = true;
-                        this.eatTarget.hp -= currentDamage * deltaTime;
+                        // 我是僵尸专属平衡旋钮：该模式玩家是进攻方，敌阵植物 HP 普遍 300~4000，
+                        // 按原始 50/s 连一株豌豆射手都要啃 6s（还没啃完就被身后的射手打死）→ 啃食 ×3。
+                        // 其它模式维持原速，不影响玩家用植物防守的手感。
+                        const eatMul = this.game.zombieMode ? 3 : 1;
+                        this.eatTarget.hp -= currentDamage * eatMul * deltaTime;
                     }
                     
                     if (this.eatTarget.hasTrait && (this.eatTarget.hasTrait('spikeweed') || this.eatTarget.hasTrait('chomper'))) {
