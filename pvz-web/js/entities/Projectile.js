@@ -12,37 +12,38 @@ class Projectile extends Entity {
         this.startX = x;
         this.startY = y;
         this.hitZombies = new Set(); // For piercing projectiles
+        this.lobbed = false;         // 是否为抛物线弹道（西瓜/冰西瓜）
         
         if (type === 'snowpea') {
             this.element.src = 'assets/images/Plants/PB-10.gif';
         } else if (type === 'scaredyshroom') {
             this.element.src = 'assets/images/Plants/ShroomBullet.gif';
             this.damage = 40;
-        } else if (type === 'melon') {
-            this.element.src = 'assets/images/Plants/MelonPult/Melon.png?v=1789049996';
+        } else if (type === 'melon' || type === 'wintermelon') {
+            // 西瓜/冰西瓜子弹：使用原版 Projectiles 图集里的"整颗西瓜"完整图案
+            // （54×46、透明底、硬边；普通版绿皮黑纹，冰瓜版同造型蓝色）。
+            // 旧素材是从 MelonPult 整株立绘 flood-fill 出的 50×40 残片 —— 右侧被齐边切掉、
+            // 右下被瓜篮挖空，这就是玩家看到的"贴图不完整"。
+            this.element.src = type === 'melon'
+                ? 'assets/images/Plants/MelonPult/Melon.png?v=1789051587'
+                : 'assets/images/Plants/MelonPult/WinterMelon.png?v=1789051587';
             this.element.style.transform = 'scale(1.0)';
-            this.element.style.borderRadius = '50%';
+            // 注意：不能再加 border-radius:50% —— 那会把完整的椭圆瓜体按内切圆再裁一圈
             this.damage = 60;
-        } else if (type === 'wintermelon') {
-            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon.png?v=1789049996';
-            this.element.style.transform = 'scale(1.0)';
-            this.element.style.borderRadius = '50%';
-            this.damage = 60;
+            this.setupLob(targetZombie);   // 抛物线弹道（见 setupLob）
         } else if (type === 'cattail') {
             this.element.src = 'assets/images/Plants/Cactus/Projectile32.png';
             this.element.style.transform = 'scale(0.8)';
             this.damage = 20;
             this.speed = 400;
         } else if (type === 'cattail_melon') {
-            this.element.src = 'assets/images/Plants/MelonPult/Melon_small.png?v=1789049996';
+            this.element.src = 'assets/images/Plants/MelonPult/Melon_small.png?v=1789051587';
             this.element.style.transform = 'scale(0.8)';
-            this.element.style.borderRadius = '50%';
             this.damage = 60;
             this.speed = 400;
         } else if (type === 'cattail_wintermelon') {
-            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon_small.png?v=1789049996';
+            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon_small.png?v=1789051587';
             this.element.style.transform = 'scale(0.8)';
-            this.element.style.borderRadius = '50%';
             this.damage = 60;
             this.speed = 400;
         } else if (type === 'puffshroom' || type === 'gloom_puff') {
@@ -81,6 +82,41 @@ class Projectile extends Entity {
         } else {
             this.element.src = 'assets/images/Plants/PB00.gif';
         }
+    }
+
+    /* ===== 抛物线弹道（西瓜投手 / 冰西瓜投手）=====
+       原版 I,Zombie 的西瓜是"抛射"：先升空、越过前排、在目标僵尸头顶落下。
+       这里用标准斜抛公式实现：
+         vx = 水平速度（常量），vy = 竖直速度（受重力累加）
+         y(t) = y0 + vy0·t + ½·g·t²，x(t) = x0 + vx·t
+       为了让弧线既明显又不会飞出草坪顶部，做法是"先定飞行时间 tf 与最高点 peak，
+       再反推出重力 g = 8·peak / tf²"，这样不同距离的抛物线形状一致、只是水平速度不同。
+       命中判定见 canHitNow()：只在"下落且已接近本行高度"的窗口内才可能打中僵尸，
+       否则子弹还在半空就会误判命中。 */
+    setupLob(target) {
+        this.lobbed = true;
+        this.baseY = this.y;                       // 本行的"落点高度"（回到这个高度即落地）
+        // 目标：正前方最近的一只僵尸；没有则默认抛出约 5 格
+        let dist = target ? (target.x - this.x) : 300;
+        dist = Math.max(70, Math.min(900, dist));
+        // 飞行时间随距离略增（0.62~1.05s），并据此定水平速度
+        const tf = Math.max(0.62, Math.min(1.05, dist / 320));
+        // 最高点：88px ≈ 接近一行的高度；草坪最上一行贴近容器顶部，故再做一次安全带收敛
+        const peak = Math.max(40, Math.min(88, this.baseY - 26));
+        const g = 8 * peak / (tf * tf);
+        this.gravity = g;
+        this.vx = dist / tf;
+        this.vy = -g * tf / 2;                     // 竖直初速向上（屏幕坐标 y 向下，故取负）
+        this.flightTime = tf;
+        this.flightT = 0;
+        this.peakHeight = peak;
+    }
+
+    // 是否到了"可以命中"的时机（非抛物线子弹恒为 true）
+    canHitNow() {
+        if (!this.lobbed) return true;
+        // 只在开始下落（vy>0）且已经落回接近本行高度时才允许命中
+        return this.vy > 0 && this.y > this.baseY - 60;
     }
     
     update(deltaTime) {
@@ -143,6 +179,16 @@ class Projectile extends Entity {
                  }
                  this.isDead = true;
                  return;
+            }
+        } else if (this.lobbed) {
+            // 抛物线飞行：水平匀速 + 竖直匀加速（重力）
+            this.flightT += deltaTime;
+            this.x += this.vx * deltaTime;
+            this.vy += this.gravity * deltaTime;
+            this.y += this.vy * deltaTime;
+            // 已经落回（甚至低于）本行高度仍未命中 → 落地消失（原版抛射物落空即消失）
+            if (this.vy > 0 && this.y > this.baseY + 8) {
+                this.isDead = true;
             }
         } else if (this.vx !== undefined && this.vy !== undefined && this.vx !== null && this.vy !== null) {
             this.x += this.vx * deltaTime;

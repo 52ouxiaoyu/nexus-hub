@@ -153,12 +153,12 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789049996';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789051587';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789049996';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789051587';
         } else if (type === 'starfruit') {
             // 杨桃（v3.6.0 经典模式可种）：五向星光射击，弹道复用融合版（Projectile 'star'）
             stat.hp = 300;
@@ -182,7 +182,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789049996';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789051587';
             stat.yOffset = 0;
         }
 
@@ -744,6 +744,15 @@ class Plant extends Entity {
                         // Forward shot
                         if (hasZombieAhead || cattailTarget) {
                             let target = this.hasTrait('cattail') ? cattailTarget : null;
+                            // 西瓜/冰西瓜是"抛射"：需要知道落点，取本行正前方最近的一只僵尸
+                            // （Projectile.setupLob 会据此决定抛物线跨度；普通射手不需要 target）
+                            if (!target && (this.hasTrait('melonpult') || this.hasTrait('wintermelon'))) {
+                                const ahead = this.game.entities.filter(e =>
+                                    e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized &&
+                                    e.row === this.row && e.x > this.x
+                                ).sort((a, b) => a.x - b.x);
+                                target = ahead[0] || null;
+                            }
                             this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15, this.row, projType, target));
                             
                             const repeatCount = this.hasTrait('gatlingpea') ? 4 : ((this.hasTrait('repeater') || this.hasTrait('cattail')) ? 2 : 1);

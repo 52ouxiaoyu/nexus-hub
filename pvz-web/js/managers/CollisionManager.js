@@ -13,6 +13,9 @@ class CollisionManager {
         for (let p of projectiles) {
             for (let z of zombies) {
                 if (p.row === z.row && p.type !== 'cattail' && p.type !== 'gloom_puff') {
+                    // 抛射型子弹（西瓜/冰西瓜）走抛物线：只有落到接近本行高度时才判定命中，
+                    // 否则它在半空中就会把僵尸"隔空打死"（canHitNow 对普通子弹恒为 true）
+                    if (typeof p.canHitNow === 'function' && !p.canHitNow()) continue;
                     if (p.x + p.radius > z.x - 30 && p.x - p.radius < z.x + 30) {
                         if (p.type === 'fumeshroom') {
                             if (!p.hitZombies.has(z)) {
