@@ -79,11 +79,13 @@ class EventManager {
                 setTimeout(() => zombies.forEach(z => {if(!z.isDead) z.speed = 20}), 4000);
             }},
             { msg: '🐜 缩小：迷你僵尸！', color: '#ffaaaa', exec: g => {
-                g.entities.filter(e => e instanceof Zombie).forEach(z => { z.element.style.transform += ' scale(0.5)'; z.hp = Math.max(1, z.hp/2); });
+                // v3.9.1：必须走 addTransform。原来 += 会在空字符串上拼出裸 ' scale(0.5)'，
+                // 冲掉 .entity 的 translate(-50%,-50%) → 僵尸整体右下偏移半个贴图
+                g.entities.filter(e => e instanceof Zombie).forEach(z => { z.addTransform('scale(0.5)'); z.hp = Math.max(1, z.hp/2); });
             }},
             { msg: '🦖 巨化：变异僵尸！', color: '#ff4444', minScore: 500, exec: g => {
                 const z = g.entities.find(e => e instanceof Zombie && !e.isDead);
-                if(z) { z.element.style.transform += ' scale(1.8)'; z.hp *= 3; z.damage *= 2; }
+                if(z) { z.addTransform('scale(1.8)'); z.hp *= 3; z.damage *= 2; }
             }},
             { msg: '🌑 黑暗：断电了！', color: '#555555', minScore: 150, exec: g => {
                 const overlay = document.createElement('div');
@@ -120,8 +122,13 @@ class EventManager {
             { msg: '💃 尬舞：全员停摆！', color: '#ff88ff', exec: g => {
                 const z = g.entities.filter(e => e instanceof Zombie);
                 const oldSpeeds = z.map(e=>e.speed);
-                z.forEach(e => { e.speed = 0; e.element.style.transition='transform 3s'; e.element.style.transform='rotate(1080deg)'; });
-                setTimeout(() => z.forEach((e,i) => { e.speed = oldSpeeds[i]||20; e.element.style.transition=''; e.element.style.transform=''; }), 3000);
+                const oldXf = z.map(e=>e.element.style.transform);   // v3.9.1：记录原始 transform 以便原样还原
+                z.forEach(e => { e.speed = 0; e.element.style.transition='transform 3s'; e.setTransform('rotate(1080deg)'); });
+                setTimeout(() => z.forEach((e,i) => {
+                    e.speed = oldSpeeds[i]||20; e.element.style.transition='';
+                    // 空串＝交还给 CSS 的 translate(-50%,-50%)；不擅自改动巨人僵尸那种自带的自定义基准
+                    e.element.style.transform = oldXf[i] || '';
+                }), 3000);
             }},
             { msg: '🛡️ 破甲：防具剥落！', color: '#aaffff', exec: g => {
                 g.entities.filter(e => e instanceof Zombie).forEach(z => { if(z.type==='conehead'||z.type==='buckethead'||z.type==='screendoor') z.hp=150; });
@@ -164,7 +171,11 @@ class EventManager {
                 setTimeout(() => { if(g.audioManager.sounds.bgm) g.audioManager.sounds.bgm.playbackRate = 1.0; }, 10000);
             }},
             { msg: '💪 兴奋剂：植物强壮！', color: '#ff0000', exec: g => {
-                g.entities.filter(e => e instanceof Plant).forEach(p => { p.hp += 2000; p.element.style.transform = 'scale(1.2)'; });
+                // v3.9.1 主犯修复：原写法 `p.element.style.transform = 'scale(1.2)'` 会把
+                // .entity 的 translate(-50%,-50%) 覆盖掉，导致**全场植物**按左上角对齐 →
+                // 集体向右下偏移半个贴图（西瓜投手 (48,48)≈一格、小喷菇 (20,33)），
+                // 最后一行植物因此被顶出画面。改用 setTransform 保留居中（幂等，重复触发仍是 1.2 倍）。
+                g.entities.filter(e => e instanceof Plant).forEach(p => { p.hp += 2000; p.setTransform('scale(1.2)'); });
             }},
             { msg: '🎰 彩票：僵尸带资进组！', color: '#ffff00', exec: g => {
                 const z = new Zombie(g, Math.floor(Math.random()*g.board.rows), 'normal');

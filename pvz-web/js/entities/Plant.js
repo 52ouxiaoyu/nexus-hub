@@ -153,12 +153,12 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789051587';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789053324';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789051587';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789053324';
         } else if (type === 'starfruit') {
             // 杨桃（v3.6.0 经典模式可种）：五向星光射击，弹道复用融合版（Projectile 'star'）
             stat.hp = 300;
@@ -182,7 +182,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789051587';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789053324';
             stat.yOffset = 0;
         }
 
@@ -245,7 +245,7 @@ class Plant extends Entity {
                 this.element.style.width = '70px';
                 this.element.style.height = '70px';
                 this.element.style.objectFit = 'contain';
-                this.element.style.transform = 'scale(1.2)';
+                this.setTransform('scale(1.2)');   // v3.9.1：保留居中（原直写会右下偏移半个贴图）
             } else {
                 // Bespoke CSS Assembly for Fusions without custom sprites
                 if (s2.src) {
@@ -830,7 +830,9 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                 let sun = new Sun(this.game, this.x, this.y - 20, targetY);
                 sun.value = sunValue;
                 if (isHybridSun) {
-                    sun.element.style.transform = 'scale(0.6)';
+                    // v3.9.1：走 setTransform，保留 .entity 的 translate(-50%,-50%) 居中
+                    //（原直写 scale(0.6) 会让小阳光右下偏移半个贴图 39×39）
+                    sun.setTransform('scale(0.6)');
                 }
                 this.game.entities.push(sun);
                 

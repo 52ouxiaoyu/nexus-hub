@@ -25,8 +25,8 @@ class Projectile extends Entity {
             // 旧素材是从 MelonPult 整株立绘 flood-fill 出的 50×40 残片 —— 右侧被齐边切掉、
             // 右下被瓜篮挖空，这就是玩家看到的"贴图不完整"。
             this.element.src = type === 'melon'
-                ? 'assets/images/Plants/MelonPult/Melon.png?v=1789051587'
-                : 'assets/images/Plants/MelonPult/WinterMelon.png?v=1789051587';
+                ? 'assets/images/Plants/MelonPult/Melon.png?v=1789053324'
+                : 'assets/images/Plants/MelonPult/WinterMelon.png?v=1789053324';
             this.element.style.transform = 'scale(1.0)';
             // 注意：不能再加 border-radius:50% —— 那会把完整的椭圆瓜体按内切圆再裁一圈
             this.damage = 60;
@@ -37,12 +37,12 @@ class Projectile extends Entity {
             this.damage = 20;
             this.speed = 400;
         } else if (type === 'cattail_melon') {
-            this.element.src = 'assets/images/Plants/MelonPult/Melon_small.png?v=1789051587';
+            this.element.src = 'assets/images/Plants/MelonPult/Melon_small.png?v=1789053324';
             this.element.style.transform = 'scale(0.8)';
             this.damage = 60;
             this.speed = 400;
         } else if (type === 'cattail_wintermelon') {
-            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon_small.png?v=1789051587';
+            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon_small.png?v=1789053324';
             this.element.style.transform = 'scale(0.8)';
             this.damage = 60;
             this.speed = 400;
