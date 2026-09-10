@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 台球 · 八球 | Nexus Hub</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <div id="canvas-holder"></div>
+
+        <!-- HUD 顶部：双方记分 -->
+        <div id="topbar">
+            <div class="player-panel" id="pp1">
+                <div class="p-name" id="pp1-name">玩家 1</div>
+                <div class="p-group" id="pp1-group">花色未定</div>
+                <div class="p-balls" id="pp1-balls"></div>
+            </div>
+            <div id="message-box">
+                <div id="turn-label">—</div>
+                <div id="msg"></div>
+            </div>
+            <div class="player-panel right" id="pp2">
+                <div class="p-name" id="pp2-name">电脑</div>
+                <div class="p-group" id="pp2-group">花色未定</div>
+                <div class="p-balls" id="pp2-balls"></div>
+            </div>
+        </div>
+
+        <!-- HUD 底部：力度条 / 操作提示 / 旋转控制 -->
+        <div id="bottombar">
+            <div id="left-controls">
+                <div id="power-wrap">
+                    <div id="power-label">力度</div>
+                    <div id="power-bar"><div id="power-fill"></div></div>
+                </div>
+                <div id="hint">移动鼠标瞄准 · 按住蓄力 · 松开出杆</div>
+            </div>
+            <div id="right-controls">
+                <div id="spin-wrap" title="点击/拖动设置杆法（上=高杆 下=低杆 左右=塞）">
+                    <div id="spin-ball"><div id="spin-dot"></div></div>
+                    <div id="spin-label">杆法</div>
+                </div>
+                <button id="btn-view" class="ctl-btn" title="切换视角 (V)">视角</button>
+                <button id="btn-restart" class="ctl-btn" title="重新开局">重开</button>
+            </div>
+        </div>
+
+        <div id="version">v1.0.0</div>
+
+        <!-- 开始菜单 -->
+        <div id="overlay">
+            <div id="menu-card">
+                <div class="menu-title">🎱 3D 台球</div>
+                <div class="menu-sub">八球规则 · Three.js 实时渲染</div>
+                <div class="menu-row">
+                    <button class="mode-btn selected" data-mode="ai" id="btn-mode-ai">人机对战</button>
+                    <button class="mode-btn" data-mode="pvp" id="btn-mode-pvp">双人对战</button>
+                </div>
+                <div class="menu-row" id="diff-row">
+                    <button class="diff-btn" data-diff="0">简单</button>
+                    <button class="diff-btn selected" data-diff="1">普通</button>
+                    <button class="diff-btn" data-diff="2">困难</button>
+                </div>
+                <button id="btn-start">开 始 游 戏</button>
+                <div class="menu-help">
+                    <b>操作说明</b><br>
+                    · 移动鼠标瞄准，按住左键蓄力，松开出杆<br>
+                    · 小部件上设置高杆 / 低杆 / 左右塞，影响母球走位<br>
+                    · 犯规（母球落袋、首触非法）后对方获自由球，点击台面放置<br>
+                    · 快捷键：←/→ 微调角度 · V 切换视角 · 右键/Esc 取消蓄力<br>
+                    · 先打完己方花色再打进黑 8 获胜；提前打进黑 8 判负
+                </div>
+            </div>
+        </div>
+
+        <!-- 结算 -->
+        <div id="overlay-end" class="hidden">
+            <div id="end-card">
+                <div id="end-title">玩家 1 获胜！</div>
+                <div id="end-sub"></div>
+                <div class="menu-row">
+                    <button id="btn-again">再来一局</button>
+                    <button id="btn-menu">返回菜单</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script>window.THREE || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');</script>
+    <script src="game.js"></script>
+</body>
+</html>
