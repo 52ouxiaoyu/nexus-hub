@@ -153,12 +153,12 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789049338';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789049996';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789049338';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789049996';
         } else if (type === 'starfruit') {
             // 杨桃（v3.6.0 经典模式可种）：五向星光射击，弹道复用融合版（Projectile 'star'）
             stat.hp = 300;
@@ -182,7 +182,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789049338';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789049996';
             stat.yOffset = 0;
         }
 
