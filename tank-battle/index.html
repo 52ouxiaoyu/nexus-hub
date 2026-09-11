@@ -1,64 +1,64 @@
 <!DOCTYPE html>
-<html lang="en" data-page-node-id="njFoG30pWfy7ksrYEp9WMI">
-<head data-page-node-id="U2Csqdps7WxO9EpvGwHbup">
-    <meta charset="UTF-8" data-page-node-id="nIgk53p3SGANyTXVtxnoZC">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="NQPl5FaWRAk2Dk6pMi1SYF">
+<html lang="en" data-page-node-id="wWOFBccdRHGHFcFDrsrlFQ">
+<head data-page-node-id="86AJbJKzMhCH2IxP04saZH">
+    <meta charset="UTF-8" data-page-node-id="PWIQgVmrEfFJpTc9VC9Dhw">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="F9GureDDQUpkwr3q4AMkqh">
     <title>Tank Battle - NES Clone</title>
-    <link rel="stylesheet" href="style.css" data-page-node-id="b0ccUEpjtWDHyRhQRp4CAc">
+    <link rel="stylesheet" href="style.css" data-page-node-id="H3R72wP3GUOHxOgZlhYNEL">
 </head>
-<body data-page-node-id="eU6elIOItierez9HlOhbO8">
-    <div id="game-container" data-page-node-id="BZX3HTUiqZqh1wfdhFO8eY">
-        <div id="hud" class="hidden" data-page-node-id="HN9ZrbpGWHRPxFDEOfhtef">
-            <div class="score-box" data-page-node-id="HKCZK2deInDpL79vbHh77B">
-                <span class="p1-color" data-page-node-id="So1Kaosmmml8jDbk4noM6q">P1 SCORE</span>
-                <span id="p1-score" data-page-node-id="eH5229cBFe1XcgYca7QX9J">00000</span>
-                <span id="p1-lives" class="p1-color" style="font-size:1.2rem;" data-page-node-id="SazxPHJxyRewofArCAhk2a">❤️x2</span>
-                <span id="p1-level" class="p1-color" style="font-size:1.1rem; font-weight:bold; margin-top:5px; text-shadow:1px 1px 2px #000;" data-page-node-id="XZbbOFgdAW2AQ3k1dBQ5rr">火力: Lv.1 [普通炮弹(白)]</span>
-                <span id="p1-ult" class="p1-color" style="font-size:1rem; margin-top:5px;" data-page-node-id="M1NHXiY3Z5NGCc7BQp78C4">大招: 无 (按M键)</span>
+<body data-page-node-id="ucjIACQkN8F87uEI4JKDhD">
+    <div id="game-container" data-page-node-id="qERG0pk0JLhcBq2o9y0CsB">
+        <div id="hud" class="hidden" data-page-node-id="Mh1WFSffDWfOBPCBvinsOn">
+            <div class="score-box" data-page-node-id="SnDGhK8Dzg4LfxRBs7g4is">
+                <span class="p1-color" data-page-node-id="AeInMOHNZ7kKBWcem3KHLL">P1 SCORE</span>
+                <span id="p1-score" data-page-node-id="CiB0lPKIk5htsZzErmfK12">00000</span>
+                <span id="p1-lives" class="p1-color" style="font-size:1.2rem;" data-page-node-id="iQMsYMRrxdrUNvZJYFuTv6">❤️x2</span>
+                <span id="p1-level" class="p1-color" style="font-size:1.1rem; font-weight:bold; margin-top:5px; text-shadow:1px 1px 2px #000;" data-page-node-id="1zV1KQpTRAculrq0myBANJ">火力: Lv.1 [普通炮弹(白)]</span>
+                <span id="p1-ult" class="p1-color" style="font-size:1rem; margin-top:5px;" data-page-node-id="a5aZ60qx05OtEWPAA02eDJ">大招: 无 (按M键)</span>
             </div>
-            <div id="mid-info" data-page-node-id="3FLZSGLX6A5Btod24WL3En">
-                <div id="stage-info" data-page-node-id="orCAXjbSDQ775kk5VDL0rV">STAGE 1</div>
-                <div id="enemies-info" data-page-node-id="12K5K6vL2AmhvIo4HIjEqB">ENEMIES: 20</div>
+            <div id="mid-info" data-page-node-id="1AQfDOdJweAysO82rjGWeD">
+                <div id="stage-info" data-page-node-id="I3CSrHuJ42nZGAdAxBBWuM">STAGE 1</div>
+                <div id="enemies-info" data-page-node-id="WaWeCqqZqSF9ED6ss1Awmj">ENEMIES: 20</div>
             </div>
-            <div class="score-box" data-page-node-id="zy7v7i25hC5ZwiOUVjfn5c">
-                <span class="p2-color" data-page-node-id="GFflicCQM0LV86svNE35zz">P2 SCORE</span>
-                <span id="p2-score" data-page-node-id="O0MRLDKcUtYaM9VgEvnOud">00000</span>
-                <span id="p2-lives" class="p2-color" style="font-size:1.2rem;" data-page-node-id="9YLEB5z0rWIYr7FcmvVrNC">❤️x2</span>
-                <span id="p2-level" class="p2-color" style="font-size:1.1rem; font-weight:bold; margin-top:5px; text-shadow:1px 1px 2px #000;" data-page-node-id="x25eUbsmwd2fUVJGjmdO4i">火力: Lv.1 [普通炮弹(白)]</span>
-                <span id="p2-ult" class="p2-color" style="font-size:1rem; margin-top:5px;" data-page-node-id="OIieBcO0ftliOHfZg1FJnY">大招: 无 (按+键)</span>
+            <div class="score-box" data-page-node-id="HKTsZLtDv6VRgjMJE4IWSC">
+                <span class="p2-color" data-page-node-id="9MufEVnNRjD9GR67vH5PnW">P2 SCORE</span>
+                <span id="p2-score" data-page-node-id="vlpSNV53ryOH49WpuxJmUl">00000</span>
+                <span id="p2-lives" class="p2-color" style="font-size:1.2rem;" data-page-node-id="njt3anxgzJfuaDLl3XOqB4">❤️x2</span>
+                <span id="p2-level" class="p2-color" style="font-size:1.1rem; font-weight:bold; margin-top:5px; text-shadow:1px 1px 2px #000;" data-page-node-id="al98g5oKvkMBg2HIXVmzA0">火力: Lv.1 [普通炮弹(白)]</span>
+                <span id="p2-ult" class="p2-color" style="font-size:1rem; margin-top:5px;" data-page-node-id="oGB3yA9x0UYXA9xCFmeWcn">大招: 无 (按+键)</span>
             </div>
         </div>
-        <div id="tips-banner" class="hidden" data-page-node-id="E1gIuvzAwo8Tfx4C46iCt1"></div>
-        <div id="ui-layer" data-page-node-id="BBxkG3q7ZHuaXAVwLyi83H">
-            <div id="start-screen" class="screen" data-page-node-id="Kr3gNfv0N63Io9jmibIZA9">
-                <h1 data-page-node-id="73v575KYZLhAxCgVcHl47f">坦克大战<br data-page-node-id="dDMMxl1XpFLM9MxYdUNpVx"><span style="font-size:1.5em; display:inline-block; margin-top:10px;" data-page-node-id="GHcQOLEmGSBepTWZxgQDXV">TANK BATTLE</span> <span style="color: #ffcc00; margin-left: 10px; font-weight: bold; border: 1px solid #ffcc00; padding: 2px 6px; border-radius: 4px; font-size: 14px; vertical-align: middle;" data-page-node-id="vWazD5mB9Nd9HrnDOe0eZ5">v1.4.3</span></h1>
-                <p data-page-node-id="gBi76OeBqXCvoPtrfX76mG">玩家一 (P1): WASD + 空格(SPACE)</p>
-                <p data-page-node-id="MScUCFjBHv74cBpyGnNWZJ">玩家二 (P2): 方向键(Arrows) + 回车(ENTER)</p>
-                <div class="settings" data-page-node-id="vkuoHgGWa2E1MijciUJB5m">
-                    <label data-page-node-id="8B8Z572CHScnMy4Thc4tuD">起始关卡 (Level): <input type="number" id="start-level" min="1" max="1000" value="1" data-page-node-id="cULBAGy2Tf5eCyF61kkLOY"></label>
-                    <div class="difficulty" data-page-node-id="GWPrK8Yf4WzQuGCINASGPH">
-                        <button class="diff-btn active" data-diff="easy" data-page-node-id="RcKW5m5uHvLTK7HQm3ofON">简单 Easy</button>
-                        <button class="diff-btn" data-diff="normal" data-page-node-id="od1yz5dsyLlWQgSOkncaQG">普通 Normal</button>
-                        <button class="diff-btn" data-diff="hard" data-page-node-id="CiCwkhF9dEMiN08ETCw7Bg">困难 Hard</button>
+        <div id="tips-banner" class="hidden" data-page-node-id="wpNszbJFDClhREXnliz3s4"></div>
+        <div id="ui-layer" data-page-node-id="nc7PHDBEfppsqebXqMwv95">
+            <div id="start-screen" class="screen" data-page-node-id="CKAIFvhKpOEhZBlG3ZPbFt">
+                <h1 data-page-node-id="dAkTHW0uw2uqFTXLsdORtD">坦克大战<br data-page-node-id="J571wF9Odhl6wlcHNUhyqk"><span style="font-size:1.5em; display:inline-block; margin-top:10px;" data-page-node-id="EjRLDrf8rzWOTn4aTPLr13">TANK BATTLE</span> <span style="color: #ffcc00; margin-left: 10px; font-weight: bold; border: 1px solid #ffcc00; padding: 2px 6px; border-radius: 4px; font-size: 14px; vertical-align: middle;" data-page-node-id="x8HVw3bVh4cdOVA6rIZny8">v1.4.4</span></h1>
+                <p data-page-node-id="fZQ0jyRzvGiwTaUBi71eMH">玩家一 (P1): WASD + 空格(SPACE)</p>
+                <p data-page-node-id="Bs5KhyMsFZsF5e4BnUMwok">玩家二 (P2): 方向键(Arrows) + 回车(ENTER)</p>
+                <div class="settings" data-page-node-id="huj58esxUOG0E4mOr7Eiom">
+                    <label data-page-node-id="ljRkDiEHr3JvPRviCeM5sZ">起始关卡 (Level): <input type="number" id="start-level" min="1" max="1000" value="1" data-page-node-id="mw3EkSrVybdJFaRlzf4x3b"></label>
+                    <div class="difficulty" data-page-node-id="Ez5GABmafa0ej6RTHyAtkq">
+                        <button class="diff-btn active" data-diff="easy" data-page-node-id="Hdw4vtTvEDYpGFpPzAavfM">简单 Easy</button>
+                        <button class="diff-btn" data-diff="normal" data-page-node-id="andHNxY5OmsRyaNmwBQIvk">普通 Normal</button>
+                        <button class="diff-btn" data-diff="hard" data-page-node-id="zmbkXrkkbNs1HUuZLFDIK1">困难 Hard</button>
                     </div>
                 </div>
-                <button id="start-btn" data-page-node-id="Gyj8N34kXpHpzAFQQHTCvw">开始游戏 / START</button>
+                <button id="start-btn" data-page-node-id="uj24sl7mnKYMs2XQyv6uCO">开始游戏 / START</button>
             </div>
-            <div id="game-over-screen" class="screen hidden" data-page-node-id="VL3G6Ebeu24AfHC9v1Hlyz">
-                <h1 data-page-node-id="CF3QIarAbKCVViCiFIIZOS">游戏结束<br data-page-node-id="yAbMxFL03TQMQ3YTypUmBa"><span style="font-size:1.5em; display:inline-block; margin-top:10px;" data-page-node-id="pJ36ADCI1wbegZdAUoWRye">GAME OVER</span></h1>
-                <button id="restart-btn" class="menu-selected" data-page-node-id="v2MVBiuQiDwKjA5bZzL9lT">重新开始 / RESTART (ENTER)</button>
-                <p style="margin-top: 20px; color: #888; font-size: 16px;" data-page-node-id="fHCJQZfYvN6t0Sel19S46w">按 ESC 退出游戏</p>
+            <div id="game-over-screen" class="screen hidden" data-page-node-id="wVz5iGPcscMZU7Fl7egXB4">
+                <h1 data-page-node-id="kWBSQDBMuRqurYmw07p0xD">游戏结束<br data-page-node-id="BZ1Jc1cO0eRIoPExCJbImx"><span style="font-size:1.5em; display:inline-block; margin-top:10px;" data-page-node-id="wSIaAZZ7Atyj99ramm3LsY">GAME OVER</span></h1>
+                <button id="restart-btn" class="menu-selected" data-page-node-id="woHFCDC5JhO5nHur7obLKa">重新开始 / RESTART (ENTER)</button>
+                <p style="margin-top: 20px; color: #888; font-size: 16px;" data-page-node-id="bJVdH8etxvpLguj0fNIeoe">按 ESC 退出游戏</p>
             </div>
         </div>
-        <canvas id="game-canvas" data-page-node-id="kskUOAYkWOsdcpVjQsF349"></canvas>
-        <div id="touch-controls" class="hidden" data-page-node-id="qH2RsnyEbJzdGZ5KxGgcFU">
-            <div id="touch-dpad" data-page-node-id="mOovS0x8s1BuT49c793jvq">
-                <button class="dpad-btn" data-dir="up" data-page-node-id="uxWgguLVrovP8AvWfJIRtB">▲</button>
-                <button class="dpad-btn" data-dir="left" data-page-node-id="ERiimRYbmHPggJKmCYX4qJ">◄</button>
-                <button class="dpad-btn" data-dir="right" data-page-node-id="eChu13QL9xCBvEEXDLAqtM">►</button>
-                <button class="dpad-btn" data-dir="down" data-page-node-id="GbHJIWKkv3ObnKChS1ds6f">▼</button>
+        <canvas id="game-canvas" data-page-node-id="x1GAMscgMQY2oli4S594qz"></canvas>
+        <div id="touch-controls" class="hidden" data-page-node-id="DosJlCzA4O3thqvu2ZCBfx">
+            <div id="touch-dpad" data-page-node-id="hHmfVDF94nMPleVy41wFc7">
+                <button class="dpad-btn" data-dir="up" data-page-node-id="rXdh6ZV22NlvMJZrwHuvG6">▲</button>
+                <button class="dpad-btn" data-dir="left" data-page-node-id="N2BXjTQMKvGrj99rqxo25b">◄</button>
+                <button class="dpad-btn" data-dir="right" data-page-node-id="6Jzu3iIzbgIlpUqAu4PThV">►</button>
+                <button class="dpad-btn" data-dir="down" data-page-node-id="8DG5juH4Xw5iaGnUaPBw2X">▼</button>
             </div>
-            <button id="touch-shoot" data-page-node-id="L2g5pZfZ1fuwjOBjWzTEZJ">FIRE</button>
+            <button id="touch-shoot" data-page-node-id="eGvHwAY2pHR21j37fLn85n">FIRE</button>
         </div>
     </div>
     <script src="ultimates.js"></script>

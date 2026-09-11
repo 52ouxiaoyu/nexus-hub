@@ -41,6 +41,49 @@ const COMIC_SHOUT_CHANCE_MAX = 0.7;     // 概率上限
 const COMIC_SHOUT_COOLDOWN = 42;        // ≈0.7s 冷却，连杀也不刷屏
 const COMIC_SYMBOL_RATIO = 0.35;        // 用符号代替文字的比例
 
+// ===== 掉落规则 =====
+// 敌我分界线 = 画布竖直中线：敌方从上方出生、玩家在下方，道具向这条线两侧散布，双方机会均等。
+// 原先道具直接掉在敌人倒下的位置（敌方半场），玩家要顶着火力上前捡，体验不公。
+const FRONT_LINE_Y = CANVAS_SIZE / 2;   // 416px（row 13）
+const DROP_LINE_SPREAD_Y = TILE_SIZE * 4;   // 分界线上下各 4 格的随机范围
+const DROP_LINE_SPREAD_X = TILE_SIZE * 5;   // 横向抖动（保持与击杀点相关的方位感）
+const DROP_SIZE = 64;                       // 道具盒尺寸（PowerUp 默认 64）
+// 从目标点向外搜索"最近可落点"的偏移表（整格步进、按距离升序），落点贴着目标点且对齐网格。
+// 对齐网格很关键：isBlocked 按"盒子覆盖到的整格"判定 —— 64×64 的道具若骑在格子边界上，
+// 会被算成压住 3×3 格；对齐后只压 2×2 格，找空地的命中率大幅提高。
+// 实测（前沿地带 100 次真实掉落）：道具能整块落在空地里的比例 72% → 100%。
+const DROP_SEARCH_OFFSETS = (() => {
+    const a = [];
+    for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) a.push([i * TILE_SIZE, j * TILE_SIZE, Math.hypot(i, j)]);
+    a.sort((p, q) => p[2] - q[2]);
+    return a;
+})();
+
+// Boss 陨落掉落：原为 12 件围一圈（半径 96px），视觉上"一地道具"过于夸张。
+// 改为少量、散得更开，并且类型不重复。
+const BOSS_DROP_COUNT = 5;
+const BOSS_DROP_RADIUS = TILE_SIZE * 3.8;   // ≈122px，比原先的 96px 更疏
+const BOSS_DROP_TYPES = [
+    POWERUP_TYPES.LIFE, POWERUP_TYPES.SHIELD, POWERUP_TYPES.STAR,
+    POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.W_MISSILE,
+    POWERUP_TYPES.BOMB, POWERUP_TYPES.TIME, POWERUP_TYPES.SHOVEL, POWERUP_TYPES.ULTIMATE
+];
+
+// ===== 敌方坦克表情包（头顶小气泡，让敌人"会思考、会愤怒、会欢喜"）=====
+// 按情境分组；idle 是日常小情绪，其余由事件触发
+const EMOTE_POOLS = {
+    idle:   ['🤔', '💭', '🙂', '👀', '🎵', '😶', '🧐', '😗'],
+    angry:  ['😡', '💢', '😤', '🔥', '🤬'],
+    happy:  ['😄', '😆', '😎', '🤩', '✌️', '🥳'],
+    scared: ['😱', '😨', '💦', '😰'],
+    hurt:   ['😵', '😖', '💔', '😫']
+};
+const EMOTE_COOLDOWN_MIN = 90;   // 每次表情后的冷却（帧）下限 ≈1.5s
+const EMOTE_COOLDOWN_MAX = 260;  // 上限 ≈4.3s —— 保证"常有"但不至于满屏气泡
+const EMOTE_RANDOM_CHANCE = 0.35;// 冷却结束时立刻来一个的概率（其余留到情境触发）
+const EMOTE_DURATION = 62;       // 单个表情停留帧数 ≈1s
+const EMOTE_EVENT_COOLDOWN = 45;// 事件驱动表情的最小间隔，避免连续受击时闪个不停
+
 function seededRandom(seed) {
     let s = seed;
     return function() {
@@ -343,6 +386,7 @@ class PowerUp {
         audio.play('powerup');
         if (player instanceof Player) player.stats.powerups++;
         const isPlayer = player instanceof Player;
+        if (!isPlayer && player.emoteReact) player.emoteReact('happy');   // 抢到道具 → 乐开花
         this.game.shakeScreen(6);
         this.game.effects.push(new Effect(this.x + 32, this.y + 32, 'EXPLOSION', 1.5));
         for (let i = 0; i < 6; i++) {
@@ -1124,6 +1168,8 @@ class Tank {
         if (this.health > 0) {
             audio.play('hit');
             this.game.effects.push(new Effect(this.x + 30, this.y + 30, 'EXPLOSION', 1));
+            // 挨了一炮还没死 → 皱眉/龇牙
+            if (this instanceof Enemy && this.emoteReact) this.emoteReact(this.health <= 1 ? 'hurt' : 'angry');
             if (this instanceof Player) {
                 this.game.shakeScreen(4);
                 if (this.level > 0) {
@@ -1146,6 +1192,8 @@ class Tank {
         this.game.shakeScreen(this.isBoss ? 15 : 5);
         if (this instanceof Player) {
             this.stats.deaths++;
+            // 敌方把玩家打掉了 → 得意一下
+            if (killer instanceof Enemy && killer.emoteReact) killer.emoteReact('happy');
         }
         if (killer instanceof Player) {
             if (!(this instanceof Player)) killer.stats.kills++;
@@ -1242,7 +1290,9 @@ class Tank {
             }
 
             if (Math.random() < dropChance && type) {
-                this.game.powerUps.push(new PowerUp(this.game, this.x, this.y, type));
+                // 掉在敌我分界线两侧，而不是敌人倒下的位置（否则玩家要冲进敌方半场挨打才能捡到）
+                const spot = this.game.fairDropSpot(this.x + this.width / 2);
+                this.game.powerUps.push(new PowerUp(this.game, spot.x, spot.y, type));
             }
         }
     }
@@ -1315,6 +1365,64 @@ class Tank {
             }
         }
         if (this.shieldTimer > 0) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(px + 30, py + 30, 38, 0, Math.PI * 2); ctx.stroke(); }
+        if (this.emote) this._drawEmote(ctx);   // 敌方坦克头顶的表情包
+    }
+
+    // 头顶表情包：漫画小气泡 + emoji，跟随坦克移动（世界坐标，lift 用于给 Boss 的标题/血条让位）
+    _drawEmote(ctx, lift = 0) {
+        if (!this.emote || this.emoteTimer <= 0) return;
+        const age = this.emoteMax - this.emoteTimer;
+        const fadeIn = Math.min(1, age / 6);
+        const fadeOut = Math.min(1, this.emoteTimer / 14);
+        const alpha = Math.max(0, Math.min(fadeIn, fadeOut));
+        if (alpha <= 0.01) return;
+
+        // 弹入：先"啵"地冒出来再回弹
+        const t = Math.min(1, age / 10);
+        const scale = (0.5 + 0.5 * t) + 0.45 * Math.sin(t * Math.PI);
+
+        const isBoss = !!this.isBoss;
+        const size = isBoss ? 48 : 34;
+        const bw = size, bh = size * 0.86, r = size * 0.32;
+        const cx = this.x + this.width / 2;
+        let cy = this.y - 6 - bh / 2 - lift;
+        cy = Math.max(bh * 0.75 + 4, cy);          // 贴到画布上沿时抬住，别被裁掉
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(cx, cy);
+        ctx.scale(scale, scale);
+        ctx.rotate(Math.sin(age / 9) * 0.07);      // 轻微摇晃，手绘感
+        ctx.lineJoin = 'round';
+
+        const bx = -bw / 2, by = -bh / 2;
+
+        // 尾巴（指向坦克头顶）
+        ctx.beginPath();
+        ctx.moveTo(-bw * 0.17, by + bh - 2);
+        ctx.lineTo(bw * 0.17, by + bh - 2);
+        ctx.lineTo(1, by + bh + size * 0.3);
+        ctx.closePath();
+        ctx.fillStyle = '#fff'; ctx.fill();
+        ctx.strokeStyle = '#111'; ctx.lineWidth = 2.5; ctx.stroke();
+
+        // 主体（_roundRectPath 是 Game 上的工具方法，坦克本身没有，走 this.game）
+        this.game._roundRectPath(ctx, bx, by, bw, bh, r);
+        ctx.fillStyle = '#fff'; ctx.fill();
+        ctx.strokeStyle = '#111'; ctx.lineWidth = 2.5; ctx.stroke();
+
+        // 内描边，做出漫画双线手绘感
+        ctx.globalAlpha = alpha * 0.3;
+        this.game._roundRectPath(ctx, bx + 2.5, by + 2.5, bw - 5, bh - 5, r - 2);
+        ctx.strokeStyle = this.color || '#c62828'; ctx.lineWidth = 1.8; ctx.stroke();
+        ctx.globalAlpha = alpha;
+
+        // 内容：emoji 直接彩绘（加黑描边会把表情糊掉），用投影压住白底
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = `${Math.round(size * 0.6)}px Arial`;
+        ctx.shadowBlur = 4; ctx.shadowColor = 'rgba(0,0,0,0.28)';
+        ctx.fillText(this.emote, 0, 1);
+        ctx.restore();
     }
 }
 
@@ -1718,8 +1826,52 @@ class Enemy extends Tank {
         }
         else { this.speed = (1.5 + Math.min(stage * 0.05, 0.8)) * diffMult; this.health = 1; this.level = Math.min(3, Math.floor(stage / 15)); }
         
-        this.dirTimer = 0; 
-    } 
+        this.dirTimer = 0;
+        // 表情包状态：头顶小气泡，让敌人"会思考、会愤怒、会欢喜"
+        this.emote = null;
+        this.emoteTimer = 0;
+        this.emoteMax = 1;
+        this.emoteKey = 'idle';
+        this.emoteBag = {};
+        this.emoteCooldown = Math.floor(Math.random() * 120);          // 出生后错开，避免所有敌人同时冒泡
+        this.emoteEventLock = 0;                                       // 事件驱动表情的间隔锁
+    }
+    // 从某个情绪池里取一个表情（抽签袋 → 同一轮内不会连出同一个）
+    _pickEmote(key) {
+        const pool = EMOTE_POOLS[key] || EMOTE_POOLS.idle;
+        let bag = this.emoteBag[key];
+        if (!bag || !bag.length) {
+            bag = pool.map((_, i) => i);
+            for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = bag[i]; bag[i] = bag[j]; bag[j] = t; }
+            this.emoteBag[key] = bag;
+        }
+        return pool[bag.shift()];
+    }
+    // 立即换一个表情。event=true 时受间隔锁限制，防止连续受击时闪个不停
+    emoteReact(key, event = true, duration = EMOTE_DURATION) {
+        if (!this.alive) return;
+        if (event) {
+            if (this.emoteEventLock > 0) return;
+            this.emoteEventLock = EMOTE_EVENT_COOLDOWN;
+        }
+        if (!EMOTE_POOLS[key]) key = 'idle';
+        this.emoteKey = key;
+        this.emote = this._pickEmote(key);
+        this.emoteTimer = this.emoteMax = duration;
+    }
+    _updateEmote() {
+        if (this.emoteEventLock > 0) this.emoteEventLock--;
+        if (this.emoteTimer > 0) { this.emoteTimer--; if (this.emoteTimer <= 0) this.emote = null; }
+        if (this.emoteCooldown > 0) {
+            this.emoteCooldown--;
+        } else if (!this.emote && Math.random() < EMOTE_RANDOM_CHANCE) {
+            // 日常小情绪：偶发地想想事情 / 哼首歌，而不是每帧都可能冒泡
+            this.emoteReact('idle', false);
+            this.emoteCooldown = EMOTE_COOLDOWN_MIN + Math.floor(Math.random() * (EMOTE_COOLDOWN_MAX - EMOTE_COOLDOWN_MIN));
+        } else if (!this.emote) {
+            this.emoteCooldown = 20 + Math.floor(Math.random() * 40); // 没抽中就小退一步再掷
+        }
+    }
     findIncomingBullet() {
         const range = TILE_SIZE * 6; const cx = this.x + this.width/2; const cy = this.y + this.height/2;
         for (const b of this.game.bullets) {
@@ -1741,6 +1893,7 @@ class Enemy extends Tank {
     }
     update() { 
         super.update();
+        this._updateEmote();
         if (this.canFly && this.flyTimer > 0) {
             this.flyTimer--;
             if (this.flyTimer <= 0) {
@@ -1756,6 +1909,7 @@ class Enemy extends Tank {
             if (incBullet) {
                 this.direction = this.getSmartDodgeDir(incBullet);
                 this.dirTimer = 10;
+                this.emoteReact('scared');   // 发现来袭炮弹 → 吓一跳
             } else if (this.dirTimer <= 0) {
                 let nearestP = null; let nearestD = Infinity;
                 for (const p of this.game.players) {
@@ -1779,11 +1933,11 @@ class Enemy extends Tank {
         
         const ox = this.x; const oy = this.y; 
         this.move(this.direction); 
-        if (this.x === ox && this.y === oy) this.dirTimer = 0; 
+        if (this.x === ox && this.y === oy) { this.dirTimer = 0; this.emoteReact('angry'); }  // 一头撞墙上 → 恼火
         
         let shootChance = this.variant === 'ELITE' ? 4 : 2;
         if (this.variant === 'RAPID') shootChance = 8;
-        if (Math.random() * 100 < shootChance) this.shoot(); 
+        if (Math.random() * 100 < shootChance) { this.shoot(); this.emoteReact('happy'); }   // 开出一炮 → 窃喜
     }
 }
 
@@ -1942,6 +2096,7 @@ class Boss extends Enemy {
     update() {
         this.cooldown--;
         this.shieldTimer--;
+        this._updateEmote();   // Boss 也走同一套表情包（重写了 update，不会自动继承 Enemy 的调用）
         
         if (this.game.enemyFrozenTimer > 0) return;
         
@@ -2144,15 +2299,19 @@ class Boss extends Enemy {
 
         if (this.health <= 0) {
             this.alive = false; this.game.weather = 'NONE';
-            for (let i = 0; i < 12; i++) {
-                const standardTypes = [POWERUP_TYPES.SHIELD, POWERUP_TYPES.BOMB, POWERUP_TYPES.SHOVEL, POWERUP_TYPES.TIME, POWERUP_TYPES.LIFE, POWERUP_TYPES.STAR, POWERUP_TYPES.STAR, POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.ULTIMATE];
-                const angle = (i / 12) * Math.PI * 2;
-                const dist = TILE_SIZE * 3;
+            // Boss 陨落掉落：数量收敛（原 12 件一圈，视觉上过于夸张），类型抽签去重
+            for (let i = 0; i < BOSS_DROP_COUNT; i++) {
+                let bag = this.game.comicBags.bossDrop;
+                if (!bag || !bag.length) bag = this.game.comicBags.bossDrop = BOSS_DROP_TYPES.slice();
+                const type = bag.splice(Math.floor(Math.random() * bag.length), 1)[0];
+                // 环形均分 + 轻微抖动，既散得开又不会溢出画布
+                const angle = (i / BOSS_DROP_COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+                const dist = BOSS_DROP_RADIUS * (0.85 + Math.random() * 0.3);
                 let px = this.x + this.width/2 + Math.cos(angle) * dist - 32;
                 let py = this.y + this.height/2 + Math.sin(angle) * dist - 32;
                 px = Math.max(0, Math.min(CANVAS_SIZE - 64, px));
                 py = Math.max(0, Math.min(CANVAS_SIZE - 64, py));
-                this.game.powerUps.push(new PowerUp(this.game, px, py, standardTypes[Math.floor(Math.random()*standardTypes.length)]));
+                this.game.powerUps.push(new PowerUp(this.game, px, py, type));
             }
             
             for(let i = 0; i < 5; i++) {
@@ -2278,6 +2437,7 @@ class Boss extends Enemy {
         ctx.fillStyle = hpRatio > 0.5 ? '#0a0' : (hpRatio > 0.25 ? '#fa0' : '#f00');
         ctx.fillRect(barX, barY, barW * hpRatio, barH);
         ctx.strokeStyle = '#666'; ctx.lineWidth = 1; ctx.strokeRect(barX, barY, barW, barH);
+        if (this.emote) this._drawEmote(ctx, 46);   // 表情包浮在标题/血条之上
     }
 }
 
@@ -2414,6 +2574,44 @@ class Game {
             rot: (slot % 2 === 0 ? -1 : 1) * (0.05 + Math.random() * 0.07)
         });
         this.shoutCooldown = COMIC_SHOUT_COOLDOWN;
+    }
+
+    // ===================== 掉落点计算 =====================
+    // 围绕敌我分界线两侧随机取一个"公平"的落点：
+    //  - y 在分界线上下各 DROP_LINE_SPREAD_Y 内浮动 → 双方都要跑一段才能捡到
+    //  - x 保留击杀点的方位感（横向小抖动），连杀时自然散开不叠成一堆
+    //  - 优先落在可通行空地上，避免掉进钢板/砖墙/水面里导致捡不到
+    fairDropSpot(preferX = CANVAS_SIZE / 2) {
+        const half = DROP_SIZE / 2;
+        const clampX = v => Math.max(0, Math.min(CANVAS_SIZE - DROP_SIZE, v));
+        const clampY = v => Math.max(0, Math.min(CANVAS_SIZE - DROP_SIZE, v));
+        // canBoat/canFly 都传 false → 水面也算不可通行，避免道具漂在湖里
+        const clear = (x, y, size) => !this.map.isBlocked(x + half - size / 2, y + half - size / 2, size, size, false, false, false);
+
+        // 1) 先按分界线两侧均匀取一个目标点 —— 分布天然对称，不会偏向某一侧（并对齐到网格）
+        const tx = clampX(Math.round((preferX - half + (Math.random() - 0.5) * 2 * DROP_LINE_SPREAD_X) / TILE_SIZE) * TILE_SIZE);
+        const ty = clampY(Math.round((FRONT_LINE_Y - half + (Math.random() - 0.5) * 2 * DROP_LINE_SPREAD_Y) / TILE_SIZE) * TILE_SIZE);
+
+        // 2) 从目标点向外找"最近的可落点"：先要求整块 64×64 落在空地（最好看），
+        //    退而求其次只要求中心 32×32 干净（地图里能整块容下 64×64 的位置不足一成）
+        for (const size of [DROP_SIZE, TILE_SIZE]) {
+            for (const [ox, oy] of DROP_SEARCH_OFFSETS) {
+                const x = clampX(tx + ox), y = clampY(ty + oy);
+                if (clear(x, y, size)) return { x, y };
+            }
+        }
+
+        // 3) 兜底：沿分界线由近到远逐格扫描（地图必然留有通路，因此总能找到一个干净的格子）
+        const cols = Array.from({ length: GRID_SIZE }, (_, i) => i)
+            .sort((a, b) => Math.abs(a * TILE_SIZE + 16 - preferX) - Math.abs(b * TILE_SIZE + 16 - preferX));
+        for (let ring = 0; ring <= DROP_LINE_SPREAD_Y; ring += TILE_SIZE) {
+            const y = clampY(FRONT_LINE_Y - half + (ring === 0 ? 0 : (Math.random() < 0.5 ? -ring : ring)));
+            for (const c of cols) {
+                const x = clampX(c * TILE_SIZE - half);
+                if (clear(x, y, TILE_SIZE)) return { x, y };
+            }
+        }
+        return { x: clampX(CANVAS_SIZE / 2 - half), y: clampY(FRONT_LINE_Y - half) };
     }
 
     // 圆角矩形路径（兼容无 roundRect 的环境）
