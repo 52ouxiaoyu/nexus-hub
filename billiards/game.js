@@ -724,24 +724,44 @@ function groupRemaining(group) {
 
 // ---------------- 规则结算 ----------------
 function resolveShot() {
-    isBreak = false;
+    const wasBreak = isBreak;
     const P = players[current], O = players[1 - current];
     let foul = false;
     let foulMsg = '';
 
     const cuePotted = cueBall().potted;
+    let potted8 = shot.potted.includes(8);
     const pottedNon8 = shot.potted.filter(n => n !== 8 && n !== 0);
-    const potted8 = shot.potted.includes(8);
 
+    // 犯规判定（必须在清 isBreak 之前做，isLegalFirstContact 要读原值）
     if (cuePotted) { foul = true; foulMsg = '母球落袋'; }
     if (shot.first === null) { foul = true; foulMsg = '空杆未触球'; }
     else if (!isLegalFirstContact(shot.first)) { foul = true; foulMsg = '首触非法球'; }
-    if (!foul && pottedNon8.length === 0 && !shot.potted.includes(0) && !shot.cushionAfter) {
+    // 触球后无球碰库——进任意球（含黑 8）即免
+    if (!foul && pottedNon8.length === 0 && !potted8 && !cuePotted && !shot.cushionAfter) {
         foul = true; foulMsg = '触球后无球碰库';
     }
 
-    // 花色分配（开球后第一杆合法进球定花色）
-    if (openTable && !foul && pottedNon8.length > 0) {
+    // 犯规判定完毕才清 isBreak（避免影响 isLegalFirstContact 的开球豁免）
+    isBreak = false;
+
+    // 开球进黑 8：重置回置球点（无论是否犯规都先还 8 上桌）
+    if (wasBreak && potted8) {
+        const eight = balls.find(b => b.num === 8);
+        eight.potted = false;
+        eight.fall = -1;
+        eight.vx = 0; eight.vz = 0;
+        eight.x = CFG.W / 4; eight.z = 0;
+        eight.mesh.visible = true;
+        eight.mesh.scale.set(1, 1, 1);
+        eight.mesh.position.set(eight.x, CFG.R, eight.z);
+        shot.potted = shot.potted.filter(n => n !== 8);
+        potted8 = false;
+        showMsg('开球黑 8 入袋，已重置回置球点', 2500);
+    }
+
+    // 花色分配：仅在非开球 + 开台 + 合法 + 进非 8 球（开球后桌面仍 open）
+    if (openTable && !wasBreak && !foul && pottedNon8.length > 0) {
         const firstType = ballType(pottedNon8[0]);
         P.group = firstType;
         O.group = firstType === 'solid' ? 'stripe' : 'solid';
@@ -749,7 +769,7 @@ function resolveShot() {
         showMsg((P.group === 'solid' ? P.name + ' 分到全色 ●' : P.name + ' 分到花色 ○'), 2600);
     }
 
-    // 黑 8 结算
+    // 黑 8 结算（非开球阶段；开球进 8 已在上面重置）
     if (potted8) {
         const win = shot.preGroupCleared && !foul && !cuePotted;
         gameOver(win ? current : 1 - current,
@@ -757,11 +777,13 @@ function resolveShot() {
         return;
     }
 
-    // 是否继续击打
+    // 继续 / 换人
     let cont = false;
     if (!foul) {
-        if (openTable) cont = pottedNon8.length > 0;
-        else cont = pottedNon8.some(n => ballType(n) === P.group);
+        if (wasBreak)                          cont = true;                          // 开球未犯规必续
+        else if (openTable)                    cont = pottedNon8.length > 0;         // 开台：进任意非 8 续
+        else if (groupRemaining(P.group) === 0) cont = true;                         // 已清台打 8：未犯规续（修你报的 bug）
+        else                                    cont = pottedNon8.some(n => ballType(n) === P.group);
     }
 
     if (foul) {
@@ -769,7 +791,7 @@ function resolveShot() {
         switchPlayer();
         startBallInHand();
     } else if (cont) {
-        showMsg('好球！继续击打', 1800);
+        showMsg(wasBreak ? '开球续杆' : '好球！继续击打', 1800);
         state = 'aim';
     } else {
         switchPlayer();
@@ -781,7 +803,10 @@ function resolveShot() {
 
 function isLegalFirstContact(num) {
     if (num === 0) return false;
-    if (openTable) return num !== 8;
+    if (openTable) {
+        if (isBreak) return true;        // 开球：首触任意合法
+        return num !== 8;                // 开台后：首触不能是 8
+    }
     const g = players[current].group;
     if (!g) return num !== 8;
     if (groupRemaining(g) === 0) return num === 8;
@@ -795,7 +820,10 @@ function switchPlayer() {
 
 function legalTargetBalls() {
     const g = players[current].group;
-    if (openTable) return balls.filter(b => !b.potted && b.num !== 8 && b.num !== 0);
+    if (openTable) {
+        if (isBreak) return balls.filter(b => !b.potted && b.num !== 0);   // 开球含 8
+        return balls.filter(b => !b.potted && b.num !== 8 && b.num !== 0);
+    }
     if (!g || groupRemaining(g) > 0) return balls.filter(b => !b.potted && b.num !== 0 && b.type === g);
     return balls.filter(b => !b.potted && b.num === 8);   // 打黑 8
 }
@@ -1349,8 +1377,23 @@ window.POOL = {
     get state() { return state; },
     get balls() { return balls; },
     get current() { return current; },
+    get players() { return players; },
+    get openTable() { return openTable; },
+    get isBreak() { return isBreak; },
     startGame, shoot, aimDir,
     setAim(x, z) { const l = Math.hypot(x, z); if (l > 0) aimDir = { x: x / l, z: z / l }; return aimDir; },
+    // 测试用：直接把指定号码的球标为进袋（不动 mesh 动画）
+    potNum(n) { const b = balls.find(x => x.num === n); if (b) { b.potted = true; b.mesh.visible = false; } },
+    // 测试用：直接设置玩家分组
+    setGroups(p0, p1) { players[0].group = p0; players[1].group = p1; openTable = false; },
+    // 测试用：移动球（不动速度）
+    moveBall(n, x, z) { const b = balls.find(y => y.num === n); if (b) { b.x = x; b.z = z; b.mesh.position.set(x, CFG.R, z); } },
+    // 测试用：把某颗球标记为进袋（含 mesh 隐藏）
+    markPotted(n) { const b = balls.find(y => y.num === n); if (b) { b.potted = true; b.mesh.visible = false; b.fall = -1; } },
+    // 测试用：直接用给定的 shot 记录跑一次规则结算（确定性测规则）
+    __resolveMock(s) { shot = s; resolveShot(); },
+    // 测试用：把 isBreak 置 false（模拟开球已经结束）
+    __endBreak() { isBreak = false; },
 };
 
 })();
