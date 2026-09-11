@@ -1172,6 +1172,17 @@ function initInput() {
         if (e.key === 'v' || e.key === 'V') cycleView();
     });
 
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'q' || e.key === 'Q') { keyHeld.q = true; e.preventDefault(); }
+        if (e.key === 'e' || e.key === 'E') { keyHeld.e = true; e.preventDefault(); }
+    });
+    window.addEventListener('keyup', (e) => {
+        if (e.key === 'q' || e.key === 'Q') keyHeld.q = false;
+        if (e.key === 'e' || e.key === 'E') keyHeld.e = false;
+    });
+    // 切走时清理按键状态，避免切回后还在"按住"
+    window.addEventListener('blur', () => { keyHeld.q = false; keyHeld.e = false; });
+
     // 杆法小部件
     const spinBall = $('spin-ball');
     let spinDrag = false;
@@ -1202,27 +1213,75 @@ function initInput() {
 
 function cycleView() {
     camMode = (camMode + 1) % CAM_VIEWS.length;
+    viewToggleTime = performance.now();
+    $('hint').dataset.idle = '';    // 让 hint 走 1.5s 过渡回原始文案
     showMsg('视角：' + CAM_VIEWS[camMode].name, 1200);
 }
 
 // ---------------- 摄像机 ----------------
-// 三个完全静止的预设机位（不跟随鼠标/aimDir），用 V 切换
+// 3 个预设机位：3/4 透视 / 俯视 / 环桌走位（按 Q/E 绕桌子走动，看向桌面中心）
 const CAM_VIEWS = [
-    { name: '3/4 透视',  pos: [0,    1.60, 2.10], look: [0,   -0.02, 0   ] },  // 默认：全场 3/4 透视
-    { name: '俯视',      pos: [0,    3.05, 0.0001], look: [0,    0,    0   ] },  // 俯视（上帝视角）
-    { name: '电影视角',  pos: [1.90, 0.70, 1.30], look: [0,    CFG.R, 0   ] },  // 低角度近脚端，桌面纵深感
+    { name: '3/4 透视',   pos: [0,    1.60, 2.10],    look: [0,   -0.02, 0    ] },
+    { name: '俯视',       pos: [0,    3.05, 0.0001],  look: [0,    0,    0    ] },
+    { name: '环桌走位',   pos: null,                  look: [0,    0,    0    ] },  // 动态计算
 ];
 
+// 环桌走位参数
+const WALK_VIEW = {
+    radius:    1.55,   // 相机离桌面中心的水平距离（m，刚好比桌子对角稍长 0.13m，贴着桌边看）
+    height:    1.10,   // 相机高度（m，模拟真人站着打台球时眼睛位置，桌面 0.8 + 0.30）
+    walkSpeed: 1.55,   // 角速度 rad/s（约 90°/s，绕一圈约 4 秒）
+};
+
+// 全局状态：环桌走位的当前角度
+let camAngle   = 0;       // 绕桌面中心的方位角（rad）
+let camWalkT   = 0;       // 仍在 lerp 收尾时使用，给提示
+const keyHeld  = { q: false, e: false };
+
 function updateCamera(dt) {
+    // 环桌走位：按 Q/E 持续转动 camAngle
+    if (camMode === 2) {
+        if (keyHeld.q) camAngle -= WALK_VIEW.walkSpeed * dt;
+        if (keyHeld.e) camAngle += WALK_VIEW.walkSpeed * dt;
+        // 角度归一化到 [-π, π]
+        if (camAngle >  Math.PI) camAngle -= Math.PI * 2;
+        if (camAngle < -Math.PI) camAngle += Math.PI * 2;
+        camWalkT = performance.now();
+    }
+
     const v = CAM_VIEWS[camMode];
-    const tp = new THREE.Vector3(v.pos[0], v.pos[1], v.pos[2]);
-    const tl = new THREE.Vector3(v.look[0], v.look[1], v.look[2]);
+    let tp, tl;
+    if (camMode === 2) {
+        // 相机在桌面中心外圈，绕中心周向走，看向桌面中心
+        const r = WALK_VIEW.radius;
+        tp = new THREE.Vector3(r * Math.cos(camAngle), WALK_VIEW.height, r * Math.sin(camAngle));
+        tl = new THREE.Vector3(0, CFG.R + 0.02, 0);
+    } else {
+        tp = new THREE.Vector3(v.pos[0], v.pos[1], v.pos[2]);
+        tl = new THREE.Vector3(v.look[0], v.look[1], v.look[2]);
+    }
     // 帧率无关的快速平滑（~0.14s 收敛），切换视角不再像在缓慢旋转
     const k = 1 - Math.exp(-dt * 22);
     camPos.lerp(tp, k);
     camLook.lerp(tl, k);
     camera.position.copy(camPos);
     camera.lookAt(camLook);
+
+    // HUD 提示当前所在位置（仅在环桌走位视角且 1.5s 内有移动）
+    if (camMode === 2) {
+        const a = camAngle * 180 / Math.PI;
+        // 桌面 W=2.54（长边）H=1.27（短边）。我们绕桌面中心，区分"短边外" vs "长边外"
+        // 用 8 个方位：长边两端 4 个，短边外 4 个，但桌子长方形有 4 个角。
+        // 简化：直接显示角度 + 文字方位（长边/短边 + 左/右）
+        const side = (Math.abs(Math.sin(camAngle)) > 0.707) ? '短边外' : '长边外';
+        const flip = Math.sin(camAngle) > 0 ? '（头顶方向）' : '（脚端方向）';
+        $('hint').textContent = `环桌走位：Q 逆时针走 / E 顺时针走 · 当前 ${a.toFixed(0)}° ${side} ${flip}`;
+    } else if (performance.now() - viewToggleTime < 1500) {
+        $('hint').textContent = '视角：' + v.name + '（V 切换）';
+    } else if ($('hint').dataset.idle !== '1') {
+        $('hint').textContent = '移动鼠标瞄准 · 按住蓄力 · 松开出杆';
+        $('hint').dataset.idle = '1';
+    }
 }
 
 // ---------------- 渲染循环 ----------------
@@ -1394,6 +1453,10 @@ window.POOL = {
     __resolveMock(s) { shot = s; resolveShot(); },
     // 测试用：把 isBreak 置 false（模拟开球已经结束）
     __endBreak() { isBreak = false; },
+    // 调试：读取当前环桌走位角度
+    getCamAngle() { return camAngle; },
+    // 调试：强行设置环桌走位角度
+    setCamAngle(a) { camAngle = a; },
 };
 
 })();
