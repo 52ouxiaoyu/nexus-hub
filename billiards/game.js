@@ -242,18 +242,25 @@ function buildTable() {
     woodBox(railW, outerH, -(W / 2 + ct + railW / 2), 0);
     woodBox(railW, outerH, (W / 2 + ct + railW / 2), 0);
 
-    // 袋口（黑圆 + 环）
-    const holeMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
-    const ringMat = new THREE.MeshStandardMaterial({ color: 0x101010, roughness: 0.4 });
+    // 袋口（径向渐变 + 细皮革环）：视觉开口较小、平滑过渡到台呢
+    const pocketTex = makePocketTexture();
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0x1a0f08, roughness: 0.75, metalness: 0.0 });
     for (const p of POCKETS) {
-        const hole = new THREE.Mesh(new THREE.CircleGeometry(p.corner ? 0.062 : 0.05, 24), holeMat);
-        hole.rotation.x = -Math.PI / 2;
-        hole.position.set(p.x * 0.985, 0.0022, p.z * 0.985);
-        scene.add(hole);
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(p.corner ? 0.068 : 0.056, 0.009, 10, 28), ringMat);
-        ring.rotation.x = -Math.PI / 2;
-        ring.position.set(p.x * 0.99, 0.008, p.z * 0.99);
-        scene.add(ring);
+        const r = p.corner ? 0.072 : 0.058;
+        const poc = new THREE.Mesh(
+            new THREE.CircleGeometry(r, 32),
+            new THREE.MeshBasicMaterial({ map: pocketTex })
+        );
+        poc.rotation.x = -Math.PI / 2;
+        poc.position.set(p.x * 0.985, 0.0018, p.z * 0.985);
+        scene.add(poc);
+        const rim = new THREE.Mesh(
+            new THREE.TorusGeometry(r * 0.97, p.corner ? 0.0045 : 0.0035, 8, 28),
+            rimMat
+        );
+        rim.rotation.x = -Math.PI / 2;
+        rim.position.set(p.x * 0.99, 0.003, p.z * 0.99);
+        scene.add(rim);
     }
 
     // 库边镶嵌圆点（钻石点）
@@ -312,6 +319,30 @@ function makeBallTexture(num) {
             g.textAlign = 'center'; g.textBaseline = 'middle';
             g.fillText(String(num), cx, 66);
         }
+    }
+    const tex = new THREE.CanvasTexture(c);
+    if (THREE.sRGBEncoding !== undefined) tex.encoding = THREE.sRGBEncoding;
+    return tex;
+}
+
+// 袋口径向渐变：中心黑 → 深绿 → 草地绿（平滑凹陷感），加细微噪点配台呢
+function makePocketTexture() {
+    const size = 128;
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const g = c.getContext('2d');
+    const cx = size / 2, cy = size / 2;
+    const grad = g.createRadialGradient(cx, cy, 0, cx, cy, size / 2);
+    grad.addColorStop(0.00, '#020403');
+    grad.addColorStop(0.28, '#0a1f14');
+    grad.addColorStop(0.55, '#163a26');
+    grad.addColorStop(0.82, '#256645');
+    grad.addColorStop(1.00, '#2a6e46');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, size, size);
+    for (let i = 0; i < 1400; i++) {
+        g.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
+        g.fillRect(Math.random() * size, Math.random() * size, 2, 2);
     }
     const tex = new THREE.CanvasTexture(c);
     if (THREE.sRGBEncoding !== undefined) tex.encoding = THREE.sRGBEncoding;
@@ -1142,27 +1173,24 @@ function initInput() {
 }
 
 function cycleView() {
-    camMode = (camMode + 1) % 3;
-    viewToggleTime = performance.now();
+    camMode = (camMode + 1) % CAM_VIEWS.length;
+    showMsg('视角：' + CAM_VIEWS[camMode].name, 1200);
 }
 
 // ---------------- 摄像机 ----------------
-function updateCamera(now) {
-    let tp, tl;
-    const cue = cueBall();
-    if (camMode === 1) {
-        tp = new THREE.Vector3(0, 3.05, 0.0001);
-        tl = new THREE.Vector3(0, 0, 0);
-    } else if (camMode === 2 && !cue.potted && (state === 'aim' || state === 'charge')) {
-        tp = new THREE.Vector3(cue.x - aimDir.x * 0.8, 0.36, cue.z - aimDir.z * 0.8);
-        tp.x = clamp(tp.x, -CFG.W / 2 - 0.3, CFG.W / 2 + 0.3);
-        tp.z = clamp(tp.z, -CFG.H / 2 - 0.35, CFG.H / 2 + 0.35);
-        tl = new THREE.Vector3(cue.x + aimDir.x * 0.5, CFG.R, cue.z + aimDir.z * 0.5);
-    } else {
-        tp = new THREE.Vector3(0, 1.62, 2.12);
-        tl = new THREE.Vector3(0, -0.05, 0);
-    }
-    const k = 1 - Math.pow(0.0018, 0.016);   // 平滑插值
+// 三个完全静止的预设机位（不跟随鼠标/aimDir），用 V 切换
+const CAM_VIEWS = [
+    { name: '3/4 透视',  pos: [0,    1.60, 2.10], look: [0,   -0.02, 0   ] },  // 默认：全场 3/4 透视
+    { name: '俯视',      pos: [0,    3.05, 0.0001], look: [0,    0,    0   ] },  // 俯视（上帝视角）
+    { name: '电影视角',  pos: [1.90, 0.70, 1.30], look: [0,    CFG.R, 0   ] },  // 低角度近脚端，桌面纵深感
+];
+
+function updateCamera(dt) {
+    const v = CAM_VIEWS[camMode];
+    const tp = new THREE.Vector3(v.pos[0], v.pos[1], v.pos[2]);
+    const tl = new THREE.Vector3(v.look[0], v.look[1], v.look[2]);
+    // 帧率无关的快速平滑（~0.14s 收敛），切换视角不再像在缓慢旋转
+    const k = 1 - Math.exp(-dt * 22);
     camPos.lerp(tp, k);
     camLook.lerp(tl, k);
     camera.position.copy(camPos);
@@ -1236,7 +1264,7 @@ function animate(now) {
 
     updateGuide();
     updateCueVisual(now);
-    updateCamera(now);
+    updateCamera(dt);
     renderer.render(scene, camera);
 }
 
