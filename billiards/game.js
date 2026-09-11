@@ -9,8 +9,8 @@
 const CFG = {
     W: 2.54, H: 1.27,            // 台面内沿（米）
     R: 0.028575,                  // 球半径
-    cornerGap: 0.145,             // 角袋处库边留空
-    sideGap: 0.075,               // 中袋处库边留空
+    cornerGap: 0.115,             // 角袋处库边留空（WPA 角袋 mouth 4.5"-4.625" ≈ 11.5cm）
+    sideGap: 0.063,               // 中袋处库边留空（WPA 中袋 mouth 5"-5.125" ≈ 12.7cm，2×sideGap）
     cornerCapture: 0.108,         // 角袋捕获半径
     sideCapture: 0.088,           // 中袋捕获半径
     friction: 0.62,               // 滚动摩擦减速度 m/s^2
@@ -218,14 +218,82 @@ function buildTable() {
         m.castShadow = true; m.receiveShadow = true;
         scene.add(m);
     }
-    // 长边（z = ±T）：留角袋与中袋口
+    // 长边（z = ±T）：留角袋与中袋口，cushion 主体顶面边缘刚好在桌面边缘 z = sz*T
     for (const sz of [-1, 1]) {
-        cushBox(-L + CFG.cornerGap, -CFG.sideGap, sz * T, sz * (T + ct));
-        cushBox(CFG.sideGap, L - CFG.cornerGap, sz * T, sz * (T + ct));
+        cushBox(-L + CFG.cornerGap, -CFG.sideGap, sz * T, sz * T);
+        cushBox(CFG.sideGap, L - CFG.cornerGap, sz * T, sz * T);
     }
-    // 短边（x = ±L）：留角袋口
+    // 短边（x = ±L）：留角袋口，cushion 主体顶面边缘刚好在桌面边缘 x = sx*L
     for (const sx of [-1, 1]) {
-        cushBox(sx * L, sx * (L + ct), -T + CFG.cornerGap, T - CFG.cornerGap);
+        cushBox(sx * (L - ct), sx * L, -T + CFG.cornerGap, T - CFG.cornerGap);
+    }
+
+    // 袋口斜面端帽（WPA 标准）：角袋 cushion 端面外夹角 142° → 每边向桌外张 26°，
+    // 中袋外夹角 103° → 每边向桌内收 38.5°。
+    // 几何：cushion 端面顶端相对底端水平偏移 = tan(26°/38.5°) × ch
+    // 视觉增强：把 dx/sIn 整体放大 1.6×，让斜面张开效果在远景也更明显
+    // （实际 dx≈0.035m, sIn≈0.060m；仍小于 ct=0.055/railW=0.13，不破坏 pocket capture）
+    const deg = Math.PI / 180;
+    const cornerTilt = 26 * deg;
+    const sideTilt = 38.5 * deg;
+    const tiltScale = 1.6;
+    const dx = Math.tan(cornerTilt) * ch * tiltScale;
+    const sIn = Math.tan(sideTilt) * ch * tiltScale;
+
+    function slopeQuad(p1, p2, p3, p4) {
+        const g = new THREE.BufferGeometry();
+        const v = new Float32Array([
+            p1[0], p1[1], p1[2],
+            p2[0], p2[1], p2[2],
+            p3[0], p3[1], p3[2],
+            p4[0], p4[1], p4[2],
+        ]);
+        g.setAttribute('position', new THREE.BufferAttribute(v, 3));
+        // 双面渲染：6 个索引（正反 2 套三角形）
+        g.setIndex([0, 1, 2, 0, 2, 3, 0, 2, 1, 0, 3, 2]);
+        g.computeVertexNormals();
+        const m = new THREE.Mesh(g, cushMat);
+        m.castShadow = true; m.receiveShadow = true;
+        scene.add(m);
+    }
+
+    // 角袋：4 个角各加 2 块斜板（短边 cushion 端面 + 长边 cushion 端面）
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+        // 端面 A：短边 cushion（x = sx*L），端面朝桌外（sx 方向）倾斜 19°
+        const Ax = sx * L;
+        slopeQuad(
+            [Ax,           0, sz * T - CFG.cornerGap],   // 内底（z 远离袋口）
+            [Ax,           0, sz * T],                   // 外底（z 靠近袋口）
+            [Ax + sx * dx, ch, sz * T],                  // 外顶（向外偏）
+            [Ax + sx * dx, ch, sz * T - CFG.cornerGap]   // 内顶
+        );
+        // 端面 B：长边 cushion（z = sz*T），端面朝桌外（sz 方向）倾斜 19°
+        const Bz = sz * T;
+        slopeQuad(
+            [sx * L - CFG.cornerGap, 0, Bz],              // 内底（x 远离袋口）
+            [sx * L,                0, Bz],              // 外底（x 靠近袋口）
+            [sx * L,                ch, Bz + sz * dx],   // 外顶（向外偏）
+            [sx * L - CFG.cornerGap, ch, Bz + sz * dx]   // 内顶
+        );
+    }
+
+    // 中袋：2 个长边中点各加 2 块斜板（两侧 cushion 端面向袋口中央倾斜 38.5°）
+    for (const sz of [-1, 1]) {
+        const Bz = sz * T;
+        // 左斜板（x = -sideGap 末端，顶端比底端更靠 +x = 袋口中央）
+        slopeQuad(
+            [-CFG.sideGap + sIn, ch, Bz - CFG.sideGap],   // 左顶
+            [-CFG.sideGap + sIn, ch, Bz + CFG.sideGap],   // 右顶
+            [-CFG.sideGap,         0, Bz + CFG.sideGap],  // 右底
+            [-CFG.sideGap,         0, Bz - CFG.sideGap]   // 左底
+        );
+        // 右斜板（x = +sideGap 末端，顶端比底端更靠 -x = 袋口中央）
+        slopeQuad(
+            [CFG.sideGap - sIn, ch, Bz - CFG.sideGap],    // 右顶
+            [CFG.sideGap - sIn, ch, Bz + CFG.sideGap],    // 左顶
+            [CFG.sideGap,         0, Bz + CFG.sideGap],   // 左底
+            [CFG.sideGap,         0, Bz - CFG.sideGap]    // 右底
+        );
     }
 
     // 木边
@@ -242,24 +310,25 @@ function buildTable() {
     woodBox(railW, outerH, -(W / 2 + ct + railW / 2), 0);
     woodBox(railW, outerH, (W / 2 + ct + railW / 2), 0);
 
-    // 袋口（径向渐变 + 细皮革环）：视觉开口较小、平滑过渡到台呢
+    // 袋口"凹陷"视觉：圆盘半径贴合 mouth（WPA 11.5cm/12.7cm），圆心略向外沉一点，
+    // 视觉上像口袋内壁往桌外微凹。
     const pocketTex = makePocketTexture();
     const rimMat = new THREE.MeshStandardMaterial({ color: 0x1a0f08, roughness: 0.75, metalness: 0.0 });
     for (const p of POCKETS) {
-        const r = p.corner ? 0.072 : 0.058;
+        const r = p.corner ? 0.052 : 0.052;
         const poc = new THREE.Mesh(
             new THREE.CircleGeometry(r, 32),
             new THREE.MeshBasicMaterial({ map: pocketTex })
         );
         poc.rotation.x = -Math.PI / 2;
-        poc.position.set(p.x * 0.985, 0.0018, p.z * 0.985);
+        poc.position.set(p.x * 0.978, 0.0018, p.z * 0.978);
         scene.add(poc);
         const rim = new THREE.Mesh(
-            new THREE.TorusGeometry(r * 0.97, p.corner ? 0.0045 : 0.0035, 8, 28),
+            new THREE.TorusGeometry(r * 0.96, p.corner ? 0.0040 : 0.0035, 8, 28),
             rimMat
         );
         rim.rotation.x = -Math.PI / 2;
-        rim.position.set(p.x * 0.99, 0.003, p.z * 0.99);
+        rim.position.set(p.x * 0.985, 0.003, p.z * 0.985);
         scene.add(rim);
     }
 
