@@ -128,6 +128,29 @@
     #t-gas { right: 20px; bottom: 110px; }
     #t-nitro { right: 20px; bottom: 200px; width: 60px; height: 60px; font-size: 20px; }
 
+    /* v1.0.1 VS 模式：按钮、布局、调色板 */
+    .big-btn.btn-vs { background: linear-gradient(120deg, #ff9f1c, #ffd166); box-shadow: 0 10px 30px rgba(255, 159, 28, 0.35); }
+    .big-btn.btn-vs:hover { box-shadow: 0 14px 38px rgba(255, 159, 28, 0.5); }
+
+    /* VS 模式 P2 HUD（右侧布局，左上/左下取齐） */
+    .vs-hud { position: fixed; right: 0; top: 0; bottom: 0; left: 50%; pointer-events: none; z-index: 21; display: none; }
+    .vs-hud:not(.hidden) { display: block; }
+    .hud-panel-p2 { position: absolute; background: rgba(20, 30, 50, 0.72); border: 1px solid rgba(30, 136, 255, 0.45); border-radius: 14px; padding: 10px 16px; backdrop-filter: blur(4px); }
+    .pos-p2 { top: 18px; left: 18px; text-align: center; min-width: 100px; }
+    .time-p2 { top: 18px; left: 50%; transform: translateX(-50%); text-align: center; min-width: 150px; }
+    .speed-p2 { bottom: 22px; left: 22px; text-align: left; min-width: 150px; }
+    .map-p2 { bottom: 22px; right: 22px; left: auto; padding: 8px; line-height: 0; }
+    .vs-hud #minimap2 { width: 110px; height: 110px; }
+    .pos-p2 #posVal2, .speed-p2 #speedVal2 { color: #4db5ff; }
+    .hint-p2 { font-size: 10px; color: #8eb8e5; margin-top: 4px; font-variant-numeric: tabular-nums; }
+    /* VS 中央分割线 */
+    #splitLine { position: fixed; top: 0; bottom: 0; left: 50%; width: 4px; margin-left: -2px; background: linear-gradient(180deg, transparent 0%, rgba(255, 223, 80, 0.7) 18%, rgba(255, 159, 28, 0.9) 50%, rgba(255, 223, 80, 0.7) 82%, transparent 100%); z-index: 22; pointer-events: none; box-shadow: 0 0 8px rgba(255, 159, 28, 0.5); }
+    /* VS 模式时，把 P1 HUD 限制到左半屏 */
+    body.vs-mode #hud { left: 0; right: 50%; }
+    body.vs-mode #trackTag { right: auto; left: 18px; }
+    /* VS 模式时，#hud-map 也限制左侧 */
+    body.vs-mode #hud-map { right: auto; left: 22px; }
+
     #muteBtn {
         position: fixed; bottom: 190px; left: 22px; z-index: 26; width: 42px; height: 42px; border-radius: 12px;
         background: rgba(8,12,20,0.6); border: 1px solid var(--border); color: #cfe3f5; font-size: 18px;
@@ -141,7 +164,7 @@
 <canvas id="game-canvas"></canvas>
 <div id="speedlines"></div>
 
-<!-- HUD -->
+<!-- HUD P1 -->
 <div id="hud" class="hidden">
     <div class="hud-panel" id="hud-pos">
         <div id="posVal">1<small>/4</small></div>
@@ -160,6 +183,27 @@
     <div id="trackTag">赛道 #--</div>
 </div>
 
+<!-- HUD P2（VS 模式启用） -->
+<div id="hudP2" class="hidden vs-hud">
+    <div class="hud-panel hud-panel-p2 pos-p2">
+        <div id="posVal2">P2<small>&nbsp;</small></div>
+        <div id="lapVal2">第 1/3 圈 · LAP</div>
+    </div>
+    <div class="hud-panel hud-panel-p2 time-p2">
+        <div id="timeVal2">P2</div>
+        <div class="hint-p2">🔵 蓝车 Blue</div>
+    </div>
+    <div class="hud-panel hud-panel-p2 speed-p2">
+        <div id="speedVal2">0<small> km/h</small></div>
+        <div id="gearVal2">GEAR N</div>
+        <div class="nitro-wrap"><div id="nitroFill2"></div></div>
+    </div>
+    <div class="hud-panel hud-panel-p2 map-p2"><canvas id="minimap2" width="300" height="300"></canvas></div>
+</div>
+
+<!-- VS 中央分隔线 -->
+<div id="splitLine" class="hidden"></div>
+
 <div id="countdown" class="hidden"><div>3</div></div>
 <div id="wrongway" class="hidden">⚠ 逆行 WRONG WAY</div>
 
@@ -172,7 +216,7 @@
     <div class="tbtn" id="t-nitro">🔥</div>
 </div>
 <button id="muteBtn" title="静音 (M)">🔊</button>
-<div id="version">Turbo Rush 3D v1.0.0</div>
+<div id="version">Turbo Rush 3D v1.1.0</div>
 
 <!-- 主菜单 -->
 <div id="menu" class="overlay">
@@ -184,12 +228,13 @@
             <div class="diff-btn sel" data-diff="1"><div class="d-name">⚡ 势均力敌</div><div class="d-desc">旗鼓相当</div></div>
             <div class="diff-btn" data-diff="2"><div class="d-name">🔥 狂野</div><div class="d-desc">高手过招</div></div>
         </div>
-        <button class="big-btn" id="btn-start">开始比赛 · START</button>
+        <button class="big-btn" id="btn-start">🏆 单人挑战 · SOLO</button>
+        <button class="big-btn btn-vs" id="btn-vs">⚔ 双人对战 · SPLIT-SCREEN VS</button>
         <div class="menu-best" id="menuBest">历史最佳圈速：<b>--:--.--</b> ｜ 最佳总成绩：<b>--:--.--</b></div>
-        <div class="controls-hint">
-            <span><b>W/↑</b> 油门</span><span><b>S/↓</b> 刹车</span><span><b>A·D/←→</b> 转向</span>
-            <span><b>Space</b> 漂移</span><span><b>Shift</b> 氮气</span><span><b>R</b> 回正</span>
-            <span><b>Esc</b> 暂停</span><span><b>M</b> 静音</span>
+        <div class="controls-hint" id="controlsHint">
+            <span><b>P1 红车</b> W/S · A·D · Space 漂移 · Shift 氮气</span>
+            <span><b>P2 蓝车</b> ↑↓←→ · . 漂移 · , 氮气</span>
+            <span><b>R</b> 回正</span><span><b>Esc</b> 暂停</span><span><b>M</b> 静音</span>
         </div>
     </div>
 </div>
