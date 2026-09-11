@@ -5,6 +5,19 @@ const CANVAS_SIZE = TILE_SIZE * GRID_SIZE; // 832px
 
 const TILE_TYPES = { EMPTY: 0, BRICK: 1, STEEL: 2, WATER: 3, FOREST: 4, ICE: 5, HARD_BRICK: 6, UNBREAKABLE: 7, BARREL: 8, BASE: 9, BASE_DESTROYED: 10 };
 const COLORS = { BRICK: '#B53120', BRICK_LIGHT: '#DC5341', STEEL: '#AAAAAA', STEEL_LIGHT: '#EEEEEE', WATER: '#2131E7', FOREST: '#21B521', PLAYER1: '#E7E721', PLAYER2: '#63C6FF', ENEMY: '#E7E7E7', BASE: '#E79C21', BARREL: '#FF4400' };
+
+// ===== 大本营护盾（每张地图都强制生成）=====
+// 大本营固定占 (row24~25, col12~13)，砖墙从 row21 起。
+// 单独在砖墙正上方再压一层"装甲顶棚"，防止敌人（尤其高阶 BOSS）刚出生就对着基地
+// 所在的两列一路往下轰，几炮就把大本营打光。
+const BASE_ROW_TOP = 24;              // 基地砖墙外沿起点（row24~25 为基地本体）
+const BASE_SHIELD_ROW = 20;           // 装甲顶棚所在行（紧贴砖墙 row21 正上方）
+const BASE_SHIELD_X1 = 11;            // 顶棚左边界
+const BASE_SHIELD_X2 = 14;            // 顶棚右边界
+const BASE_CORE_X1 = 12;              // 基地正对的两列（唯一能直射基地的竖直通道）
+const BASE_CORE_X2 = 13;
+const BASE_PROTECT_Y = 18;            // 保护区上沿：路径雕刻不得在此区域内开挖
+
 const POWERUP_TYPES = { SHIELD: '🛡️', BOMB: '💣', STAR: '⭐', SHOVEL: '🏗️', LIFE: '❤️', TIME: '⏳', MAX_WEAPON: '🚀', BOAT: '🚤', FLY: '🚁', W_MISSILE: '🎯', W_LASER: '⚡', W_EXPLOSIVE: '💥', FAKE_BOMB: '🧨', ULTIMATE: '🔮' };
 
 // ===== 漫画式反馈文案池（纯数据驱动，想加梗直接往数组里塞即可）=====
@@ -479,6 +492,7 @@ class GameMap {
         this.setBaseWalls(TILE_TYPES.BRICK);
         
         this.guaranteeConnectivity();
+        this.setBaseShield(); // 必须在 guaranteeConnectivity 之后：它是"成品保护层"，不许被路径雕刻挖掉
     }
     
     isConnected(x1, y1, x2, y2) {
@@ -502,6 +516,12 @@ class GameMap {
         return false;
     }
 
+    // 大本营 + 顶棚保护区：路径雕刻绝不在这一片开挖，
+    // 否则会掏出一条直通基地的竖直走廊，把护心石和砖墙一起架空。
+    inBaseProtectedZone(x, y) {
+        return x >= BASE_SHIELD_X1 - 1 && x <= BASE_SHIELD_X2 + 1 && y >= BASE_PROTECT_Y;
+    }
+
     forcePath(x1, y1, x2, y2) {
         const impassable = [TILE_TYPES.STEEL, TILE_TYPES.HARD_BRICK, TILE_TYPES.UNBREAKABLE, TILE_TYPES.WATER];
         let x = x1; let y = y1;
@@ -514,16 +534,16 @@ class GameMap {
             } else {
                 y += y < y2 ? 1 : -1;
             }
-            if (x >= 10 && x <= 15 && y >= 20) continue; // protect base area
+            if (this.inBaseProtectedZone(x, y)) continue; // protect base area
             if (x <= 0 || x >= GRID_SIZE - 1 || y <= 0 || y >= GRID_SIZE - 1) continue;
             
             if (impassable.includes(this.grid[y][x])) {
                 this.grid[y][x] = TILE_TYPES.EMPTY;
                 // clear a 2x2 area to ensure tank can pass easily
-                if (x+1 < GRID_SIZE-1 && impassable.includes(this.grid[y][x+1]) && !(x+1 >= 10 && x+1 <= 15 && y >= 20)) this.grid[y][x+1] = TILE_TYPES.EMPTY;
-                if (y+1 < GRID_SIZE-1 && impassable.includes(this.grid[y+1][x]) && !(x >= 10 && x <= 15 && y+1 >= 20)) this.grid[y+1][x] = TILE_TYPES.EMPTY;
-                if (x-1 > 0 && impassable.includes(this.grid[y][x-1]) && !(x-1 >= 10 && x-1 <= 15 && y >= 20)) this.grid[y][x-1] = TILE_TYPES.EMPTY;
-                if (y-1 > 0 && impassable.includes(this.grid[y-1][x]) && !(x >= 10 && x <= 15 && y-1 >= 20)) this.grid[y-1][x] = TILE_TYPES.EMPTY;
+                if (x+1 < GRID_SIZE-1 && impassable.includes(this.grid[y][x+1]) && !this.inBaseProtectedZone(x+1, y)) this.grid[y][x+1] = TILE_TYPES.EMPTY;
+                if (y+1 < GRID_SIZE-1 && impassable.includes(this.grid[y+1][x]) && !this.inBaseProtectedZone(x, y+1)) this.grid[y+1][x] = TILE_TYPES.EMPTY;
+                if (x-1 > 0 && impassable.includes(this.grid[y][x-1]) && !this.inBaseProtectedZone(x-1, y)) this.grid[y][x-1] = TILE_TYPES.EMPTY;
+                if (y-1 > 0 && impassable.includes(this.grid[y-1][x]) && !this.inBaseProtectedZone(x, y-1)) this.grid[y-1][x] = TILE_TYPES.EMPTY;
             }
         }
     }
@@ -553,6 +573,16 @@ class GameMap {
         walls.forEach(([y,x]) => { if (y >= 0 && y < GRID_SIZE && x >= 0 && x < GRID_SIZE) this.grid[y][x] = type; });
     }
     clearArea(tx, ty, tw, th) { for (let y = ty; y < ty + th; y++) for (let x = tx; x < tx + tw; x++) if (y < GRID_SIZE && x < GRID_SIZE) this.grid[y][x] = TILE_TYPES.EMPTY; }
+
+    // ===== 大本营"装甲顶棚"：无论随机地图怎么生成，都强制在基地正上方留坚硬掩护 =====
+    // ① 顶层压一排钢块(STEEL)：普通/精英敌人（最高 3 级）与低阶 BOSS 完全打不穿；
+    // ② 正对基地的两列(12/13)再加一块不可摧毁的黑曜石(UNBREAKABLE)：这两列是唯一能
+    //    竖直直射到基地的通道，即便高阶 BOSS 用高爆弹把周围砖石全掀了，也会被它顶住。
+    // 注意：必须在 guaranteeConnectivity() 之后调用，否则路径雕刻会把护心石挖掉。
+    setBaseShield() {
+        for (let x = BASE_SHIELD_X1; x <= BASE_SHIELD_X2; x++) this.grid[BASE_SHIELD_ROW][x] = TILE_TYPES.STEEL;
+        for (let x = BASE_CORE_X1; x <= BASE_CORE_X2; x++) this.grid[BASE_SHIELD_ROW - 1][x] = TILE_TYPES.UNBREAKABLE;
+    }
     draw(ctx) {
         for (let y = 0; y < GRID_SIZE; y++) {
             for (let x = 0; x < GRID_SIZE; x++) {
