@@ -18,7 +18,7 @@ const BASE_CORE_X1 = 12;              // 基地正对的两列（唯一能直射
 const BASE_CORE_X2 = 13;
 const BASE_PROTECT_Y = 18;            // 保护区上沿：路径雕刻不得在此区域内开挖
 
-const POWERUP_TYPES = { SHIELD: '🛡️', BOMB: '💣', STAR: '⭐', SHOVEL: '🏗️', LIFE: '❤️', TIME: '⏳', MAX_WEAPON: '🚀', BOAT: '🚤', FLY: '🚁', W_MISSILE: '🎯', W_LASER: '⚡', W_EXPLOSIVE: '💥', FAKE_BOMB: '🧨', ULTIMATE: '🔮' };
+const POWERUP_TYPES = { SHIELD: '🛡️', BOMB: '💣', STAR: '⭐', SHOVEL: '🏗️', LIFE: '❤️', TIME: '⏳', MAX_WEAPON: '🚀', BOAT: '🚤', FLY: '🚁', W_MISSILE: '🎯', W_LASER: '⚡', W_EXPLOSIVE: '💥', W_SPREAD: '🔱', W_BOUNCE: '🪀', FAKE_BOMB: '🧨', ULTIMATE: '🔮' };
 
 // ===== 漫画式反馈文案池（纯数据驱动，想加梗直接往数组里塞即可）=====
 // 抽取方式为"抽签袋"：整个池子洗一遍逐个抽，抽空才重洗 → 一轮内绝不重复
@@ -66,8 +66,30 @@ const BOSS_DROP_RADIUS = TILE_SIZE * 3.8;   // ≈122px，比原先的 96px 更�
 const BOSS_DROP_TYPES = [
     POWERUP_TYPES.LIFE, POWERUP_TYPES.SHIELD, POWERUP_TYPES.STAR,
     POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.W_MISSILE,
+    POWERUP_TYPES.W_SPREAD, POWERUP_TYPES.W_BOUNCE,
     POWERUP_TYPES.BOMB, POWERUP_TYPES.TIME, POWERUP_TYPES.SHOVEL, POWERUP_TYPES.ULTIMATE
 ];
+
+// ===== 火力成长曲线（v1.4.5）=====
+// 背景：v1.4.4 及以前，火力等级只有两条来源 ——「连击 10 次升 1 级」和「捡道具升 1 级」，
+// 于是出现了"打死一大堆坦克火力还是最初的白子弹"的观感；而道具又能叠加到一把 9 级，
+// 分配极度不均。这里统一改成**进度点**制：击杀/捡道具都只加"火力进度"，攒满才升 1 级。
+//   · 升级门槛：Lv0~2 需 2 点，Lv3~5 需 3 点，Lv6~8 需 4 点 → 从 0 级打满 9 级共 27 点
+//   · 普通击杀 +1、连杀(≥5) +2 → 纯靠打怪约 18~27 杀满级，一局打完刚好"慢慢升满"
+//   · 重复拾取同类武器 +1、换成新武器 +2、⭐ +2（低等级时正好一级）
+//   · 🚀 遗产火箭：不再是"一口吃成 9 级"，改为"至少提到 5 级、最多再 +2 级"
+const FIRE_NEED_BASE = 2;         // Lv0 时每级所需进度点
+const FIRE_NEED_STEP = 3;         // 每 3 级门槛 +1 点（Lv0~2→2、Lv3~5→3、Lv6~8→4）
+const FIRE_KILL_GAIN = 1;         // 普通击杀进度
+const FIRE_KILL_STREAK_GAIN = 2;  // 连杀进度（5 连杀起翻倍）
+const FIRE_KILL_STREAK_AT = 5;    // 达到多少连杀开始算"连杀加成"
+const FIRE_MILESTONES = [3, 5, 7, 9];  // 只有在这些等级才弹大横幅，避免"每两三杀就刷屏"
+const FIRE_PICKUP_GAIN = 1;       // 重复拾取同类武器
+const FIRE_PICKUP_NEW_GAIN = 2;   // 首次拾取某种新武器
+const FIRE_STAR_GAIN = 2;         // ⭐ 星星
+const FIRE_MAX_WEAPON_FLOOR = 5;  // 🚀 至少提升到的等级
+const FIRE_MAX_WEAPON_STEP = 2;   // 🚀 在此之上最多再加几级
+const BOUNCE_MAX_BOUNCES = 4;     // 🪀 弹射炮最多在墙壁间反弹几次
 
 // ===== 敌方坦克表情包（头顶小气泡，让敌人"会思考、会愤怒、会欢喜"）=====
 // 按情境分组；idle 是日常小情绪，其余由事件触发
@@ -347,11 +369,12 @@ class PowerUp {
         else if (type === POWERUP_TYPES.BOMB) this.game.showTip("💡 TIP: 吃到炸弹💣可以瞬间消灭屏幕上的所有敌人！", 400);
         else if (type === POWERUP_TYPES.SHOVEL) this.game.showTip("💡 TIP: 吃到铁锹🏗️可以把基地周围的砖块升级为坚不可摧的钢板！", 400);
         else if (type === POWERUP_TYPES.TIME) this.game.showTip("💡 TIP: 吃到时钟⏳可以冻结所有敌人一段时间！", 400);
-        else if (type === POWERUP_TYPES.STAR) this.game.showTip("💡 TIP: 吃到星星⭐可以直接升一级，火力提升！", 400);
+        else if (type === POWERUP_TYPES.STAR) this.game.showTip("💡 TIP: 吃到星星⭐可获得大量火力进度，快速升级！", 400);
         else if (type === POWERUP_TYPES.W_MISSILE) this.game.showTip("💡 TIP: 吃到🎯切换为【跟踪导弹】，自动追踪敌人！", 400);
         else if (type === POWERUP_TYPES.W_LASER) this.game.showTip("💡 TIP: 吃到⚡切换为【穿透激光】，拥有极高弹速和穿透力！", 400);
         else if (type === POWERUP_TYPES.W_EXPLOSIVE) this.game.showTip("💡 TIP: 吃到💥切换为【高爆弹】，拥有巨大爆炸范围！", 400);
-                else if (type === POWERUP_TYPES.W_BOUNCE) this.game.showTip("💡 TIP: 吃到🪀切换为【弹射炮】，子弹能在墙壁间疯狂弹射！", 400);
+        else if (type === POWERUP_TYPES.W_SPREAD) this.game.showTip("💡 TIP: 吃到🔱切换为【霰弹散射】，一次打出多枚扇形弹！", 400);
+        else if (type === POWERUP_TYPES.W_BOUNCE) this.game.showTip("💡 TIP: 吃到🪀切换为【弹射炮】，子弹能在墙壁间疯狂弹射！", 400);
     }
     update() {
         this.timer--; if (this.timer <= 0) this.active = false;
@@ -365,21 +388,27 @@ class PowerUp {
     }
     handleWeaponPickup(player, newClass, name, color) {
         const isPlayer = player instanceof Player;
-        if (player.weaponClass !== newClass) {
+        const isNew = player.weaponClass !== newClass;
+        if (isNew) {
             player.weaponClass = newClass;
             if (isPlayer) this.game.showAnnouncement(`火力切换: ${name}!`, color);
             else this.game.showAnnouncement(`⚠️ 敌人获得了: ${name}!`, '#f00');
         }
-        if (player.level < 9) {
-            player.upgrade();
-            if (isPlayer) this.game.showAnnouncement(`${name}升级 (Lv ${player.level})!`, color);
-        } else {
-            player.overdriveTimer = 600; // 10 seconds
+        // v1.4.5：道具不再"一口一个满级"，只按进度点推进（换新武器 +2 / 重复同类 +1）
+        const gain = isNew ? FIRE_PICKUP_NEW_GAIN : FIRE_PICKUP_GAIN;
+        const levels = player.addFireProgress(gain);
+        if (player.level >= 9) {
+            // 满级后再吃武器 → 10 秒超载（连发）
+            if (!(player.overdriveTimer > 0)) player.overdriveTimer = 600;
             if (isPlayer) {
-                this.game.showAnnouncement(`火力超载 (OVERDRIVE) 启动!`, '#f0f');
+                this.game.showAnnouncement('火力超载 (OVERDRIVE) 启动!', '#f0f');
                 this.game.shakeScreen(15);
                 this.game.hitStopTimer = 10;
             }
+        } else if (isPlayer && levels > 0) {
+            this.game.showAnnouncement(`${name} · 火力 Lv.${player.level}!`, color);
+        } else if (isPlayer) {
+            this.game.showFloatingText(`火力 ${player.fireProgress}/${player.fireNeed()}`, player.x + player.width / 2, player.y - 20, '#9fe8ff');
         }
     }
     applyEffect(player) {
@@ -409,7 +438,7 @@ class PowerUp {
             else { this.game.players.forEach(p => p.destroy(player, 2)); this.game.showAnnouncement('⚠️ 敌人使用了全屏炸弹!', '#f00'); }
         }
         else if (this.type === POWERUP_TYPES.SHIELD) player.setShield(360);
-        else if (this.type === POWERUP_TYPES.STAR) player.upgrade();
+        else if (this.type === POWERUP_TYPES.STAR) player.addFireProgress(FIRE_STAR_GAIN);
         else if (this.type === POWERUP_TYPES.SHOVEL) {
             if (isPlayer) this.game.fortifyBase();
             else { this.game.unfortifyBase(); this.game.showAnnouncement('⚠️ 基地防御被削弱!', '#f00'); }
@@ -426,12 +455,16 @@ class PowerUp {
             else { this.game.playerFrozenTimer = 300; this.game.showAnnouncement('⚠️ 玩家被冻结!', '#f00'); }
         }
         else if (this.type === POWERUP_TYPES.MAX_WEAPON) {
-            player.level = 9;
-            player.speed = Math.min(8, 4 + 9 * 0.15);
-            player.maxHealth = 1 + 9 * 2;
+            // v1.4.5：原实现直接 level=9 —— 捡到几个道具就"非常强非常强"，分配失衡。
+            // 改为「至少提到 5 级，且至多在本级基础上 +2 级」，满血奖励保留。
+            const hpBonus = isPlayer ? 1 + player.level * 2 : 1 + 9 * 2;
+            player.level = Math.min(9, Math.max(player.level + FIRE_MAX_WEAPON_STEP, FIRE_MAX_WEAPON_FLOOR));
+            player.fireProgress = 0;
+            player.speed = Math.min(8, 4 + player.level * 0.15);
+            player.maxHealth = Math.max(player.maxHealth, hpBonus);
             player.health = player.maxHealth;
             if (isPlayer) {
-                this.game.showAnnouncement('终极武器 MAX WEAPON!', '#f0f');
+                this.game.showAnnouncement(`终极武器 MAX WEAPON! 火力 Lv.${player.level}`, '#f0f');
                 this.game.updateHUD();
             } else {
                 this.game.showAnnouncement('⚠️ 敌方坦克获得了终极武器!', '#f00');
@@ -440,7 +473,8 @@ class PowerUp {
         else if (this.type === POWERUP_TYPES.W_MISSILE) { this.handleWeaponPickup(player, 'MISSILE', '跟踪导弹', '#0f0'); }
         else if (this.type === POWERUP_TYPES.W_LASER) { this.handleWeaponPickup(player, 'LASER', '穿透激光', '#0ff'); }
         else if (this.type === POWERUP_TYPES.W_EXPLOSIVE) { this.handleWeaponPickup(player, 'EXPLOSIVE', '高爆弹', '#f00'); }
-                else if (this.type === POWERUP_TYPES.W_BOUNCE) { this.handleWeaponPickup(player, 'BOUNCE', '弹射炮', '#f0f'); }
+        else if (this.type === POWERUP_TYPES.W_SPREAD) { this.handleWeaponPickup(player, 'SPREAD', '霰弹散射', '#0f0'); }
+        else if (this.type === POWERUP_TYPES.W_BOUNCE) { this.handleWeaponPickup(player, 'BOUNCE', '弹射炮', '#f0f'); }
         else if (this.type === POWERUP_TYPES.BOAT) {
             player.canBoat = true;
             this.game.showAnnouncement('获得渡河能力 CAN BOAT!', '#0cf');
@@ -813,10 +847,26 @@ class Bullet {
             this.speed = 5;
             this.damage *= 2;
             this.size = 12;
+        } else if (this.type === 'SPREAD') {
+            // 🔱 霰弹：弹丸小、飞得快、单丸伤害低，靠"同时多枚"制造覆盖面
+            this.speed = 9;
+            this.size = 6;
+            this.damage = Math.max(1, Math.floor(level / 4) + 1); // Lv0~3→1，Lv4+→2
+        } else if (this.type === 'BOUNCE') {
+            // 🪀 弹射炮：撞墙反弹，反弹次数用尽才炸
+            this.speed = 7;
+            this.size = 9;
+            this.bounces = 0;
+            this.maxBounces = BOUNCE_MAX_BOUNCES;
         }
         this.vx = undefined; this.vy = undefined;
+        if (this.type === 'BOUNCE') {
+            this.vx = this.dir === 'LEFT' ? -this.speed : this.dir === 'RIGHT' ? this.speed : 0;
+            this.vy = this.dir === 'UP' ? -this.speed : this.dir === 'DOWN' ? this.speed : 0;
+        }
     }
     update() {
+        this.px = this.x; this.py = this.y;   // 记录上一帧位置（🪀 弹射炮判断撞墙方向用）
         if (this.type === 'MISSILE' || this.type === 'LASER_MISSILE') {
             let target = null;
             let minDist = Infinity;
@@ -883,11 +933,15 @@ class Bullet {
         }
         const tx = Math.floor((this.x + this.size/2) / TILE_SIZE); const ty = Math.floor((this.y + this.size/2) / TILE_SIZE);
         if (tx < 0 || tx >= GRID_SIZE || ty < 0 || ty >= GRID_SIZE) { 
+            // 🪀 弹射炮在画布边缘也要弹回来（还有反弹次数的话）
+            if (this.type === 'BOUNCE' && this._bounceOff(tx, ty)) return;
             this.active = false;
             return; 
         }
         const tile = this.game.map.grid[ty][tx];
         if (tile === TILE_TYPES.BRICK || tile === TILE_TYPES.HARD_BRICK || tile === TILE_TYPES.STEEL || tile === TILE_TYPES.UNBREAKABLE || tile === TILE_TYPES.BASE || tile === TILE_TYPES.BARREL) {
+            // 🪀 弹射炮撞墙不消失，反弹后继续飞；次数用尽才走下面正常的爆炸流程
+            if (this.type === 'BOUNCE' && this._bounceOff(tx, ty)) return;
             if (this.piercing) {
                 if (tile === TILE_TYPES.BRICK || tile === TILE_TYPES.HARD_BRICK || tile === TILE_TYPES.BARREL) {
                     this.game.map.grid[ty][tx] = TILE_TYPES.EMPTY;
@@ -968,6 +1022,31 @@ class Bullet {
             }
         }
     }
+    // 🪀 弹射炮撞墙反弹：判断是"横向的墙"还是"纵向的墙"，翻转对应速度分量。
+    // 返回 true 表示已成功反弹（调用方直接 return）；false 表示反弹次数用尽（走正常消失/爆炸流程）。
+    _bounceOff(tx, ty) {
+        this.bounces = this.bounces || 0;
+        if (this.bounces >= (this.maxBounces || BOUNCE_MAX_BOUNCES)) return false;
+        const half = this.size / 2;
+        const oldTx = Math.floor((this.px + half) / TILE_SIZE);
+        const oldTy = Math.floor((this.py + half) / TILE_SIZE);
+        const solidAt = (gx, gy) => {
+            if (gx < 0 || gx >= GRID_SIZE || gy < 0 || gy >= GRID_SIZE) return true;
+            const t = this.game.map.grid[gy][gx];
+            return t === TILE_TYPES.BRICK || t === TILE_TYPES.HARD_BRICK || t === TILE_TYPES.STEEL ||
+                   t === TILE_TYPES.UNBREAKABLE || t === TILE_TYPES.BASE || t === TILE_TYPES.BARREL;
+        };
+        const wallSide = solidAt(tx, oldTy);    // 沿 x 方向撞墙 → 翻转 vx
+        const wallTopBot = solidAt(oldTx, ty);  // 沿 y 方向撞墙 → 翻转 vy
+        this.x = this.px; this.y = this.py;     // 退回上一帧位置，避免卡进墙体
+        this.bounces++;
+        if (wallSide && !wallTopBot) this.vx = -this.vx;
+        else if (wallTopBot && !wallSide) this.vy = -this.vy;
+        else { this.vx = -this.vx; this.vy = -this.vy; }
+        this.dir = Math.abs(this.vx) > Math.abs(this.vy) ? (this.vx > 0 ? 'RIGHT' : 'LEFT') : (this.vy > 0 ? 'DOWN' : 'UP');
+        this.game.effects.push(new Effect(this.x + half, this.y + half, 'EXPLOSION', 0.25));
+        return true;
+    }
     triggerExplosion(ex, ey, small = false) {
         let radius = 0.5;
         if (!small && this.type === 'EXPLOSIVE') {
@@ -1025,6 +1104,17 @@ class Bullet {
             ctx.shadowBlur = 10; ctx.shadowColor = '#f00';
             ctx.beginPath(); ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI * 2); ctx.fill();
             if (Math.random() < 0.5) this.game.effects.push(new Effect(this.x + this.size/2, this.y + this.size/2, 'EXPLOSION', 0.2));
+        } else if (this.type === 'SPREAD') {
+            ctx.fillStyle = '#7dff5a';
+            ctx.shadowBlur = 8; ctx.shadowColor = '#0f0';
+            ctx.beginPath(); ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI * 2); ctx.fill();
+        } else if (this.type === 'BOUNCE') {
+            ctx.fillStyle = '#f0f';
+            ctx.shadowBlur = 12; ctx.shadowColor = '#f0f';
+            ctx.beginPath(); ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI * 2); ctx.fill();
+            // 弹过一次就描白边，方便玩家看清"弹射"过程
+            ctx.strokeStyle = this.bounces > 0 ? '#fff' : 'rgba(255,255,255,0.45)';
+            ctx.lineWidth = 2; ctx.stroke();
         } else {
             ctx.fillStyle = this.level >= 1 ? '#ff0' : '#fff'; 
             ctx.beginPath(); ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI * 2); ctx.fill(); 
@@ -1035,16 +1125,40 @@ class Bullet {
 }
 
 class Tank {
-    constructor(game, x, y, color) { this.game = game; this.x = x; this.y = y; this.width = 60; this.height = 60; this.color = color; this.direction = 'UP'; this.speed = 4; this.cooldown = 0; this.alive = true; this.shieldTimer = 0; this.level = 0; this.score = 0; this.weaponClass = 'NORMAL'; }
+    constructor(game, x, y, color) { this.game = game; this.x = x; this.y = y; this.width = 60; this.height = 60; this.color = color; this.direction = 'UP'; this.speed = 4; this.cooldown = 0; this.alive = true; this.shieldTimer = 0; this.level = 0; this.fireProgress = 0; this.score = 0; this.weaponClass = 'NORMAL'; }
     setShield(d) { this.shieldTimer = d; }
+    // 升一级。返回是否真的升了（满级时返回 false，方便调用方跳过反馈）
     upgrade() { 
-        if (this.level >= 9) return;
+        if (this.level >= 9) return false;
         this.level++;
         this.speed = Math.min(8, 4 + this.level * 0.15); 
         if (this instanceof Player) {
-            this.game.showFloatingText(`LEVEL ${this.level}!`, this.x, this.y, '#0f0');
+            this.game.showFloatingText(`LEVEL ${this.level}!`, this.x + this.width / 2, this.y - 18, '#7cff5a');
+            // 大横幅只在里程碑等级弹，否则每两三杀就刷屏
+            if (FIRE_MILESTONES.includes(this.level)) {
+                this.game.showAnnouncement(`🔥 火力提升 Lv.${this.level}`, '#ffcc00');
+                this.game.shakeScreen(6);
+                audio.play('powerup');
+            }
             this.game.updateHUD();
         }
+        return true;
+    }
+    // 当前等级升到下一级所需的"火力进度点"
+    fireNeed() { return FIRE_NEED_BASE + Math.floor(this.level / FIRE_NEED_STEP); }
+    // 积累火力进度；攒满自动升级（可能一次加很多点、连升多级）。返回升了几级。
+    addFireProgress(n = 1) {
+        if (this.level >= 9) { this.fireProgress = 0; return 0; }
+        this.fireProgress += n;
+        let gained = 0;
+        while (this.level < 9 && this.fireProgress >= this.fireNeed()) {
+            this.fireProgress -= this.fireNeed();
+            if (this.upgrade()) gained++;
+            else break;
+        }
+        if (this.level >= 9) this.fireProgress = 0;
+        if (gained > 0 && this instanceof Player) this.game.updateHUD();
+        return gained;
     }
     update() { if (this.cooldown > 0) this.cooldown--;
         if (this.overdriveTimer > 0) this.overdriveTimer--; if (this.shieldTimer > 0) this.shieldTimer--; if (this.flyBombCooldown > 0) this.flyBombCooldown--; 
@@ -1109,6 +1223,8 @@ class Tank {
         this.cooldown = 20 - Math.min(this.level, 5) * 2;
         if (this.weaponClass === 'EXPLOSIVE') this.cooldown += 15;
         if (this.weaponClass === 'LASER') this.cooldown += 10;
+        if (this.weaponClass === 'SPREAD') this.cooldown += 18;   // 🔱 霰弹一次多枚，代价是射速
+        if (this.weaponClass === 'BOUNCE') this.cooldown += 5;    // 🪀 弹射炮子弹滞留久，略降射速
         if (this.overdriveTimer > 0) this.cooldown = Math.max(2, Math.floor(this.cooldown * 0.3)); // 70% cooldown reduction in overdrive
         
         audio.play('shoot');
@@ -1123,9 +1239,24 @@ class Tank {
         let bType = this.weaponClass || 'NORMAL';
         let numShots = 1;
         let burstDelay = 60; // ms between burst shots
+
+        // 🔱 霰弹：一次同时打出 3（Lv5+ 为 5）枚扇形弹，不做连发延迟
+        if (bType === 'SPREAD') {
+            const pellets = this.level >= 5 ? 5 : 3;
+            const step = this.level >= 7 ? 0.22 : 0.3;
+            const base = this.direction === 'UP' ? -Math.PI/2 : this.direction === 'DOWN' ? Math.PI/2 : this.direction === 'LEFT' ? Math.PI : 0;
+            for (let i = 0; i < pellets; i++) {
+                const angle = base + (i - (pellets - 1) / 2) * step;
+                const b = new Bullet(this.game, this, bx, by, this.direction, this.level, 'SPREAD');
+                b.vx = Math.cos(angle) * b.speed;
+                b.vy = Math.sin(angle) * b.speed;
+                this.game.bullets.push(b);
+            }
+            return;
+        }
         
         // Weapon Logic Revamp: Single barrel, burst fire instead of parallel!
-        if (bType === 'NORMAL' || bType === 'MISSILE') {
+        if (bType === 'NORMAL' || bType === 'MISSILE' || bType === 'BOUNCE') {
             if (this.level >= 9) numShots = 5;
             else if (this.level >= 7) numShots = 4;
             else if (this.level >= 5) numShots = 3;
@@ -1172,11 +1303,16 @@ class Tank {
             if (this instanceof Enemy && this.emoteReact) this.emoteReact(this.health <= 1 ? 'hurt' : 'angry');
             if (this instanceof Player) {
                 this.game.shakeScreen(4);
-                if (this.level > 0) {
-                    this.level = Math.max(0, this.level - 1);
-                    this.speed = Math.min(8, 4 + this.level * 0.15);
+                // v1.4.5：原来"挨一炮就掉一整级"，玩家刚升上去就被打回 0 级，
+                // 火力永远停在初始白弹。改为"掉火力进度、不掉等级"——惩罚与投入成比例，
+                // 死亡依旧会把等级减半（handlePlayerDeath），保留风险感。
+                if (this.fireProgress > 0) {
+                    this.fireProgress = 0;
                     this.game.effects.push(new Effect(this.x + 30, this.y + 30, 'EXPLOSION', 1));
-                    this.game.showFloatingText('火力下降!', this.x, this.y, '#f00');
+                    this.game.showFloatingText('火力进度清空!', this.x, this.y, '#f88');
+                } else if (this.level > 0) {
+                    this.game.effects.push(new Effect(this.x + 30, this.y + 30, 'EXPLOSION', 1));
+                    this.game.showFloatingText('火力稳固!', this.x, this.y, '#9fe8ff');
                 }
                 this.shieldTimer = 30;
                 this.game.updateHUD();
@@ -1207,14 +1343,22 @@ class Tank {
                 killer.killStreak = 1;
             }
             killer.lastKillTime = now;
-            
+
+            // 击杀 → 火力进度（v1.4.5）。旧版只有"连击 10 次升 1 级"，普通击杀不给成长，
+            // 于是玩家打爆一堆坦克火力仍是初始白弹。现在每一杀都攒进度，连杀双倍，攒满即升。
+            // 例外：全屏炸弹（damage≥50）一次性清场，不该顺带把火力也刷满，故不计进度。
+            if (damage < 50) {
+                const fireGain = killer.killStreak >= FIRE_KILL_STREAK_AT ? FIRE_KILL_STREAK_GAIN : FIRE_KILL_GAIN;
+                const fireLevels = killer.addFireProgress(fireGain);
+                if (fireLevels === 0 && killer.level < 9) {
+                    this.game.showFloatingText(`火力 ${killer.fireProgress}/${killer.fireNeed()}`, this.x + this.width / 2, this.y + this.height + 8, '#9fe8ff');
+                }
+            }
+
             if (killer.killStreak > 2) {
                 this.game.showFloatingText(`${killer.killStreak} COMBO!`, this.x + this.width/2, this.y - 30, '#ff0');
-                if (killer.killStreak === 5) this.game.showTip('💡 TIP: 连续击杀不仅能获得分数，连击10次还可以直升1级并获得天赋！', 400);
+                if (killer.killStreak === 5) this.game.showTip('💡 TIP: 连杀可让火力进度翻倍，攒满进度点就升级！', 400);
                 this.game.shakeScreen(Math.min(killer.killStreak * 2, 12));
-                if (killer.killStreak % 10 === 0) {
-                    killer.upgrade();
-                }
             }
             // Vampiric Perk hook
             if (killer.perks && killer.perks.includes('VAMPIRIC') && Math.random() < 0.5) {
@@ -1267,24 +1411,25 @@ class Tank {
                     POWERUP_TYPES.TIME, POWERUP_TYPES.STAR, 
                     POWERUP_TYPES.ULTIMATE,
                     POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.W_MISSILE,
-                    POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_EXPLOSIVE
+                    POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_EXPLOSIVE,
+                    POWERUP_TYPES.W_SPREAD, POWERUP_TYPES.W_BOUNCE
                 ];
                 
                 if (this.variant === 'HEAVY') {
                     dropChance = 0.4;
-                    dropTypes = [POWERUP_TYPES.LIFE, POWERUP_TYPES.SHOVEL, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.BOMB, POWERUP_TYPES.ULTIMATE];
+                    dropTypes = [POWERUP_TYPES.LIFE, POWERUP_TYPES.SHOVEL, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.W_SPREAD, POWERUP_TYPES.BOMB, POWERUP_TYPES.ULTIMATE];
                 } else if (this.variant === 'FAST') {
                     dropChance = 0.35;
-                    dropTypes = [POWERUP_TYPES.TIME, POWERUP_TYPES.SHIELD, POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.ULTIMATE];
+                    dropTypes = [POWERUP_TYPES.TIME, POWERUP_TYPES.SHIELD, POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_BOUNCE, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.ULTIMATE];
                 } else if (this.variant === 'ELITE') {
                     dropChance = 0.6;
-                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.STAR, POWERUP_TYPES.LIFE, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.ULTIMATE];
+                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.STAR, POWERUP_TYPES.LIFE, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.W_SPREAD, POWERUP_TYPES.ULTIMATE];
                 } else if (this.variant === 'SMART') {
                     dropChance = 0.45;
-                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.SHIELD, POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.ULTIMATE];
+                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.SHIELD, POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_BOUNCE, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.ULTIMATE];
                 } else if (this.variant === 'RAPID') {
                     dropChance = 0.4;
-                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.ULTIMATE];
+                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.W_SPREAD, POWERUP_TYPES.ULTIMATE];
                 }
                 type = dropTypes[Math.floor(Math.random() * dropTypes.length)];
             }
@@ -2927,8 +3072,17 @@ class Game {
             
             return `<span style='color:${color};'>${wName}</span>`;
         };
-        if(p1LvlEl) p1LvlEl.innerHTML = this.players[0].alive ? `火力: Lv.${this.players[0].level} [${getWeaponHTML(this.players[0])}]` : `DEAD`;
-        if(p2LvlEl) p2LvlEl.innerHTML = this.players[1].alive ? `火力: Lv.${this.players[1].level} [${getWeaponHTML(this.players[1])}]` : `DEAD`;
+        // 火力进度小格：让"慢慢攒满再升级"这件事看得见（v1.4.5）
+        const getFireBar = (p) => {
+            if (p.level >= 9) return `<span style='color:#ffcc00;'>MAX</span>`;
+            const need = p.fireNeed();
+            const done = Math.max(0, Math.min(need, p.fireProgress || 0));
+            let s = '';
+            for (let i = 0; i < need; i++) s += (i < done ? '▰' : '▱');
+            return `<span style='color:#9fe8ff;'>${s}</span>`;
+        };
+        if(p1LvlEl) p1LvlEl.innerHTML = this.players[0].alive ? `火力: Lv.${this.players[0].level} ${getFireBar(this.players[0])} [${getWeaponHTML(this.players[0])}]` : `DEAD`;
+        if(p2LvlEl) p2LvlEl.innerHTML = this.players[1].alive ? `火力: Lv.${this.players[1].level} ${getFireBar(this.players[1])} [${getWeaponHTML(this.players[1])}]` : `DEAD`;
 
         const updateUltHUD = (playerId, player) => {
             const el = document.getElementById(`p${playerId}-ult`);
@@ -2959,6 +3113,7 @@ class Game {
         if (player.level > 0) {
             player.level = Math.floor(player.level / 2);
             player.speed = Math.min(8, 4 + player.level * 0.15);
+            player.fireProgress = 0;
             player.health = 1;
             player.maxHealth = 1;
             this.showFloatingText('火力减半!', player.x + player.width/2, player.y - 10, '#f00');
@@ -2994,6 +3149,7 @@ class Game {
 
     revivePlayer(player) {
         player.level = 0;
+        player.fireProgress = 0;
         player.speed = 4;
         player.maxHealth = 1;
         player.health = 1;
