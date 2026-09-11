@@ -1,8 +1,9 @@
 'use strict';
 /* =========================================================================
- * 极速飞车 Turbo Rush 3D — v1.1.0
+ * 极速飞车 Turbo Rush 3D — v1.1.1
  * 街机式 3D 环形赛道竞速（参考马车 / 山脊赛车式手感）
  * v1.1.0：双人分屏 PK + 路面方向箭头 + 出赛道车身不消失软回拉
+ * v1.1.1：修复 A/D 转向方向（相机 right=-world X 导致视觉左右相反）
  * 纯前端：three.js r128（本地）+ 原生 JS，无任何构建工具
  * 坐标系约定：heading=0 朝 +z；heading 增大 = 右转；
  *            left 向量 = (t.z, 0, -t.x)（命名沿用，实际为行进方向右侧）
@@ -159,12 +160,15 @@ const Input = {
         }
     },
     /* P1 输入：W/S 油门/刹车，A/D 转向，Space 漂移，Shift 氮气 */
-    get throttle() { return (this.keys['w'] || this.touch.gas) ? 1 : 0; },
-    get brake()    { return (this.keys['s'] || this.touch.brake) ? 1 : 0; },
+    /* v1.1.1：SOLO 模式方向键归 P1；VS 模式方向键归 P2 */
+    _soloArrow() { return typeof Game !== 'undefined' && Game.mode !== 'VS'; },
+    get throttle() { return (this.keys['w'] || (this._soloArrow() && this.keys['arrowup']) || this.touch.gas) ? 1 : 0; },
+    get brake()    { return (this.keys['s'] || (this._soloArrow() && this.keys['arrowdown']) || this.touch.brake) ? 1 : 0; },
+    /* 转向：+1 = 视觉左转（A / ←），-1 = 视觉右转（D / →） */
     get steer() {
         let s = 0;
-        if (this.keys['a'] || this.touch.left) s -= 1;
-        if (this.keys['d'] || this.touch.right) s += 1;
+        if (this.keys['a'] || (this._soloArrow() && this.keys['arrowleft']) || this.touch.left) s += 1;
+        if (this.keys['d'] || (this._soloArrow() && this.keys['arrowright']) || this.touch.right) s -= 1;
         return s;
     },
     get handbrake() { return !!this.keys[' ']; },
@@ -174,8 +178,8 @@ const Input = {
         this.p2.throttle = (this.keys['arrowup']) ? 1 : 0;
         this.p2.brake = (this.keys['arrowdown']) ? 1 : 0;
         let s = 0;
-        if (this.keys['arrowleft']) s -= 1;
-        if (this.keys['arrowright']) s += 1;
+        if (this.keys['arrowleft']) s += 1;   // 视觉左转
+        if (this.keys['arrowright']) s -= 1; // 视觉右转
         this.p2.steer = s;
         this.p2.handbrake = !!this.keys['.'];
         this.p2.nitro = !!this.keys[','];
@@ -451,10 +455,10 @@ class World {
         const fade = 1 - smoothstep(300, 350, r);
         const dish = 0.5 - 0.012 * (r / 80); // 远离赛道轻微下沉，让出界感更强
         return fade * (
-            0.55 * Math.sin(x * 0.011 + 1.7)
-          + 0.45 * Math.sin(z * 0.013 + 4.2)
-          + 0.32 * Math.sin((x + z) * 0.008 + 2.0)
-          + 0.22 * Math.sin(x * 0.027 - z * 0.021)
+            0.40 * Math.sin(x * 0.011 + 1.7)
+          + 0.30 * Math.sin(z * 0.013 + 4.2)
+          + 0.22 * Math.sin((x + z) * 0.008 + 2.0)
+          + 0.12 * Math.sin(x * 0.027 - z * 0.021)
         ) + fade * dish;
     }
     /* v1.0.1：多点采样取 min + 补当前点 → 保证赛车永远不会被小起伏遮住 */
@@ -757,7 +761,9 @@ class Player {
 
         // 转向：方向盘角随速度衰减 + 侧向抓地封顶
         const steerMax = 0.62 / (1 + Math.abs(this.speed) * 0.055);
-        this.steerA = lerp(this.steerA, steerIn * steerMax, 1 - Math.exp(-10 * dt));
+        // v1.1.1：转向输入为 0 时方向盘自动回中，避免换向按键反应迟钝
+        if (steerIn === 0) this.steerA = lerp(this.steerA, 0, 1 - Math.exp(-12 * dt));
+        else this.steerA = lerp(this.steerA, steerIn * steerMax, 1 - Math.exp(-10 * dt));
         let yawRate = (this.speed / 2.6) * Math.tan(this.steerA);
         const latCap = (hb ? CFG.LAT_GRIP * 0.55 : CFG.LAT_GRIP) / Math.max(Math.abs(this.speed), 3);
         yawRate = clamp(yawRate, -latCap, latCap);
@@ -1363,7 +1369,7 @@ const Game = {
                 const near = w.smp[w.nearestIdx(pp.pos.x, pp.pos.z, pp.idx)];
                 const err = wrapAngle(Math.atan2(near.t.x, near.t.z) - pp.heading);
                 pp.autopilot = pp.autopilot || { throttle: 0.5, brake: 0, steer: 0 };
-                pp.autopilot.steer = clamp(-err * 1.6, -1, 1);
+                pp.autopilot.steer = clamp(err * 1.6, -1, 1);
                 pp.autopilot.throttle = pp.speed < 17 ? 1 : 0;
             };
             autoPilot(p);
