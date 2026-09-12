@@ -1,9 +1,10 @@
 'use strict';
 /* =========================================================================
- * 极速飞车 Turbo Rush 3D — v1.1.1
+ * 极速飞车 Turbo Rush 3D — v1.1.2
  * 街机式 3D 环形赛道竞速（参考马车 / 山脊赛车式手感）
  * v1.1.0：双人分屏 PK + 路面方向箭头 + 出赛道车身不消失软回拉
  * v1.1.1：修复 A/D 转向方向（相机 right=-world X 导致视觉左右相反）
+ * v1.1.2：路面箭头 → 路边黑黄 V 字指示牌；草地阻尼调到接近真实（max 0.55×、摩擦 0.030）
  * 纯前端：three.js r128（本地）+ 原生 JS，无任何构建工具
  * 坐标系约定：heading=0 朝 +z；heading 增大 = 右转；
  *            left 向量 = (t.z, 0, -t.x)（命名沿用，实际为行进方向右侧）
@@ -234,26 +235,31 @@ function makeBannerTexture() {
     g.fillText('🏁 FINISH', 256, 66);
     return new THREE.CanvasTexture(c);
 }
-/* v1.0.1：路面方向箭头纹理（顶端箭头 + 完整外轮廓 + 透明镂空） */
-function makeArrowTexture() {
-    const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+/* v1.1.2：路边指示牌纹理 —— 真实赛道 V 字形箭头 + 黑黄警示色 */
+function makeSignTexture() {
+    const c = document.createElement('canvas'); c.width = 512; c.height = 384;
     const g = c.getContext('2d');
-    g.clearRect(0, 0, 256, 256);
-    // 阴影（向下偏 6px）
-    g.save(); g.translate(128, 110 + 6); g.fillStyle = 'rgba(0,0,0,0.35)';
+    g.clearRect(0, 0, 512, 384);
+    // 黑色边框 + 黄色底
+    g.fillStyle = '#ffd400';
+    g.fillRect(0, 0, 512, 384);
+    // 黑色边框
+    g.lineWidth = 16; g.strokeStyle = '#101010';
+    g.strokeRect(8, 8, 496, 368);
+    // 横向 V 字箭头（从中间向两侧斜下，再回到中心 → 实际更像 ▲ 的厚版）
+    g.lineWidth = 36; g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#101010';
     g.beginPath();
-    g.moveTo(-58, 28); g.lineTo(0, -36); g.lineTo(58, 28); g.lineTo(20, 28); g.lineTo(20, 60); g.lineTo(-20, 60); g.lineTo(-20, 28); g.closePath();
-    g.fill(); g.restore();
-    // 黄色箭头（朝 +y，原 plane 朝 +z，但 rotateX(-PI/2) 后 +y 朝 +z）
-    g.save(); g.translate(128, 110); g.fillStyle = '#ffd23f';
+    g.moveTo(96, 270); g.lineTo(256, 110); g.lineTo(416, 270);  // V 形上沿
+    g.moveTo(96, 210); g.lineTo(256, 50); g.lineTo(416, 210);   // V 形下沿 → 双线形成粗箭头
+    g.stroke();
+    // 高光（让箭头从远处也清晰可见）
+    g.lineWidth = 6; g.strokeStyle = '#fff7c2';
     g.beginPath();
-    g.moveTo(-72, 36); g.lineTo(0, -42); g.lineTo(72, 36); g.lineTo(26, 36); g.lineTo(26, 78); g.lineTo(-26, 78); g.lineTo(-26, 36); g.closePath();
-    g.fill();
-    // 高光描边
-    g.strokeStyle = 'rgba(255,255,255,0.85)'; g.lineWidth = 5; g.stroke();
-    g.restore();
+    g.moveTo(96, 268); g.lineTo(256, 108); g.lineTo(416, 268);
+    g.stroke();
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace || THREE.LinearSRGBColorSpace;
+    tex.anisotropy = 4;
     return tex;
 }
 
@@ -315,7 +321,7 @@ class World {
 
         this.buildRoadMesh();
         this.buildGantry();
-        this.buildArrows(); // v1.0.1 路面箭头
+        this.buildSignBoards(); // v1.1.2 路边指示牌
     }
 
     smpAt(s) {
@@ -419,32 +425,44 @@ class World {
         }
     }
 
-    /* v1.0.1：路面方向箭头（每 28m 一个）。立在路面上像路标，尖端指向赛道前进方向 */
-    buildArrows() {
-        const STEP = 28, N_ARROWS = Math.floor(this.length / STEP);
-        const arrowGeo = new THREE.PlaneGeometry(2.6, 4.2);
-        const arrowTex = makeArrowTexture();
-        const mat = new THREE.MeshBasicMaterial({ map: arrowTex, transparent: true, alphaTest: 0.06, side: THREE.DoubleSide });
-        this.arrowGroup = new THREE.Group();
-        for (let k = 1; k <= N_ARROWS; k++) {
+    /* v1.1.2：路边指示牌 —— 黑黄警示色 V 字箭头 + 木桩，沿赛道左右交替排列 */
+    buildSignBoards() {
+        const STEP = 32, N_SIGNS = Math.floor(this.length / STEP);
+        const signTex = makeSignTexture();
+        const boardGeo = new THREE.PlaneGeometry(2.6, 2.0);
+        const postMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2b });
+        const boardMat = new THREE.MeshLambertMaterial({ map: signTex, side: THREE.DoubleSide });
+        this.signGroup = new THREE.Group();
+        for (let k = 1; k <= N_SIGNS; k++) {
             const s = k * STEP;
             const a = this.smpAt(s);
             const yaw = Math.atan2(a.t.x, a.t.z);
-            // R_x(-π/2) 把 plane 转到 xz 朝 +y 立直；R_y(yaw) 让 +z 转向前方
-            const m = new THREE.Mesh(arrowGeo, mat);
-            m.rotation.set(-Math.PI / 2, yaw, 0);
-            m.position.set(a.p.x, a.y + 0.30, a.p.z);
-            this.arrowGroup.add(m);
+            // 左右交替：偶数右侧、奇数左侧
+            const side = (k % 2 === 0) ? 1 : -1;
+            const sideOffset = CFG.ROAD_HALF + CFG.CURB_W + 1.8;
+            const cx = a.p.x + a.left.x * sideOffset * side;
+            const cz = a.p.z + a.left.z * sideOffset * side;
+            // 木桩
+            const post = new THREE.Mesh(new THREE.BoxGeometry(0.18, 2.6, 0.18), postMat);
+            post.position.set(cx, a.y + 1.3, cz);
+            this.signGroup.add(post);
+            // 牌面（立起来，朝向赛道 + 微微向内倾斜 15°，像真实赛道指示牌）
+            const board = new THREE.Mesh(boardGeo, boardMat);
+            board.position.set(cx + a.left.x * side * 0.5, a.y + 2.6, cz + a.left.z * side * 0.5);
+            board.rotation.set(0, yaw + Math.PI, 0); // 立直
+            board.rotateZ(side * 0.18);              // 朝路面微倾（约 10°）
+            this.signGroup.add(board);
         }
-        this.group.add(this.arrowGroup);
-        this.arrowMeshes = this.arrowGroup.children;
+        this.group.add(this.signGroup);
+        this.signBoards = this.signGroup.children.filter(c => c.material === boardMat);
+        this.signPostCount = N_SIGNS;
     }
-    /* v1.0.1：箭头呼吸 + 直道/弯道变色（共享材质，全局呼吸 OK） */
-    updateArrows(time) {
-        if (!this.arrowMeshes) return;
-        const pulse = 0.7 + 0.3 * Math.sin(time * 3.6);
-        for (const m of this.arrowMeshes) {
-            m.material.opacity = pulse;
+    /* v1.1.2：指示牌呼吸闪烁（脉冲强度更柔和） */
+    updateSignBoards(time) {
+        if (!this.signBoards) return;
+        const pulse = 0.85 + 0.15 * Math.sin(time * 2.4);
+        for (const m of this.signBoards) {
+            m.material.emissiveIntensity = pulse * 0.18;
         }
     }
 
@@ -741,8 +759,8 @@ class Player {
         const lat = w.lateralOffset(this.pos.x, this.pos.z, this.idx);
         const onRoad = Math.abs(lat) <= CFG.ROAD_HALF + CFG.CURB_W;
 
-        // v1.0.1：出赛道严重限速 + 摩擦更大，避免飘出太远
-        const vmaxEff = (nitroOn ? CFG.VMAX_NITRO : CFG.VMAX) * (onRoad ? 1 : 0.25);
+        // v1.1.2：出赛道阻尼改成接近真实（草地滚阻约 2.5× 路面，最高速度约 55%）
+        const vmaxEff = (nitroOn ? CFG.VMAX_NITRO : CFG.VMAX) * (onRoad ? 1 : 0.55);
         let a = 0;
         if (throttle > 0) a += CFG.ACCEL * 1.35 * Math.max(0, 1 - this.speed / vmaxEff) * throttle * (nitroOn ? 1.6 : 1);
         if (brake > 0) {
@@ -750,12 +768,11 @@ class Player {
             else a += 8 * brake * (1 - clamp(-this.speed / -CFG.REV_MAX, 0, 1));
         }
         const sgn = Math.abs(this.speed) > 0.15 ? Math.sign(this.speed) : 0;
-        a -= this.speed * (onRoad ? 0.012 : 0.30); // 出赛道摩擦从 0.14 → 0.30
+        a -= this.speed * (onRoad ? 0.012 : 0.030); // 草地滚阻 2.5× 路面（之前 0.30 太重）
         a -= 0.35 * sgn;
-        if (!onRoad) a -= 8.5 * sgn; // 出赛道反拖（8.5 比 3.4 强 2.5 倍）
         if (hb) a -= 6 * sgn;
         this.speed += a * dt;
-        if (this.speed > vmaxEff) this.speed = Math.max(vmaxEff, this.speed - 16 * dt); // 出赛道软限速
+        if (this.speed > vmaxEff) this.speed = Math.max(vmaxEff, this.speed - 7 * dt); // 软限速（之前 -16）
         if (this.speed < CFG.REV_MAX) this.speed = CFG.REV_MAX;
         if (Math.abs(this.speed) < 0.06 && throttle === 0 && brake === 0) this.speed = 0;
 
@@ -1466,7 +1483,7 @@ const Game = {
         }
 
         w.updateClouds(dt);
-        if (this.world.updateArrows) this.world.updateArrows(performance.now() / 1000);
+        if (this.world.updateSignBoards) this.world.updateSignBoards(performance.now() / 1000);
 
         // HUD
         if (this.state !== 'MENU') {
