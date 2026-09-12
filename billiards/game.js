@@ -1171,7 +1171,9 @@ function segBlocked(x1, z1, x2, z2, rad, ignore) {
     const len2 = dx * dx + dz * dz;
     if (len2 < 1e-9) return false;
     for (const b of balls) {
-        if (b.potted || ignore.includes(b.num)) continue;
+        // 母球不能挡自己：线段起点就是母球中心（t=0 距离恒为 0），
+        // 不排除的话所有进攻候选全部被判"路径被挡"——AI 只会直线轻推的根因
+        if (b.potted || b.num === 0 || ignore.includes(b.num)) continue;
         const t = clamp(((b.x - x1) * dx + (b.z - z1) * dz) / len2, 0, 1);
         const px = x1 + dx * t, pz = z1 + dz * t;
         if (Math.hypot(b.x - px, b.z - pz) < rad) return true;
@@ -1390,8 +1392,19 @@ function aiChooseShot() {
     }
     if (!bestPlan) return aiDefense(targets, sigma);
 
-    const a = Math.atan2(bestPlan.dir.z, bestPlan.dir.x) + gauss() * sigma;
-    return { dir: { x: Math.cos(a), z: Math.sin(a) }, power: clamp(bestPlan.power, 0.10, 0.95), vert: bestPlan.vert };
+    // 噪声复验：评分时用的是理想方向，实际出杆带瞄准噪声。
+    // 对决胜球（如打黑8）毫厘之差就是胜负，所以从理想线 + 3 个噪声样本里
+    // 选模拟实测最优的那个方向——保证"选出来的就是打出来的"。
+    const vert = bestPlan.vert || 0;
+    let bdir = bestPlan.dir;
+    let bval = scoreSim(simulateShot(bdir.x, bdir.z, bestPlan.power, vert), ctx);
+    for (let k = 0; k < 3; k++) {
+        const a0 = Math.atan2(bestPlan.dir.z, bestPlan.dir.x) + gauss() * sigma;
+        const d = { x: Math.cos(a0), z: Math.sin(a0) };
+        const v = scoreSim(simulateShot(d.x, d.z, bestPlan.power, vert), ctx);
+        if (v > bval) { bval = v; bdir = d; }
+    }
+    return { dir: bdir, power: clamp(bestPlan.power, 0.10, 0.95), vert };
 }
 
 // 兜底防守：轻碰最近合法球（简单难度 & 极端局面用）
