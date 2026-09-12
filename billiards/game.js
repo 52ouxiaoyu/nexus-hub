@@ -974,6 +974,7 @@ function resolveShot() {
         state = 'aim';
     }
     setHint(aimHint());
+    setRules();
     refreshHUD();
     maybeRunAI();
 }
@@ -1015,10 +1016,67 @@ function legalTargetBalls() {
     return balls.filter(b => !b.potted && b.num === 8);   // 打黑 8
 }
 
+// ---- 左下角「怎么打」规则说明卡 ----
+// 目标球小图标（复用 HUD 的 .mini-ball 样式）
+function miniBallHTML(n) {
+    const col = BALL_COLORS[n];
+    const style = n > 8
+        ? `background:linear-gradient(180deg,#f4f0e4 22%,${col} 22%,${col} 78%,#f4f0e4 78%)`
+        : `background:${col === '#1b1b1b' ? '#1b1b1b;color:#fff' : col}`;
+    return `<span class="mini-ball" style="${style}">${n}</span>`;
+}
+
+// 三行说明：该打哪颗 / 怎样算合法 / 怎样算犯规（与 resolveShot 的判罚严格一致）
+function ruleHint() {
+    const P = players[current];
+
+    // ① 开球
+    if (isBreak && openTable) {
+        return {
+            target: '<b>开球</b>：把母球打向对面的球堆（1~15 号都可先碰）',
+            legal: '撞到球堆 + 有球落袋且不犯规 → 你继续击打（花色仍不定）',
+            foul: '母球落袋 / 完全没碰到球 → 换对方，并拿到自由球',
+        };
+    }
+    // ② 台面开放
+    if (openTable) {
+        return {
+            target: '台面开放：任意球都可以打（<b>黑 8 除外</b>）· 先合法打进哪一组，那一组就归你',
+            legal: '母球先碰到任意非 8 号球；进球即定花色，并继续击打',
+            foul: '母球落袋 / 母球先碰到黑 8 / 触球后无球碰库 → 换对方，并拿到自由球',
+        };
+    }
+    // ③ 己方球已清完，进入打黑 8
+    if (P.group && groupRemaining(P.group) === 0) {
+        return {
+            target: '<b>只剩黑 8</b>：把它打进就赢',
+            legal: '母球先碰到黑 8 并把它打进，且母球不落袋 → 获胜',
+            foul: '打黑 8 时母球落袋 / 黑 8 被提前打进 → 直接判负',
+        };
+    }
+    // ④ 花色已定，还有球
+    const gname = P.group === 'solid' ? '全色 ●' : '花色 ○';
+    const nums = legalTargetBalls().map(b => b.num).sort((a, b) => a - b);
+    return {
+        target: `你的球是 <b>${gname}</b>（还剩 ${nums.length} 颗）：`
+            + `<span class="rule-balls">${nums.map(miniBallHTML).join('')}</span>`,
+        legal: '母球先碰到自己的球；打进自己的球即可继续击打',
+        foul: '母球落袋 / 先碰到对方的球或黑 8 / 触球后无球碰库 → 换对方，并拿到自由球',
+    };
+}
+
+function setRules() {
+    const r = ruleHint();
+    $('rule-target').innerHTML = r.target;
+    $('rule-legal').innerHTML = r.legal;
+    $('rule-foul').innerHTML = r.foul;
+}
+
 // ---------------- 自由球 ----------------
 function startBallInHand() {
     state = 'ballinhand';
     setHint('自由球：移动鼠标选择位置，点击台面放置母球');
+    setRules();
     ghostCue.visible = true;
 }
 
@@ -1047,6 +1105,7 @@ function tryPlaceCue(x, z) {
     ghostCue.visible = false;
     state = 'aim';
     setHint(aimHint());
+    setRules();
     return true;
 }
 
@@ -1568,6 +1627,7 @@ function startGame(_vsAI, level) {
     $('overlay').classList.add('hidden');
     $('overlay-end').classList.add('hidden');
     setHint(aimHint());
+    setRules();
     showMsg('开球！' + players[0].name + ' 先手 · 台面开放，任意球可先打（黑 8 除外）', 3200);
     refreshHUD();
 }
@@ -1625,10 +1685,13 @@ window.POOL = {
     get state() { return state; },
     get balls() { return balls; },
     get current() { return current; },
+    set current(v) { current = v; },
     get players() { return players; },
     get openTable() { return openTable; },
+    set openTable(v) { openTable = v; },
     get isBreak() { return isBreak; },
-    startGame, shoot, aimDir,
+    set isBreak(v) { isBreak = v; },
+    startGame, shoot, aimDir, setRules, ruleHint,
     setAim(x, z) { const l = Math.hypot(x, z); if (l > 0) aimDir = { x: x / l, z: z / l }; return aimDir; },
     // 测试用：直接把指定号码的球标为进袋（不动 mesh 动画）
     potNum(n) { const b = balls.find(x => x.num === n); if (b) { b.potted = true; b.mesh.visible = false; } },
