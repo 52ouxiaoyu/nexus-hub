@@ -48,6 +48,12 @@ let openTable = true, isBreak = true;
 let shot = null;         // 本杆事件记录
 let aimDir = { x: 1, z: 0 };
 let power = 0, chargeStart = 0;
+// 蓄力力度：三角波往返（0→1→0 循环），错过最佳力度可以等它回落再松手
+function chargePowerAt(now) {
+    const t = (now - chargeStart) / (CFG.chargeTime * 1000);  // 单程时长
+    const phase = t % 2;                                       // 一个循环 = 升 + 降
+    return phase <= 1 ? phase : 2 - phase;
+}
 let spin = { x: 0, y: 0 };
 let shotDirStore = { x: 1, z: 0 };
 let camMode = 0;         // 0 三维 1 俯视 2 母球后
@@ -1386,8 +1392,7 @@ function initInput() {
 
     window.addEventListener('pointerup', (e) => {
         if (state === 'charge' && !players[current].isAI) {
-            const frac = clamp((performance.now() - chargeStart) / (CFG.chargeTime * 1000), 0.05, 1);
-            shoot(frac);
+            shoot(clamp(power, 0.05, 1));   // 用屏幕上显示的当前力度，所见即所得
         }
     });
 
@@ -1540,9 +1545,9 @@ function animate(now) {
     const dt = Math.min((now - lastT) / 1000 || 0.016, 0.05);
     lastT = now;
 
-    // 蓄力
+    // 蓄力（三角波：慢升到满 → 慢降回 0 → 循环）
     if (state === 'charge') {
-        power = clamp((now - chargeStart) / (CFG.chargeTime * 1000), 0, 1);
+        power = chargePowerAt(now);
         $('power-fill').style.width = (power * 100).toFixed(1) + '%';
     }
 
@@ -1691,6 +1696,8 @@ window.POOL = {
     set openTable(v) { openTable = v; },
     get isBreak() { return isBreak; },
     set isBreak(v) { isBreak = v; },
+    get power() { return power; },
+    chargePowerAt,
     startGame, shoot, aimDir, setRules, ruleHint,
     setAim(x, z) { const l = Math.hypot(x, z); if (l > 0) aimDir = { x: x / l, z: z / l }; return aimDir; },
     // 测试用：直接把指定号码的球标为进袋（不动 mesh 动画）
