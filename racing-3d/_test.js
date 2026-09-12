@@ -539,6 +539,77 @@ const FILE = 'file://' + path.resolve(__dirname, 'index.html');
         t('T23.3 粒子池循环复用不溢出（200 次 emit 后 ≤ 72）', fx.poolOverflow === false);
     }
 
+    /* ===== T24 (v1.2.4): 终点实体碰撞 + 防绕圈计圈 ===== */
+    const gate = await page.evaluate(() => {
+        const g = window.__game, w = g.world, p = g.player;
+        const out = {};
+        if (!w.gateRects || !w.gateCircleDefs) return { none: true };
+        g.togglePause(true); // 暂停 rAF 推进，避免并发干扰
+        // A) 门区检测：车在起点线正中（smp[0]）→ latch 置位
+        p.pos.copy(w.smp[0].p); p.idx = 0; p.gateLatch = false;
+        g.checkGate(p);
+        out.latchAtGate = p.gateLatch;
+        // B) 车在线附近但横向偏离 20m（绕门外）→ 不置位
+        const nearLine = w.smp[w.smp.length - 10]; // 距起点线约 10m 弧长
+        p.pos.copy(nearLine.p).addScaledVector(nearLine.left, 20); p.idx = w.smp.length - 10;
+        p.gateLatch = false;
+        g.checkGate(p);
+        out.latchOffGate = p.gateLatch;
+        // C) 防绕圈：accum 超阈值但未穿门 → 不计圈（注意 SOLO 计圈用 Game.crossings）
+        const L = w.length;
+        g.crossings = 0; p.accum = 30; p.gateLatch = false;
+        g.checkLap();
+        out.blocked = g.crossings;
+        // D) 穿门后正常计圈，latch 被消费
+        p.gateLatch = true;
+        g.checkLap();
+        out.counted = g.crossings;
+        out.latchConsumed = p.gateLatch;
+        // E) 看台矩形碰撞（清空圆形碰撞体隔离测试）
+        const saved = w.colliders;
+        w.colliders = [];
+        const st = w.gateRects[0];
+        p.pos.set(st.x, 0, st.z); p.idx = 0;
+        p.velAngle = st.yaw + Math.PI / 2; p.heading = p.velAngle; // 朝看台短边方向撞入
+        p.speed = 25;
+        out.standHit = w.collideCar(p);
+        const dfx = (p.pos.x - st.x) * Math.cos(st.yaw) - (p.pos.z - st.z) * Math.sin(st.yaw);
+        const dfz = (p.pos.x - st.x) * Math.sin(st.yaw) + (p.pos.z - st.z) * Math.cos(st.yaw);
+        out.standOut = Math.abs(dfx) >= st.hx + 0.85 || Math.abs(dfz) >= st.hz + 0.85;
+        out.standSpeed = p.speed;
+        p.pos.set(st.x + 60, 0, st.z); p.speed = 20; p.velAngle = 0;
+        out.standFarHit = w.collideCar(p);
+        // F) 立柱圆形碰撞（只放回这一根，隔离测试；从路内侧撞向立柱，
+        //    避免推出后落进柱子与看台之间 ~2m 的缝隙再被看台推回）
+        const pc = w.gateCircleDefs[0];
+        const s0v = w.smp[0];
+        w.colliders = [pc];
+        p.pos.set(pc.x - s0v.left.x * 1.2, 0, pc.z - s0v.left.z * 1.2);
+        p.velAngle = Math.atan2(s0v.left.x, s0v.left.z); p.heading = p.velAngle;
+        p.speed = 25;
+        out.pillarHit = w.collideCar(p);
+        out.pillarD = Math.hypot(p.pos.x - pc.x, p.pos.z - pc.z);
+        out.pillarMinD = pc.minD;
+        w.colliders = saved; // 还原
+        g.togglePause(false);
+        return out;
+    });
+    if (gate.none) {
+        t('T24.0 gate 碰撞体存在', false, 'gateRects/gateCircleDefs 未创建');
+    } else {
+        t('T24.1 车在终点门正下 → gateLatch 置位', gate.latchAtGate === true, String(gate.latchAtGate));
+        t('T24.2 车横向偏离 20m（门外）→ 不置位', gate.latchOffGate === false, String(gate.latchOffGate));
+        t('T24.3 未穿门不计圈（防绕圈作弊）', gate.blocked === 0, 'crossings=' + gate.blocked);
+        t('T24.4 穿门后正常计圈且 latch 消费', gate.counted === 1 && gate.latchConsumed === false,
+            `crossings=${gate.counted} latch=${gate.latchConsumed}`);
+        t('T24.5 车撞看台被推出（矩形碰撞生效）', gate.standHit === true && gate.standOut,
+            `hit=${gate.standHit} out=${gate.standOut}`);
+        t('T24.6 撞看台明显减速（25 → < 23）', gate.standSpeed < 23, `v=${gate.standSpeed.toFixed(1)}`);
+        t('T24.7 远离看台不误判', gate.standFarHit === false);
+        t('T24.8 车撞立柱被推出（d ≥ minD - 0.05）', gate.pillarHit === true && gate.pillarD >= gate.pillarMinD - 0.05,
+            `d=${gate.pillarD.toFixed(2)} minD=${gate.pillarMinD}`);
+    }
+
     /* ===== 截图 ===== */
     await page.evaluate(() => window.__game && window.__game.togglePause && window.__game.togglePause(true));
     await new Promise(r => setTimeout(r, 100));

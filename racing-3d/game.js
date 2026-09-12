@@ -1,6 +1,6 @@
 'use strict';
 /* =========================================================================
- * 极速飞车 Turbo Rush 3D — v1.2.3
+ * 极速飞车 Turbo Rush 3D — v1.2.4
  * 街机式 3D 环形赛道竞速（参考马车 / 山脊赛车式手感）
  * v1.1.0：双人分屏 PK + 路面方向箭头 + 出赛道车身不消失软回拉
  * v1.1.1：修复 A/D 转向方向（相机 right=-world X 导致视觉左右相反）
@@ -14,6 +14,8 @@
  *         gripRate 7.0→9.5（车尾更跟手）、侧滑掉速 0.55→0.40，过弯更容易拐住
  * v1.2.3：氮气尾焰特效 —— 加速时车尾两个排气口喷橙黄火焰（加法混合）+ 淡灰尾烟，
  *         Sprite 粒子池 72 个（canvas 生成纹理，无外部素材），P1/P2 共用
+ * v1.2.4：终点设施实体化（看台矩形碰撞 + 龙门架立柱圆形碰撞，不再穿透）；
+ *         终点门区检测（必须真正从龙门架下穿过才计圈，绕开终点线无效）
  * 纯前端：three.js r128（本地）+ 原生 JS，无任何构建工具
  * 坐标系约定：heading=0 朝 +z；heading 增大 = 右转；
  *            left 向量 = (t.z, 0, -t.x)（命名沿用，实际为行进方向右侧）
@@ -428,11 +430,23 @@ class World {
         this.group.add(banner);
         // 起点两侧看台
         const standM = new THREE.MeshLambertMaterial({ color: 0x39506c });
+        // v1.2.4：终点设施碰撞体（看台=旋转矩形，立柱=圆形），不再可穿透
+        this.gateRects = []; this.gateCircleDefs = [];
+        const gyaw = Math.atan2(s0.t.x, s0.t.z);
         for (const side of [1, -1]) {
             const st = new THREE.Mesh(new THREE.BoxGeometry(3, 2.2, 26), standM);
             st.position.set(s0.p.x + s0.left.x * (CFG.ROAD_HALF + 6) * side, s0.y + 1, s0.p.z + s0.left.z * (CFG.ROAD_HALF + 6) * side);
-            st.rotation.y = Math.atan2(s0.t.x, s0.t.z);
+            st.rotation.y = gyaw;
             this.group.add(st);
+            this.gateRects.push({
+                x: st.position.x, z: st.position.z,
+                hx: 1.5, hz: 13, yaw: gyaw,   // 半尺寸（left×tangent 方向）
+            });
+            this.gateCircleDefs.push({
+                x: s0.p.x + s0.left.x * span * side,
+                z: s0.p.z + s0.left.z * span * side,
+                minD: 1.7,                     // 立柱半宽 0.4 + 车身余量
+            });
         }
     }
 
@@ -616,6 +630,8 @@ class World {
         this.colliders = [];
         trees.forEach(t => this.colliders.push({ x: t.x, z: t.z, minD: 0.6 * t.s + 1.05 }));
         rocks.forEach(t => this.colliders.push({ x: t.x, z: t.z, minD: 1.0 * t.s + 1.0 }));
+        // v1.2.4：终点龙门架立柱（buildGantry 中定义，此处并入圆形碰撞体列表）
+        if (this.gateCircleDefs) this.gateCircleDefs.forEach(c => this.colliders.push({ x: c.x, z: c.z, minD: c.minD }));
 
         // 远山
         const mts = [];
@@ -668,6 +684,33 @@ class World {
             const headOn = Math.max(0, -(mvx * nx + mvz * nz));
             car.speed *= 1 - (0.12 + 0.5 * headOn);
             hit = true;
+        }
+        // v1.2.4：矩形碰撞体（终点看台等大件）—— 转到台子局部坐标做推离
+        const rects = this.gateRects;
+        if (rects) {
+            for (let i = 0; i < rects.length; i++) {
+                const rc = rects[i];
+                const dx = car.pos.x - rc.x, dz = car.pos.z - rc.z;
+                if (dx > 17 || dx < -17 || dz > 17 || dz < -17) continue; // 粗筛（对角线 ~13.2m）
+                const sy = Math.sin(rc.yaw), cy = Math.cos(rc.yaw);
+                const fz = dx * sy + dz * cy;   // 局部：沿台子长边（赛道切线方向）
+                const fx = dx * cy - dz * sy;   // 局部：沿台子短边（left 方向）
+                const hx = rc.hx + 1.0, hz = rc.hz + 1.0; // 1.0 ≈ 车身半宽余量
+                if (Math.abs(fx) >= hx || Math.abs(fz) >= hz) continue;
+                // 沿穿透量较小的轴推出，再转回世界坐标（world = left*px + t*pz）
+                const penX = hx - Math.abs(fx), penZ = hz - Math.abs(fz);
+                let px = 0, pz = 0;
+                if (penX < penZ) px = (fx >= 0 ? 1 : -1) * penX;
+                else pz = (fz >= 0 ? 1 : -1) * penZ;
+                const wx = cy * px + sy * pz, wz = -sy * px + cy * pz;
+                car.pos.x += wx; car.pos.z += wz;
+                // 撞击角减速（与树/岩石同款公式）
+                const mvx = Math.sin(car.velAngle), mvz = Math.cos(car.velAngle);
+                const nl = Math.hypot(wx, wz) || 1;
+                const headOn = Math.max(0, -(mvx * wx / nl + mvz * wz / nl));
+                car.speed *= 1 - (0.12 + 0.5 * headOn);
+                hit = true;
+            }
         }
         return hit;
     }
@@ -768,6 +811,7 @@ class Player {
         this.steerA = 0;
         this.accum = 0; // 累计净里程（v1.0.1：从 Player 实例自身持有，原来混在 lastS 旁边）
         this.crossings = 0; // 跨起跑线次数（line 1 + 3 圈 = 4）
+        this.gateLatch = false; // v1.2.4：真正穿过终点龙门架下才会置位（防绕圈作弊）
         this.lapMark = 0;
         this.lapTimes = [];
         this.finished = false;
@@ -1242,7 +1286,8 @@ const Game = {
         this.raceTime = 0; this.lapTimes = []; this.crossings = 0; this.lapMark = 0;
         this.wrongTimer = 0;
         this.cdTime = 3.6; this.cdShown = null;
-        this.player2 && (this.player2.crossings = 0, this.player2.lapMark = 0, this.player2.lapTimes = [], this.player2.finished = false);
+        this.player && (this.player.gateLatch = false); // v1.2.4
+        this.player2 && (this.player2.crossings = 0, this.player2.lapMark = 0, this.player2.lapTimes = [], this.player2.finished = false, this.player2.gateLatch = false);
         this.state = 'COUNTDOWN';
         this.skids.clear();
         if (this.nitroFx) this.nitroFx.clear();
@@ -1306,12 +1351,24 @@ const Game = {
         for (const ai of this.ais) if (ai.accumDist() + ai.startS > this.playerTotal(this.player)) r++;
         return r;
     },
+    /* v1.2.4：终点门区检测 —— 车身必须在龙门架下（距起点线弧长 <3m 且 |lat| ≤ 门半宽）
+       才置 gateLatch；计圈时要求 latch 成立，绕开终点线无法计圈 */
+    checkGate(pp) {
+        const w = this.world, L = w.length;
+        const gi = w.nearestIdx(pp.pos.x, pp.pos.z, pp.idx);
+        const gs = w.smp[gi].s;
+        const dLine = Math.min(gs, L - gs);
+        const glat = w.lateralOffset(pp.pos.x, pp.pos.z, gi);
+        if (dLine < 3 && Math.abs(glat) <= CFG.ROAD_HALF + CFG.CURB_W + 1.2) pp.gateLatch = true;
+    },
     /* 单玩家计圈 */
     checkLap() {
         if (this.mode !== 'SOLO') return;
         const L = this.world.length;
         const next = 22 + this.crossings * L;
         if (this.player.accum < next) return;
+        if (!this.player.gateLatch) return; // v1.2.4：没真正穿门不计圈
+        this.player.gateLatch = false;
         this.crossings++;
         if (this.crossings === 1) {
             this.lapMark = this.raceTime;
@@ -1333,6 +1390,8 @@ const Game = {
         const L = this.world.length;
         const next = 22 + p.crossings * L;
         if (p.accum < next) return false;
+        if (!p.gateLatch) return false; // v1.2.4：没真正穿门不计圈
+        p.gateLatch = false;
         p.crossings++;
         if (p.crossings === 1) {
             p.lapMark = raceTime;
@@ -1566,7 +1625,10 @@ const Game = {
         // 计圈
         if (racing) {
             this.raceTime += dt;
+            // v1.2.4：先做终点门区检测（真实穿门才 latch），再判计圈
+            this.checkGate(p);
             if (isVS) {
+                if (this.player2) this.checkGate(this.player2);
                 if (this.player && !this.player.finished) this.checkLapVS(this.player, this.raceTime);
                 if (this.player2 && !this.player2.finished) this.checkLapVS(this.player2, this.raceTime);
                 // 任一玩家完成 → 结算
