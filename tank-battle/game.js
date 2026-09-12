@@ -378,7 +378,7 @@ class PowerUp {
         else if (type === POWERUP_TYPES.W_MISSILE) this.game.showTip("💡 TIP: 吃到🎯切换为【跟踪导弹】，自动追踪敌人！", 400);
         else if (type === POWERUP_TYPES.W_LASER) this.game.showTip("💡 TIP: 吃到⚡切换为【穿透激光】，拥有极高弹速和穿透力！", 400);
         else if (type === POWERUP_TYPES.W_EXPLOSIVE) this.game.showTip("💡 TIP: 吃到💥切换为【高爆弹】，拥有巨大爆炸范围！", 400);
-        else if (type === POWERUP_TYPES.W_SPREAD) this.game.showTip("💡 TIP: 吃到🔱切换为【霰弹散射】，一次打出多枚扇形弹！", 400);
+        else if (type === POWERUP_TYPES.W_SPREAD) this.game.showTip("💡 TIP: 吃到🔱切换为【霰弹散射】，一次并列打出多排平行弹幕！", 400);
         else if (type === POWERUP_TYPES.W_BOUNCE) this.game.showTip("💡 TIP: 吃到🪀切换为【弹射炮】，子弹能在墙壁间疯狂弹射！", 400);
     }
     update() {
@@ -856,7 +856,8 @@ class Bullet {
         this.active = true;
         this.size = 8;
         this.speed = 6;
-        this.damage = 1 + Math.floor(level / 2);
+        // v1.4.7：弹数减密的同时上调单发杀伤（基座扣血是固定 -1，不吃伤害加成，可放心加强）
+        this.damage = 2 + Math.floor(level / 2);
         this.piercing = false;
 
         if (this.type === 'NORMAL') {
@@ -875,10 +876,10 @@ class Bullet {
             this.damage *= 2;
             this.size = 12;
         } else if (this.type === 'SPREAD') {
-            // 🔱 霰弹：弹丸小、飞得快、单丸伤害低，靠"同时多枚"制造覆盖面
+            // 🔱 霰弹（v1.4.7）：弹丸与炮管平行直飞，弹数比旧扇形少、单丸更重
             this.speed = 9;
             this.size = 6;
-            this.damage = Math.max(1, Math.floor(level / 4) + 1); // Lv0~3→1，Lv4+→2
+            this.damage = 2 + Math.floor(level / 4); // Lv0~3→2，Lv4+→3
         } else if (this.type === 'BOUNCE') {
             // 🪀 弹射炮：撞墙反弹，反弹次数用尽才炸
             this.speed = 7;
@@ -1247,8 +1248,8 @@ class Tank {
         if (!this.alive) return;
         if (this.cooldown > 0) return;
         
-        // Cooldown depends on level and type
-        this.cooldown = 20 - Math.min(this.level, 5) * 2;
+        // Cooldown depends on level and type（v1.4.7：基础冷却 20→24，屏上子弹流密度约 -30%）
+        this.cooldown = 24 - Math.min(this.level, 5) * 2;
         if (this.weaponClass === 'EXPLOSIVE') this.cooldown += 15;
         if (this.weaponClass === 'LASER') this.cooldown += 10;
         if (this.weaponClass === 'SPREAD') this.cooldown += 18;   // 🔱 霰弹一次多枚，代价是射速
@@ -1268,31 +1269,27 @@ class Tank {
         let numShots = 1;
         let burstDelay = 60; // ms between burst shots
 
-        // 🔱 霰弹：一次同时打出 3（Lv5+ 为 5）枚扇形弹，不做连发延迟
+        // 🔱 霰弹：一次并列打出多排平行弹（Lv5 前后 2/4 排），不做连发延迟
+        // v1.4.7 重做：不再斜着打——沿射击方向并列打出 2 排（Lv5+ 4 排）平行弹幕，
+        // 全部弹道与炮管平行（斜向弹对玩家/敌人都太难躲，用户明确要求）。
         if (bType === 'SPREAD') {
-            const pellets = this.level >= 5 ? 5 : 3;
-            const step = this.level >= 7 ? 0.22 : 0.3;
-            const base = this.direction === 'UP' ? -Math.PI/2 : this.direction === 'DOWN' ? Math.PI/2 : this.direction === 'LEFT' ? Math.PI : 0;
-            for (let i = 0; i < pellets; i++) {
-                const angle = base + (i - (pellets - 1) / 2) * step;
-                const b = new Bullet(this.game, this, bx, by, this.direction, this.level, 'SPREAD');
-                b.vx = Math.cos(angle) * b.speed;
-                b.vy = Math.sin(angle) * b.speed;
+            const rows = this.level >= 5 ? 4 : 2;
+            const perp = this.direction === 'UP' || this.direction === 'DOWN' ? [1, 0] : [0, 1]; // 垂直于射击方向的偏移轴
+            for (let i = 0; i < rows; i++) {
+                const off = (i - (rows - 1) / 2) * 12; // 排间距 12px（±6 / ±18，都在 60px 车体内）
+                const b = new Bullet(this.game, this, bx + perp[0] * off, by + perp[1] * off, this.direction, this.level, 'SPREAD');
                 this.game.bullets.push(b);
             }
             return;
         }
         
-        // Weapon Logic Revamp: Single barrel, burst fire instead of parallel!
+        // v1.4.7 减密+增伤：弹数阶梯整体下调（普通系 Lv8+ 最多 3 发、激光/高爆最多 2 发），
+        // 单发杀伤上调（见 Bullet 构造 damage = 2 + floor(level/2)）——少而重，不再满屏弹。
         if (bType === 'NORMAL' || bType === 'MISSILE' || bType === 'BOUNCE') {
-            if (this.level >= 9) numShots = 4;   // v1.4.6 减密：满级 5 连发 → 4 连发
-            else if (this.level >= 7) numShots = 4;
-            else if (this.level >= 5) numShots = 3;
-            else if (this.level >= 3) numShots = 2;
-        } else if (bType === 'LASER' || bType === 'EXPLOSIVE') {
             if (this.level >= 8) numShots = 3;
             else if (this.level >= 4) numShots = 2;
-            else numShots = 1;
+        } else if (bType === 'LASER' || bType === 'EXPLOSIVE') {
+            if (this.level >= 4) numShots = 2;
         }
         
         const shootSingle = () => {
