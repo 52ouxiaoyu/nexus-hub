@@ -1,12 +1,15 @@
 'use strict';
 /* =========================================================================
- * 极速飞车 Turbo Rush 3D — v1.2.0
+ * 极速飞车 Turbo Rush 3D — v1.2.1
  * 街机式 3D 环形赛道竞速（参考马车 / 山脊赛车式手感）
  * v1.1.0：双人分屏 PK + 路面方向箭头 + 出赛道车身不消失软回拉
  * v1.1.1：修复 A/D 转向方向（相机 right=-world X 导致视觉左右相反）
  * v1.1.2：路面箭头 → 路边黑黄 V 字指示牌；草地阻尼调到接近真实（max 0.55×、摩擦 0.030）
  * v1.2.0：极简操作（4 方向键 + Space/Enter 加速带 CD，无刹车/手刹）；
  *         树/岩石碰撞（推出 + 按撞击角减速）；指示牌减半且只放左侧
+ * v1.2.1：车对车碰撞重做为动量守恒模型（等质量、恢复系数 0.72）：
+ *         被追尾 → 向前冲；撞前车 → 前车被撞飞、自己稍减速；
+ *         互相挤行 → 轻微持续摩擦互损，不再瞬间掉速
  * 纯前端：three.js r128（本地）+ 原生 JS，无任何构建工具
  * 坐标系约定：heading=0 朝 +z；heading 增大 = 右转；
  *            left 向量 = (t.z, 0, -t.x)（命名沿用，实际为行进方向右侧）
@@ -1450,34 +1453,6 @@ const Game = {
         // 玩家
         const info = p.update(dt, controlsLive);
 
-        // 与 AI 软碰撞（仅 SOLO）
-        if (this.state !== 'MENU' && !isVS) {
-            for (const ai of this.ais) {
-                const dx = p.pos.x - ai.pos.x, dz = p.pos.z - ai.pos.z;
-                const d = Math.hypot(dx, dz);
-                if (d < 2.9 && d > 0.01) {
-                    const push = (2.9 - d) * 0.55;
-                    p.pos.x += dx / d * push; p.pos.z += dz / d * push;
-                    p.speed *= 0.94;
-                    ai.v *= 0.97;
-                    ai.laneT = clamp(ai.laneT + (Math.random() < 0.5 ? -2 : 2), -CFG.ROAD_HALF + 2.2, CFG.ROAD_HALF - 2.2);
-                }
-            }
-        }
-
-        // VS 模式下 P1 ↔ P2 软碰撞
-        if (isVS && this.player2) {
-            const pp = this.player2;
-            const dx = p.pos.x - pp.pos.x, dz = p.pos.z - pp.pos.z;
-            const d = Math.hypot(dx, dz);
-            if (d < 2.9 && d > 0.01) {
-                const push = (2.9 - d) * 0.55;
-                p.pos.x += dx / d * push * 0.5; p.pos.z += dz / d * push * 0.5;
-                pp.pos.x -= dx / d * push * 0.5; pp.pos.z -= dz / d * push * 0.5;
-                p.speed *= 0.94; pp.speed *= 0.94;
-            }
-        }
-
         // AI（仅 SOLO）
         if (!isVS) {
             for (const ai of this.ais) ai.update(dt, racing || this.state === 'FINISHED', p.accum);
@@ -1487,6 +1462,15 @@ const Game = {
         let info2 = null;
         if (isVS && this.player2) {
             info2 = this.player2.update(dt, controlsLive, Input.p2);
+        }
+
+        // v1.2.1：车辆间碰撞（动量守恒）—— 在所有车位置更新完之后统一结算
+        if (this.state !== 'MENU') {
+            if (!isVS) {
+                for (const ai of this.ais) this.carVsCar(p, ai, dt);
+            } else if (this.player2) {
+                this.carVsCar(p, this.player2, dt);
+            }
         }
 
         // 计圈
@@ -1555,6 +1539,78 @@ const Game = {
             AudioSys.setEngine(Math.abs(p.speed), 0.3, false);
             AudioSys.setSkid(0);
         }
+    },
+    /* ================= v1.2.1：车对车碰撞（动量守恒模型） =================
+     * 等质量一维弹性碰撞（恢复系数 e=0.72），沿两车连心线交换动量：
+     *  - 被追尾：冲量沿自己车头方向 → 向前冲，后车按动量减速
+     *  - 撞前车：前车被向前撞飞、自己稍减速（等质量动量分配）
+     *  - 并排挤行（无相对接近速度）：只有轻微持续摩擦互损，不再瞬间掉速
+     * AI 车位置由样条覆写，冲量/位移换算到 (s, lane) 上才能持久生效 */
+    carVsCar(A, B, dt) {
+        const R = 2.8; // 车身等效半径（两车中心距 < R 视为接触）
+        const dx = A.pos.x - B.pos.x, dz = A.pos.z - B.pos.z;
+        const d = Math.hypot(dx, dz);
+        if (d >= R || d < 1e-4) return false;
+        const nx = dx / d, nz = dz / d;               // 连心线方向：B → A
+        const va = this._carVel(A), vb = this._carVel(B);
+        const closing = (vb.x - va.x) * nx + (vb.z - va.z) * nz; // >0 = 正在靠近
+        const overlap = R - d;
+        let hit = false;
+        if (closing > 0.4) {
+            const e = 0.72;                            // 恢复系数（部分弹性）
+            const j = (1 + e) / 2 * closing;           // 等质量冲量标量
+            this._carImpulse(A, nx * j, nz * j);
+            this._carImpulse(B, -nx * j, -nz * j);
+            this._carCrashSound(A, j); this._carCrashSound(B, j);
+            hit = true;
+        } else if (overlap > 0.02) {
+            // 挤在一起：轻微持续摩擦（每秒约 overlap×2.2 比例损耗），平滑不骤停
+            const k = Math.min(overlap * 1.4, 0.5) * dt * 1.6;
+            this._carScrub(A, k); this._carScrub(B, k);
+        }
+        // 位置分离（各承担一半，防止持续下陷）
+        const push = overlap * 0.5;
+        this._carDisplace(A, nx * push, nz * push);
+        this._carDisplace(B, -nx * push, -nz * push);
+        return hit;
+    },
+    _carVel(c) {
+        if (c instanceof Player) {
+            const a = Math.abs(c.speed) > 0.5 ? c.velAngle : c.heading;
+            return { x: Math.sin(a) * c.speed, z: Math.cos(a) * c.speed };
+        }
+        const t = c.world.smpAt(c.s).t;
+        return { x: t.x * c.v, z: t.z * c.v };
+    },
+    _carImpulse(c, ix, iz) {
+        if (c instanceof Player) {
+            // 冲量投影到自身运动方向：法向冲量撞在车头/车尾 → 速度标量增减；纯侧碰 → 几乎不减速
+            const a = Math.abs(c.speed) > 0.5 ? c.velAngle : c.heading;
+            c.speed += ix * Math.sin(a) + iz * Math.cos(a);
+            if (c.speed < CFG.REV_MAX) c.speed = CFG.REV_MAX;
+        } else {
+            const sm = c.world.smpAt(c.s);
+            const along = ix * sm.t.x + iz * sm.t.z;
+            c.v = Math.max(0, c.v + along);            // AI 不倒车
+            c.s += along * 0.15;                        // 立即给一点位移，"被撞飞"更明显
+        }
+    },
+    _carScrub(c, k) {
+        if (c instanceof Player) c.speed *= (1 - k);
+        else c.v *= (1 - k);
+    },
+    _carDisplace(c, mx, mz) {
+        if (c instanceof Player) { c.pos.x += mx; c.pos.z += mz; return; }
+        const sm = c.world.smpAt(c.s);
+        c.s += mx * sm.t.x + mz * sm.t.z;               // 纵向推进 → 弧长
+        const dl = mx * sm.left.x + mz * sm.left.z;     // 横向推开 → 车道偏移
+        c.lane = clamp(c.lane + dl, -CFG.ROAD_HALF + 1.5, CFG.ROAD_HALF - 1.5);
+        c.laneT = clamp(c.laneT + dl, -CFG.ROAD_HALF + 2.2, CFG.ROAD_HALF - 2.2);
+    },
+    _carCrashSound(c, j) {
+        if (c._crashCd === undefined || j < 3.2 || c._crashCd > 0) return;
+        c._crashCd = 0.45;
+        AudioSys.beep(70 + Math.random() * 35, 0.14, 'square', 0.3);
     },
     /* v1.0.1：相机跟随独立函数（复用 P1/P2） */
     _updateCamera(pp, cam, info, dt) {
