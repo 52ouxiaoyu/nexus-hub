@@ -1181,7 +1181,23 @@ function aiChooseShot() {
     const targets = legalTargetBalls();
     if (!targets.length || cue.potted) return null;
     const sigma = [0.035, 0.014, 0.005][aiLevel];
+    // 难度越高越挑正切角（薄球进球率低，高手宁可做防守）
+    const cutMin = [0.22, 0.28, 0.30][aiLevel];
 
+    // ---- 开球：直线全力冲球堆最前沿（专用逻辑，不再落进"安全球轻推"） ----
+    if (isBreak) {
+        let apex = null, ad = Infinity;
+        for (const b of targets) {
+            const d = Math.hypot(b.x - cue.x, b.z - cue.z);
+            if (d < ad) { ad = d; apex = b; }
+        }
+        if (apex) {
+            const a = Math.atan2(apex.z - cue.z, apex.x - cue.x) + gauss() * sigma;
+            return { dir: { x: Math.cos(a), z: Math.sin(a) }, power: 0.97 };
+        }
+    }
+
+    // ---- 进攻：评分选最优 (球, 袋) 组合 ----
     let best = null, bestScore = -Infinity;
     for (const b of targets) {
         for (const p of POCKETS) {
@@ -1197,57 +1213,63 @@ function aiChooseShot() {
             if (al < 1e-6) continue;
             adx /= al; adz /= al;
 
-            // 切角太薄不行
             const cosCut = adx * pdx + adz * pdz;
-            if (cosCut < 0.28) continue;
+            if (cosCut < cutMin) continue;
 
             // 路径检查
             if (segBlocked(cue.x, cue.z, gx, gz, 2 * CFG.R * 0.96, [b.num])) continue;
             if (segBlocked(b.x, b.z, p.x, p.z, 2 * CFG.R * 0.92, [b.num])) continue;
 
-            const score = cosCut * cosCut * cosCut / (0.25 + al + pl * 1.6);
+            let score = cosCut * cosCut * cosCut / (0.25 + al + pl * 1.6);
+            if (aiLevel === 2) score *= 1 + 0.2 * cosCut;   // 困难更偏好正切角
             if (score > bestScore) {
                 bestScore = score;
-                best = { dir: { x: adx, z: adz }, dist: al + pl };
+                best = { dir: { x: adx, z: adz }, dist: al + pl, cosCut };
             }
         }
     }
 
     if (best) {
-        const v = clamp(1.6 + best.dist * 2.4, 1.6, 7.2);
+        // 力度 = 距离需求 ÷ 切角效率：薄球需要更大力度才能滚到袋，正切角省力
+        const v = clamp(1.5 + best.dist * 2.3 / Math.max(best.cosCut, 0.32), 1.7, 7.4);
         const powerFrac = (v - CFG.minPower) / (CFG.maxPower - CFG.minPower);
-        // 加入瞄准噪声
         const a = Math.atan2(best.dir.z, best.dir.x) + gauss() * sigma;
-        return { dir: { x: Math.cos(a), z: Math.sin(a) }, power: clamp(powerFrac, 0.08, 0.95) };
+        return { dir: { x: Math.cos(a), z: Math.sin(a) }, power: clamp(powerFrac, 0.10, 0.95) };
     }
 
-    // 没有好球：安全球，碰最近的合法球
+    // ---- 防守：没有直接进球线时轻碰最近的合法球，尽量不打散球堆、不给对手送球 ----
     let nb = null, nd = Infinity;
     for (const b of targets) {
         const d = Math.hypot(b.x - cue.x, b.z - cue.z);
         if (d < nd) { nd = d; nb = b; }
     }
     if (!nb) return null;
-    const a = Math.atan2(nb.z - cue.z, nb.x - cue.x) + gauss() * sigma * 0.5;
-    return { dir: { x: Math.cos(a), z: Math.sin(a) }, power: clamp(0.3 + nd * 0.15, 0.25, 0.6) };
+    const a = Math.atan2(nb.z - cue.z, nb.x - cue.x) + gauss() * sigma * 0.4;
+    const v = clamp(1.9 + nd * 1.3, 1.9, 3.8);
+    const powerFrac = (v - CFG.minPower) / (CFG.maxPower - CFG.minPower);
+    return { dir: { x: Math.cos(a), z: Math.sin(a) }, power: clamp(powerFrac, 0.10, 0.45) };
 }
 
 function aiPlaceCue() {
     const targets = legalTargetBalls();
-    const cue = cueBall();
-    // 尝试摆在目标球正后方（与袋口一条线）
+    // 评分制：遍历所有 (目标球, 袋口, 后退距离) 组合，选整体进球条件最好的摆位。
+    // 摆在「球—袋连线正后方」= 直线球（切角 1），所以评分主要看袋口远近 + 路径通畅。
+    let best = null, bestScore = -Infinity;
     for (const b of targets) {
         for (const p of POCKETS) {
             let dx = b.x - p.x, dz = b.z - p.z;
             const l = Math.hypot(dx, dz) || 1;
             dx /= l; dz /= l;
-            const cx = clamp(b.x + dx * 0.5, -CFG.W / 2 + CFG.R, CFG.W / 2 - CFG.R);
-            const cz = clamp(b.z + dz * 0.5, -CFG.H / 2 + CFG.R, CFG.H / 2 - CFG.R);
-            if (!segBlocked(cx, cz, b.x, b.z, 2 * CFG.R * 0.96, [b.num])) {
-                if (tryPlaceCue(cx, cz)) return;
+            for (const back of [0.35, 0.55, 0.8]) {
+                const cx = b.x + dx * back, cz = b.z + dz * back;
+                if (!validCuePos(cx, cz)) continue;
+                if (segBlocked(cx, cz, b.x, b.z, 2 * CFG.R * 0.96, [b.num])) continue;
+                const score = 1 / (0.3 + l);
+                if (score > bestScore) { bestScore = score; best = { cx, cz }; }
             }
         }
     }
+    if (best && tryPlaceCue(best.cx, best.cz)) return;
     // 兜底：中心附近
     const cands = [[0, 0], [-CFG.W / 4, 0], [CFG.W / 4, 0], [0, -CFG.H / 4], [0, CFG.H / 4]];
     for (const [x, z] of cands) if (tryPlaceCue(x, z)) return;
@@ -1697,7 +1719,7 @@ window.POOL = {
     get isBreak() { return isBreak; },
     set isBreak(v) { isBreak = v; },
     get power() { return power; },
-    chargePowerAt,
+    chargePowerAt, maybeRunAI,
     startGame, shoot, aimDir, setRules, ruleHint,
     setAim(x, z) { const l = Math.hypot(x, z); if (l > 0) aimDir = { x: x / l, z: z / l }; return aimDir; },
     // 测试用：直接把指定号码的球标为进袋（不动 mesh 动画）
