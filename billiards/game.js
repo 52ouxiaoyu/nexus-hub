@@ -902,6 +902,7 @@ function resolveShot() {
     isBreak = false;
 
     // 开球进黑 8：重置回置球点（无论是否犯规都先还 8 上桌）
+    let eightSpotted = false;
     if (wasBreak && potted8) {
         const eight = balls.find(b => b.num === 8);
         eight.potted = false;
@@ -913,16 +914,18 @@ function resolveShot() {
         eight.mesh.position.set(eight.x, CFG.R, eight.z);
         shot.potted = shot.potted.filter(n => n !== 8);
         potted8 = false;
-        showMsg('开球黑 8 入袋，已重置回置球点', 2500);
+        eightSpotted = true;      // 开球进 8：重置后开球方仍续杆（WPA 3.3(e)）
     }
 
     // 花色分配：仅在非开球 + 开台 + 合法 + 进非 8 球（开球后桌面仍 open）
+    let infoMsg = null;
     if (openTable && !wasBreak && !foul && pottedNon8.length > 0) {
         const firstType = ballType(pottedNon8[0]);
         P.group = firstType;
         O.group = firstType === 'solid' ? 'stripe' : 'solid';
         openTable = false;
-        showMsg((P.group === 'solid' ? P.name + ' 分到全色 ●' : P.name + ' 分到花色 ○'), 2600);
+        const gname = g => g === 'solid' ? '全色 ● 1-7' : '花色 ○ 9-15';
+        infoMsg = P.name + ' 分到 ' + gname(P.group) + ' · ' + O.name + ' 拿 ' + gname(O.group);
     }
 
     // 黑 8 结算（非开球阶段；开球进 8 已在上面重置）
@@ -936,23 +939,41 @@ function resolveShot() {
     // 继续 / 换人
     let cont = false;
     if (!foul) {
-        if (wasBreak)                          cont = true;                          // 开球未犯规必续
-        else if (openTable)                    cont = pottedNon8.length > 0;         // 开台：进任意非 8 续
-        else if (groupRemaining(P.group) === 0) cont = true;                         // 已清台打 8：未犯规续（修你报的 bug）
+        if (wasBreak) {
+            // WPA 3.3(c)：开球进球且未犯规 → 开球方继续击打，台面保持 open
+            // WPA 3.3(d)：开球无球落袋 → 换对手击打（旧版"开球必续"是错的）
+            cont = pottedNon8.length > 0 || eightSpotted;
+        }
+        else if (openTable)                     cont = pottedNon8.length > 0;   // 开放台面：进任意非 8 球即续
+        else if (groupRemaining(P.group) === 0) cont = true;                      // 已清台打 8：未犯规即续
         else                                    cont = pottedNon8.some(n => ballType(n) === P.group);
     }
 
     if (foul) {
-        showMsg('犯规：' + foulMsg + '，对方自由球', 3000);
-        switchPlayer();
+        // 换人时必须静默，否则"轮到 xxx"会立刻把犯规原因顶掉，玩家看不到自己为什么被罚
+        switchPlayer(true);
+        showMsg('犯规：' + foulMsg + ' → ' + players[current].name + ' 自由球', 3800);
         startBallInHand();
     } else if (cont) {
-        showMsg(wasBreak ? '开球续杆' : '好球！继续击打', 1800);
+        if (infoMsg) {
+            showMsg(infoMsg + ' · 继续击打', 4000);
+        } else if (wasBreak) {
+            showMsg(pottedNon8.length > 0
+                ? '开球进球 · 台面仍开放（花色未定）· 继续击打，下一杆合法进球才定花色'
+                : '开球黑 8 入袋已重置回置球点 · 继续击打', 4000);
+        } else {
+            showMsg('好球！继续击打', 1800);
+        }
         state = 'aim';
     } else {
-        switchPlayer();
+        switchPlayer(true);
+        showMsg(infoMsg
+            ? infoMsg + ' → 轮到 ' + players[current].name
+            : (wasBreak ? '开球未进球 → 轮到 ' + players[current].name
+                        : '轮到 ' + players[current].name), 2600);
         state = 'aim';
     }
+    setHint(aimHint());
     refreshHUD();
     maybeRunAI();
 }
@@ -969,9 +990,19 @@ function isLegalFirstContact(num) {
     return ballType(num) === g;
 }
 
-function switchPlayer() {
+function switchPlayer(quiet) {
     current = 1 - current;
-    showMsg('轮到 ' + players[current].name, 1800);
+    if (!quiet) showMsg('轮到 ' + players[current].name, 1800);
+}
+
+// 底部提示：把"台面开放 / 该打黑 8"这类关键状态直接写在瞄准提示里，
+// 免得玩家打完球不知道自己的花色为什么还没定
+function aimHint() {
+    if (state === 'ballinhand') return '自由球：移动鼠标选择位置，点击台面放置母球';
+    const P = players[current];
+    if (openTable) return '台面开放（花色未定）：可先打任意球（黑 8 除外）· 下一杆合法进球即定花色';
+    if (P.group && groupRemaining(P.group) === 0) return '已清台：瞄准黑 8 收尾（打进即胜，母球落袋判负）';
+    return '移动鼠标瞄准 · 按住蓄力 · 松开出杆';
 }
 
 function legalTargetBalls() {
@@ -1015,7 +1046,7 @@ function tryPlaceCue(x, z) {
     cue.mesh.position.set(x, CFG.R, z);
     ghostCue.visible = false;
     state = 'aim';
-    setHint('移动鼠标瞄准 · 按住蓄力 · 松开出杆');
+    setHint(aimHint());
     return true;
 }
 
@@ -1172,9 +1203,11 @@ function refreshHUD() {
         const panel = $('pp' + (i + 1));
         panel.classList.toggle('active', i === current && state !== 'over');
         if (openTable) {
-            gEl.textContent = '花色未定';
+            gEl.textContent = '台面开放 · 花色未定';
+            gEl.classList.add('open');
             wrap.innerHTML = '';
         } else {
+            gEl.classList.remove('open');
             gEl.textContent = P.group === 'solid' ? '全色 ● 1-7' : '花色 ○ 9-15';
             let nums;
             const onEight = groupRemaining(P.group) === 0;
@@ -1534,8 +1567,8 @@ function startGame(_vsAI, level) {
     ghostCue.visible = false;
     $('overlay').classList.add('hidden');
     $('overlay-end').classList.add('hidden');
-    setHint('移动鼠标瞄准 · 按住蓄力 · 松开出杆');
-    showMsg('开球！' + players[0].name + ' 先手', 2500);
+    setHint(aimHint());
+    showMsg('开球！' + players[0].name + ' 先手 · 台面开放，任意球可先打（黑 8 除外）', 3200);
     refreshHUD();
 }
 
