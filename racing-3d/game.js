@@ -1,10 +1,12 @@
 'use strict';
 /* =========================================================================
- * 极速飞车 Turbo Rush 3D — v1.1.2
+ * 极速飞车 Turbo Rush 3D — v1.2.0
  * 街机式 3D 环形赛道竞速（参考马车 / 山脊赛车式手感）
  * v1.1.0：双人分屏 PK + 路面方向箭头 + 出赛道车身不消失软回拉
  * v1.1.1：修复 A/D 转向方向（相机 right=-world X 导致视觉左右相反）
  * v1.1.2：路面箭头 → 路边黑黄 V 字指示牌；草地阻尼调到接近真实（max 0.55×、摩擦 0.030）
+ * v1.2.0：极简操作（4 方向键 + Space/Enter 加速带 CD，无刹车/手刹）；
+ *         树/岩石碰撞（推出 + 按撞击角减速）；指示牌减半且只放左侧
  * 纯前端：three.js r128（本地）+ 原生 JS，无任何构建工具
  * 坐标系约定：heading=0 朝 +z；heading 增大 = 右转；
  *            left 向量 = (t.z, 0, -t.x)（命名沿用，实际为行进方向右侧）
@@ -53,6 +55,8 @@ const CFG = {
     REV_MAX: -9,
     LAT_GRIP: 19,            // 侧向抓地上限 m/s²
     NITRO_MAX: 100,
+    BOOST_MAX: 2.2,          // v1.2.0：一次氮气最长 2.2 秒
+    BOOST_CD: 4,             // v1.2.0：氮气冷却 4 秒（用完/松开即进 CD）
     AI_COLORS: [0x4361ee, 0xf4a261, 0x2a9d8f],
     PLAYER_COLOR: 0xe63946,
 };
@@ -141,7 +145,7 @@ const Input = {
     touch: { left: false, right: false, gas: false, brake: false, nitro: false },
     init() {
         window.addEventListener('keydown', e => {
-            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Shift'].includes(e.key)) e.preventDefault();
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Shift', 'Enter'].includes(e.key)) e.preventDefault();
             this.keys[e.key.toLowerCase()] = true;
             Game.onKey(e.key.toLowerCase());
         });
@@ -160,8 +164,9 @@ const Input = {
             bind('t-left', 'left'); bind('t-right', 'right'); bind('t-gas', 'gas'); bind('t-brake', 'brake'); bind('t-nitro', 'nitro');
         }
     },
-    /* P1 输入：W/S 油门/刹车，A/D 转向，Space 漂移，Shift 氮气 */
-    /* v1.1.1：SOLO 模式方向键归 P1；VS 模式方向键归 P2 */
+    /* v1.2.0 极简键位：4 方向键驾驶 + 1 个加速键（带 CD），无刹车/手刹
+       P1：W A S D 或方向键（SOLO 时两套都归 P1） + Space 加速
+       P2：方向键 + 回车加速 */
     _soloArrow() { return typeof Game !== 'undefined' && Game.mode !== 'VS'; },
     get throttle() { return (this.keys['w'] || (this._soloArrow() && this.keys['arrowup']) || this.touch.gas) ? 1 : 0; },
     get brake()    { return (this.keys['s'] || (this._soloArrow() && this.keys['arrowdown']) || this.touch.brake) ? 1 : 0; },
@@ -172,9 +177,8 @@ const Input = {
         if (this.keys['d'] || (this._soloArrow() && this.keys['arrowright']) || this.touch.right) s -= 1;
         return s;
     },
-    get handbrake() { return !!this.keys[' ']; },
-    get nitro()     { return !!(this.keys['shift'] || this.touch.nitro); },
-    /* v1.0.1：P2 输入（方向键 ↑↓←→ 油门/刹车/转向；. 漂移；RShift 氮气） */
+    get handbrake() { return false; }, // v1.2.0：移除手刹（简化操作）
+    get nitro()     { return !!(this.keys[' '] || this.touch.nitro); },
     setP2() {
         this.p2.throttle = (this.keys['arrowup']) ? 1 : 0;
         this.p2.brake = (this.keys['arrowdown']) ? 1 : 0;
@@ -182,8 +186,8 @@ const Input = {
         if (this.keys['arrowleft']) s += 1;   // 视觉左转
         if (this.keys['arrowright']) s -= 1; // 视觉右转
         this.p2.steer = s;
-        this.p2.handbrake = !!this.keys['.'];
-        this.p2.nitro = !!this.keys[','];
+        this.p2.handbrake = false;
+        this.p2.nitro = !!this.keys['enter']; // 回车加速（主键盘/小键盘回车通用）
     }
 };
 
@@ -425,9 +429,9 @@ class World {
         }
     }
 
-    /* v1.1.2：路边指示牌 —— 黑黄警示色 V 字箭头 + 木桩，沿赛道左右交替排列 */
+    /* v1.2.0：路边指示牌 —— 只放左侧、密度减半（每 64m 一块），避免满路都是牌子 */
     buildSignBoards() {
-        const STEP = 32, N_SIGNS = Math.floor(this.length / STEP);
+        const STEP = 64, N_SIGNS = Math.floor(this.length / STEP);
         const signTex = makeSignTexture();
         const boardGeo = new THREE.PlaneGeometry(2.6, 2.0);
         const postMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2b });
@@ -437,20 +441,18 @@ class World {
             const s = k * STEP;
             const a = this.smpAt(s);
             const yaw = Math.atan2(a.t.x, a.t.z);
-            // 左右交替：偶数右侧、奇数左侧
-            const side = (k % 2 === 0) ? 1 : -1;
             const sideOffset = CFG.ROAD_HALF + CFG.CURB_W + 1.8;
-            const cx = a.p.x + a.left.x * sideOffset * side;
-            const cz = a.p.z + a.left.z * sideOffset * side;
+            const cx = a.p.x - a.left.x * sideOffset; // 固定放左侧
+            const cz = a.p.z - a.left.z * sideOffset;
             // 木桩
             const post = new THREE.Mesh(new THREE.BoxGeometry(0.18, 2.6, 0.18), postMat);
             post.position.set(cx, a.y + 1.3, cz);
             this.signGroup.add(post);
-            // 牌面（立起来，朝向赛道 + 微微向内倾斜 15°，像真实赛道指示牌）
+            // 牌面（立起来，朝向赛道 + 微微向内倾斜，像真实赛道指示牌）
             const board = new THREE.Mesh(boardGeo, boardMat);
-            board.position.set(cx + a.left.x * side * 0.5, a.y + 2.6, cz + a.left.z * side * 0.5);
+            board.position.set(cx - a.left.x * 0.5, a.y + 2.6, cz - a.left.z * 0.5);
             board.rotation.set(0, yaw + Math.PI, 0); // 立直
-            board.rotateZ(side * 0.18);              // 朝路面微倾（约 10°）
+            board.rotateZ(-0.18);                    // 朝路面微倾（约 10°）
             this.signGroup.add(board);
         }
         this.group.add(this.signGroup);
@@ -602,6 +604,12 @@ class World {
         });
         this.group.add(rock);
 
+        // v1.2.0：碰撞体（树干 + 岩石），供车辆碰撞检测
+        // minD 已含车身半宽（~1.05m）：树按树干粗细，岩石按实际缩放
+        this.colliders = [];
+        trees.forEach(t => this.colliders.push({ x: t.x, z: t.z, minD: 0.6 * t.s + 1.05 }));
+        rocks.forEach(t => this.colliders.push({ x: t.x, z: t.z, minD: 1.0 * t.s + 1.0 }));
+
         // 远山
         const mts = [];
         for (let i = 0; i < 16; i++) {
@@ -632,6 +640,29 @@ class World {
         }
         this.group.add(this.clouds);
         this.updateClouds(0);
+    }
+
+    /* v1.2.0：车辆与树/岩石碰撞。推出障碍 + 按撞击角度减速，返回是否碰撞 */
+    collideCar(car) {
+        const cols = this.colliders;
+        if (!cols) return false;
+        let hit = false;
+        for (let i = 0; i < cols.length; i++) {
+            const c = cols[i];
+            const dx = car.pos.x - c.x, dz = car.pos.z - c.z;
+            if (dx > 5 || dx < -5 || dz > 5 || dz < -5) continue; // 粗筛
+            const d = Math.hypot(dx, dz);
+            if (d >= c.minD) continue;
+            const nx = d > 0.001 ? dx / d : 1, nz = d > 0.001 ? dz / d : 0;
+            const push = c.minD - d;
+            car.pos.x += nx * push; car.pos.z += nz * push; // 推出障碍
+            // 正面撞减速多（~62%），侧刮减速少（~12%）
+            const mvx = Math.sin(car.velAngle), mvz = Math.cos(car.velAngle);
+            const headOn = Math.max(0, -(mvx * nx + mvz * nz));
+            car.speed *= 1 - (0.12 + 0.5 * headOn);
+            hit = true;
+        }
+        return hit;
     }
 
     updateClouds(dt) {
@@ -718,6 +749,9 @@ class Player {
         this.velAngle = this.heading;
         this.speed = 0;
         this.nitro = CFG.NITRO_MAX;
+        this.boostT = 0;   // v1.2.0：本次氮气已持续时间
+        this.boostCd = 0;  // v1.2.0：氮气冷却剩余
+        this._crashCd = 0; // v1.2.0：碰撞音效冷却
         this.idx = 0;
         this.lastS = s0;
         this.autopilot = null;
@@ -750,8 +784,21 @@ class Player {
         const throttle = inp.throttle;
         const brake = inp.brake;
         const steerIn = inp.steer;
-        const hb = !!inp.handbrake;
-        const nitroOn = !!inp.nitro && this.nitro > 1 && this.speed > 4;
+        const hb = !!inp.handbrake; // v1.2.0：恒为 false（手刹已移除）
+        // v1.2.0：CD 氮气 —— 一次最长 BOOST_MAX 秒；用完或中途松开 → 进 BOOST_CD 冷却
+        if (this.boostCd > 0) this.boostCd = Math.max(0, this.boostCd - dt);
+        let nitroOn = false;
+        if (inp.nitro && this.boostCd <= 0 && this.speed > 4) {
+            nitroOn = true;
+            this.boostT += dt;
+            if (this.boostT >= CFG.BOOST_MAX) this.boostCd = CFG.BOOST_CD;
+        } else if (this.boostT > 0) {
+            this.boostT = 0;
+            this.boostCd = CFG.BOOST_CD;
+        }
+        // HUD 读数：加速中 → 剩余量递减；CD 中 → 恢复进度；就绪 → 满
+        this.nitro = this.boostCd > 0 ? (1 - this.boostCd / CFG.BOOST_CD) * 100
+                   : (this.boostT > 0 ? Math.max(0, (1 - this.boostT / CFG.BOOST_MAX)) * 100 : 100);
 
         // 赛道定位
         this.idx = w.nearestIdx(this.pos.x, this.pos.z, this.idx);
@@ -796,9 +843,13 @@ class Player {
         this.pos.x += Math.sin(this.velAngle) * this.speed * dt;
         this.pos.z += Math.cos(this.velAngle) * this.speed * dt;
 
-        // 氮气
-        if (nitroOn) this.nitro = Math.max(0, this.nitro - 26 * dt);
-        else this.nitro = Math.min(CFG.NITRO_MAX, this.nitro + (onRoad ? 5.5 : 2.5) * dt);
+        // v1.2.0：与树/岩石碰撞（推出 + 撞击减速 + 音效）
+        if (this._crashCd > 0) this._crashCd -= dt;
+        if (w.collideCar(this) && this._crashCd <= 0 && Math.abs(this.speed) > 3) {
+            this._crashCd = 0.45;
+            AudioSys.beep(70 + Math.random() * 35, 0.14, 'square', 0.3);
+        }
+
         this.nitroOn = nitroOn;
 
         // 高度与姿态（贴地 + 俯仰/侧倾）
