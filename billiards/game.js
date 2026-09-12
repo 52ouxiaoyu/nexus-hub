@@ -1157,7 +1157,10 @@ function aiTakeTurn() {
             chargeStart = performance.now();
             const chargeDur = plan.power * CFG.chargeTime * 1000;
             AI.after(chargeDur, () => {
-                if (state === 'charge') shoot(plan.power);
+                if (state === 'charge') {
+                    spin = { x: 0, y: plan.vert || 0 };   // AI 的高低杆走位
+                    shoot(plan.power);
+                }
             });
         });
     });
@@ -1176,15 +1179,131 @@ function segBlocked(x1, z1, x2, z2, rad, ignore) {
     return false;
 }
 
+// ---------------- AI 脑内模拟（前瞻搜索） ----------------
+// 克隆当前局面、静音音效，把一杆的完整物理在"脑内"跑完；不渲染、不动真实状态。
+function simulateShot(dirX, dirZ, powerFrac, vertSpin = 0) {
+    const savedBalls = balls, savedShot = shot, savedDir = shotDirStore;
+    const sBH = SFX.ballHit, sCU = SFX.cushion, sPO = SFX.pocket;
+    SFX.ballHit = () => {}; SFX.cushion = () => {}; SFX.pocket = () => {};
+    balls = balls.map(b => ({
+        num: b.num, type: b.type, x: b.x, z: b.z, vx: 0, vz: 0,
+        potted: b.potted, vertSpin: 0, sideSpin: 0, fall: 0, pocket: null, mesh: null,
+    }));
+    shot = { first: null, potted: [], cushionAfter: false, preGroupCleared: false };
+    shotDirStore = { x: dirX, z: dirZ };
+    const c = balls[0];
+    const v = CFG.minPower + powerFrac * (CFG.maxPower - CFG.minPower);
+    c.vx = dirX * v; c.vz = dirZ * v; c.vertSpin = vertSpin;
+    let res;
+    try {
+        for (let i = 0; i < 3600; i++) if (!physStep(CFG.dt)) break;
+        res = { potted: shot.potted.slice(), first: shot.first, cushionAfter: shot.cushionAfter, balls };
+    } finally {
+        balls = savedBalls; shot = savedShot; shotDirStore = savedDir;
+        SFX.ballHit = sBH; SFX.cushion = sCU; SFX.pocket = sPO;
+    }
+    return res;
+}
+
+function segBlockedIn(arr, x1, z1, x2, z2, rad, ignore) {
+    const dx = x2 - x1, dz = z2 - z1;
+    const len2 = dx * dx + dz * dz;
+    if (len2 < 1e-9) return false;
+    for (const b of arr) {
+        if (b.potted || ignore.includes(b.num)) continue;
+        const t = clamp(((b.x - x1) * dx + (b.z - z1) * dz) / len2, 0, 1);
+        const px = x1 + dx * t, pz = z1 + dz * t;
+        if (Math.hypot(b.x - px, b.z - pz) < rad) return true;
+    }
+    return false;
+}
+
+// 从 (bx,bz) 出发对 arr 中 nums 这些球的最佳几何进球分（评估走位 / 防守价值）
+function geoBestScore(bx, bz, arr, nums) {
+    let bestS = 0;
+    for (const n of nums) {
+        const b = arr.find(x => x.num === n);
+        if (!b || b.potted) continue;
+        for (const p of POCKETS) {
+            let pdx = p.x - b.x, pdz = p.z - b.z;
+            const pl = Math.hypot(pdx, pdz);
+            if (pl < 1e-6) continue;
+            pdx /= pl; pdz /= pl;
+            const gx = b.x - pdx * 2 * CFG.R, gz = b.z - pdz * 2 * CFG.R;
+            let adx = gx - bx, adz = gz - bz;
+            const al = Math.hypot(adx, adz);
+            if (al < 1e-6) continue;
+            adx /= al; adz /= al;
+            const cosCut = adx * pdx + adz * pdz;
+            if (cosCut < 0.2) continue;
+            if (segBlockedIn(arr, bx, bz, gx, gz, 2 * CFG.R * 0.96, [b.num])) continue;
+            if (segBlockedIn(arr, b.x, b.z, p.x, p.z, 2 * CFG.R * 0.92, [b.num])) continue;
+            const sc = cosCut * cosCut * cosCut / (0.25 + al + pl * 1.6);
+            if (sc > bestS) bestS = sc;
+        }
+    }
+    return bestS;
+}
+
+// 给一杆的模拟结果打分：进球收益 - 犯规惩罚 ± 走位 / 防守价值
+function scoreSim(res, ctx) {
+    const pottedSet = new Set(res.potted);
+    const sb = res.balls;
+    const cueEnd = sb[0];
+    let val = 0;
+
+    const firstLegal = res.first !== null && isLegalFirstContact(res.first);
+    const scratch = cueEnd.potted;
+
+    // 8 号球：合法打赢 / 提前送 = 输
+    if (pottedSet.has(8)) {
+        const onEight = ctx.my && ctx.myRemBefore === 0;
+        if (onEight && !scratch && firstLegal) return 2000;
+        return -1200;
+    }
+
+    let ownPots = 0, oppPots = 0;
+    for (const n of res.potted) {
+        if (n === 0) continue;
+        if (ctx.my && ballType(n) === ctx.my) ownPots++;
+        else if (!ctx.my && n !== 8) ownPots++;     // 台面开放：进的都算机会
+        else oppPots++;
+    }
+    val += ownPots * 130 - oppPots * 70;
+    if (!firstLegal) val -= 350;
+    if (scratch) val -= 450;
+
+    if (ownPots > 0 && !scratch && firstLegal) {
+        // 进攻成功 → 评估走位：终局母球打下一颗球的质量
+        const remainNums = [];
+        for (const b of sb) {
+            if (b.potted || b.num === 0 || b.num === 8) continue;
+            if (!ctx.my || ballType(b.num) === ctx.my) remainNums.push(b.num);
+        }
+        if (!remainNums.length) val += 160;                        // 自己的球清完了，下一杆打 8
+        else val += Math.min(geoBestScore(cueEnd.x, cueEnd.z, sb, remainNums) * 220, 110);
+    } else if (ownPots === 0 && !scratch) {
+        // 没进球 → 防守价值 = 让对手下一杆有多难受
+        const oppNums = [];
+        for (const b of sb) {
+            if (b.potted || b.num === 0) continue;
+            if (ctx.opp && ballType(b.num) === ctx.opp) oppNums.push(b.num);
+            else if (!ctx.opp && b.num !== 8) oppNums.push(b.num);
+        }
+        const oppNext = oppNums.length ? geoBestScore(cueEnd.x, cueEnd.z, sb, oppNums) : 0;
+        val += 8 - oppNext * 90;
+    }
+    return val;
+}
+
 function aiChooseShot() {
     const cue = cueBall();
     const targets = legalTargetBalls();
     if (!targets.length || cue.potted) return null;
     const sigma = [0.035, 0.014, 0.005][aiLevel];
-    // 难度越高越挑正切角（薄球进球率低，高手宁可做防守）
     const cutMin = [0.22, 0.28, 0.30][aiLevel];
 
-    // ---- 开球：直线全力冲球堆最前沿（专用逻辑，不再落进"安全球轻推"） ----
+    // ---- 开球：直线全力冲球堆最前沿 ----
     if (isBreak) {
         let apex = null, ad = Infinity;
         for (const b of targets) {
@@ -1197,47 +1316,87 @@ function aiChooseShot() {
         }
     }
 
-    // ---- 进攻：评分选最优 (球, 袋) 组合 ----
-    let best = null, bestScore = -Infinity;
+    // ---- 收集候选：(球, 袋) 几何组合 ----
+    const cands = [];
     for (const b of targets) {
         for (const p of POCKETS) {
-            // 袋口方向与幽灵球位置
             let pdx = p.x - b.x, pdz = p.z - b.z;
             const pl = Math.hypot(pdx, pdz);
             if (pl < 1e-6) continue;
             pdx /= pl; pdz /= pl;
             const gx = b.x - pdx * 2 * CFG.R, gz = b.z - pdz * 2 * CFG.R;
-
             let adx = gx - cue.x, adz = gz - cue.z;
             const al = Math.hypot(adx, adz);
             if (al < 1e-6) continue;
             adx /= al; adz /= al;
-
             const cosCut = adx * pdx + adz * pdz;
-            if (cosCut < cutMin) continue;
-
-            // 路径检查
+            if (cosCut < 0.18) continue;
             if (segBlocked(cue.x, cue.z, gx, gz, 2 * CFG.R * 0.96, [b.num])) continue;
             if (segBlocked(b.x, b.z, p.x, p.z, 2 * CFG.R * 0.92, [b.num])) continue;
+            const geo = cosCut * cosCut * cosCut / (0.25 + al + pl * 1.6);
+            cands.push({ dir: { x: adx, z: adz }, dist: al + pl, cosCut, geo });
+        }
+    }
+    cands.sort((a, b) => b.geo - a.geo);
 
-            let score = cosCut * cosCut * cosCut / (0.25 + al + pl * 1.6);
-            if (aiLevel === 2) score *= 1 + 0.2 * cosCut;   // 困难更偏好正切角
-            if (score > bestScore) {
-                bestScore = score;
-                best = { dir: { x: adx, z: adz }, dist: al + pl, cosCut };
+    // ---- 简单难度：保持一步几何决策（原有手感） ----
+    if (aiLevel === 0) {
+        const best = cands.find(c => c.cosCut >= cutMin);
+        if (best) {
+            const v = clamp(1.5 + best.dist * 2.3 / Math.max(best.cosCut, 0.32), 1.7, 7.4);
+            const powerFrac = (v - CFG.minPower) / (CFG.maxPower - CFG.minPower);
+            const a = Math.atan2(best.dir.z, best.dir.x) + gauss() * sigma;
+            return { dir: { x: Math.cos(a), z: Math.sin(a) }, power: clamp(powerFrac, 0.10, 0.95) };
+        }
+        return aiDefense(targets, sigma);
+    }
+
+    // ---- 普通/困难：脑内模拟搜索（进攻候选 + 防守候选同一评分体系） ----
+    const P = players[current];
+    const ctx = {
+        my: P.group,
+        opp: players[1 - current].group,
+        myRemBefore: P.group ? groupRemaining(P.group) : 99,
+    };
+    const aims = cands.slice(0, aiLevel === 2 ? 9 : 7);
+    const powers = aiLevel === 2 ? [0.35, 0.62, 0.9] : [0.45, 0.8];
+    let bestPlan = null, bestVal = -Infinity;
+    for (const c of aims) {
+        // 高低杆只对较直的球有意义（薄球走位意义不大，省算力）
+        const spinList = aiLevel === 2 && c.cosCut > 0.55 ? [0, 0.55, -0.55] : [0];
+        for (const pf of powers) {
+            for (const sy of spinList) {
+                const res = simulateShot(c.dir.x, c.dir.z, pf, sy);
+                const val = scoreSim(res, ctx) + gauss() * (aiLevel === 2 ? 0.6 : 2.5);
+                if (val > bestVal) { bestVal = val; bestPlan = { dir: c.dir, power: pf, vert: sy }; }
             }
         }
     }
 
-    if (best) {
-        // 力度 = 距离需求 ÷ 切角效率：薄球需要更大力度才能滚到袋，正切角省力
-        const v = clamp(1.5 + best.dist * 2.3 / Math.max(best.cosCut, 0.32), 1.7, 7.4);
-        const powerFrac = (v - CFG.minPower) / (CFG.maxPower - CFG.minPower);
-        const a = Math.atan2(best.dir.z, best.dir.x) + gauss() * sigma;
-        return { dir: { x: Math.cos(a), z: Math.sin(a) }, power: clamp(powerFrac, 0.10, 0.95) };
+    // ---- 防守候选：轻推最近合法球，多档力度进同一评分体系 ----
+    let nb = null, nd = Infinity;
+    for (const b of targets) {
+        const d = Math.hypot(b.x - cue.x, b.z - cue.z);
+        if (d < nd) { nd = d; nb = b; }
     }
+    if (nb) {
+        const da = Math.atan2(nb.z - cue.z, nb.x - cue.x);
+        const ddir = { x: Math.cos(da), z: Math.sin(da) };
+        for (const pf of [0.10, 0.18, 0.28]) {
+            const res = simulateShot(ddir.x, ddir.z, pf, 0);
+            const val = scoreSim(res, ctx) + gauss() * (aiLevel === 2 ? 0.6 : 2.5);
+            if (val > bestVal) { bestVal = val; bestPlan = { dir: ddir, power: pf, vert: 0 }; }
+        }
+    }
+    if (!bestPlan) return aiDefense(targets, sigma);
 
-    // ---- 防守：没有直接进球线时轻碰最近的合法球，尽量不打散球堆、不给对手送球 ----
+    const a = Math.atan2(bestPlan.dir.z, bestPlan.dir.x) + gauss() * sigma;
+    return { dir: { x: Math.cos(a), z: Math.sin(a) }, power: clamp(bestPlan.power, 0.10, 0.95), vert: bestPlan.vert };
+}
+
+// 兜底防守：轻碰最近合法球（简单难度 & 极端局面用）
+function aiDefense(targets, sigma) {
+    const cue = cueBall();
     let nb = null, nd = Infinity;
     for (const b of targets) {
         const d = Math.hypot(b.x - cue.x, b.z - cue.z);
@@ -1719,7 +1878,7 @@ window.POOL = {
     get isBreak() { return isBreak; },
     set isBreak(v) { isBreak = v; },
     get power() { return power; },
-    chargePowerAt, maybeRunAI,
+    chargePowerAt, maybeRunAI, aiChooseShot, simulateShot, scoreSim,
     startGame, shoot, aimDir, setRules, ruleHint,
     setAim(x, z) { const l = Math.hypot(x, z); if (l > 0) aimDir = { x: x / l, z: z / l }; return aimDir; },
     // 测试用：直接把指定号码的球标为进袋（不动 mesh 动画）
