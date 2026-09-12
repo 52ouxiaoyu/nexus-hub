@@ -56,6 +56,7 @@ function chargePowerAt(now) {
 }
 let spin = { x: 0, y: 0 };
 let shotDirStore = { x: 1, z: 0 };
+let customNames = ['', ''];   // 菜单里填的玩家昵称
 let camMode = 0;         // 0 三维 1 俯视 2 母球后
 let viewToggleTime = 0;
 
@@ -1599,6 +1600,7 @@ function initInput() {
     });
 
     window.addEventListener('keydown', (e) => {
+        if (state === 'menu' || state === 'over') return;   // 菜单/结算界面 players 可能未初始化
         if (players[current].isAI) return;
         if (e.key === 'Escape' && state === 'charge') {
             state = 'aim';
@@ -1620,6 +1622,7 @@ function initInput() {
     });
 
     window.addEventListener('keydown', (e) => {
+        if (e.target && e.target.tagName === 'INPUT') return;   // 昵称输入框里正常打字
         if (e.key === 'q' || e.key === 'Q') { keyHeld.q = true; e.preventDefault(); }
         if (e.key === 'e' || e.key === 'E') { keyHeld.e = true; e.preventDefault(); }
     });
@@ -1807,8 +1810,9 @@ function startGame(_vsAI, level) {
     vsAI = _vsAI;
     aiLevel = level;
     players = [
-        { name: '玩家 1', group: null, isAI: false },
-        vsAI ? { name: '电脑', group: null, isAI: true } : { name: '玩家 2', group: null, isAI: false },
+        { name: customNames[0].trim() || '玩家 1', group: null, isAI: false },
+        vsAI ? { name: '电脑', group: null, isAI: true }
+             : { name: customNames[1].trim() || '玩家 2', group: null, isAI: false },
     ];
     current = 0;
     openTable = true;
@@ -1851,9 +1855,23 @@ function initMenu() {
             btn.classList.add('selected');
         });
     });
+    // 昵称输入：人机模式玩家2固定"电脑"，双人模式可自定义
+    function applyNameMode(m) {
+        const p2 = $('name-p2');
+        if (m === 'ai') { p2.disabled = true; p2.value = ''; p2.placeholder = '电脑'; }
+        else { p2.disabled = false; p2.placeholder = '玩家 2 昵称'; }
+    }
+    applyNameMode(mode);
+    $('btn-mode-ai').addEventListener('click', () => applyNameMode('ai'));
+    $('btn-mode-pvp').addEventListener('click', () => applyNameMode('pvp'));
+    // 输入框里回车直接开始
+    document.querySelectorAll('.name-input').forEach(inp => {
+        inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btn-start').click(); });
+    });
     $('btn-start').addEventListener('click', () => {
         SFX.unlock();
         const level = parseInt(document.querySelector('.diff-btn.selected').dataset.diff, 10) || 1;
+        customNames = [$('name-p1').value, $('name-p2').value];
         startGame(mode === 'ai', level);
     });
     $('btn-again').addEventListener('click', () => startGame(vsAI, aiLevel));
