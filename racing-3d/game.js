@@ -1,6 +1,6 @@
 'use strict';
 /* =========================================================================
- * 极速飞车 Turbo Rush 3D — v1.2.1
+ * 极速飞车 Turbo Rush 3D — v1.2.2
  * 街机式 3D 环形赛道竞速（参考马车 / 山脊赛车式手感）
  * v1.1.0：双人分屏 PK + 路面方向箭头 + 出赛道车身不消失软回拉
  * v1.1.1：修复 A/D 转向方向（相机 right=-world X 导致视觉左右相反）
@@ -10,6 +10,8 @@
  * v1.2.1：车对车碰撞重做为动量守恒模型（等质量、恢复系数 0.72）：
  *         被追尾 → 向前冲；撞前车 → 前车被撞飞、自己稍减速；
  *         互相挤行 → 轻微持续摩擦互损，不再瞬间掉速
+ * v1.2.2：新手抓地增强 —— LAT_GRIP 19→26、方向盘上限 0.62→0.72 且高速衰减放缓、
+ *         gripRate 7.0→9.5（车尾更跟手）、侧滑掉速 0.55→0.40，过弯更容易拐住
  * 纯前端：three.js r128（本地）+ 原生 JS，无任何构建工具
  * 坐标系约定：heading=0 朝 +z；heading 增大 = 右转；
  *            left 向量 = (t.z, 0, -t.x)（命名沿用，实际为行进方向右侧）
@@ -56,7 +58,7 @@ const CFG = {
     ACCEL: 15,
     BRAKE: 30,
     REV_MAX: -9,
-    LAT_GRIP: 19,            // 侧向抓地上限 m/s²
+    LAT_GRIP: 26,            // v1.2.2：侧向抓地上限 m/s²（19 → 26，新手过弯更容易拐住）
     NITRO_MAX: 100,
     BOOST_MAX: 2.2,          // v1.2.0：一次氮气最长 2.2 秒
     BOOST_CD: 4,             // v1.2.0：氮气冷却 4 秒（用完/松开即进 CD）
@@ -827,7 +829,8 @@ class Player {
         if (Math.abs(this.speed) < 0.06 && throttle === 0 && brake === 0) this.speed = 0;
 
         // 转向：方向盘角随速度衰减 + 侧向抓地封顶
-        const steerMax = 0.62 / (1 + Math.abs(this.speed) * 0.055);
+        // v1.2.2：新手抓地增强 —— 方向盘角度上限加大、高速衰减放缓，转向更跟手
+        const steerMax = 0.72 / (1 + Math.abs(this.speed) * 0.045);
         // v1.1.1：转向输入为 0 时方向盘自动回中，避免换向按键反应迟钝
         if (steerIn === 0) this.steerA = lerp(this.steerA, 0, 1 - Math.exp(-12 * dt));
         else this.steerA = lerp(this.steerA, steerIn * steerMax, 1 - Math.exp(-10 * dt));
@@ -837,10 +840,11 @@ class Player {
         this.heading = wrapAngle(this.heading + yawRate * dt);
 
         // 漂移：速度方向滞后于车头
-        const gripRate = hb ? 2.0 : 7.0;
+        // v1.2.2：gripRate 7.0 → 9.5（车尾更跟手，过弯不易甩出去）；侧滑掉速 0.55 → 0.40
+        const gripRate = hb ? 2.0 : 9.5;
         this.velAngle = wrapAngle(this.velAngle + wrapAngle(this.heading - this.velAngle) * clamp(gripRate * dt, 0, 1));
         this.slide = Math.abs(wrapAngle(this.heading - this.velAngle));
-        if (this.slide > 0.12 && Math.abs(this.speed) > 8) this.speed -= this.slide * this.speed * 0.55 * dt;
+        if (this.slide > 0.12 && Math.abs(this.speed) > 8) this.speed -= this.slide * this.speed * 0.40 * dt;
 
         // 位移
         this.pos.x += Math.sin(this.velAngle) * this.speed * dt;

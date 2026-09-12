@@ -479,6 +479,33 @@ const FILE = 'file://' + path.resolve(__dirname, 'index.html');
     t('T21.7 持续挤行 30 帧平滑损耗（30 → 15~28）', mom.cP30 > 15 && mom.cP30 < 28, `v=${mom.cP30.toFixed(2)}`);
     t('T21.8 远离时不误判碰撞', mom.dHit === false);
 
+    /* ===== T22 (v1.2.2): 新手抓地增强 —— 转向速率与车尾跟随性 ===== */
+    const grip = await page.evaluate(() => {
+        const g = window.__game, p = g.player;
+        const out = {};
+        // 1) 30 m/s 满舵左转 1 秒：heading 角速度应达到抓地上限（26/30 ≈ 0.87 rad/s，旧值 0.63）
+        p.speed = 30; p.heading = 0; p.velAngle = 0;
+        Input.keys['a'] = true;
+        for (let i = 0; i < 60; i++) p.update(0.016, true);
+        Input.keys['a'] = false;
+        out.yaw30 = p.heading;          // ≈ 0.86 rad
+        out.slide30 = p.slide;
+        // 2) 高速 44 m/s 满舵 1 秒：角速度应 > 0.55 rad/s（旧值 0.43）
+        p.speed = 44; p.heading = 0; p.velAngle = 0;
+        Input.keys['a'] = true;
+        for (let i = 0; i < 60; i++) p.update(0.016, true);
+        Input.keys['a'] = false;
+        out.yaw44 = p.heading;
+        // 3) 1 秒后方向盘回中（自动回中仍正常）
+        for (let i = 0; i < 30; i++) p.update(0.016, true);
+        out.steerBack = Math.abs(p.steerA);
+        return out;
+    });
+    t('T22.1 30 m/s 满舵角速度 > 0.75 rad/s（旧 0.63）', grip.yaw30 > 0.75, `yaw1s=${grip.yaw30.toFixed(3)}`);
+    t('T22.2 30 m/s 满舵 1 秒侧滑角 < 0.2（车尾跟手）', grip.slide30 < 0.2, `slide=${grip.slide30.toFixed(3)}`);
+    t('T22.3 44 m/s 满舵角速度 > 0.55 rad/s（旧 0.43）', grip.yaw44 > 0.55, `yaw1s=${grip.yaw44.toFixed(3)}`);
+    t('T22.4 松开方向 0.5 秒后方向盘回中（|steerA| < 0.02）', grip.steerBack < 0.02, `steerA=${grip.steerBack.toFixed(3)}`);
+
     /* ===== 截图 ===== */
     await page.evaluate(() => window.__game && window.__game.togglePause && window.__game.togglePause(true));
     await new Promise(r => setTimeout(r, 100));
