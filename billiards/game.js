@@ -293,40 +293,126 @@ function buildTable() {
     frameShape.holes.push(new THREE.Path(holePts));
     prism(frameShape, railH, woodMat);
 
-    // 袋口内壁（深色圆筒，斜看时是黑洞侧壁）
+    // ---- 袋口几何参数（洞口 / 内壁 / 镶边 共用）----
+    // 真实球台的洞口朝桌面那一侧是**敞开**的（两库边鼻尖之间就是球进去的通道），
+    // 所以洞口不能是封闭的完整圆：外侧保留圆弧（被木框包裹），
+    // 朝桌内一侧改成两条直边、形成一个伸进台呢的"喇叭口"。
+    const R2H = Math.SQRT1_2;
+    function pocketGeo(p) {
+        const sx = Math.sign(p.x), sz = Math.sign(p.z);
+        const cx = p.corner ? sx * L : 0, cz = sz * T;
+        const r = p.corner ? pArc : sArc;                                   // 洞口半径
+        const hw = p.corner ? 0.078 : 0.070;                                // 喇叭半宽（≈两鼻尖间距的一半）
+        const tIn = r * 1.12;                                               // 轮廓沿朝内方向伸出圆外一点
+        const din = p.corner ? { x: -sx * R2H, z: -sz * R2H }               // 角袋：朝桌内对角
+                              : { x: 0, z: -sz };                            // 中袋：垂直朝桌内
+        const phi = Math.asin(Math.min(0.94, hw / r));                       // 开口半角
+        const a0 = Math.atan2(din.z, din.x) + phi;
+        const span = Math.PI * 2 - phi * 2;                                  // 外侧圆弧张角
+        const fadeStart = r * 0.78;                                          // 朝桌内开始淡出的位置（黑区保持到大半，再柔化收尾）
+        return { cx, cz, r, hw, tIn, din, phi, a0, span, fadeStart };
+    }
+    // 洞口轮廓（3D xz）：外侧圆弧 + 喇叭口两条直边
+    function pocketOutline(q, n) {
+        const pts = [];
+        for (let i = 0; i <= n; i++) {
+            const a = q.a0 + q.span * i / n;
+            pts.push([q.cx + Math.cos(a) * q.r, q.cz + Math.sin(a) * q.r]);
+        }
+        const pv = { x: -q.din.z, z: q.din.x };
+        const tip = q.hw * 0.82;   // 末端略收窄 → 漏斗口（而不是方头）
+        pts.push([q.cx + q.din.x * q.tIn - pv.x * tip, q.cz + q.din.z * q.tIn - pv.z * tip]);  // 喇叭口 · 右壁
+        pts.push([q.cx + q.din.x * q.tIn + pv.x * tip, q.cz + q.din.z * q.tIn + pv.z * tip]);  // 喇叭口 · 左壁
+        return pts;
+    }
+
+    // 袋口内壁（深色圆筒，斜看时是黑洞侧壁）——只包朝外的部分，朝桌面一侧敞开
     for (const p of POCKETS) {
-        const r = p.corner ? pArc : sArc;
-        const cx = p.corner ? Math.sign(p.x) * L : 0, cz = Math.sign(p.z) * T;
+        const q = pocketGeo(p);
+        let ts = Math.PI / 2 - q.a0 - q.span;
+        ts = ((ts % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
         const tube = new THREE.Mesh(
-            new THREE.CylinderGeometry(r, r * 0.9, railH + 0.004, 30, 1, true),
+            new THREE.CylinderGeometry(q.r, q.r * 0.9, railH + 0.004, 28, 1, true, ts, q.span),
             linerMat
         );
-        tube.position.set(cx, (railH + 0.004) / 2, cz);
+        tube.position.set(q.cx, (railH + 0.004) / 2, q.cz);
         tube.receiveShadow = true;
         scene.add(tube);
     }
 
-    // ---- 袋口：径向渐变黑（凹陷感）+ 细皮革环；圆心落在台面角 / 边中点 ----
+    // ---- 袋口：径向渐变黑，形状 = 外侧圆弧 + 朝桌面敞开的喇叭口 ----
     const pocketTex = makePocketTexture();
-    const rimMat = new THREE.MeshStandardMaterial({ color: 0x120a05, roughness: 0.8, metalness: 0.0 });
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0x120a05, roughness: 0.8, metalness: 0.0, side: THREE.DoubleSide });
+    const pocketFillMat = new THREE.MeshBasicMaterial({ color: 0x080b09, side: THREE.DoubleSide });
     for (const p of POCKETS) {
-        const cx = p.corner ? Math.sign(p.x) * L : 0;
-        const cz = Math.sign(p.z) * T;
-        const r = p.corner ? pArc : sArc;
-        const poc = new THREE.Mesh(
-            new THREE.CircleGeometry(r, 40),
-            new THREE.MeshBasicMaterial({ map: pocketTex })
-        );
-        poc.rotation.x = -Math.PI / 2;
-        poc.position.set(cx, 0.0022, cz);
+        const q = pocketGeo(p);
+        const out = pocketOutline(q, 64);
+        const body = new THREE.Shape(out.map(pt => new THREE.Vector2(pt[0], -pt[1])));
+        const geo = new THREE.ShapeGeometry(body);
+        // ShapeGeometry 自带 UV 是顶点坐标，这里改成"以洞口圆心为中心、半径 r 归一"的圆形 UV，
+        // 径向渐变贴图才会正确定心
+        const pos = geo.attributes.position, uvA = geo.attributes.uv;
+        const col = new Float32Array(pos.count * 4);
+        for (let i = 0; i < uvA.count; i++) {
+            const px = pos.getX(i), py = pos.getY(i);          // shape 坐标 = (x, -z)
+            uvA.setXY(i,
+                0.5 + (px - q.cx) / (2 * q.r),
+                0.5 + (py + q.cz) / (2 * q.r));
+            // 朝桌面方向渐隐：d = 顶点在"朝桌内"方向相对圆心的投影。
+            // 圆靠桌内那一段弧因此会淡到 0（边界消失，台面与洞口连成一片），
+            // 而朝木框那一侧仍是不透明的黑 —— 这就是"开口"。
+            // 淡出深度随横向偏移收窄，渐隐区因此呈扇形张开（中间伸得远、两侧收），像张开的嘴
+            const dx2 = px - q.cx, dz2 = -py - q.cz;
+            const d = dx2 * q.din.x + dz2 * q.din.z;
+            const pLat = dx2 * (-q.din.z) + dz2 * q.din.x;
+            const tEff = q.tIn * (1 - 0.28 * Math.min(1, Math.abs(pLat) / q.r));
+            let a = 1 - (d - q.fadeStart) / (tEff - q.fadeStart);
+            a = Math.max(0, Math.min(1, a));
+            col[i * 4] = 1; col[i * 4 + 1] = 1; col[i * 4 + 2] = 1; col[i * 4 + 3] = a;
+        }
+        uvA.needsUpdate = true;
+        geo.setAttribute('color', new THREE.BufferAttribute(col, 4));
+        geo.rotateX(-Math.PI / 2);
+        // side: DoubleSide —— 洞口轮廓在 xz 平面按角度递增生成，(x,-z) 映射后绕向会翻转，
+        // 单面渲染会被背面剔除（整块洞口消失、透出木框挖空后的背景）
+        // 轮廓点已含圆心偏移（绝对坐标），所以 mesh 位置只抬高度、不再平移
+        const poc = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+            map: pocketTex, side: THREE.DoubleSide,
+            transparent: true, vertexColors: true, depthWrite: false,
+        }));
+        poc.position.set(0, 0.0022, 0);
         scene.add(poc);
-        const rim = new THREE.Mesh(
-            new THREE.TorusGeometry(r * 0.965, p.corner ? 0.0042 : 0.0036, 8, 40),
-            rimMat
+
+        // 镶边：只沿**外侧圆弧**（朝桌面一侧敞开，所以不再是完整圆环）
+        const arc = out.slice(0, 65);
+        const inner = arc.map(pt => [q.cx + (pt[0] - q.cx) * 0.955, q.cz + (pt[1] - q.cz) * 0.955]);
+        const ring = new THREE.Shape(
+            [...arc, ...inner.reverse()].map(pt => new THREE.Vector2(pt[0], -pt[1]))
         );
-        rim.rotation.x = -Math.PI / 2;
-        rim.position.set(cx, 0.0034, cz);
+        const ringGeo = new THREE.ShapeGeometry(ring);
+        ringGeo.rotateX(-Math.PI / 2);
+        const rim = new THREE.Mesh(ringGeo, rimMat);
+        rim.position.set(0, 0.0034, 0);   // 同上：轮廓为绝对坐标
         scene.add(rim);
+
+        // 中袋：库边端面从鼻尖向外斜切，会在鼻尖外侧让出两个小三角；
+        // 木框在这里挖的洞（内边界角落 ≈ √(sideGap²+cw²)=8.4cm）又比洞口半径 7.8cm 远一点，
+        // 于是漏出背景。补两片深色衬片（只填库边开口两侧，不跨越洞口中心）
+        if (!p.corner) {
+            const szs = Math.sign(p.z);
+            const z0 = szs * (T - 0.002), z1 = szs * (T + cw + 0.002);
+            for (const sxs of [-1, 1]) {
+                const x0 = sxs * (sg - 0.003), x1 = sxs * (sg + jawS + 0.008);
+                const pg = new THREE.ShapeGeometry(new THREE.Shape(
+                    [[x0, z0], [x1, z0], [x1, z1], [x0, z1]]
+                        .map(pt => new THREE.Vector2(pt[0], -pt[1]))
+                ));
+                pg.rotateX(-Math.PI / 2);
+                const pm = new THREE.Mesh(pg, pocketFillMat);
+                pm.position.set(0, 0.0035, 0);
+                scene.add(pm);
+            }
+        }
     }
 
     // 库边镶嵌圆点（钻石点）
@@ -399,16 +485,18 @@ function makePocketTexture() {
     const g = c.getContext('2d');
     const cx = size / 2, cy = size / 2;
     const grad = g.createRadialGradient(cx, cy, 0, cx, cy, size / 2);
-    grad.addColorStop(0.00, '#020403');
-    grad.addColorStop(0.44, '#040c07');
-    grad.addColorStop(0.68, '#0c2115');
-    grad.addColorStop(0.88, '#1d5236');
-    grad.addColorStop(1.00, '#2a6e46');
+    // 黑心要盖过"球心可达的最远处"（约 0.88×R），最后 4% 融进台呢色，
+    // 这样喇叭口末端与台呢无缝、看不出硬边，而球滚到洞口附近时视觉上仍在黑区上
+    grad.addColorStop(0.00, '#010302');
+    grad.addColorStop(0.55, '#020604');
+    grad.addColorStop(0.72, '#050d08');
+    grad.addColorStop(0.88, '#0b1c11');
+    grad.addColorStop(1.00, '#16311f');
     g.fillStyle = grad;
     g.fillRect(0, 0, size, size);
     // 噪点只加在外圈（黑心保持纯净）
     for (let i = 0; i < 700; i++) {
-        const ang = Math.random() * Math.PI * 2, rad = (0.58 + Math.random() * 0.42) * size / 2;
+        const ang = Math.random() * Math.PI * 2, rad = (0.76 + Math.random() * 0.24) * size / 2;
         g.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.05)';
         g.fillRect(cx + Math.cos(ang) * rad, cy + Math.sin(ang) * rad, 2, 2);
     }
@@ -1525,6 +1613,8 @@ window.POOL = {
     getCamAngle() { return camAngle; },
     // 调试：强行设置环桌走位角度
     setCamAngle(a) { camAngle = a; },
+    // 调试：拿到场景对象（排查渲染问题时染色用）
+    get scene() { return scene; },
 };
 
 })();
