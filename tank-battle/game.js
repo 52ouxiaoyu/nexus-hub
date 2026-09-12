@@ -80,6 +80,11 @@ const BOSS_DROP_TYPES = [
 //   · 🚀 遗产火箭：不再是"一口吃成 9 级"，改为"至少提到 5 级、最多再 +2 级"
 const FIRE_NEED_BASE = 2;         // Lv0 时每级所需进度点
 const FIRE_NEED_STEP = 3;         // 每 3 级门槛 +1 点（Lv0~2→2、Lv3~5→3、Lv6~8→4）
+// ---- v1.4.6 性能减法常量 ----
+const MAX_EFFECTS = 90;        // 同屏特效上限（超出丢弃最老的）
+const ENEMY_BULLET_CAP = 100;  // 同屏敌方子弹上限（玩家不受限）
+const WEATHER_PARTICLES = 40;  // 天气粒子数量（原 100）
+
 const FIRE_KILL_GAIN = 1;         // 普通击杀进度
 const FIRE_KILL_STREAK_GAIN = 2;  // 连杀进度（5 连杀起翻倍）
 const FIRE_KILL_STREAK_AT = 5;    // 达到多少连杀开始算"连杀加成"
@@ -418,10 +423,9 @@ class PowerUp {
         if (!isPlayer && player.emoteReact) player.emoteReact('happy');   // 抢到道具 → 乐开花
         this.game.shakeScreen(6);
         this.game.effects.push(new Effect(this.x + 32, this.y + 32, 'EXPLOSION', 1.5));
-        for (let i = 0; i < 6; i++) {
-            setTimeout(() => {
-                this.game.effects.push(new Effect(this.x + 32 + (Math.random() - 0.5) * 60, this.y + 32 + (Math.random() - 0.5) * 60, 'SPARK'));
-            }, i * 80);
+        // v1.4.6 性能减法：6 个 setTimeout SPARK（Effect 本就没有 SPARK 绘制分支，纯属垃圾对象）→ 2 个当场爆点
+        for (let i = 0; i < 2; i++) {
+            this.game.effects.push(new Effect(this.x + 32 + (Math.random() - 0.5) * 40, this.y + 32 + (Math.random() - 0.5) * 40, 'EXPLOSION', 0.4));
         }
         if (this.type === POWERUP_TYPES.FAKE_BOMB) {
             this.game.effects.push(new Effect(this.x + 32, this.y + 32, 'EXPLOSION', 2));
@@ -500,11 +504,14 @@ class PowerUp {
         ctx.save();
         ctx.translate(this.x + 32, this.y + 32);
         ctx.scale(scale, scale);
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = '#FFD700';
-        ctx.fillStyle = 'rgba(255, 215, 0, 0.4)';
+        // v1.4.6 性能减法：光晕不走 shadowBlur，改为两层半透明圆
+        ctx.fillStyle = 'rgba(255, 215, 0, 0.16)';
         ctx.beginPath();
-        ctx.arc(0, 0, 24, 0, Math.PI * 2);
+        ctx.arc(0, 0, 30, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255, 215, 0, 0.35)';
+        ctx.beginPath();
+        ctx.arc(0, 0, 22, 0, Math.PI * 2);
         ctx.fill();
         ctx.font = '48px Arial';
         ctx.textAlign = 'center';
@@ -515,8 +522,9 @@ class PowerUp {
 }
 
 class GameMap {
-    constructor(game) { this.game = game; this.grid = []; }
+    constructor(game) { this.game = game; this.grid = []; this._cache = null; this._dirty = true; }
     reset(levelIndex) {
+        this._dirty = true; // v1.4.6 换图后强制重绘缓存
         const level = generateLevel(levelIndex);
         this.currentLevel = level;
         this.grid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
@@ -649,8 +657,9 @@ class GameMap {
             [22,12],[22,13]
         ];
         walls.forEach(([y,x]) => { if (y >= 0 && y < GRID_SIZE && x >= 0 && x < GRID_SIZE) this.grid[y][x] = type; });
+        this.markDirty();
     }
-    clearArea(tx, ty, tw, th) { for (let y = ty; y < ty + th; y++) for (let x = tx; x < tx + tw; x++) if (y < GRID_SIZE && x < GRID_SIZE) this.grid[y][x] = TILE_TYPES.EMPTY; }
+    clearArea(tx, ty, tw, th) { for (let y = ty; y < ty + th; y++) for (let x = tx; x < tx + tw; x++) if (y < GRID_SIZE && x < GRID_SIZE) this.grid[y][x] = TILE_TYPES.EMPTY; this.markDirty(); }
 
     // ===== 大本营"装甲顶棚"：无论随机地图怎么生成，都强制在基地正上方留坚硬掩护 =====
     // ① 顶层压一排钢块(STEEL)：普通/精英敌人（最高 3 级）与低阶 BOSS 完全打不穿；
@@ -659,9 +668,27 @@ class GameMap {
     // 注意：必须在 guaranteeConnectivity() 之后调用，否则路径雕刻会把护心石挖掉。
     setBaseShield() {
         for (let x = BASE_SHIELD_X1; x <= BASE_SHIELD_X2; x++) this.grid[BASE_SHIELD_ROW][x] = TILE_TYPES.STEEL;
+        this.markDirty();
         for (let x = BASE_CORE_X1; x <= BASE_CORE_X2; x++) this.grid[BASE_SHIELD_ROW - 1][x] = TILE_TYPES.UNBREAKABLE;
     }
+    // v1.4.6 性能减法：静态地形不再每帧重画 26x26 格（一帧 2000+ 次 fillRect），
+    // 改为离屏缓存 + 脏标记：只有砖被打掉/道具改地形时才整层重绘，平时一次 drawImage 搞定。
     draw(ctx) {
+        if (!this._cache) {
+            this._cache = document.createElement('canvas');
+            this._cache.width = CANVAS_SIZE; this._cache.height = CANVAS_SIZE;
+            this._dirty = true;
+        }
+        if (this._dirty) {
+            const c = this._cache.getContext('2d');
+            c.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+            this._drawStatic(c);
+            this._dirty = false;
+        }
+        ctx.drawImage(this._cache, 0, 0);
+    }
+    markDirty() { this._dirty = true; }
+    _drawStatic(ctx) {
         for (let y = 0; y < GRID_SIZE; y++) {
             for (let x = 0; x < GRID_SIZE; x++) {
                 const tile = this.grid[y][x]; if (tile === TILE_TYPES.EMPTY || tile === TILE_TYPES.FOREST) continue;
@@ -944,18 +971,18 @@ class Bullet {
             if (this.type === 'BOUNCE' && this._bounceOff(tx, ty)) return;
             if (this.piercing) {
                 if (tile === TILE_TYPES.BRICK || tile === TILE_TYPES.HARD_BRICK || tile === TILE_TYPES.BARREL) {
-                    this.game.map.grid[ty][tx] = TILE_TYPES.EMPTY;
+                    this.game.map.grid[ty][tx] = TILE_TYPES.EMPTY; this.game.map.markDirty();
                     if (this.owner instanceof Player) this.owner.stats.blocks++;
                     return;
                 }
                 if (tile === TILE_TYPES.STEEL && this.type === 'LASER' && this.level >= 5) {
-                    this.game.map.grid[ty][tx] = TILE_TYPES.EMPTY;
+                    this.game.map.grid[ty][tx] = TILE_TYPES.EMPTY; this.game.map.markDirty();
                     if (this.owner instanceof Player) this.owner.stats.blocks++;
                     return;
                 }
             }
             if (tile === TILE_TYPES.BARREL) {
-                this.game.map.grid[ty][tx] = TILE_TYPES.EMPTY;
+                this.game.map.grid[ty][tx] = TILE_TYPES.EMPTY; this.game.map.markDirty();
                 if (this.owner instanceof Player) this.owner.stats.blocks++;
                 this.game.hitStopTimer = 6; // Hit Stop!
                 let explosionRadius = 3.5;
@@ -969,7 +996,7 @@ class Bullet {
                             if (d <= explosionRadius) {
                                 let t = this.game.map.grid[iy][ix];
                                 if (t === TILE_TYPES.BRICK || t === TILE_TYPES.HARD_BRICK || t === TILE_TYPES.STEEL || t === TILE_TYPES.BARREL) {
-                                    this.game.map.grid[iy][ix] = TILE_TYPES.EMPTY;
+                                    this.game.map.grid[iy][ix] = TILE_TYPES.EMPTY; this.game.map.markDirty();
                                 }
                             }
                         }
@@ -989,10 +1016,10 @@ class Bullet {
                         audio.play('explosion');
                     }
                     if (this.game.baseHealth <= 0) {
-                        this.game.map.grid[24][12] = TILE_TYPES.BASE_DESTROYED;
-                        this.game.map.grid[24][13] = TILE_TYPES.BASE_DESTROYED;
-                        this.game.map.grid[25][12] = TILE_TYPES.BASE_DESTROYED;
-                        this.game.map.grid[25][13] = TILE_TYPES.BASE_DESTROYED;
+                        this.game.map.grid[24][12] = TILE_TYPES.BASE_DESTROYED; this.game.map.markDirty();
+                        this.game.map.grid[24][13] = TILE_TYPES.BASE_DESTROYED; this.game.map.markDirty();
+                        this.game.map.grid[25][12] = TILE_TYPES.BASE_DESTROYED; this.game.map.markDirty();
+                        this.game.map.grid[25][13] = TILE_TYPES.BASE_DESTROYED; this.game.map.markDirty();
                         this.game.gameOver();
                     }
                     this.game.shakeScreen(8);
@@ -1066,13 +1093,13 @@ class Bullet {
                     if (d <= radius) {
                         let t = this.game.map.grid[iy][ix];
                         if (t === TILE_TYPES.BRICK) {
-                            this.game.map.grid[iy][ix] = TILE_TYPES.EMPTY;
+                            this.game.map.grid[iy][ix] = TILE_TYPES.EMPTY; this.game.map.markDirty();
                             if (this.owner instanceof Player) this.owner.stats.blocks++;
                         } else if (t === TILE_TYPES.HARD_BRICK && this.level >= 5) {
-                            this.game.map.grid[iy][ix] = TILE_TYPES.EMPTY;
+                            this.game.map.grid[iy][ix] = TILE_TYPES.EMPTY; this.game.map.markDirty();
                             if (this.owner instanceof Player) this.owner.stats.blocks++;
                         } else if (t === TILE_TYPES.STEEL && this.level >= 5 && d <= radius - 1.5) {
-                            this.game.map.grid[iy][ix] = TILE_TYPES.EMPTY;
+                            this.game.map.grid[iy][ix] = TILE_TYPES.EMPTY; this.game.map.markDirty();
                             if (this.owner instanceof Player) this.owner.stats.blocks++;
                         }
                     }
@@ -1094,33 +1121,34 @@ class Bullet {
         }
     }
     draw(ctx) { 
-        ctx.save(); 
+        // v1.4.6 性能减法：shadowBlur 是 Canvas 最贵的操作之一（每次都触发离屏高斯模糊），
+        // 满屏弹幕时一帧要做几十上百次。全部改为"半透明光晕 + 实心亮心"两层画法，视觉近似、开销极低。
+        const gx = this.x + this.size / 2, gy = this.y + this.size / 2, r = this.size / 2;
         if (this.type === 'LASER' || this.type === 'LASER_MISSILE') {
+            const vert = this.dir === 'UP' || this.dir === 'DOWN';
+            ctx.fillStyle = 'rgba(0,255,255,0.30)';
+            ctx.fillRect(this.x - 2, this.y - (vert ? 3 : 0), vert ? this.size/2 + 4 : this.size*2, vert ? this.size*2 : this.size/2 + 4);
             ctx.fillStyle = '#0ff';
-            ctx.shadowBlur = 10; ctx.shadowColor = '#0ff';
-            ctx.fillRect(this.x, this.y, this.dir === 'UP' || this.dir === 'DOWN' ? this.size/2 : this.size*2, this.dir === 'UP' || this.dir === 'DOWN' ? this.size*2 : this.size/2);
+            ctx.fillRect(this.x, this.y, vert ? this.size/2 : this.size*2, vert ? this.size*2 : this.size/2);
         } else if (this.type === 'MISSILE') {
-            ctx.fillStyle = '#f55';
-            ctx.shadowBlur = 10; ctx.shadowColor = '#f00';
-            ctx.beginPath(); ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI * 2); ctx.fill();
-            if (Math.random() < 0.5) this.game.effects.push(new Effect(this.x + this.size/2, this.y + this.size/2, 'EXPLOSION', 0.2));
+            ctx.fillStyle = 'rgba(255,60,60,0.30)'; ctx.beginPath(); ctx.arc(gx, gy, r + 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#f55'; ctx.beginPath(); ctx.arc(gx, gy, r, 0, Math.PI * 2); ctx.fill();
+            // 尾烟限流：从"每帧 50% 概率"降到"平均每 6 帧一个"，特效数组不再被灌爆
+            if (Math.random() < 0.16) this.game.effects.push(new Effect(gx, gy, 'EXPLOSION', 0.2));
         } else if (this.type === 'SPREAD') {
-            ctx.fillStyle = '#7dff5a';
-            ctx.shadowBlur = 8; ctx.shadowColor = '#0f0';
-            ctx.beginPath(); ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = 'rgba(60,255,60,0.30)'; ctx.beginPath(); ctx.arc(gx, gy, r + 3, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#7dff5a'; ctx.beginPath(); ctx.arc(gx, gy, r, 0, Math.PI * 2); ctx.fill();
         } else if (this.type === 'BOUNCE') {
-            ctx.fillStyle = '#f0f';
-            ctx.shadowBlur = 12; ctx.shadowColor = '#f0f';
-            ctx.beginPath(); ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = 'rgba(255,60,255,0.30)'; ctx.beginPath(); ctx.arc(gx, gy, r + 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#f0f'; ctx.beginPath(); ctx.arc(gx, gy, r, 0, Math.PI * 2); ctx.fill();
             // 弹过一次就描白边，方便玩家看清"弹射"过程
             ctx.strokeStyle = this.bounces > 0 ? '#fff' : 'rgba(255,255,255,0.45)';
-            ctx.lineWidth = 2; ctx.stroke();
+            ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(gx, gy, r, 0, Math.PI * 2); ctx.stroke();
         } else {
-            ctx.fillStyle = this.level >= 1 ? '#ff0' : '#fff'; 
-            ctx.beginPath(); ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI * 2); ctx.fill(); 
-            if (this.level >= 1) { ctx.shadowBlur = 15; ctx.shadowColor = this.level >= 1 ? '#ff0' : '#fff'; } 
+            if (this.level >= 1) { ctx.fillStyle = 'rgba(255,255,60,0.28)'; ctx.beginPath(); ctx.arc(gx, gy, r + 4, 0, Math.PI * 2); ctx.fill(); }
+            ctx.fillStyle = this.level >= 1 ? '#ff0' : '#fff';
+            ctx.beginPath(); ctx.arc(gx, gy, r, 0, Math.PI * 2); ctx.fill();
         }
-        ctx.restore(); 
     }
 }
 
@@ -1225,7 +1253,7 @@ class Tank {
         if (this.weaponClass === 'LASER') this.cooldown += 10;
         if (this.weaponClass === 'SPREAD') this.cooldown += 18;   // 🔱 霰弹一次多枚，代价是射速
         if (this.weaponClass === 'BOUNCE') this.cooldown += 5;    // 🪀 弹射炮子弹滞留久，略降射速
-        if (this.overdriveTimer > 0) this.cooldown = Math.max(2, Math.floor(this.cooldown * 0.3)); // 70% cooldown reduction in overdrive
+        if (this.overdriveTimer > 0) this.cooldown = Math.max(2, Math.floor(this.cooldown * 0.5)); // v1.4.6 减密：50% 冷却缩减（原 70%，泼水式射速太密）
         
         audio.play('shoot');
         
@@ -1257,7 +1285,7 @@ class Tank {
         
         // Weapon Logic Revamp: Single barrel, burst fire instead of parallel!
         if (bType === 'NORMAL' || bType === 'MISSILE' || bType === 'BOUNCE') {
-            if (this.level >= 9) numShots = 5;
+            if (this.level >= 9) numShots = 4;   // v1.4.6 减密：满级 5 连发 → 4 连发
             else if (this.level >= 7) numShots = 4;
             else if (this.level >= 5) numShots = 3;
             else if (this.level >= 3) numShots = 2;
@@ -1464,12 +1492,11 @@ class Tank {
         ctx.save();
         if (this.flashTimer > 0) ctx.filter = 'brightness(300%) grayscale(50%)';
         
+        // v1.4.6 性能减法：坦克本体的 shadowBlur 光环移除（炮管颜色/描边已经能区分等级），
+        // 超载状态改为在坦克脚下画一层半透明红色警示圈，不再走高斯模糊。
         if (this.overdriveTimer > 0) {
-            ctx.shadowBlur = 30 + Math.sin(Date.now() / 50) * 20;
-            ctx.shadowColor = Math.floor(Date.now() / 100) % 2 === 0 ? '#ff0000' : '#ffff00';
-        } else if (this.level >= 1) {
-            ctx.shadowBlur = 8 + Math.min(this.level, 5) * 4;
-            ctx.shadowColor = this.level >= 4 ? '#f0f' : (this.level >= 3 ? '#0ff' : (this.level >= 2 ? '#f00' : (this.level >= 1 ? '#ff0' : '#fff')));
+            ctx.fillStyle = 'rgba(255,60,0,0.25)';
+            ctx.beginPath(); ctx.arc(this.x + this.width/2, this.y + this.height/2, this.width * 0.62, 0, Math.PI * 2); ctx.fill();
         }
         ctx.fillStyle = this.color;
         if (this.direction === 'UP' || this.direction === 'DOWN') {
@@ -1565,7 +1592,6 @@ class Tank {
         // 内容：emoji 直接彩绘（加黑描边会把表情糊掉），用投影压住白底
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.font = `${Math.round(size * 0.6)}px Arial`;
-        ctx.shadowBlur = 4; ctx.shadowColor = 'rgba(0,0,0,0.28)';
         ctx.fillText(this.emote, 0, 1);
         ctx.restore();
     }
@@ -1605,8 +1631,6 @@ class Player extends Tank {
         
         ctx.font = 'bold 20px Arial';
         ctx.textAlign = 'center';
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = this.color;
         ctx.fillStyle = '#fff';
         ctx.lineWidth = 3;
         ctx.strokeStyle = '#000';
@@ -2081,8 +2105,9 @@ class Enemy extends Tank {
         if (this.x === ox && this.y === oy) { this.dirTimer = 0; this.emoteReact('angry'); }  // 一头撞墙上 → 恼火
         
         let shootChance = this.variant === 'ELITE' ? 4 : 2;
-        if (this.variant === 'RAPID') shootChance = 8;
-        if (Math.random() * 100 < shootChance) { this.shoot(); this.emoteReact('happy'); }   // 开出一炮 → 窃喜
+        if (this.variant === 'RAPID') shootChance = 5;   // v1.4.6 减密：8 → 5
+        // v1.4.6 保险丝：同屏敌方子弹超过上限时敌人暂时停火（玩家火力不受限）
+        if (Math.random() * 100 < shootChance && (this.game._enemyBulletCount || 0) < ENEMY_BULLET_CAP) { this.shoot(); this.emoteReact('happy'); }   // 开出一炮 → 窃喜
     }
 }
 
@@ -2391,7 +2416,7 @@ class Boss extends Enemy {
                         let cx = tx + j, cy = ty + i;
                         if (cx > 0 && cx < GRID_SIZE-1 && cy > 0 && cy < GRID_SIZE-1) {
                             if (this.game.map.grid[cy][cx] === TILE_TYPES.BRICK) {
-                                this.game.map.grid[cy][cx] = TILE_TYPES.EMPTY;
+                                this.game.map.grid[cy][cx] = TILE_TYPES.EMPTY; this.game.map.markDirty();
                                 this.game.effects.push(new Effect(cx * TILE_SIZE + 16, cy * TILE_SIZE + 16, 'EXPLOSION', 0.5));
                             }
                         }
@@ -2614,7 +2639,7 @@ class Game {
         this.pausePressed = false;
         this.bossWarning = 0;
         this.lastEnemyCount = 0;
-        for(let i=0; i<100; i++) this.weatherParticles.push({x: Math.random()*CANVAS_SIZE, y: Math.random()*CANVAS_SIZE, s: 2 + Math.random()*5});
+        for(let i=0; i<WEATHER_PARTICLES; i++) this.weatherParticles.push({x: Math.random()*CANVAS_SIZE, y: Math.random()*CANVAS_SIZE, s: 2 + Math.random()*5}); // v1.4.6 减密 100→40
         document.getElementById('start-btn').onclick = () => this.startGame();
         document.getElementById('restart-btn').onclick = () => this.startGame();
         document.querySelectorAll('.diff-btn').forEach(btn => {
@@ -2903,9 +2928,7 @@ class Game {
             // 普通击杀：仅描边星芒 + 冲击线，不遮挡战场视野
             this._burstPath(ctx, 0, 0, spikes, outer, inner, age / 45);
             ctx.lineJoin = 'round';
-            ctx.shadowBlur = 8; ctx.shadowColor = c.color;
             ctx.lineWidth = 3.5; ctx.strokeStyle = c.color; ctx.stroke();
-            ctx.shadowBlur = 0;
             ctx.strokeStyle = 'rgba(17,17,17,0.8)'; ctx.lineWidth = 2;
             for (let i = 0; i < 4; i++) {
                 const a = (i / 4) * Math.PI * 2 + 0.6;
@@ -2919,10 +2942,8 @@ class Game {
         // 内容：文字走黑描边 + 白填充；符号直接彩绘，改用投影压住底色
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         if (sym) {
-            ctx.shadowBlur = 10; ctx.shadowColor = 'rgba(0,0,0,0.5)';
             ctx.fillStyle = '#fff';
             ctx.fillText(c.text, 0, 2);
-            ctx.shadowBlur = 0;
         } else {
             ctx.lineWidth = c.big ? 7 : 6; ctx.strokeStyle = '#111';
             ctx.strokeText(c.text, 0, 2);
@@ -3295,6 +3316,7 @@ class Game {
         }
 
         this.players.forEach(p => { try { p.update(); } catch(e) { console.error(e); } }); 
+        this._enemyBulletCount = 0; for (const b of this.bullets) if (b.active && b.owner instanceof Enemy) this._enemyBulletCount++; // v1.4.6 每帧只统计一次
         this.enemies.forEach(e => { try { e.update(); } catch(e) { console.error(e); } });
         this.bullets.forEach(b => { try { b.update(); } catch(e) { console.error(e); } });
         this.effects.forEach(e => { try { e.update(); } catch(e) { console.error(e); } });
@@ -3303,6 +3325,7 @@ class Game {
         this.wreckages = this.wreckages.filter(w => w.timer > 0);
         this.bullets = this.bullets.filter(b => b.active && !isNaN(b.x) && !isNaN(b.y));
         this.effects = this.effects.filter(e => e.active && !isNaN(e.x) && !isNaN(e.y));
+        if (this.effects.length > MAX_EFFECTS) this.effects.splice(0, this.effects.length - MAX_EFFECTS); // v1.4.6 特效总量保险丝
         this.powerUps = this.powerUps.filter(p => p.active && !isNaN(p.x) && !isNaN(p.y));
         this.enemies = this.enemies.filter(e => e.alive && !isNaN(e.x) && !isNaN(e.y));
         if (this.enemies.length !== this.lastEnemyCount) { this.updateHUD(); this.lastEnemyCount = this.enemies.length; }
@@ -3429,8 +3452,6 @@ class Game {
                             this.ctx.fillStyle = '#0f0'; 
                             this.ctx.font = 'bold 12px Arial'; 
                             this.ctx.textAlign = 'center'; 
-                            this.ctx.shadowBlur = 4; 
-                            this.ctx.shadowColor = '#000'; 
                             const key = p.id === 1 ? 'U键' : '9键'; 
                             this.ctx.fillText(`按 ${key} 借命(-50%分)`, p.x + 30, p.y + 55); 
                         }
