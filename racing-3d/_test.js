@@ -506,6 +506,39 @@ const FILE = 'file://' + path.resolve(__dirname, 'index.html');
     t('T22.3 44 m/s 满舵角速度 > 0.55 rad/s（旧 0.43）', grip.yaw44 > 0.55, `yaw1s=${grip.yaw44.toFixed(3)}`);
     t('T22.4 松开方向 0.5 秒后方向盘回中（|steerA| < 0.02）', grip.steerBack < 0.02, `steerA=${grip.steerBack.toFixed(3)}`);
 
+    /* ===== T23 (v1.2.3): 氮气尾焰特效 ===== */
+    const fx = await page.evaluate(() => {
+        const g = window.__game, p = g.player;
+        const out = {};
+        if (!g.nitroFx) return { none: true };
+        g.nitroFx.clear();
+        // 1) 挂线验证：RACING 状态下按住空格跑 40 帧 → 尾焰粒子应出现
+        if (g.state !== 'RACING') { g.mode = 'SOLO'; g.buildRace(g.seed || 12345); g.startRace(); g.state = 'RACING'; g.cdTime = 0; }
+        p.speed = 30; p.boostCd = 0; p.boostT = 0;
+        Input.keys['w'] = true; Input.keys[' '] = true;
+        let maxVisible = 0;
+        for (let i = 0; i < 40; i++) { g.frame(0.016); maxVisible = Math.max(maxVisible, g.nitroFx.visibleCount()); }
+        Input.keys[' '] = false; Input.keys['w'] = false;
+        out.duringBoost = maxVisible;
+        out.nitroOnFlag = p.nitroOn;
+        // 2) 松开后 1.5 秒（90 帧）粒子应全部消亡
+        for (let i = 0; i < 90; i++) g.frame(0.016);
+        out.afterStop = g.nitroFx.visibleCount();
+        // 3) 粒子池不溢出：连续 emit 200 次，活跃数不超过池大小
+        g.nitroFx.clear();
+        for (let i = 0; i < 200; i++) g.nitroFx.emit(p);
+        out.poolOverflow = g.nitroFx.visibleCount() > g.nitroFx.max;
+        g.nitroFx.clear();
+        return out;
+    });
+    if (fx.none) {
+        t('T23.1 nitroFx 系统存在', false, 'g.nitroFx 未创建');
+    } else {
+        t('T23.1 加速时尾焰粒子出现（可见数 > 10）', fx.duringBoost > 10, `maxVisible=${fx.duringBoost} nitroOn=${fx.nitroOnFlag}`);
+        t('T23.2 松开加速 1.5 秒后粒子全部消亡', fx.afterStop === 0, `visible=${fx.afterStop}`);
+        t('T23.3 粒子池循环复用不溢出（200 次 emit 后 ≤ 72）', fx.poolOverflow === false);
+    }
+
     /* ===== 截图 ===== */
     await page.evaluate(() => window.__game && window.__game.togglePause && window.__game.togglePause(true));
     await new Promise(r => setTimeout(r, 100));

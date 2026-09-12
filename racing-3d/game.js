@@ -1,6 +1,6 @@
 'use strict';
 /* =========================================================================
- * 极速飞车 Turbo Rush 3D — v1.2.2
+ * 极速飞车 Turbo Rush 3D — v1.2.3
  * 街机式 3D 环形赛道竞速（参考马车 / 山脊赛车式手感）
  * v1.1.0：双人分屏 PK + 路面方向箭头 + 出赛道车身不消失软回拉
  * v1.1.1：修复 A/D 转向方向（相机 right=-world X 导致视觉左右相反）
@@ -12,6 +12,8 @@
  *         互相挤行 → 轻微持续摩擦互损，不再瞬间掉速
  * v1.2.2：新手抓地增强 —— LAT_GRIP 19→26、方向盘上限 0.62→0.72 且高速衰减放缓、
  *         gripRate 7.0→9.5（车尾更跟手）、侧滑掉速 0.55→0.40，过弯更容易拐住
+ * v1.2.3：氮气尾焰特效 —— 加速时车尾两个排气口喷橙黄火焰（加法混合）+ 淡灰尾烟，
+ *         Sprite 粒子池 72 个（canvas 生成纹理，无外部素材），P1/P2 共用
  * 纯前端：three.js r128（本地）+ 原生 JS，无任何构建工具
  * 坐标系约定：heading=0 朝 +z；heading 增大 = 右转；
  *            left 向量 = (t.z, 0, -t.x)（命名沿用，实际为行进方向右侧）
@@ -986,6 +988,86 @@ class SkidMarks {
     }
 }
 
+/* ---------------- 9.5 氮气尾焰（v1.2.3：加速时车尾喷火 + 尾烟） ---------------- */
+class NitroFx {
+    constructor(scene) {
+        this.scene = scene;
+        const MAX = 72;
+        this.max = MAX; this.cursor = 0; this.pool = [];
+        // 圆形柔和光点纹理（canvas 生成，无外部素材）
+        const cv = document.createElement('canvas');
+        cv.width = cv.height = 64;
+        const c2 = cv.getContext('2d');
+        const grd = c2.createRadialGradient(32, 32, 2, 32, 32, 30);
+        grd.addColorStop(0, 'rgba(255,255,255,1)');
+        grd.addColorStop(0.4, 'rgba(255,255,255,0.6)');
+        grd.addColorStop(1, 'rgba(255,255,255,0)');
+        c2.fillStyle = grd; c2.fillRect(0, 0, 64, 64);
+        const tex = new THREE.CanvasTexture(cv);
+        for (let i = 0; i < MAX; i++) {
+            const m = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false });
+            const sp = new THREE.Sprite(m);
+            sp.visible = false;
+            scene.add(sp);
+            this.pool.push({ sp, life: 0, max: 1, vx: 0, vy: 0, vz: 0, s0: 1, s1: 1, smoke: false });
+        }
+    }
+    /* 在车尾两个排气口喷火焰，偶尔补一口烟（car 需有 pos/velAngle） */
+    emit(car) {
+        const f = Math.sin(car.velAngle), fz = Math.cos(car.velAngle);
+        const gy = car.pos.y + 0.5;
+        for (const side of [-0.5, 0.5]) {
+            const x = car.pos.x - f * 2.35 + fz * side;
+            const z = car.pos.z - fz * 2.35 - f * side;
+            this._spawn(x, gy, z, -f, -fz, {
+                life: 0.28, vx: -f * 9 + (Math.random() - 0.5) * 2, vy: 0.6 + Math.random() * 0.8,
+                vz: -fz * 9 + (Math.random() - 0.5) * 2, s0: 0.55, s1: 1.5,
+                color: 0xffa030, smoke: false
+            });
+        }
+        if (Math.random() < 0.6) {
+            this._spawn(car.pos.x - f * 2.7, gy, car.pos.z - fz * 2.7, -f, -fz, {
+                life: 0.7, vx: -f * 5 + (Math.random() - 0.5) * 1.5, vy: 1.2 + Math.random(),
+                vz: -fz * 5 + (Math.random() - 0.5) * 1.5, s0: 0.8, s1: 2.4,
+                color: 0x9aa3ad, smoke: true
+            });
+        }
+    }
+    _spawn(x, y, z, dirX, dirZ, o) {
+        const p = this.pool[this.cursor];
+        this.cursor = (this.cursor + 1) % this.max;
+        p.life = p.max = o.life;
+        p.vx = o.vx; p.vy = o.vy; p.vz = o.vz;
+        p.s0 = o.s0; p.s1 = o.s1; p.smoke = o.smoke;
+        p.sp.material.color.setHex(o.color);
+        p.sp.material.blending = o.smoke ? THREE.NormalBlending : THREE.AdditiveBlending;
+        p.sp.visible = true;
+        p.sp.position.set(x, y, z);
+        p.sp.scale.set(o.s0, o.s0, 1);
+        p.sp.material.opacity = o.smoke ? 0.3 : 0.85;
+    }
+    update(dt) {
+        for (const p of this.pool) {
+            if (p.life <= 0) continue;
+            p.life -= dt;
+            if (p.life <= 0) { p.sp.visible = false; continue; }
+            const t = 1 - p.life / p.max;
+            p.sp.position.x += p.vx * dt;
+            p.sp.position.y += p.vy * dt;
+            p.sp.position.z += p.vz * dt;
+            const s = p.s0 + (p.s1 - p.s0) * t;
+            p.sp.scale.set(s, s, 1);
+            p.sp.material.opacity = p.smoke ? 0.3 * (1 - t) : 0.85 * (1 - t);
+        }
+    }
+    visibleCount() { return this.pool.reduce((n, p) => n + (p.sp.visible ? 1 : 0), 0); }
+    clear() { for (const p of this.pool) { p.life = 0; p.sp.visible = false; } }
+    dispose() {
+        for (const p of this.pool) { this.scene.remove(p.sp); p.sp.material.dispose(); }
+        this.pool = [];
+    }
+}
+
 /* ---------------- 10. 游戏主控 ---------------- */
 const Game = {
     state: 'LOADING', // LOADING MENU COUNTDOWN RACING PAUSED FINISHED
@@ -1106,6 +1188,9 @@ const Game = {
 
         // 单一 skids 系统（P1 + P2 共用）
         this.skids = new SkidMarks(this.scene);
+        // v1.2.3：氮气尾焰系统（P1/P2 共用粒子池）
+        if (this.nitroFx) this.nitroFx.dispose();
+        this.nitroFx = new NitroFx(this.scene);
 
         const L = this.world.length;
         const isVS = this.mode === 'VS';
@@ -1160,6 +1245,7 @@ const Game = {
         this.player2 && (this.player2.crossings = 0, this.player2.lapMark = 0, this.player2.lapTimes = [], this.player2.finished = false);
         this.state = 'COUNTDOWN';
         this.skids.clear();
+        if (this.nitroFx) this.nitroFx.clear();
         this.els.bestVal.textContent = `最佳圈 ${fmtTime(this.bestLap())}`;
         AudioSys.silence();
     },
@@ -1511,6 +1597,13 @@ const Game = {
             };
             tryDrop(p, true);
             if (this.player2) tryDrop(this.player2, false);
+        }
+
+        // v1.2.3：氮气尾焰（加速中的车从车尾喷火 + 冒烟）
+        if (this.nitroFx) {
+            if (racing && p.nitroOn) this.nitroFx.emit(p);
+            if (racing && isVS && this.player2 && this.player2.nitroOn) this.nitroFx.emit(this.player2);
+            this.nitroFx.update(dt);
         }
 
         // 相机（P1）
