@@ -123,15 +123,15 @@ function generateLevel(index) {
     const rng = seededRandom(index * 7919 + 12345);
     const level = { bricks: [], steels: [], waters: [], forests: [], ices: [], totalEnemies: 0 };
     if (index === 0) {
-        // v1.4.9 重排：原 6 列 2 格间距的砖墙把 60px 坦克实际封死（缝 64px 仅 4px 余量），
-        // 且敌人出生列（2/12/22）直接压砖。改为 4 列、列间通道 4~5 格宽、列内每 2 段留豁口，
-        // 砖量约减半；配合 GameMap 的车道保底雕刻，敌我必然能打到一起。
+        // v1.4.12：恢复 v1.4.9 前的原版密度（6 列砖墙 168 块 + 中场钢块）。
+        // 连通性改由 GameMap._repairConnectivity 最小代价修补兜底——只在真被堵死时
+        // 沿最省路径拆几块砖，不再为连通性把整张地图推平。
         level.totalEnemies = 10;
-        for (let x of [2, 8, 15, 22]) {
-            for (let y of [4, 8]) level.bricks.push([y, x, 2, 2]);    // 上半场：行 4-5、8-9（行 2-3 留给出生区）
-            for (let y of [14, 18]) level.bricks.push([y, x, 2, 2]);  // 下半场：行 14-15、18-19
+        for (let x of [2, 6, 10, 14, 18, 22]) {
+            for (let y = 2; y < 10; y += 2) level.bricks.push([y, x, 2, 2]);
+            for (let y = 14; y < 20; y += 2) level.bricks.push([y, x, 2, 2]);
         }
-        level.steels.push([12, 15, 2, 2]); // 中场钢块挪到砖列间隙（原 [12,12] 正压中央车道）
+        level.steels.push([12, 12, 2, 2]);
         return level;
     }
     if (index === 1) {
@@ -647,47 +647,68 @@ class GameMap {
         }
     }
 
-    // v1.4.9 车道保底：任何地图都先雕出"三纵一横"的确定性通道，再谈 BFS 校验。
-    //   三纵：列 4-6 / 11-13 / 18-20，行 1~17（18+ 是大本营保护区，不动）
-    //   一横：行 20-21 的左右两段（列 1-9 / 16-24，避开基地护盾区 10-15），
-    //         把玩家出生区（行 22-23，列 8-9 / 16-17）与左右车道底部接通。
-    //   敌人出生箱（行 1-3，列 1-3 / 11-13 / 21-23）与三条车道顶端天然相邻。
-    // 只清"不可通行"地块（砖/钢/硬砖/水/木桶），林/冰本来就能走，不动。
-    _carveLanes() {
-        const solid = (t) => t === TILE_TYPES.BRICK || t === TILE_TYPES.HARD_BRICK || t === TILE_TYPES.STEEL ||
-                             t === TILE_TYPES.UNBREAKABLE || t === TILE_TYPES.WATER || t === TILE_TYPES.BARREL;
-        const clearCell = (x, y) => {
-            if (x <= 0 || x >= GRID_SIZE - 1 || y <= 0 || y >= GRID_SIZE - 1) return;
-            if (this.inBaseProtectedZone(x, y)) return;
-            if (solid(this.grid[y][x])) this.grid[y][x] = TILE_TYPES.EMPTY;
-        };
-        for (const x0 of [4, 11, 18]) {
-            for (let y = 1; y <= 17; y++) for (let x = x0; x < x0 + 3; x++) clearCell(x, y);
-        }
-        for (let y = 20; y <= 21; y++) {
-            for (let x = 1; x <= 9; x++) clearCell(x, y);      // 左横廊：接玩家 1 号出生区与左车道
-            for (let x = 16; x <= 24; x++) clearCell(x, y);    // 右横廊：接玩家 2 号出生区与右车道
-        }
-        // 车道底部（行 17）与横廊（行 20）之间还差行 18-19——左右车道在保护区之外，继续向下打通
-        for (const x0 of [4, 18]) {
-            for (let y = 18; y <= 19; y++) for (let x = x0; x < x0 + 3; x++) clearCell(x, y);
+    // v1.4.12 连通性修补（取代 v1.4.9 的"三纵一横"推平式车道）：
+    // 建筑按模板/随机密度原样保留，只在关键点对真不连通时，用 Dijkstra 找一条
+    // "拆障碍最少"的路径，只拆路径上必须拆的格子。砖/木桶代价 1、钢/水代价 6
+    // （能绕就绕）、不可摧毁块与基地保护区禁挖；拆完仍不通才走 forcePath 兜底。
+    // 用户反馈：v1.4.9 为保连通拆掉太多建筑，"跟打一张空地图差不多"。
+    _cellClearCost(x, y) {
+        if (x <= 0 || x >= GRID_SIZE - 1 || y <= 0 || y >= GRID_SIZE - 1) return -1;
+        if (this.inBaseProtectedZone(x, y)) return -1;
+        const t = this.grid[y][x];
+        if (t === TILE_TYPES.EMPTY || t === TILE_TYPES.FOREST || t === TILE_TYPES.ICE) return 0;
+        if (t === TILE_TYPES.BRICK || t === TILE_TYPES.BARREL || t === TILE_TYPES.HARD_BRICK) return 1;
+        if (t === TILE_TYPES.STEEL || t === TILE_TYPES.WATER) return 6;
+        return -1; // UNBREAKABLE 等禁挖
+    }
+    _repairConnectivity() {
+        const keyPoints = [ [2,2], [12,2], [22,2], [8,22], [16,22] ];
+        const N = GRID_SIZE;
+        for (let i = 0; i < keyPoints.length - 1; i++) {
+            const [sx, sy] = keyPoints[i], [tx, ty] = keyPoints[i+1];
+            if (this.isConnected(sx, sy, tx, ty)) continue;
+            // Dijkstra：节点 = 2x2 足迹锚点，边代价 = 足迹内需拆格子的代价之和
+            const dist = Array(N).fill().map(() => Array(N).fill(Infinity));
+            const prev = Array(N).fill().map(() => Array(N).fill(null));
+            dist[sy][sx] = 0;
+            const pq = [[0, sx, sy]];
+            let found = false;
+            while (pq.length > 0) {
+                pq.sort((a, b) => a[0] - b[0]); // 26x26 规模，排序队列足够快
+                const [d, x, y] = pq.shift();
+                if (d > dist[y][x]) continue;
+                if (x === tx && y === ty) { found = true; break; }
+                for (const [dx, dy] of [[0,1],[1,0],[0,-1],[-1,0]]) {
+                    const nx = x + dx, ny = y + dy;
+                    if (nx < 1 || nx >= N - 1 || ny < 1 || ny >= N - 1) continue;
+                    let cost = 0, ok = true;
+                    for (let fy = ny; fy <= ny + 1 && ok; fy++) for (let fx = nx; fx <= nx + 1; fx++) {
+                        const c = this._cellClearCost(fx, fy);
+                        if (c < 0) { ok = false; break; }
+                        cost += c;
+                    }
+                    if (!ok) continue;
+                    const nd = d + cost;
+                    if (nd < dist[ny][nx]) { dist[ny][nx] = nd; prev[ny][nx] = [x, y]; pq.push([nd, nx, ny]); }
+                }
+            }
+            if (!found) { this.forcePath(sx, sy, tx, ty); continue; } // 极端情况兜底
+            // 回溯路径，只拆足迹里"需要拆"的格子
+            let cur = [tx, ty];
+            while (cur) {
+                const [cx, cy] = cur;
+                for (let fy = cy; fy <= cy + 1; fy++) for (let fx = cx; fx <= cx + 1; fx++) {
+                    if (this._cellClearCost(fx, fy) > 0) this.grid[fy][fx] = TILE_TYPES.EMPTY;
+                }
+                cur = prev[cy][cx];
+            }
         }
         this.markDirty();
     }
     guaranteeConnectivity() {
-        // v1.4.9：先确定性车道，再按"坦克真实可通行"模型校验关键点对，
-        // 不通就走 forcePath 兜底（会挖砖）。基地顶(12,20)被护盾区包住，坦克本来就不该开进去，已从校验点中移除。
-        this._carveLanes();
-        const keyPoints = [ [2,2], [12,2], [22,2], [8,22], [16,22] ];
-        for (let pass = 0; pass < 2; pass++) {
-            for (let i = 0; i < keyPoints.length - 1; i++) {
-                let p1 = keyPoints[i];
-                let p2 = keyPoints[i+1];
-                if (!this.isConnected(p1[0], p1[1], p2[0], p2[1])) {
-                    this.forcePath(p1[0], p1[1], p2[0], p2[1]);
-                }
-            }
-        }
+        // v1.4.12：不再预先推平车道。按"坦克真实可通行"模型校验关键点对，
+        // 不连通才做最小代价修补。基地顶(12,20)被护盾区包住，坦克本来就不该开进去，已从校验点中移除。
+        this._repairConnectivity();
     }
     setBaseWalls(type) {
         const walls = [
@@ -1865,7 +1886,7 @@ class Player extends Tank {
 
         if (targetPriority <= 0) {
             // —— 波次间隙：占住最近的敌军出兵车道口，向上持续开火 ——
-            // 用 v1.4.9 雕出的三条南北车道中心列(4-6/11-13/18-20)，那里才有通路
+            // 三条南北走廊中心列(5/12/19)——v1.4.12 起地图不再预雕车道，砖挡路时 AI 会自己啃穿
             const laneCols = [5, 12, 19];
             const cands = laneCols.map(c => c * TILE_SIZE + 16)
                 .sort((a, b) => Math.abs(a - myX) - Math.abs(b - myX));
