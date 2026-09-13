@@ -3045,7 +3045,8 @@ class Game {
                 e.preventDefault();
             }
         } else if (this.gameState === 'GAME_OVER' || this.gameState === 'MVP_SHOWCASE') {
-            if (e.key === 'Enter' || e.key === ' ') {
+            // v1.4.10: 忽略按住不放的自动重复 keydown（空格同时是开火键，长按会导致连续重开）
+            if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) {
                 this.startGame();
                 e.preventDefault();
             } else if (e.key === 'Escape') {
@@ -3056,6 +3057,8 @@ class Game {
     }
 
     startGame() {
+        // v1.4.10 修复：重开时取消 MVP 结算的 5 秒定时器，防止新局中途被强制弹结算屏
+        if (this._mvpScreenTimer) { clearTimeout(this._mvpScreenTimer); this._mvpScreenTimer = null; }
         audio.init();
         audio.play('start');
         const levelInput = document.getElementById('start-level');
@@ -3214,6 +3217,7 @@ class Game {
         }
     }
     showGameOverScreen() {
+        if (this.gameState !== 'MVP_SHOWCASE') return; // v1.4.10: 新局已开始，忽略过期的结算跳转
         this.gameState = 'GAME_OVER';
         const totalScore = this.players.reduce((sum, p) => sum + p.score, 0);
         if (totalScore > this.highScore) {
@@ -3814,7 +3818,10 @@ class Game {
         
         
         audio.play('powerup');
-        setTimeout(() => {
+        // v1.4.10 修复：记录定时器 id，重开时取消，避免新局进行中被过期跳转拉回结算屏
+        if (this._mvpScreenTimer) clearTimeout(this._mvpScreenTimer);
+        this._mvpScreenTimer = setTimeout(() => {
+            this._mvpScreenTimer = null;
             this.showGameOverScreen();
         }, 5000); // show MVP screen for 5 seconds
     }
