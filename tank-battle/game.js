@@ -123,12 +123,15 @@ function generateLevel(index) {
     const rng = seededRandom(index * 7919 + 12345);
     const level = { bricks: [], steels: [], waters: [], forests: [], ices: [], totalEnemies: 0 };
     if (index === 0) {
+        // v1.4.9 重排：原 6 列 2 格间距的砖墙把 60px 坦克实际封死（缝 64px 仅 4px 余量），
+        // 且敌人出生列（2/12/22）直接压砖。改为 4 列、列间通道 4~5 格宽、列内每 2 段留豁口，
+        // 砖量约减半；配合 GameMap 的车道保底雕刻，敌我必然能打到一起。
         level.totalEnemies = 10;
-        for (let x of [2, 6, 10, 14, 18, 22]) {
-            for (let y = 2; y < 10; y += 2) level.bricks.push([y, x, 2, 2]);
-            for (let y = 14; y < 20; y += 2) level.bricks.push([y, x, 2, 2]);
+        for (let x of [2, 8, 15, 22]) {
+            for (let y of [4, 8]) level.bricks.push([y, x, 2, 2]);    // 上半场：行 4-5、8-9（行 2-3 留给出生区）
+            for (let y of [14, 18]) level.bricks.push([y, x, 2, 2]);  // 下半场：行 14-15、18-19
         }
-        level.steels.push([12, 12, 2, 2]);
+        level.steels.push([12, 15, 2, 2]); // 中场钢块挪到砖列间隙（原 [12,12] 正压中央车道）
         return level;
     }
     if (index === 1) {
@@ -581,8 +584,17 @@ class GameMap {
         this.setBaseShield(); // 必须在 guaranteeConnectivity 之后：它是"成品保护层"，不许被路径雕刻挖掉
     }
     
+    // v1.4.9 连通性模型修正：旧版把 BRICK 当"可通行"（满地砖墙也判连通）、按 1 格算路
+    //（坦克 60px 需要连续 2 格才过得去），导致检查永远通过、实际双方被封死。
+    // 现在：砖/钢/硬砖/水/木桶都算阻挡，且一格"坦克可站"要求 2x2 足迹全部可走（EMPTY/林/冰）。
+    _tankFit(x, y) {
+        const passable = (t) => t === TILE_TYPES.EMPTY || t === TILE_TYPES.FOREST || t === TILE_TYPES.ICE;
+        if (x < 1 || y < 1 || x + 1 > GRID_SIZE - 2 || y + 1 > GRID_SIZE - 2) return false;
+        return passable(this.grid[y][x]) && passable(this.grid[y][x + 1]) &&
+               passable(this.grid[y + 1][x]) && passable(this.grid[y + 1][x + 1]);
+    }
     isConnected(x1, y1, x2, y2) {
-        const impassable = [TILE_TYPES.STEEL, TILE_TYPES.HARD_BRICK, TILE_TYPES.UNBREAKABLE, TILE_TYPES.WATER];
+        if (!this._tankFit(x1, y1) || !this._tankFit(x2, y2)) return false;
         let visited = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(false));
         let queue = [[x1, y1]];
         visited[y1][x1] = true;
@@ -592,7 +604,7 @@ class GameMap {
             for (let [dx, dy] of [[0,1],[1,0],[0,-1],[-1,0]]) {
                 let nx = x + dx; let ny = y + dy;
                 if (nx > 0 && nx < GRID_SIZE-1 && ny > 0 && ny < GRID_SIZE-1) {
-                    if (!visited[ny][nx] && !impassable.includes(this.grid[ny][nx])) {
+                    if (!visited[ny][nx] && this._tankFit(nx, ny)) {
                         visited[ny][nx] = true;
                         queue.push([nx, ny]);
                     }
@@ -609,7 +621,8 @@ class GameMap {
     }
 
     forcePath(x1, y1, x2, y2) {
-        const impassable = [TILE_TYPES.STEEL, TILE_TYPES.HARD_BRICK, TILE_TYPES.UNBREAKABLE, TILE_TYPES.WATER];
+        // v1.4.9：砖/木桶也要挖（旧版不挖砖，密度高的图永远"连通"不了）
+        const impassable = [TILE_TYPES.BRICK, TILE_TYPES.HARD_BRICK, TILE_TYPES.STEEL, TILE_TYPES.UNBREAKABLE, TILE_TYPES.WATER, TILE_TYPES.BARREL];
         let x = x1; let y = y1;
         while (x !== x2 || y !== y2) {
             if (x !== x2 && y !== y2) {
@@ -634,15 +647,45 @@ class GameMap {
         }
     }
 
+    // v1.4.9 车道保底：任何地图都先雕出"三纵一横"的确定性通道，再谈 BFS 校验。
+    //   三纵：列 4-6 / 11-13 / 18-20，行 1~17（18+ 是大本营保护区，不动）
+    //   一横：行 20-21 的左右两段（列 1-9 / 16-24，避开基地护盾区 10-15），
+    //         把玩家出生区（行 22-23，列 8-9 / 16-17）与左右车道底部接通。
+    //   敌人出生箱（行 1-3，列 1-3 / 11-13 / 21-23）与三条车道顶端天然相邻。
+    // 只清"不可通行"地块（砖/钢/硬砖/水/木桶），林/冰本来就能走，不动。
+    _carveLanes() {
+        const solid = (t) => t === TILE_TYPES.BRICK || t === TILE_TYPES.HARD_BRICK || t === TILE_TYPES.STEEL ||
+                             t === TILE_TYPES.UNBREAKABLE || t === TILE_TYPES.WATER || t === TILE_TYPES.BARREL;
+        const clearCell = (x, y) => {
+            if (x <= 0 || x >= GRID_SIZE - 1 || y <= 0 || y >= GRID_SIZE - 1) return;
+            if (this.inBaseProtectedZone(x, y)) return;
+            if (solid(this.grid[y][x])) this.grid[y][x] = TILE_TYPES.EMPTY;
+        };
+        for (const x0 of [4, 11, 18]) {
+            for (let y = 1; y <= 17; y++) for (let x = x0; x < x0 + 3; x++) clearCell(x, y);
+        }
+        for (let y = 20; y <= 21; y++) {
+            for (let x = 1; x <= 9; x++) clearCell(x, y);      // 左横廊：接玩家 1 号出生区与左车道
+            for (let x = 16; x <= 24; x++) clearCell(x, y);    // 右横廊：接玩家 2 号出生区与右车道
+        }
+        // 车道底部（行 17）与横廊（行 20）之间还差行 18-19——左右车道在保护区之外，继续向下打通
+        for (const x0 of [4, 18]) {
+            for (let y = 18; y <= 19; y++) for (let x = x0; x < x0 + 3; x++) clearCell(x, y);
+        }
+        this.markDirty();
+    }
     guaranteeConnectivity() {
-        // Points that must be connected: P1, P2, Base top, and all 3 enemy spawns
-        const keyPoints = [ [8,22], [16,22], [12,20], [2,2], [12,2], [22,2] ];
-        
-        for (let i = 0; i < keyPoints.length - 1; i++) {
-            let p1 = keyPoints[i];
-            let p2 = keyPoints[i+1];
-            if (!this.isConnected(p1[0], p1[1], p2[0], p2[1])) {
-                this.forcePath(p1[0], p1[1], p2[0], p2[1]);
+        // v1.4.9：先确定性车道，再按"坦克真实可通行"模型校验关键点对，
+        // 不通就走 forcePath 兜底（会挖砖）。基地顶(12,20)被护盾区包住，坦克本来就不该开进去，已从校验点中移除。
+        this._carveLanes();
+        const keyPoints = [ [2,2], [12,2], [22,2], [8,22], [16,22] ];
+        for (let pass = 0; pass < 2; pass++) {
+            for (let i = 0; i < keyPoints.length - 1; i++) {
+                let p1 = keyPoints[i];
+                let p2 = keyPoints[i+1];
+                if (!this.isConnected(p1[0], p1[1], p2[0], p2[1])) {
+                    this.forcePath(p1[0], p1[1], p2[0], p2[1]);
+                }
             }
         }
     }
