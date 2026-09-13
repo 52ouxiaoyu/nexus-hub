@@ -579,9 +579,12 @@ class GameMap {
         this.clearArea(8, 22, 2, 2); this.clearArea(16, 22, 2, 2); this.clearArea(1, 1, 3, 3); this.clearArea(11, 1, 3, 3); this.clearArea(21, 1, 3, 3);
         this.grid[24][12] = this.grid[24][13] = this.grid[25][12] = this.grid[25][13] = TILE_TYPES.BASE;
         this.setBaseWalls(TILE_TYPES.BRICK);
-        
+        // v1.4.13 调序：钢棚先落位、再修连通。旧顺序（先修后棚）下，修复/校验看到的是
+        // "没有钢棚的临时地形"，某条偶然空地通路被判定连通而跳过修复，钢棚一落恰好
+        // 焊死该通路 → 关卡 3 约 20% 概率 P2 出生井被封锁。
+        // 现在修复以最终地形为准，且 _cellClearCost 对保护区/不可摧毁块本就禁挖，前置安全。
+        this.setBaseShield();
         this.guaranteeConnectivity();
-        this.setBaseShield(); // 必须在 guaranteeConnectivity 之后：它是"成品保护层"，不许被路径雕刻挖掉
     }
     
     // v1.4.9 连通性模型修正：旧版把 BRICK 当"可通行"（满地砖墙也判连通）、按 1 格算路
@@ -654,19 +657,35 @@ class GameMap {
     // 用户反馈：v1.4.9 为保连通拆掉太多建筑，"跟打一张空地图差不多"。
     _cellClearCost(x, y) {
         if (x <= 0 || x >= GRID_SIZE - 1 || y <= 0 || y >= GRID_SIZE - 1) return -1;
-        if (this.inBaseProtectedZone(x, y)) return -1;
         const t = this.grid[y][x];
         if (t === TILE_TYPES.EMPTY || t === TILE_TYPES.FOREST || t === TILE_TYPES.ICE) return 0;
+        // v1.4.13 修复：保护区只"禁挖"不"禁走"——旧顺序把保护区里的空地也判成不可通行，
+        // 而玩家出生点(8,22)紧邻保护区(x>=10)，从上方接近的 2x2 足迹必然擦到边缘，
+        // 导致 Dijkstra 判定无路、forcePath 兜底也从不挖保护区 → 关卡 3 偶发 35/50 封锁
+        if (this.inBaseProtectedZone(x, y)) return -1;
         if (t === TILE_TYPES.BRICK || t === TILE_TYPES.BARREL || t === TILE_TYPES.HARD_BRICK) return 1;
         if (t === TILE_TYPES.STEEL || t === TILE_TYPES.WATER) return 6;
         return -1; // UNBREAKABLE 等禁挖
     }
     _repairConnectivity() {
-        const keyPoints = [ [2,2], [12,2], [22,2], [8,22], [16,22] ];
+        // v1.4.13 拓扑修正：关键点对不再用链式（旧链 [22,2]->[8,22]->[16,22] 要求
+        // P1/P2 在基地保护区底下横向互达，而保护区禁挖 + row19 黑曜石 + row20 钢棚
+        // 把底部横穿压成 row 18 一条缝，随机不可摧毁柱子一旦压住缝就"结构不可修"）。
+        // 改为两个出生井各自向上连到敌方出生区——竖井向上必然可修。
+        const pairs = [
+            [[8,22],  [2,2]],    // P1 出生 → 左上敌区
+            [[16,22], [22,2]],   // P2 出生 → 右上敌区
+            [[2,2],   [12,2]],   // 三个敌区顶部互通
+            [[12,2],  [22,2]],
+        ];
         const N = GRID_SIZE;
-        for (let i = 0; i < keyPoints.length - 1; i++) {
-            const [sx, sy] = keyPoints[i], [tx, ty] = keyPoints[i+1];
+        // 最多 3 轮：forcePath 兜底是随机游走，偶发挖不透——修完必须复查，
+        // 不连通的下一轮继续修（v1.4.13 补：旧版有两轮复核，重构时被遗漏导致偶发封锁）
+        for (let pass = 0; pass < 3; pass++) {
+        let allConnected = true;
+        for (const [[sx, sy], [tx, ty]] of pairs) {
             if (this.isConnected(sx, sy, tx, ty)) continue;
+            allConnected = false;
             // Dijkstra：节点 = 2x2 足迹锚点，边代价 = 足迹内需拆格子的代价之和
             const dist = Array(N).fill().map(() => Array(N).fill(Infinity));
             const prev = Array(N).fill().map(() => Array(N).fill(null));
@@ -702,6 +721,8 @@ class GameMap {
                 }
                 cur = prev[cy][cx];
             }
+        }
+        if (allConnected) break;
         }
         this.markDirty();
     }
@@ -987,12 +1008,25 @@ class Bullet {
                 diff = (diff + Math.PI) % (Math.PI * 2);
                 if (diff < 0) diff += Math.PI * 2;
                 diff -= Math.PI;
-                let turnSpeed = this.owner instanceof Player ? 0.05 : 0.015; // Enemies turn much slower
-                let newAngle = currentAngle + Math.max(-turnSpeed, Math.min(turnSpeed, diff));
-                this.vx = Math.cos(newAngle) * this.speed;
-                this.vy = Math.sin(newAngle) * this.speed;
-                if (Math.abs(this.vx) > Math.abs(this.vy)) this.dir = this.vx > 0 ? 'RIGHT' : 'LEFT';
-                else this.dir = this.vy > 0 ? 'DOWN' : 'UP';
+                if (this.owner instanceof Player) {
+                    // 玩家追踪弹保持连续转向（武器福利，不受限制）
+                    let turnSpeed = 0.05;
+                    let newAngle = currentAngle + Math.max(-turnSpeed, Math.min(turnSpeed, diff));
+                    this.vx = Math.cos(newAngle) * this.speed;
+                    this.vy = Math.sin(newAngle) * this.speed;
+                    if (Math.abs(this.vx) > Math.abs(this.vy)) this.dir = this.vx > 0 ? 'RIGHT' : 'LEFT';
+                    else this.dir = this.vy > 0 ? 'DOWN' : 'UP';
+                } else {
+                    // v1.4.13：敌方追踪弹改四方向阶梯追踪——用户要求去掉一切斜向弹，
+                    // 每 24 帧重新对准目标主轴方向，转向瞬间完成、弹道始终正交可预判
+                    if (this._homeRetarget === undefined) this._homeRetarget = 0;
+                    if (this._homeRetarget <= 0) {
+                        this._homeRetarget = 24;
+                        this.dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'RIGHT' : 'LEFT') : (dy > 0 ? 'DOWN' : 'UP');
+                    } else this._homeRetarget--;
+                    this.vx = this.dir === 'LEFT' ? -this.speed : this.dir === 'RIGHT' ? this.speed : 0;
+                    this.vy = this.dir === 'UP' ? -this.speed : this.dir === 'DOWN' ? this.speed : 0;
+                }
             } else if (this.vx === undefined) {
                 this.vx = (this.dir === 'LEFT' ? -this.speed : this.dir === 'RIGHT' ? this.speed : 0);
                 this.vy = (this.dir === 'UP' ? -this.speed : this.dir === 'DOWN' ? this.speed : 0);
@@ -2349,14 +2383,16 @@ class Boss extends Enemy {
                     let blvl = this.level;
                     if (this.bossVariant === 'HEAVY' || this.bossVariant === 'GIANT') blvl += 2; 
                     let b = new Bullet(this.game, this, bx - 8, by - 8, dir, blvl, bType);
-                    b.vx = Math.cos(angle) * b.speed;
-                    b.vy = Math.sin(angle) * b.speed;
+                    // v1.4.13：弹道量化到四方向（dir 已按炮塔角度归一）——用户要求去掉斜向弹，
+                    // 旋转炮塔只影响出膛位置观感，弹本身永远直线正交飞行，可预判可躲
+                    b.vx = dir === 'LEFT' ? -b.speed : dir === 'RIGHT' ? b.speed : 0;
+                    b.vy = dir === 'UP' ? -b.speed : dir === 'DOWN' ? b.speed : 0;
                     this.game.bullets.push(b);
                 } else if (this.canFly) {
                     let blvl = this.level;
                     let b = new Bullet(this.game, this, bx - 8, by - 8, dir, blvl, bType);
-                    b.vx = Math.cos(angle) * b.speed;
-                    b.vy = Math.sin(angle) * b.speed;
+                    b.vx = dir === 'LEFT' ? -b.speed : dir === 'RIGHT' ? b.speed : 0;
+                    b.vy = dir === 'UP' ? -b.speed : dir === 'DOWN' ? b.speed : 0;
                     this.game.bullets.push(b);
                 }
             }
