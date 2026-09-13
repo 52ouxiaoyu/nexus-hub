@@ -570,7 +570,7 @@ const FILE = 'file://' + path.resolve(__dirname, 'index.html');
         w.colliders = [];
         const st = w.gateRects[0];
         p.pos.set(st.x, 0, st.z); p.idx = 0;
-        p.velAngle = st.yaw + Math.PI / 2; p.heading = p.velAngle; // 朝看台短边方向撞入
+        p.velAngle = st.yaw - Math.PI / 2; p.heading = p.velAngle; // 朝看台撞入（沿 -X 局部方向）
         p.speed = 25;
         out.standHit = w.collideCar(p);
         const dfx = (p.pos.x - st.x) * Math.cos(st.yaw) - (p.pos.z - st.z) * Math.sin(st.yaw);
@@ -609,6 +609,63 @@ const FILE = 'file://' + path.resolve(__dirname, 'index.html');
         t('T24.8 车撞立柱被推出（d ≥ minD - 0.05）', gate.pillarHit === true && gate.pillarD >= gate.pillarMinD - 0.05,
             `d=${gate.pillarD.toFixed(2)} minD=${gate.pillarMinD}`);
     }
+
+    /* ===== T25 (v1.2.5): 看台"吸车"修复 —— 一次性撞击减速 + 楔形缝不再互推夹车 ===== */
+    const stick = await page.evaluate(() => {
+        const g = window.__game, w = g.world, p = g.player;
+        const out = {};
+        g.togglePause(true);
+        // 只保留立柱圆碰撞体（隔离树/石噪声，且立柱是楔形缝的组成部分）
+        w.colliders = w.gateCircleDefs.map(c => ({ x: c.x, z: c.z, minD: c.minD }));
+        const st = w.gateRects[0];
+        const cy = Math.cos(st.yaw), sy = Math.sin(st.yaw);
+        const X = { x: cy, z: -sy };   // 看台局部 x 轴（世界坐标）
+        const Z = { x: sy, z: cy };    // 看台局部 z 轴（世界坐标）
+        const put = (fx, fz) => { p.pos.set(st.x + X.x * fx + Z.x * fz, 0, st.z + X.z * fx + Z.z * fz); };
+
+        // A) 正面撞看台：一次性减速仍然生效
+        put(-2.0, 0);
+        p.velAngle = Math.atan2(X.x, X.z); p.heading = p.velAngle; // 朝看台撞入
+        p.speed = 25; p._hitPenCd = 0;
+        w.collideCar(p, 0.016);
+        out.headOnSpeed = p.speed;
+
+        // B) 贴着看台长边平行刮蹭 90 帧：速度不应衰减（旧版每帧 ×0.88 会衰到 ≈0）
+        put(-2.49, 6);
+        p.velAngle = st.yaw; p.heading = st.yaw; // 沿台子长边方向开
+        p.speed = 25; p._hitPenCd = 0;
+        for (let i = 0; i < 90; i++) { put(-2.49, 6); w.collideCar(p, 0.016); }
+        out.scrapeSpeed = p.speed;
+
+        // C) 立柱-看台楔形缝（横向 ~10.8，横向 10.5~11.2 为旧版互推夹车区）：
+        //    持续接触速度不塌、能沿切线开出去
+        const s0 = w.smp[0];
+        p.pos.set(s0.p.x + s0.left.x * 10.8 + s0.t.x * 0.5, 0, s0.p.z + s0.left.z * 10.8 + s0.t.z * 0.5);
+        p.velAngle = Math.atan2(s0.t.x, s0.t.z); p.heading = p.velAngle;
+        p.speed = 8; p._hitPenCd = 0;
+        const sx = p.pos.x, sz = p.pos.z;
+        for (let i = 0; i < 240; i++) {
+            p.pos.x += Math.sin(p.velAngle) * p.speed * 0.016;
+            p.pos.z += Math.cos(p.velAngle) * p.speed * 0.016;
+            w.collideCar(p, 0.016);
+        }
+        out.wedgeSpeed = p.speed;
+        out.wedgeMoved = Math.hypot(p.pos.x - sx, p.pos.z - sz);
+
+        // D) 撞树一次性减速回归（冲量式对圆形碰撞体同样生效）
+        w.colliders = [{ x: 5000, z: 5000, minD: 2 }];
+        p.pos.set(5000, 0, 4998.5); p.velAngle = 0; p.heading = 0; p.speed = 25; p._hitPenCd = 0;
+        w.collideCar(p, 0.016);
+        out.treeSpeed = p.speed;
+        g.togglePause(false);
+        return out;
+    });
+    t('T25.1 正面撞看台仍明显减速（25 → < 20）', stick.headOnSpeed < 20, `v=${stick.headOnSpeed.toFixed(1)}`);
+    t('T25.2 贴看台刮蹭 90 帧速度不衰减（> 23，旧版 ≈ 0）', stick.scrapeSpeed > 23, `v=${stick.scrapeSpeed.toFixed(1)}`);
+    t('T25.3 立柱-看台楔形缝速度不塌（> 6.5）且能开出去（位移 > 5m）',
+        stick.wedgeSpeed > 6.5 && stick.wedgeMoved > 5,
+        `v=${stick.wedgeSpeed.toFixed(1)} moved=${stick.wedgeMoved.toFixed(1)}m`);
+    t('T25.4 撞树一次性减速回归正常（25 → < 20）', stick.treeSpeed < 20, `v=${stick.treeSpeed.toFixed(1)}`);
 
     /* ===== 截图 ===== */
     await page.evaluate(() => window.__game && window.__game.togglePause && window.__game.togglePause(true));

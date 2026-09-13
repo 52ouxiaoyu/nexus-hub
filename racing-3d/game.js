@@ -1,6 +1,6 @@
 'use strict';
 /* =========================================================================
- * 极速飞车 Turbo Rush 3D — v1.2.4
+ * 极速飞车 Turbo Rush 3D — v1.2.5
  * 街机式 3D 环形赛道竞速（参考马车 / 山脊赛车式手感）
  * v1.1.0：双人分屏 PK + 路面方向箭头 + 出赛道车身不消失软回拉
  * v1.1.1：修复 A/D 转向方向（相机 right=-world X 导致视觉左右相反）
@@ -16,6 +16,8 @@
  *         Sprite 粒子池 72 个（canvas 生成纹理，无外部素材），P1/P2 共用
  * v1.2.4：终点设施实体化（看台矩形碰撞 + 龙门架立柱圆形碰撞，不再穿透）；
  *         终点门区检测（必须真正从龙门架下穿过才计圈，绕开终点线无效）
+ * v1.2.5：修复碰看台"被吸住"——撞击减速改一次性冲量式（closing>1.2 m/s 且冷却结束才扣速，
+ *         刮蹭/被夹住不再每帧指数衰减）；立柱圆形推离若会推进看台矩形则跳过，消除互推夹车
  * 纯前端：three.js r128（本地）+ 原生 JS，无任何构建工具
  * 坐标系约定：heading=0 朝 +z；heading 增大 = 右转；
  *            left 向量 = (t.z, 0, -t.x)（命名沿用，实际为行进方向右侧）
@@ -665,8 +667,13 @@ class World {
         this.updateClouds(0);
     }
 
-    /* v1.2.0：车辆与树/岩石碰撞。推出障碍 + 按撞击角度减速，返回是否碰撞 */
-    collideCar(car) {
+    /* v1.2.0：车辆与树/岩石碰撞。推出障碍 + 撞击减速，返回是否碰撞
+       v1.2.5：撞击减速改「一次性冲量式」——只在真正撞入（closing>1.2 m/s）且冷却结束时扣速，
+       贴墙刮蹭/被夹住不再每帧 ×0.88 指数衰减（修复车碰看台后"被吸住开不出来"）；
+       圆形（立柱等）推离若会推进看台矩形则跳过，交由矩形统一推出，消除两碰撞体互推夹车 */
+    collideCar(car, dt = 0.016) {
+        car._hitPenCd = Math.max(0, (car._hitPenCd || 0) - dt);
+        car._impactFlag = false;
         const cols = this.colliders;
         if (!cols) return false;
         let hit = false;
@@ -678,11 +685,10 @@ class World {
             if (d >= c.minD) continue;
             const nx = d > 0.001 ? dx / d : 1, nz = d > 0.001 ? dz / d : 0;
             const push = c.minD - d;
-            car.pos.x += nx * push; car.pos.z += nz * push; // 推出障碍
-            // 正面撞减速多（~62%），侧刮减速少（~12%）
-            const mvx = Math.sin(car.velAngle), mvz = Math.cos(car.velAngle);
-            const headOn = Math.max(0, -(mvx * nx + mvz * nz));
-            car.speed *= 1 - (0.12 + 0.5 * headOn);
+            const tx = car.pos.x + nx * push, tz = car.pos.z + nz * push;
+            if (this._insideRects(tx, tz)) { hit = true; continue; } // 看台会接管推出
+            car.pos.x = tx; car.pos.z = tz;
+            this._impactSlow(car, nx, nz);
             hit = true;
         }
         // v1.2.4：矩形碰撞体（终点看台等大件）—— 转到台子局部坐标做推离
@@ -704,15 +710,37 @@ class World {
                 else pz = (fz >= 0 ? 1 : -1) * penZ;
                 const wx = cy * px + sy * pz, wz = -sy * px + cy * pz;
                 car.pos.x += wx; car.pos.z += wz;
-                // 撞击角减速（与树/岩石同款公式）
-                const mvx = Math.sin(car.velAngle), mvz = Math.cos(car.velAngle);
                 const nl = Math.hypot(wx, wz) || 1;
-                const headOn = Math.max(0, -(mvx * wx / nl + mvz * wz / nl));
-                car.speed *= 1 - (0.12 + 0.5 * headOn);
+                this._impactSlow(car, wx / nl, wz / nl);
                 hit = true;
             }
         }
         return hit;
+    }
+
+    /* v1.2.5：撞击减速（一次性，冲量式）。closing = 撞入法向的速度分量（m/s），
+       只有真的"撞上去"（closing > 1.2 且冷却结束）才扣一次速，刮蹭/静止接触不扣 */
+    _impactSlow(car, nx, nz) {
+        const mvx = Math.sin(car.velAngle), mvz = Math.cos(car.velAngle);
+        const closing = -(mvx * nx + mvz * nz) * car.speed; // 撞入为正
+        if (car._hitPenCd > 0 || closing < 1.2) return;
+        car._hitPenCd = 0.4;
+        car._impactFlag = true;
+        car.speed *= 1 - (0.12 + 0.5 * Math.min(1, closing / 25));
+    }
+
+    /* v1.2.5：点是否落在任一看台的有效碰撞矩形内（含车身余量） */
+    _insideRects(x, z) {
+        const rects = this.gateRects;
+        if (!rects) return false;
+        for (let i = 0; i < rects.length; i++) {
+            const rc = rects[i];
+            const dx = x - rc.x, dz = z - rc.z;
+            if (dx > 17 || dx < -17 || dz > 17 || dz < -17) continue;
+            const sy = Math.sin(rc.yaw), cy = Math.cos(rc.yaw);
+            if (Math.abs(dx * cy - dz * sy) < rc.hx + 1.0 && Math.abs(dx * sy + dz * cy) < rc.hz + 1.0) return true;
+        }
+        return false;
     }
 
     updateClouds(dt) {
@@ -896,9 +924,9 @@ class Player {
         this.pos.x += Math.sin(this.velAngle) * this.speed * dt;
         this.pos.z += Math.cos(this.velAngle) * this.speed * dt;
 
-        // v1.2.0：与树/岩石碰撞（推出 + 撞击减速 + 音效）
+        // v1.2.0：与树/岩石碰撞（推出 + 撞击减速 + 音效）；v1.2.5 音效只在真实撞击时触发
         if (this._crashCd > 0) this._crashCd -= dt;
-        if (w.collideCar(this) && this._crashCd <= 0 && Math.abs(this.speed) > 3) {
+        if (w.collideCar(this, dt) && this._impactFlag && this._crashCd <= 0 && Math.abs(this.speed) > 3) {
             this._crashCd = 0.45;
             AudioSys.beep(70 + Math.random() * 35, 0.14, 'square', 0.3);
         }
