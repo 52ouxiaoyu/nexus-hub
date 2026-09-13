@@ -94,7 +94,7 @@ const FIRE_PICKUP_NEW_GAIN = 2;   // 首次拾取某种新武器
 const FIRE_STAR_GAIN = 2;         // ⭐ 星星
 const FIRE_MAX_WEAPON_FLOOR = 5;  // 🚀 至少提升到的等级
 const FIRE_MAX_WEAPON_STEP = 2;   // 🚀 在此之上最多再加几级
-const BOUNCE_MAX_BOUNCES = 4;     // 🪀 弹射炮最多在墙壁间反弹几次
+const BOUNCE_MAX_BOUNCES = 2;     // 🪀 弹射炮最多在墙壁间反弹几次（v1.4.11：4→2，用户要求限弹两次）
 
 // ===== 敌方坦克表情包（头顶小气泡，让敌人"会思考、会愤怒、会欢喜"）=====
 // 按情境分组；idle 是日常小情绪，其余由事件触发
@@ -1076,6 +1076,16 @@ class Bullet {
                     }
                     this.game.shakeScreen(8);
                 }
+            } else if (tile === TILE_TYPES.BRICK || (tile === TILE_TYPES.HARD_BRICK && this.damage >= 4)) {
+                // v1.4.11 修复：直击砖墙应摧毁地形（原版坦克大战基本规则）。
+                // 此前只有爆炸类武器的 AOE 能清砖，普通弹打砖只出特效——AI 和玩家
+                // 都被"打不掉的砖墙"卡死在对峙位置，这正是"建筑物遮挡"问题的根源。
+                // 硬砖需要大威力弹（Lv4+ 合并大弹 / 高爆弹）才能啃动。
+                this.game.map.grid[ty][tx] = TILE_TYPES.EMPTY; this.game.map.markDirty();
+                if (this.owner instanceof Player) this.owner.stats.blocks++;
+                this.triggerExplosion(this.x + this.size/2, this.y + this.size/2, true);
+                this.active = false;
+                return;
             } else {
                 this.triggerExplosion(this.x + this.size/2, this.y + this.size/2);
             }
@@ -1842,52 +1852,44 @@ class Player extends Tank {
             preferredDist = nearestEnemy.isBoss ? TILE_SIZE * 6 : TILE_SIZE * 3;
         }
 
-        // 3. MOVE TOWARDS TARGET
-        let dx = targetX - myX;
-        let dy = targetY - myY;
-        let distToTarget = Math.hypot(dx, dy);
+        // 3+4. v1.4.11 走位/驻守/开火（重做）
+        //      理念：与目标同轴对齐后"原地驻枪"持续开火，朝向每帧跟随目标；
+        //      中间是砖墙就边对峙边啃砖打视线；钢墙/硬砖挡死才重新走位绕行；
+        //      场上无敌时抢占敌军出兵车道，向上持续点射啃出通路
+        const dx = targetX - myX;
+        const dy = targetY - myY;
+        const distToTarget = Math.hypot(dx, dy);
+        const AL = TILE_SIZE * 0.7;                // 同轴对齐阈值(≈22px)
+        const horizAligned = Math.abs(dy) <= AL;   // 近似同排 → 水平轴可开火
+        const vertAligned = Math.abs(dx) <= AL;    // 近似同列 → 垂直轴可开火
 
-        let moveDir;
-        if (distToTarget <= preferredDist) {
-            // Reached optimal distance. Try to align for a shot!
-            if (Math.abs(dx) > Math.abs(dy)) {
-                moveDir = dy > 0 ? 'DOWN' : 'UP'; // align vertically
+        if (targetPriority <= 0) {
+            // —— 波次间隙：占住最近的敌军出兵车道口，向上持续开火 ——
+            // 用 v1.4.9 雕出的三条南北车道中心列(4-6/11-13/18-20)，那里才有通路
+            const laneCols = [5, 12, 19];
+            const cands = laneCols.map(c => c * TILE_SIZE + 16)
+                .sort((a, b) => Math.abs(a - myX) - Math.abs(b - myX));
+            let laneX = cands[0];
+            const mate = this.game.players.find(p => p !== this && p.aiActive && p.alive);
+            if (mate && Math.abs(mate.x + mate.width / 2 - laneX) < TILE_SIZE * 2) laneX = cands[1] ?? laneX; // 队友占了就换道
+            const frontY = 13 * TILE_SIZE; // 敌我分界线
+            if (Math.abs(laneX - myX) > 10) this._aiSteer(myX, myY, laneX - myX, 0); // 对中收紧到10px：车身要完整进车道
+            else if (Math.abs(frontY - myY) > AL) this._aiSteer(myX, myY, 0, frontY - myY);
+            else { this.direction = 'UP'; this.shoot(); }
+        } else if (targetPriority !== 100 && (horizAligned || vertAligned)) {
+            // —— 驻枪对峙：同轴后停住，朝向每帧跟随目标持续开火（敌人靠近立即转向进攻） ——
+            // 注意：救援行走(100)永不驻枪，否则与队友尸体同轴时会停下导致救援失败
+            if (this._rayClass(myX, myY, targetX, targetY) === 'HARD') {
+                // 钢墙/硬砖挡死视线，射击无意义 → 继续走位绕行
+                this._aiSteer(myX, myY, dx, dy);
             } else {
-                moveDir = dx > 0 ? 'RIGHT' : 'LEFT'; // align horizontally
+                if (horizAligned) this.direction = dx > 0 ? 'RIGHT' : 'LEFT';
+                else this.direction = dy > 0 ? 'DOWN' : 'UP';
+                if (!this.isFacingBase()) this.shoot(); // 自带冷却；中间是砖时子弹会啃开视线
             }
         } else {
-            // Move closer
-            if (Math.abs(dx) > Math.abs(dy)) moveDir = dx > 0 ? 'RIGHT' : 'LEFT';
-            else moveDir = dy > 0 ? 'DOWN' : 'UP';
-        }
-
-        if (!this.aiMoveDir || this.aiMoveTimer <= 0) {
-            this.aiMoveDir = moveDir;
-            this.aiMoveTimer = 15 + Math.floor(Math.random() * 20); // More frequent updates
-        } else {
-            this.aiMoveTimer--;
-        }
-
-        // Obstacle avoidance
-        if (this.isTileBlocked(myX, myY, this.aiMoveDir)) {
-            this.aiMoveDir = this.getAlternateDir(this.aiMoveDir, dx, dy, myX, myY);
-            this.aiMoveTimer = 20;
-        }
-
-        this.move(this.aiMoveDir);
-
-        // 4. COMBAT LOGIC
-        // Always shoot if we have a clear line of sight to any enemy, and not facing base
-        if (!this.isFacingBase()) {
-            let shot = false;
-            for (const e of this.game.enemies) {
-                if (!e.alive) continue;
-                if (this.canShootTarget(e)) { this.shoot(); shot = true; break; }
-            }
-            // Suppressive fire if moving towards an enemy
-            if (!shot && targetPriority === 70 && Math.random() < 0.1) {
-                this.shoot();
-            }
+            // —— 未对齐：曼哈顿走位逼近目标 ——
+            this._aiSteer(myX, myY, dx, dy);
         }
         
         // 5. AUTO ULTIMATE
@@ -1921,7 +1923,7 @@ class Player extends Tank {
         else if (dir === 'LEFT') tx -= checkDist; else if (dir === 'RIGHT') tx += checkDist;
         return this.game.map.isBlocked(tx - this.width/2, ty - this.height/2, this.width, this.height, false, this.canBoat, this.canFly);
     }
-    getAlternateDir(blockedDir, dx, dy, myX, myY) {
+    getAlternateDir(blockedDir, dx, dy, myX, myY, allowReverse = false) {
         let dirs = ['UP', 'DOWN', 'LEFT', 'RIGHT'].filter(d => d !== blockedDir);
         if (myX !== undefined && myY !== undefined) {
             dirs = dirs.filter(d => !this.isTileBlocked(myX, myY, d));
@@ -1930,11 +1932,13 @@ class Player extends Tank {
             const rev = { 'UP': 'DOWN', 'DOWN': 'UP', 'LEFT': 'RIGHT', 'RIGHT': 'LEFT' };
             return rev[blockedDir] || 'UP';
         }
-        dirs.sort((a, b) => {
-            const costA = (a === 'UP' && dy < 0) || (a === 'DOWN' && dy > 0) || (a === 'LEFT' && dx < 0) || (a === 'RIGHT' && dx > 0) ? 0 : 1;
-            const costB = (b === 'UP' && dy < 0) || (b === 'DOWN' && dy > 0) || (b === 'LEFT' && dx < 0) || (b === 'RIGHT' && dx > 0) ? 0 : 1;
-            return costA - costB;
-        });
+        const rev2 = { 'UP': 'DOWN', 'DOWN': 'UP', 'LEFT': 'RIGHT', 'RIGHT': 'LEFT' };
+        const cost = (d) => {
+            let c = (d === 'UP' && dy < 0) || (d === 'DOWN' && dy > 0) || (d === 'LEFT' && dx < 0) || (d === 'RIGHT' && dx > 0) ? 0 : 1;
+            if (d === rev2[blockedDir] && !allowReverse) c += 2; // v1.4.11：尽量别原路折返，优先侧移绕行（否则会上下振荡）
+            return c;
+        };
+        dirs.sort((a, b) => cost(a) - cost(b));
         return dirs[0];
     }
     canShootTarget(target) {
@@ -1964,7 +1968,7 @@ class Player extends Tank {
     findIncomingBullet(x, y) {
         const range = TILE_SIZE * 6;
         for (const b of this.game.bullets) {
-            if (!b.active || !(b.owner instanceof Player)) continue;
+            if (!b.active || b.owner === this) continue; // v1.4.11：敌方子弹才是真威胁，旧版只躲队友弹
             let incoming = false;
             if (b.dir === 'DOWN' && Math.abs(b.x + b.size/2 - x) < 24 && b.y < y && y - b.y < range) incoming = true;
             if (b.dir === 'UP' && Math.abs(b.x + b.size/2 - x) < 24 && b.y > y && b.y - y < range) incoming = true;
@@ -1983,6 +1987,61 @@ class Player extends Tank {
         const validDirs = perpDirs.filter(d => !this.isTileBlocked(myX, myY, d));
         if (validDirs.length > 0) return validDirs[Math.floor(Math.random() * validDirs.length)];
         return perpDirs[0];
+    }
+    // v1.4.11：曼哈顿走位。主导轴被堵就试别的方向；四面全堵时朝目标方向开火啃砖
+    _aiSteer(myX, myY, dx, dy) {
+        // 死区：微小差值视为 0，避免围绕对齐线上下振荡（UP/DOWN 每帧翻转、原地蹭）
+        if (Math.abs(dx) < 8) dx = 0;
+        if (Math.abs(dy) < 8) dy = 0;
+        // 方向承诺：绕行方向一经选定保持 12 帧（除非被堵），防止贴着对齐线反复横跳
+        if (this._steerCommit && this._steerCommit.frames > 0 && !this.isTileBlocked(myX, myY, this._steerCommit.dir)) {
+            this._steerCommit.frames--;
+            this.aiMoveDir = this._steerCommit.dir;
+            this.move(this._steerCommit.dir);
+            return;
+        }
+        this._steerCommit = null;
+        const mainDir = Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'RIGHT' : 'LEFT') : (dy > 0 ? 'DOWN' : 'UP');
+        let dir = mainDir;
+        if (this.isTileBlocked(myX, myY, dir)) {
+            // 卡死检测：连续 30 帧想走却没挪窝 → 解除折返禁令（真死角必须允许回头）
+            if (this._steerStuck === undefined) this._steerStuck = 0;
+            if (this._lastSteerX === myX && this._lastSteerY === myY) this._steerStuck++; else this._steerStuck = 0;
+            this._lastSteerX = myX; this._lastSteerY = myY;
+            const allowReverse = this._steerStuck > 30;
+            const alt = this.getAlternateDir(dir, dx, dy, myX, myY, allowReverse);
+            if (alt && !this.isTileBlocked(myX, myY, alt)) {
+                dir = alt;
+                this._steerCommit = { dir: alt, frames: 12 };
+            } else {
+                // 死角：朝目标方向开火，把砖墙啃开
+                this._steerCommit = null;
+                this.direction = mainDir;
+                if (!this.isFacingBase()) this.shoot();
+                this.aiMoveDir = mainDir;
+                return;
+            }
+        }
+        this.aiMoveDir = dir;
+        this.move(dir);
+    }
+    // v1.4.11：我到目标连线的地形分类——CLEAR 通 / BRICK 砖墙(可啃) / HARD 钢墙等打不开
+    _rayClass(myX, myY, tx, ty) {
+        const dist = Math.hypot(tx - myX, ty - myY);
+        if (dist < 1) return 'CLEAR';
+        const steps = Math.ceil(dist / (TILE_SIZE / 2));
+        let kind = 'CLEAR';
+        for (let i = 1; i <= steps; i++) {
+            const px = myX + (tx - myX) * i / steps;
+            const py = myY + (ty - myY) * i / steps;
+            const gx = Math.floor(px / TILE_SIZE);
+            const gy = Math.floor(py / TILE_SIZE);
+            if (gx < 0 || gx >= GRID_SIZE || gy < 0 || gy >= GRID_SIZE) return 'HARD';
+            const t = this.game.map.grid[gy][gx];
+            if (t === TILE_TYPES.BRICK || t === TILE_TYPES.BARREL) kind = 'BRICK';
+            else if (t === TILE_TYPES.STEEL || t === TILE_TYPES.HARD_BRICK || t === TILE_TYPES.UNBREAKABLE) return 'HARD';
+        }
+        return kind;
     }
 }
 class Enemy extends Tank { 
