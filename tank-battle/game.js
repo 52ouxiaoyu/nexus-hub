@@ -861,8 +861,8 @@ class Bullet {
         this.piercing = false;
 
         if (this.type === 'NORMAL') {
-            if (level >= 5) this.speed = 10;
-            else if (level >= 3) this.speed = 8;
+            // v1.4.8 限速：8/10 太快来不及躲，非激光统一压到 7（激光保持 12——它是一条直线，可预判）
+            if (level >= 3) this.speed = 7;
         } else if (this.type === 'LASER') {
             this.speed = 12;
             this.piercing = true;
@@ -877,7 +877,7 @@ class Bullet {
             this.size = 12;
         } else if (this.type === 'SPREAD') {
             // 🔱 霰弹（v1.4.7）：弹丸与炮管平行直飞，弹数比旧扇形少、单丸更重
-            this.speed = 9;
+            this.speed = 7; // v1.4.8 限速：9 → 7
             this.size = 6;
             this.damage = 2 + Math.floor(level / 4); // Lv0~3→2，Lv4+→3
         } else if (this.type === 'BOUNCE') {
@@ -886,6 +886,14 @@ class Bullet {
             this.size = 9;
             this.bounces = 0;
             this.maxBounces = BOUNCE_MAX_BOUNCES;
+        }
+        // v1.4.8 威力合并：取消连发（原 Lv4+ 双发 / Lv8+ 三发）→ 只打 1 发"大弹"，
+        // 体积长大（判定框随之变大，更好命中），被合并的弹数折算进伤害。
+        // SPREAD 本身就是多排覆盖，不参与合并。
+        if (this.type !== 'SPREAD' && level >= 4) {
+            const big = level >= 8 ? { size: 8, dmg: 4 } : { size: 4, dmg: 2 };
+            this.size += big.size;
+            this.damage += big.dmg;
         }
         this.vx = undefined; this.vy = undefined;
         if (this.type === 'BOUNCE') {
@@ -1266,8 +1274,6 @@ class Tank {
         else if (this.direction === 'RIGHT') bx = this.x + this.width;
         
         let bType = this.weaponClass || 'NORMAL';
-        let numShots = 1;
-        let burstDelay = 60; // ms between burst shots
 
         // 🔱 霰弹：一次并列打出多排平行弹（Lv5 前后 2/4 排），不做连发延迟
         // v1.4.7 重做：不再斜着打——沿射击方向并列打出 2 排（Lv5+ 4 排）平行弹幕，
@@ -1283,36 +1289,10 @@ class Tank {
             return;
         }
         
-        // v1.4.7 减密+增伤：弹数阶梯整体下调（普通系 Lv8+ 最多 3 发、激光/高爆最多 2 发），
-        // 单发杀伤上调（见 Bullet 构造 damage = 2 + floor(level/2)）——少而重，不再满屏弹。
-        if (bType === 'NORMAL' || bType === 'MISSILE' || bType === 'BOUNCE') {
-            if (this.level >= 8) numShots = 3;
-            else if (this.level >= 4) numShots = 2;
-        } else if (bType === 'LASER' || bType === 'EXPLOSIVE') {
-            if (this.level >= 4) numShots = 2;
-        }
-        
-        const shootSingle = () => {
-            if (!this.alive) return;
-            // Always calculate spawn position relative to CURRENT tank position!
-            let currentBx = this.x + this.width / 2 - 4;
-            let currentBy = this.y + this.height / 2 - 4;
-            if (this.direction === 'UP') currentBy = this.y - 8;
-            else if (this.direction === 'DOWN') currentBy = this.y + this.height;
-            else if (this.direction === 'LEFT') currentBx = this.x - 8;
-            else if (this.direction === 'RIGHT') currentBx = this.x + this.width;
-            
-            let b = new Bullet(this.game, this, currentBx, currentBy, this.direction, this.level, bType);
-            this.game.bullets.push(b);
-        };
-        
-        for (let i = 0; i < numShots; i++) {
-            if (i === 0) {
-                shootSingle();
-            } else {
-                setTimeout(shootSingle, i * burstDelay);
-            }
-        }
+        // v1.4.8：连发机制整体移除——任何等级都只打 1 发，威力折算进子弹体积与伤害
+        //（见 Bullet 构造的"威力合并"档位：Lv4+ 体积 12/伤害+2，Lv8+ 体积 16/伤害+4）。
+        // 连发走 setTimeout 的实现还导致弹幕在时间轴上铺开，屏上"永远有子弹"，是满屏弹的元凶之一。
+        this.game.bullets.push(new Bullet(this.game, this, bx, by, this.direction, this.level, bType));
     }
 
     destroy(killer, damage = 1) {
