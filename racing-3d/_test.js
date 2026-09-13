@@ -667,6 +667,55 @@ const FILE = 'file://' + path.resolve(__dirname, 'index.html');
         `v=${stick.wedgeSpeed.toFixed(1)} moved=${stick.wedgeMoved.toFixed(1)}m`);
     t('T25.4 撞树一次性减速回归正常（25 → < 20）', stick.treeSpeed < 20, `v=${stick.treeSpeed.toFixed(1)}`);
 
+    /* ===== T26 (v1.2.6): 刹车反馈 —— 刹车灯 / 点头 / 胎痕 / 停稳倒车 ===== */
+    const brk = await page.evaluate(() => {
+        const g = window.__game, p = g.player;
+        const out = {};
+        g.togglePause(true);
+        const inpB = { throttle: 0, brake: 1, steer: 0, handbrake: false, nitro: false };
+        const inp0 = { throttle: 0, brake: 0, steer: 0, handbrake: false, nitro: false };
+        // A) 高速刹车：尾灯增亮 + 点头
+        p.pos.set(0, 0, 0); p.idx = 0; p.speed = 30; p.velAngle = 0; p.heading = 0;
+        for (let i = 0; i < 20; i++) p.update(0.016, true, inpB);
+        out.lightOn = p.tailM.emissiveIntensity;
+        out.dive = p.dive;
+        // B) 松开刹车：尾灯恢复、点头回弹
+        p.speed = 30;
+        for (let i = 0; i < 10; i++) p.update(0.016, true, inp0);
+        out.lightOff = p.tailM.emissiveIntensity;
+        out.diveOff = p.dive;
+        // C) 停稳后按住 S → 倒车（回归：刹停继续按住即倒车）
+        p.speed = 0;
+        for (let i = 0; i < 60; i++) p.update(0.016, true, inpB);
+        out.reverseSpeed = p.speed;
+        g.togglePause(false);
+        return out;
+    });
+    t('T26.1 刹车时尾灯增亮（emissive ≥ 2.0）', brk.lightOn >= 2.0, `intensity=${brk.lightOn}`);
+    t('T26.2 松开刹车尾灯恢复（≈0.8）', Math.abs(brk.lightOff - 0.8) < 0.01, `intensity=${brk.lightOff}`);
+    t('T26.3 刹车点头生效（dive > 0.03）', brk.dive > 0.03, `dive=${brk.dive.toFixed(3)}`);
+    t('T26.4 松开后点头回弹（< 0.03）', brk.diveOff < 0.03, `dive=${brk.diveOff.toFixed(3)}`);
+    t('T26.5 停稳后按住 S 倒车（v < -1）', brk.reverseSpeed < -1, `v=${brk.reverseSpeed.toFixed(1)}`);
+    // D) 高速刹车胎痕（真实帧循环：按住 S 跑 0.6s → 数痕迹实例）
+    const skid0 = await page.evaluate(() => {
+        const g = window.__game, p = g.player;
+        g.state = 'RACING'; // 确保帧循环里 controlsLive
+        g.togglePause(false);
+        g.skids.clear(); g.skids.lastDrop = 0;
+        p.speed = 25; p.velAngle = 0; p.heading = 0;
+        Input.keys['s'] = true;
+        return g.skids.cursor;
+    });
+    await new Promise(r => setTimeout(r, 600));
+    const skid1 = await page.evaluate(() => {
+        const g = window.__game, p = g.player;
+        Input.keys['s'] = false;
+        g.togglePause(true);
+        return { cursor: g.skids.cursor, brakingSeen: p.braking, v: p.speed };
+    });
+    const skidDelta = (skid1.cursor - skid0 + 160) % 160;
+    t('T26.6 高速刹车留胎痕（新增痕迹 > 5）', skidDelta > 5, `drops=${skidDelta} braking=${skid1.brakingSeen} v=${skid1.v.toFixed(1)}`);
+
     /* ===== 截图 ===== */
     await page.evaluate(() => window.__game && window.__game.togglePause && window.__game.togglePause(true));
     await new Promise(r => setTimeout(r, 100));

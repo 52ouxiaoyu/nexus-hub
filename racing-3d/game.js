@@ -1,6 +1,6 @@
 'use strict';
 /* =========================================================================
- * 极速飞车 Turbo Rush 3D — v1.2.5
+ * 极速飞车 Turbo Rush 3D — v1.2.6
  * 街机式 3D 环形赛道竞速（参考马车 / 山脊赛车式手感）
  * v1.1.0：双人分屏 PK + 路面方向箭头 + 出赛道车身不消失软回拉
  * v1.1.1：修复 A/D 转向方向（相机 right=-world X 导致视觉左右相反）
@@ -18,6 +18,8 @@
  *         终点门区检测（必须真正从龙门架下穿过才计圈，绕开终点线无效）
  * v1.2.5：修复碰看台"被吸住"——撞击减速改一次性冲量式（closing>1.2 m/s 且冷却结束才扣速，
  *         刮蹭/被夹住不再每帧指数衰减）；立柱圆形推离若会推进看台矩形则跳过，消除互推夹车
+ * v1.2.6：刹车反馈强化 —— 刹车时尾灯增亮（刹车灯）+ 车头点头（brake dive）+
+ *         高速刹车留胎痕；菜单键位注明 S/↓ 为刹车（停稳后倒车）
  * 纯前端：three.js r128（本地）+ 原生 JS，无任何构建工具
  * 坐标系约定：heading=0 朝 +z；heading 增大 = 右转；
  *            left 向量 = (t.z, 0, -t.x)（命名沿用，实际为行进方向右侧）
@@ -810,7 +812,7 @@ function buildCarMesh(color) {
     );
     shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.03; shadow.scale.set(0.85, 1.35, 1);
     g.add(shadow);
-    return { group: g, wheels, frontWheels: [wheels[0], wheels[1]] };
+    return { group: g, wheels, frontWheels: [wheels[0], wheels[1]], tailM: tlM };
 }
 
 /* ---------------- 7. 玩家（支持 P1/P2 双实例，自定义输入） ---------------- */
@@ -845,6 +847,9 @@ class Player {
         this.finished = false;
         const built = buildCarMesh(this.color);
         this.mesh = built.group; this.wheels = built.wheels; this.frontWheels = built.frontWheels;
+        this.tailM = built.tailM;   // v1.2.6：尾灯材质（刹车时增亮）
+        this.dive = 0;              // v1.2.6：刹车点头量（平滑）
+        this.braking = false;       // v1.2.6：高速刹车中（供刹车胎痕）
         this.wheelSpin = 0;
         this.update(0.016, false);
     }
@@ -891,7 +896,8 @@ class Player {
         if (throttle > 0) a += CFG.ACCEL * 1.35 * Math.max(0, 1 - this.speed / vmaxEff) * throttle * (nitroOn ? 1.6 : 1);
         if (brake > 0) {
             if (this.speed > 0.5) a -= CFG.BRAKE * brake;
-            else a += 8 * brake * (1 - clamp(-this.speed / -CFG.REV_MAX, 0, 1));
+            // v1.2.6：修正符号（原 a += 8 导致倒车永不生效，REV_MAX 形同虚设）
+            else a -= 8 * brake * (1 - clamp(-this.speed / -CFG.REV_MAX, 0, 1));
         }
         const sgn = Math.abs(this.speed) > 0.15 ? Math.sign(this.speed) : 0;
         a -= this.speed * (onRoad ? 0.012 : 0.030); // 草地滚阻 2.5× 路面（之前 0.30 太重）
@@ -901,6 +907,7 @@ class Player {
         if (this.speed > vmaxEff) this.speed = Math.max(vmaxEff, this.speed - 7 * dt); // 软限速（之前 -16）
         if (this.speed < CFG.REV_MAX) this.speed = CFG.REV_MAX;
         if (Math.abs(this.speed) < 0.06 && throttle === 0 && brake === 0) this.speed = 0;
+        this.braking = brake > 0 && this.speed > 12; // v1.2.6：高速刹车中（供刹车胎痕判定）
 
         // 转向：方向盘角随速度衰减 + 侧向抓地封顶
         // v1.2.2：新手抓地增强 —— 方向盘角度上限加大、高速衰减放缓，转向更跟手
@@ -951,8 +958,12 @@ class Player {
         this.mesh.position.copy(this.pos);
         this.mesh.rotation.order = 'YXZ';
         this.mesh.rotation.y = this.heading;
-        this.mesh.rotation.x = lerp(this.mesh.rotation.x, Math.atan2(yB - yF, 4.2), clamp(8 * dt, 0, 1));
+        // v1.2.6：刹车点头——高速刹车时车头下压，让刹车"看得见"
+        this.dive = lerp(this.dive, (brake > 0 && this.speed > 4) ? 0.055 : 0, clamp(6 * dt, 0, 1));
+        this.mesh.rotation.x = lerp(this.mesh.rotation.x, Math.atan2(yB - yF, 4.2) + this.dive, clamp(8 * dt, 0, 1));
         this.mesh.rotation.z = lerp(this.mesh.rotation.z, Math.atan2(yL - yR, 2.2), clamp(8 * dt, 0, 1));
+        // v1.2.6：刹车灯——踩刹车（且非静止）时尾灯增亮
+        if (this.tailM) this.tailM.emissiveIntensity = (brake > 0 && Math.abs(this.speed) > 1) ? 2.4 : 0.8;
 
         // 车轮
         this.wheelSpin += this.speed * dt / 0.44;
@@ -1674,9 +1685,10 @@ const Game = {
         }
 
         // 打滑痕迹（共用 skids 系统，按"全局任意车在打滑"判定）
+        // v1.2.6：高速刹车（braking）也留胎痕，强化刹车反馈
         if (racing) {
             const tryDrop = (pp, isP1) => {
-                if (!pp.drifting) return;
+                if (!pp.drifting && !pp.braking) return;
                 const now = performance.now();
                 if (now - this.skids.lastDrop < 36) return;
                 this.skids.lastDrop = now;
