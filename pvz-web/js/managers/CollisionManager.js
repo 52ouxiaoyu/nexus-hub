@@ -25,12 +25,21 @@ class CollisionManager {
                             }
                         } else {
                             p.isDead = true; 
-                            z.takeDamage(p.damage);
+                            // ===== v3.10.0 投手（卷心菜/玉米/黄油）= 破甲弹 =====
+                            // 破甲规则：伤害越过护甲直接落在僵尸本体上，但护甲"感知不到"这次伤害
+                            // → 路障帽/铁桶/报纸/铁门永不脱落（详见 Zombie.takeDamage / armorHp）。
+                            // 该规则只给这三个投掷物开（其它植物仍是普通伤害）。
+                            const pierce = p.type === 'cabbage' || p.type === 'icecabbage'
+                                        || p.type === 'kernel' || p.type === 'popcorn'
+                                        || p.type === 'butter';
+                            z.takeDamage(p.damage, pierce ? { pierce: true } : undefined);
                             
-                            if (p.type === 'snowpea' || p.type === 'wintermelon') {
+                            if (p.type === 'snowpea' || p.type === 'wintermelon' || p.type === 'icecabbage') {
                                 z.setSlow(10.0);
                             } else if (p.type === 'firepea') {
                                 z.thaw(); // Fire thaws out zombies
+                            } else if (p.type === 'butter') {
+                                z.freezeButter(3.0); // 玉米投手 20% 黄油：定身 3 秒
                             }
                             
                             if (p.type === 'melon' || p.type === 'wintermelon') {
@@ -41,6 +50,16 @@ class CollisionManager {
                                         if (p.type === 'wintermelon') {
                                             oz.setSlow(10.0);
                                         }
+                                    }
+                                }
+                            }
+                            
+                            // 爆米花（融合：玉米投手+火爆辣椒）：命中 3×3 溅射（同为破甲伤害）
+                            if (p.type === 'popcorn') {
+                                const allZombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+                                for (let oz of allZombies) {
+                                    if (oz !== z && Math.abs(oz.row - z.row) <= 1 && Math.abs(oz.x - z.x) < 150) {
+                                        oz.takeDamage(p.damage / 2, { pierce: true });
                                     }
                                 }
                             }

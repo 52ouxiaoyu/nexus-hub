@@ -187,12 +187,15 @@ class InputManager {
             else if (type === 'hypnoshroom') imgName = 'HypnoShroom/HypnoShroom';      // v3.6.0 经典新增
             else if (type === 'pumpkinhead') imgName = 'PumpkinHead/PumpkinHead';       // v3.6.0 经典新增
             else if (type === 'plantern') imgName = 'Plantern/0';   // 路灯花用 0.gif 透明大画布(白天),Plantern.gif 是夜版
+            else if (type === 'cabbagepult') imgName = 'CabbagePult/CabbagePult';  // v3.10.0
+            else if (type === 'kernelpult') imgName = 'KernelPult/KernelPult';     // v3.10.0
 
-            // Melon / Winter Melon 图是 PNG，其他植物是 GIF
-            const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon';
+            // Melon / Winter Melon / 两个投手 图是 PNG，其他植物是 GIF
+            const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
+                || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1789053324`
-                : `assets/images/Plants/${imgName}.gif?v=1789053324`;
+                ? `assets/images/Plants/${imgName}.png?v=1789396446`
+                : `assets/images/Plants/${imgName}.gif?v=1789396446`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
         }
     }

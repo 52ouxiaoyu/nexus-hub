@@ -16,6 +16,15 @@ class Zombie extends Entity {
         this.slowTimer = 0;
         this.hasPlantHead = false;
         this.hypnotized = false; // 被魅惑菇策反后变为友方僵尸（向右行进，与敌方僵尸搏斗）
+        // ===== v3.10.0 黄油定身（玉米投手 20% 黄油）=====
+        // 与寒冰减速完全独立：减速只是"走/啃变慢"，黄油是"一步不动、一口不啃"3 秒。
+        this.butterTimer = 0;
+        this.isButtered = false;
+        // ===== v3.10.0 破甲（卷心菜投手 / 玉米投手）=====
+        // hp 是单一血池，护甲（路障/铁桶/报纸）靠"hp 跌破阈值"来脱落。
+        // armorHp 单独记录"护甲能感知到的伤害"：被破甲伤害打掉的部分不计入 armorHp，
+        // 于是打本体却不掉护甲（护甲外观一直保留）。见 takeDamage()。
+        this.armorHp = null;
         
         if (type === 'normal') {
             this.hp = 200; this.maxHp = 200;
@@ -176,6 +185,8 @@ class Zombie extends Entity {
             this.maxHp = this.hp;
             this.speed *= 1.5;
         }
+        // 破甲基准血量（放在所有血量调整之后，保证与 armorMul 的换算一致）
+        this.armorHp = this.hp;
     }
     
     // 植物头僵尸：把一颗基础植物顶在头上（独立 DOM 层，随僵尸同步移动）
@@ -200,8 +211,8 @@ class Zombie extends Entity {
         this.headEl.style.left = (this.x - this.headSize / 2) + 'px';
         this.headEl.style.top = (this.y + this.yOffset - 72 + 6) + 'px'; // 从头顶往下 6px 开始扣住
         this.headEl.style.zIndex = String(Math.floor(this.y) + 1); // 略高于同一行的身体
-        // 被冰冻时头顶植物一起结冰（外观联动）
-        this.headEl.style.filter = this.isSlowed ? 'brightness(70%) sepia(100%) hue-rotate(190deg) saturate(500%)' : '';
+        // 被冰冻/黄油定身时头顶植物一起变色（外观联动，与身体同一套状态滤镜）
+        this.headEl.style.filter = this._statusFilter();
     }
     
     // 死亡时：植物头随僵尸一起翻滚飞落消失（纯视觉，无任何收益/惩罚）
@@ -223,10 +234,36 @@ class Zombie extends Entity {
         this.slowTimer = t;
     }
     
-    // 解冻（火爆辣椒/火球等）：同时清掉蓝色滤镜
+    // ===== v3.10.0 黄油定身（玉米投手）：完全冻结 sec 秒 =====
+    // 独立于寒冰减速：减速是"行动力 ×0.3"，黄油是"行动力 = 0"，可叠加（黄油期间蓝+黄取黄）。
+    freezeButter(sec = 3) {
+        if (this.isDead || this.hypnotized || this.state === 'DYING') return;
+        // 再次命中黄油 → 刷新持续时间（不叠加时长）
+        this.butterTimer = Math.max(this.butterTimer, sec);
+        this.isButtered = true;
+        this._tintedByStatus = true;
+        if (this.element) this.element.style.filter = this._statusFilter();
+        if (this.headEl) this.headEl.style.filter = this._statusFilter();
+    }
+    
+    // 状态滤镜统一出口：黄油（暖黄）优先于寒冰减速（冰蓝）；都没有则返回空串
+    _statusFilter() {
+        if (this.butterTimer > 0) {
+            return 'brightness(105%) sepia(85%) saturate(260%) hue-rotate(5deg)';   // 黄油黄
+        }
+        if (this.isSlowed) {
+            return 'brightness(70%) sepia(100%) hue-rotate(190deg) saturate(500%)'; // strong blue tint
+        }
+        return '';
+    }
+    
+    // 解冻（火爆辣椒/火球等）：清掉减速与黄油、并复位滤镜
     thaw() {
         this.isSlowed = false;
         this.slowTimer = 0;
+        this.butterTimer = 0;
+        this.isButtered = false;
+        this._tintedByStatus = false;
         if (this.element) this.element.style.filter = '';
         if (this.headEl) this.headEl.style.filter = '';
     }
@@ -291,14 +328,17 @@ class Zombie extends Entity {
         this.element.style.top = `${this.y + this.yOffset}px`;
         this.syncPlantHead(); // 植物头跟随身体移动
         
+        // ===== v3.10.0 状态滤镜（黄油 优先于 寒冰）=====
+        // 只在"确有状态"时写入 → 没状态时不动 filter，避免抹掉 zomboni/pogo/ladder 的固有色调。
         if (this.isSlowed) {
             this.slowTimer -= deltaTime;
-            if (this.slowTimer <= 0) {
-                this.isSlowed = false;
-                this.element.style.filter = '';
-            } else {
-                this.element.style.filter = 'brightness(70%) sepia(100%) hue-rotate(190deg) saturate(500%)'; // strong blue tint
-            }
+            if (this.slowTimer <= 0) this.isSlowed = false;
+        }
+        if (this.isSlowed || this.butterTimer > 0 || this._tintedByStatus) {
+            const f = this._statusFilter();
+            this.element.style.filter = f;
+            if (this.headEl) this.headEl.style.filter = f;
+            this._tintedByStatus = !!f;
         }
         
         const currentSpeed = this.isSlowed ? this.speed * 0.3 : this.speed; // 70% slow!
@@ -308,7 +348,7 @@ class Zombie extends Entity {
         const armorMul = this.game.zombieMode ? 3 : 1;
         
         // Handle cone falling off
-        if (this.type === 'conehead' && this.hp <= 200 * armorMul && this.state !== 'DYING') {
+        if (this.type === 'conehead' && this.armorHp <= 200 * armorMul && this.state !== 'DYING') {
             this.type = 'normal';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
@@ -316,7 +356,7 @@ class Zombie extends Entity {
         }
         
         // Handle bucket falling off
-        if (this.type === 'buckethead' && this.hp <= 200 * armorMul && this.state !== 'DYING') {
+        if (this.type === 'buckethead' && this.armorHp <= 200 * armorMul && this.state !== 'DYING') {
             this.type = 'normal';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
@@ -326,7 +366,7 @@ class Zombie extends Entity {
         // 植物头僵尸的头顶植物是纯外观：不提供装甲/不掉落，随僵尸一起行动直到死亡。
         
         // Handle newspaper falling off
-        if (this.type === 'newspaper' && this.hp <= 150 * armorMul && !this.hasLostNewspaper && this.state !== 'DYING') {
+        if (this.type === 'newspaper' && this.armorHp <= 150 * armorMul && !this.hasLostNewspaper && this.state !== 'DYING') {
             this.hasLostNewspaper = true;
             this.speed = 45; // Gets very angry and fast
             this.walkSrc = 'assets/images/Zombies/NewspaperZombie/HeadWalk0.gif';
@@ -335,7 +375,7 @@ class Zombie extends Entity {
         }
 
         // Handle screendoor falling off
-        if (this.type === 'screendoor' && this.hp <= 200 * armorMul && this.state !== 'DYING') {
+        if (this.type === 'screendoor' && this.armorHp <= 200 * armorMul && this.state !== 'DYING') {
             this.type = 'normal';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
@@ -406,6 +446,20 @@ class Zombie extends Entity {
         }
         
         if (this.state === 'DYING') return;
+        
+        // ===== v3.10.0 黄油定身（玉米投手 20% 概率投出黄油）=====
+        // 完全冻结：一步不动、一口不啃、不推进任何状态机（连巨人的秒砸也停），持续 3 秒。
+        // 与寒冰减速叠加共存：减速改速度，黄油直接封动作。死亡判定在上一段，故被黄油期间仍会被打死。
+        if (this.butterTimer > 0) {
+            this.butterTimer -= deltaTime;
+            if (this.butterTimer > 0) return;
+            this.butterTimer = 0;
+            this.isButtered = false;
+            const f = this._statusFilter();
+            this.element.style.filter = f;
+            if (this.headEl) this.headEl.style.filter = f;
+            this._tintedByStatus = !!f;
+        }
         
         // ===== 魅惑（友方）僵尸：短路正常行走/啃食逻辑 =====
         if (this.hypnotized) {
@@ -652,11 +706,17 @@ class Zombie extends Entity {
         }
     }
     
-    takeDamage(amount) {
+    takeDamage(amount, opts) {
         // 友方（被魅惑）僵尸免疫我方植物/子弹/爆炸的一切伤害，
         // 只能被敌方僵尸肉搏杀死（FIGHTING 直接扣血）
         if (this.hypnotized) return;
+        // ===== v3.10.0 破甲（仅卷心菜投手 / 玉米投手的投掷物）=====
+        // opts.pierce=true 表示"越过护甲直接打本体"：
+        //   · hp 正常扣（该掉多少血就掉多少血）
+        //   · armorHp（护甲能感知到的伤害）**不扣** → 路障/铁桶/报纸/铁门永远不脱落
+        // 非破甲伤害两者同时扣，行为与旧版完全一致。
+        if (this.armorHp === null || this.armorHp === undefined) this.armorHp = this.hp + amount;
         this.hp -= amount;
-        // Optional: briefly change brightness or show hit effect
+        if (!(opts && opts.pierce)) this.armorHp -= amount;
     }
 }

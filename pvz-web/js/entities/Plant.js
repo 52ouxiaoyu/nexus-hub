@@ -153,12 +153,27 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789053324';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789396446';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789053324';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789396446';
+        } else if (type === 'cabbagepult') {
+            // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
+            // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
+            stat.hp = 300;
+            stat.fireRate = 1.4;
+            stat.fireTimer = 0;
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1789396446';
+        } else if (type === 'kernelpult') {
+            // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
+            // 与卷心菜投手同享破甲规则。
+            stat.hp = 300;
+            stat.fireRate = 1.4;
+            stat.fireTimer = 0;
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1789396446';
+            stat.butterChance = 0.2;
         } else if (type === 'starfruit') {
             // 杨桃（v3.6.0 经典模式可种）：五向星光射击，弹道复用融合版（Projectile 'star'）
             stat.hp = 300;
@@ -182,7 +197,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789053324';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789396446';
             stat.yOffset = 0;
         }
 
@@ -204,6 +219,11 @@ class Plant extends Entity {
             else if (type === 'fusion_hypnoshroom') { p1 = 'puffshroom'; p2 = 'garlic'; }        // 魅惑菇：小喷菇+大蒜
             else if (type === 'fusion_pumpkinhead') { p1 = 'wallnut'; p2 = 'tallnut'; }          // 南瓜壳：坚果墙+高坚果
             else if (type === 'fusion_chomper_wallnut') { p1 = 'wallnut'; p2 = 'chomper'; }      // 大嘴坚果：大嘴花+坚果墙
+            // ===== v3.10.0 以卷心菜投手 / 玉米投手为基础的新融合 =====
+            else if (type === 'fusion_icecabbage') { p1 = 'cabbagepult'; p2 = 'iceshroom'; }    // 寒冰卷心菜：卷心菜投手+寒冰菇
+            else if (type === 'fusion_popcorn') { p1 = 'kernelpult'; p2 = 'jalapeno'; }          // 爆米花投手：玉米投手+火爆辣椒
+            else if (type === 'fusion_cabbagenut') { p1 = 'cabbagepult'; p2 = 'wallnut'; }       // 卷心菜堡垒：卷心菜投手+坚果墙
+            else if (type === 'fusion_veggiepult') { p1 = 'cabbagepult'; p2 = 'kernelpult'; }    // 双料投手：卷心菜投手+玉米投手
             else {
                 const parts = type.split('_');
                 p1 = parts[1];
@@ -335,6 +355,31 @@ class Plant extends Entity {
                     this.fusionOverlay.src = s2.src; // chomper 头
                     this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 85%, 0 85%)';
                     this.fusionOverlay.style.transform = 'translate(0px, -25px) scale(0.9)';
+                    this.fusionOverlay.style.transformOrigin = 'center center';
+                } else if (type === 'fusion_icecabbage') {
+                    // 寒冰卷心菜：原版卷心菜投手立绘整体转冰蓝（与"冰西瓜=西瓜转蓝"同一套最小改动思路）
+                    this.element.src = s1.src;
+                    this.element.style.filter = 'brightness(112%) hue-rotate(120deg) saturate(1.7)';
+                    this.fusionOverlay.style.display = 'none';
+                } else if (type === 'fusion_popcorn') {
+                    // 爆米花投手：原版玉米投手立绘整体转焦金色（玉米受热爆开）
+                    this.element.src = s1.src;
+                    this.element.style.filter = 'hue-rotate(-18deg) saturate(1.9) brightness(1.18)';
+                    this.fusionOverlay.style.display = 'none';
+                } else if (type === 'fusion_cabbagenut') {
+                    // 卷心菜堡垒：坚果墙身 + 卷心菜投手头（沿用"大嘴坚果"同一套头顶拼接）
+                    this.yOffset = s2.yOffset;      // 宿主是坚果墙，用它的落位偏移
+                    this.element.src = s2.src;      // wallnut 身体
+                    this.fusionOverlay.src = s1.src; // cabbagepult 头
+                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 88%, 0 88%)';
+                    this.fusionOverlay.style.transform = 'translate(0px, -22px) scale(0.95)';
+                    this.fusionOverlay.style.transformOrigin = 'center center';
+                } else if (type === 'fusion_veggiepult') {
+                    // 双料投手：玉米投手身 + 卷心菜头（两种投掷物交替）
+                    this.element.src = s2.src;      // kernelpult 本体
+                    this.fusionOverlay.src = s1.src; // cabbagepult 头
+                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 72%, 0 72%)';
+                    this.fusionOverlay.style.transform = 'translate(-2px, -18px) scale(0.92)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 }
                 
@@ -653,7 +698,7 @@ class Plant extends Entity {
         
         if (this.isDead) return;
         
-        if ((this.hasTrait('peashooter') || this.hasTrait('snowpea') || this.hasTrait('repeater') || this.hasTrait('puffshroom') || this.hasTrait('threepeater') || this.hasTrait('fumeshroom') || this.hasTrait('gatlingpea') || this.hasTrait('splitpea') || this.hasTrait('scaredyshroom') || this.hasTrait('melonpult') || this.hasTrait('wintermelon') || this.hasTrait('cattail'))) {
+        if ((this.hasTrait('peashooter') || this.hasTrait('snowpea') || this.hasTrait('repeater') || this.hasTrait('puffshroom') || this.hasTrait('threepeater') || this.hasTrait('fumeshroom') || this.hasTrait('gatlingpea') || this.hasTrait('splitpea') || this.hasTrait('scaredyshroom') || this.hasTrait('melonpult') || this.hasTrait('wintermelon') || this.hasTrait('cattail') || this.hasTrait('cabbagepult') || this.hasTrait('kernelpult'))) {
             
             // Handle Scaredy-shroom hiding
             if (this.hasTrait('scaredyshroom')) {
@@ -721,6 +766,23 @@ class Plant extends Entity {
                          else projType = 'cattail';
                     }
                     
+                    // ===== v3.10.0 两个投手（卷心菜 / 玉米）=====
+                    // 都是抛射物，命中时按"破甲"结算（打本体、护甲不脱落，见 CollisionManager）。
+                    if (this.hasTrait('cabbagepult')) projType = 'cabbage';
+                    if (this.hasTrait('kernelpult')) projType = 'kernel';
+                    // 双料投手（卷心菜投手+玉米投手）：两种投掷物交替出手
+                    if (this.type === 'fusion_veggiepult') {
+                        this.veggieToggle = !this.veggieToggle;
+                        projType = this.veggieToggle ? 'cabbage' : 'kernel';
+                    }
+                    // 玉米系（含双料）20% 概率改投黄油：破甲 + 定身 3 秒
+                    if (projType === 'kernel' && Math.random() < (this.butterChance || 0.2)) {
+                        projType = 'butter';
+                    }
+                    // 两个投手系融合的专属弹种
+                    if (this.type === 'fusion_icecabbage') projType = 'icecabbage';
+                    if (this.type === 'fusion_popcorn') projType = 'popcorn';
+                    
                     // 樱桃射手特色：普通子弹为樱桃色豌豆，每第 10 次攻击发射小樱桃炸弹
                     // （伤害=原版樱桃炸弹 1800 的一半=900，命中后 3×3 爆炸）
                     if (this.type === 'fusion_cherrybomb_peashooter') {
@@ -744,9 +806,10 @@ class Plant extends Entity {
                         // Forward shot
                         if (hasZombieAhead || cattailTarget) {
                             let target = this.hasTrait('cattail') ? cattailTarget : null;
-                            // 西瓜/冰西瓜是"抛射"：需要知道落点，取本行正前方最近的一只僵尸
+                            // 西瓜/冰西瓜/卷心菜/玉米都是"抛射"：需要知道落点，取本行正前方最近的一只僵尸
                             // （Projectile.setupLob 会据此决定抛物线跨度；普通射手不需要 target）
-                            if (!target && (this.hasTrait('melonpult') || this.hasTrait('wintermelon'))) {
+                            if (!target && (this.hasTrait('melonpult') || this.hasTrait('wintermelon')
+                                            || this.hasTrait('cabbagepult') || this.hasTrait('kernelpult'))) {
                                 const ahead = this.game.entities.filter(e =>
                                     e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized &&
                                     e.row === this.row && e.x > this.x
