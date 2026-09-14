@@ -952,7 +952,7 @@ function resolveShot() {
             cont = pottedNon8.length > 0 || eightSpotted;
         }
         else if (openTable)                     cont = pottedNon8.length > 0;   // 开放台面：进任意非 8 球即续
-        else if (groupRemaining(P.group) === 0) cont = true;                      // 已清台打 8：未犯规即续
+        else if (groupRemaining(P.group) === 0) cont = false;                     // 打 8 阶段：没进 8（未犯规）也换人，进 8 已在上面直接结算胜负
         else                                    cont = pottedNon8.some(n => ballType(n) === P.group);
     }
 
