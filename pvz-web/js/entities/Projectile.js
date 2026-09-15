@@ -25,8 +25,8 @@ class Projectile extends Entity {
             // 旧素材是从 MelonPult 整株立绘 flood-fill 出的 50×40 残片 —— 右侧被齐边切掉、
             // 右下被瓜篮挖空，这就是玩家看到的"贴图不完整"。
             this.element.src = type === 'melon'
-                ? 'assets/images/Plants/MelonPult/Melon.png?v=1789396446'
-                : 'assets/images/Plants/MelonPult/WinterMelon.png?v=1789396446';
+                ? 'assets/images/Plants/MelonPult/Melon.png?v=1789480595'
+                : 'assets/images/Plants/MelonPult/WinterMelon.png?v=1789480595';
             this.setTransform();   // v3.10.0：裸写 transform 会顶掉 .entity 的居中基准（贴图偏移半个身位）
             // 注意：不能再加 border-radius:50% —— 那会把完整的椭圆瓜体按内切圆再裁一圈
             this.damage = 60;
@@ -36,7 +36,13 @@ class Projectile extends Entity {
             // 子弹取自 TSR 原版 Projectiles 图集（行标签 "Cabbage"）：30×27 绿色卷心菜。
             // 破甲：命中时以 {pierce:true} 结算 → 越过路障/铁桶/报纸/铁门直接打本体，护甲不脱落
             // （见 CollisionManager.update 与 Zombie.takeDamage）。
-            this.element.src = 'assets/images/Plants/CabbagePult/Cabbage.png?v=1789396446';
+            this.element.src = 'assets/images/Plants/CabbagePult/Cabbage.png?v=1789480595';
+            // v3.11.0 尺寸校准：原图 30×27 投出来只有"米粒大"，与立绘篮筐里那颗（实测 35×29）
+            // 不成比例 → 放大到 34×31 与篮内弹药等大（用 width/height，不碰 transform 以免顶掉居中基准）
+            this.element.style.width = '34px';
+            this.element.style.height = '31px';
+            this.element.style.objectFit = 'contain';
+            this.radius = 12;
             this.damage = 40;
             if (type === 'icecabbage') {
                 // 寒冰卷心菜（融合：卷心菜投手+寒冰菇）：同造型加冰蓝，命中附带减速
@@ -47,12 +53,19 @@ class Projectile extends Entity {
             // ===== v3.10.0 玉米投手 =====
             // 子弹取自原版图集（行标签 "Kernel"）：淡黄玉米粒。同样走抛物线 + 破甲。
             // 爆米花（融合：玉米投手+火爆辣椒）：焦色更大颗，命中 3×3 溅射。
-            this.element.src = 'assets/images/Plants/KernelPult/Kernel.png?v=1789396446';
+            this.element.src = 'assets/images/Plants/KernelPult/Kernel.png?v=1789480595';
+            // v3.11.0 尺寸校准：原图 16×17 投出来只有"米粒大"；立绘篮筐里那颗实测 19×20，
+            // 所以放大到 22×23 —— 略大于篮内单颗，空中飞行时才有存在感（爆米花更大一颗 30×30）。
+            // 用 width/height 而不是 transform，避免顶掉 .entity 的 translate(-50%,-50%) 居中基准。
+            this.element.style.width = '22px';
+            this.element.style.height = '23px';
+            this.element.style.objectFit = 'contain';
+            this.radius = 12;
             this.damage = 20;
             if (type === 'popcorn') {
                 this.element.style.filter = 'hue-rotate(-18deg) saturate(1.9) brightness(1.18)';
-                this.element.style.width = '28px';
-                this.element.style.height = '28px';
+                this.element.style.width = '30px';
+                this.element.style.height = '30px';
                 this.element.style.objectFit = 'contain';
                 this.damage = 40;
             }
@@ -60,14 +73,14 @@ class Projectile extends Entity {
         } else if (type === 'butter') {
             // ===== v3.10.0 玉米投手的黄油（20% 概率）=====
             // 原版图集行标签 "Butter" 的黄油块；命中后定身 3 秒（见 CollisionManager）。
-            // 图集里黄油块偏大（46×48），显示时收小到 30×30（用 width/height，不碰 transform，
-            // 以免破坏 .entity 的 translate(-50%,-50%) 居中基准）。
-            this.element.src = 'assets/images/Plants/KernelPult/Butter.png?v=1789396446';
-            this.element.style.width = '30px';
-            this.element.style.height = '30px';
+            // v3.11.0：与放大后的玉米粒同一档体积，46×48 → 28×29
+            // （用 width/height，不碰 transform，以免破坏 .entity 的 translate(-50%,-50%) 居中基准）。
+            this.element.src = 'assets/images/Plants/KernelPult/Butter.png?v=1789480595';
+            this.element.style.width = '28px';
+            this.element.style.height = '29px';
             this.element.style.objectFit = 'contain';
             this.damage = 40;
-            this.radius = 12;
+            this.radius = 14;
             this.setupLob(targetZombie);
         } else if (type === 'cattail') {
             this.element.src = 'assets/images/Plants/Cactus/Projectile32.png';
@@ -75,12 +88,12 @@ class Projectile extends Entity {
             this.damage = 20;
             this.speed = 400;
         } else if (type === 'cattail_melon') {
-            this.element.src = 'assets/images/Plants/MelonPult/Melon_small.png?v=1789396446';
+            this.element.src = 'assets/images/Plants/MelonPult/Melon_small.png?v=1789480595';
             this.setTransform('scale(0.8)');
             this.damage = 60;
             this.speed = 400;
         } else if (type === 'cattail_wintermelon') {
-            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon_small.png?v=1789396446';
+            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon_small.png?v=1789480595';
             this.setTransform('scale(0.8)');
             this.damage = 60;
             this.speed = 400;

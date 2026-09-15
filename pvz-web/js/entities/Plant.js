@@ -153,26 +153,26 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789396446';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789480595';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789396446';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789480595';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1789396446';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1789480595';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1789396446';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1789480595';
             stat.butterChance = 0.2;
         } else if (type === 'starfruit') {
             // 杨桃（v3.6.0 经典模式可种）：五向星光射击，弹道复用融合版（Projectile 'star'）
@@ -197,7 +197,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789396446';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789480595';
             stat.yOffset = 0;
         }
 
@@ -274,6 +274,13 @@ class Plant extends Entity {
                     this.fusionOverlay.style.position = 'absolute';
                     this.fusionOverlay.style.pointerEvents = 'none';
                     this.fusionOverlay.style.zIndex = '1';
+                    // ===== v3.11.0 关键修复 =====
+                    // fusionOverlay 是裸 <img>，不带 .entity 的 transform: translate(-50%,-50%)，
+                    // 而下面每个分支又直接给它写 transform → 整块叠加部件相对植物中心
+                    // 偏右半宽、偏下半高（越大的贴图偏得越多），这就是玩家看到的
+                    // "融合的植物被扔到原植物的右下角"。统一在每处 transform 前置居中基准。
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%)';
+                    this.fusionOverlay.style.transformOrigin = 'center center';
                 }
                 
                 if (type === 'fusion_peaflower') {
@@ -281,14 +288,14 @@ class Plant extends Entity {
                     this.fusionOverlay.src = s1.src;
                     // Keep the entire Peashooter head (remove just the stem)
                     this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 65%, 0 65%)';
-                    this.fusionOverlay.style.transform = 'translate(0px, -20px) scale(1.0)';
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(0px, -20px) scale(1.0)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_nutshooter') {
                     this.element.src = s2.src;
                     this.fusionOverlay.src = s1.src;
                     // Keep the entire Peashooter head
                     this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 65%, 0 65%)';
-                    this.fusionOverlay.style.transform = 'translate(5px, -15px) scale(1.0)';
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(5px, -15px) scale(1.0)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_frostbomb') {
                     this.element.src = s2.src;
@@ -298,7 +305,7 @@ class Plant extends Entity {
                     this.element.src = s2.src;
                     this.fusionOverlay.src = s1.src;
                     this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 85%, 0 85%)'; // Show the face!
-                    this.fusionOverlay.style.transform = 'translate(0px, -30px) scale(0.9)';
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(0px, -30px) scale(0.9)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_spikynut') {
                     this.yOffset = s2.yOffset; // use wallnut's offset for the main body
@@ -306,15 +313,18 @@ class Plant extends Entity {
                     this.fusionOverlay.src = s1.src; // spikeweed
                     this.fusionOverlay.style.clipPath = 'none'; // show full spikeweed
                     // Spikeweed needs to be placed at the bottom of the wallnut
-                    // Wallnut is at -15, Spikeweed normally at 25. Difference is 40.
-                    this.fusionOverlay.style.transform = 'translate(0px, 40px)';
+                    // v3.11.0：叠加层改为"以中心对齐"后，这里必须重新标定——
+                    // 旧值 40 是在"左上角对齐"的错误坐标系里试出来的，换算到中心系应为 24px
+                    // （否则刺会整体浮在坚果下方 ~23px，中间露一条缝）。
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(0px, 24px)';
                 } else if (type === 'fusion_spikerock_tallnut') {
                     this.yOffset = s2.yOffset; // use tallnut's offset
                     this.element.src = s2.src; // tallnut
                     this.fusionOverlay.src = s1.src; // spikerock
                     this.fusionOverlay.style.clipPath = 'none'; // show full spikerock
-                    // Tallnut is at -20, Spikerock normally at 20. Difference is 40.
-                    this.fusionOverlay.style.transform = 'translate(0px, 40px)';
+                    // Tallnut is at -20, Spikerock normally at 20.
+                    // v3.11.0：同上，40 → 30（中心系重标定）
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(0px, 30px)';
                 } else if (type === 'fusion_snownut') {
                     // Wallnut colored ice blue
                     this.element.src = s2.src; // wallnut
@@ -332,7 +342,7 @@ class Plant extends Entity {
                     this.element.src = s2.src; // cattail
                     this.fusionOverlay.src = s1.src; // melon
                     this.fusionOverlay.style.clipPath = 'none';
-                    this.fusionOverlay.style.transform = 'translate(-5px, -30px) scale(0.7)'; // put on top of cattail head
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(-5px, -30px) scale(0.7)'; // put on top of cattail head
                 } else if (type === 'fusion_starfruit') {
                     // 杨桃：使用原版杨桃整株立绘
                     this.element.src = 'assets/images/Plants/Starfruit/Starfruit.gif';
@@ -350,11 +360,14 @@ class Plant extends Entity {
                     this.yOffset = -15;
                     this.fusionOverlay.style.display = 'none';
                 } else if (type === 'fusion_chomper_wallnut') {
-                    // 大嘴坚果：坚果身 + 大嘴花头（与图鉴合成图一致）
+                    // 大嘴坚果：坚果身 + 大嘴花头
+                    // v3.11.0：大嘴花立绘在 130×114 画布里整体偏左 ~20px（原图集如此），
+                    // 直接居中叠上去会让头探出坚果左边 24px、看着像"贴歪了"——
+                    // 补 20px 横向偏移后头部才真正压在坚果中心（重合度 52% → 87%）。
                     this.element.src = s1.src; // wallnut 身体
                     this.fusionOverlay.src = s2.src; // chomper 头
                     this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 85%, 0 85%)';
-                    this.fusionOverlay.style.transform = 'translate(0px, -25px) scale(0.9)';
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(20px, -25px) scale(0.9)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_icecabbage') {
                     // 寒冰卷心菜：原版卷心菜投手立绘整体转冰蓝（与"冰西瓜=西瓜转蓝"同一套最小改动思路）
@@ -367,19 +380,20 @@ class Plant extends Entity {
                     this.element.style.filter = 'hue-rotate(-18deg) saturate(1.9) brightness(1.18)';
                     this.fusionOverlay.style.display = 'none';
                 } else if (type === 'fusion_cabbagenut') {
-                    // 卷心菜堡垒：坚果墙身 + 卷心菜投手头（沿用"大嘴坚果"同一套头顶拼接）
+                    // 卷心菜堡垒：坚果墙身 + 把卷心菜投手的"篮筐+卷心菜"当帽子扣在坚果头顶
+                    // （v3.11.0 用户要求：这类"帽子"必须落在宿主上方、呈现出帽子的形状）
                     this.yOffset = s2.yOffset;      // 宿主是坚果墙，用它的落位偏移
                     this.element.src = s2.src;      // wallnut 身体
-                    this.fusionOverlay.src = s1.src; // cabbagepult 头
-                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 88%, 0 88%)';
-                    this.fusionOverlay.style.transform = 'translate(0px, -22px) scale(0.95)';
+                    this.fusionOverlay.src = s1.src; // cabbagepult（只取左上角的篮筐+卷心菜）
+                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 46% 0, 46% 46%, 0 46%)';
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(26px, -4px)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_veggiepult') {
-                    // 双料投手：玉米投手身 + 卷心菜头（两种投掷物交替）
+                    // 双料投手：玉米投手身 + 把卷心菜的"篮筐+卷心菜"当帽子扣在玉米头顶
                     this.element.src = s2.src;      // kernelpult 本体
-                    this.fusionOverlay.src = s1.src; // cabbagepult 头
-                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 72%, 0 72%)';
-                    this.fusionOverlay.style.transform = 'translate(-2px, -18px) scale(0.92)';
+                    this.fusionOverlay.src = s1.src; // cabbagepult（只取左上角的篮筐+卷心菜）
+                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 48% 0, 48% 50%, 0 50%)';
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(37px, 8px)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 }
                 
@@ -1156,7 +1170,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     this.isArmed = true;
                     this.element.src = 'assets/images/Plants/PotatoMine/PotatoMine.gif';
                     if (this.type === 'fusion_sporemine' && this.fusionOverlay) {
-                        this.fusionOverlay.style.transform = 'translate(0px, -45px) scale(0.9)';
+                        this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(0px, -45px) scale(0.9)';
                     }
                 }
             } else if (!this.hasExploded) {
