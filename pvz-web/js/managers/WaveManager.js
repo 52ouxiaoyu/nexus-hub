@@ -6,7 +6,16 @@ class WaveManager {
         this.spawnInterval = 20; // 20 seconds before the second zombie
         this.waveCount = 0;
     }
-    
+
+    // v3.11.1：经典/融合「再玩一局」原地重开时，把刷怪节奏恢复到开局状态
+    // （此前 spawnInterval 只减不增、timeElapsed 累计，重开后高级僵尸立刻出现）
+    reset() {
+        this.timeElapsed = 0;
+        this.nextSpawnTime = 25; // First zombie in 25 seconds
+        this.spawnInterval = 20; // 20 seconds before the second zombie
+        this.waveCount = 0;
+    }
+
     update(deltaTime) {
         if (this.game.vaseMode) return; // 砸罐子模式：所有僵尸来自罐子，waveManager 不刷怪
         if (this.game.zombieMode) return; // 我是僵尸模式：僵尸全部由玩家购买释放，waveManager 不刷怪
