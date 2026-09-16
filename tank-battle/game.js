@@ -1508,43 +1508,57 @@ class Tank {
             }
         }
         if (this instanceof Enemy && !this.isBoss) {
-            let dropChance = 0.25; // Increased base drop chance significantly
+            // v1.4.14：整体掉率减半——用户反馈"道具动不动就出现，太容易获得"
+            let dropChance = 0.12;
             let type = null;
             
             if (this.weaponClass && this.weaponClass !== 'NORMAL') {
-                dropChance = 1.0;
+                dropChance = 0.45;
                 if (this.weaponClass === 'MISSILE') type = POWERUP_TYPES.W_MISSILE;
                 else if (this.weaponClass === 'LASER') type = POWERUP_TYPES.W_LASER;
                 else if (this.weaponClass === 'EXPLOSIVE') type = POWERUP_TYPES.W_EXPLOSIVE;
                 else if (this.weaponClass === 'SPREAD') type = POWERUP_TYPES.W_SPREAD;
                 else if (this.weaponClass === 'BOUNCE') type = POWERUP_TYPES.W_BOUNCE;
             } else {
+                // v1.4.14：各池去重（旧池 W_MISSILE×2 / ELITE STAR×2 的双权重是同类扎堆的帮凶），
+                // 抽取改用抽签袋 _pickComic——洗匀逐个抽、抽空才重洗，一轮内类型绝不重复
                 let dropTypes = [
                     POWERUP_TYPES.SHIELD, POWERUP_TYPES.BOMB, POWERUP_TYPES.SHOVEL, 
                     POWERUP_TYPES.TIME, POWERUP_TYPES.STAR, 
                     POWERUP_TYPES.ULTIMATE,
-                    POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.W_MISSILE,
+                    POWERUP_TYPES.W_MISSILE,
                     POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_EXPLOSIVE,
                     POWERUP_TYPES.W_SPREAD, POWERUP_TYPES.W_BOUNCE
                 ];
                 
                 if (this.variant === 'HEAVY') {
-                    dropChance = 0.4;
+                    dropChance = 0.2;
                     dropTypes = [POWERUP_TYPES.LIFE, POWERUP_TYPES.SHOVEL, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.W_SPREAD, POWERUP_TYPES.BOMB, POWERUP_TYPES.ULTIMATE];
                 } else if (this.variant === 'FAST') {
-                    dropChance = 0.35;
+                    dropChance = 0.18;
                     dropTypes = [POWERUP_TYPES.TIME, POWERUP_TYPES.SHIELD, POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_BOUNCE, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.ULTIMATE];
                 } else if (this.variant === 'ELITE') {
-                    dropChance = 0.6;
-                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.STAR, POWERUP_TYPES.LIFE, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.W_SPREAD, POWERUP_TYPES.ULTIMATE];
+                    dropChance = 0.3;
+                    dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.LIFE, POWERUP_TYPES.W_EXPLOSIVE, POWERUP_TYPES.W_SPREAD, POWERUP_TYPES.ULTIMATE];
                 } else if (this.variant === 'SMART') {
-                    dropChance = 0.45;
+                    dropChance = 0.22;
                     dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.SHIELD, POWERUP_TYPES.W_LASER, POWERUP_TYPES.W_BOUNCE, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.ULTIMATE];
                 } else if (this.variant === 'RAPID') {
-                    dropChance = 0.4;
+                    dropChance = 0.2;
                     dropTypes = [POWERUP_TYPES.STAR, POWERUP_TYPES.W_MISSILE, POWERUP_TYPES.W_SPREAD, POWERUP_TYPES.ULTIMATE];
                 }
-                type = dropTypes[Math.floor(Math.random() * dropTypes.length)];
+                type = this.game._pickComic('enemyDrop', dropTypes);
+                // 场上已有同类型 → 重抽一次；仍重复则放弃本次掉落（屏幕不再堆同款）
+                if (this.game.powerUps.some(p => p.type === type)) {
+                    const alt = this.game._pickComic('enemyDrop', dropTypes);
+                    type = this.game.powerUps.some(p => p.type === alt) ? null : alt;
+                }
+            }
+            // v1.4.14：武器坦克击杀掉"同款武器"——场上已有该武器道具时直接跳过，
+            // 旧版 100% 掉落是同类堆积的最大来源
+            if (type && this.weaponClass && this.weaponClass !== 'NORMAL' &&
+                this.game.powerUps.some(p => p.type === type)) {
+                type = null;
             }
 
             if (Math.random() < dropChance && type) {
