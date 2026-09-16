@@ -815,6 +815,39 @@ const FILE = 'file://' + path.resolve(__dirname, 'index.html');
         t('T29.4 黑色边框存在', sign.borderDark === true);
     }
 
+    /* ===== T30 (v1.3.0): 路面加宽 + 草地惩罚渐变（修复吸住/弹射体感） ===== */
+    const wide = await page.evaluate(() => {
+        const g = window.__game, w = g.world, p = g.player;
+        g.togglePause(true);
+        const out = { roadHalf: CFG.ROAD_HALF };
+        // 找一段最直的赛道（曲率最小），避免直线测试被弯道几何污染
+        let idx = 0, mc = Infinity;
+        for (let i = 0; i < w.smp.length; i += 10) if (w.smp[i].curv < mc) { mc = w.smp[i].curv; idx = i; }
+        out.minCurv = mc;
+        const base = w.smp[idx];
+        const edge = CFG.ROAD_HALF + CFG.CURB_W;
+        // 三档横向位置：路中央(off=0) / 路缘外2.5m(off≈0.5) / 深草(off=1)，给油 1.2s 看速度分层
+        const runAt = (latOff) => {
+            p.speed = 30; p.velAngle = Math.atan2(base.t.x, base.t.z);
+            p.heading = p.velAngle; p.steerA = 0;
+            p.pos.copy(base.p).addScaledVector(base.left, latOff);
+            p.idx = idx;
+            const st = { throttle: 1, brake: 0, steer: 0, handbrake: false, nitro: false };
+            for (let i = 0; i < 75; i++) p.update(0.016, true, st);
+            return p.speed;
+        };
+        out.vRoad = runAt(0);
+        out.vMid = runAt(edge + 2.5);
+        out.vGrass = runAt(edge + 10);
+        g.togglePause(false);
+        return out;
+    });
+    t('T30.1 路面已加宽（半宽 8.5m，路宽 17m）', wide.roadHalf === 8.5, `ROAD_HALF=${wide.roadHalf}`);
+    t('T30.2 测试路段足够直（曲率 < 1/250m）', wide.minCurv < 0.004, `curv=${wide.minCurv.toFixed(5)} rad/m`);
+    t('T30.3 深草极速仍受惩罚（< 21 m/s）', wide.vGrass < 21, `v=${wide.vGrass.toFixed(1)}`);
+    t('T30.4 过渡带速度介于路面与深草之间（渐变无悬崖）', wide.vRoad > wide.vMid && wide.vMid > wide.vGrass && wide.vMid > 25 && wide.vMid < 36,
+        `road=${wide.vRoad.toFixed(1)} mid=${wide.vMid.toFixed(1)} grass=${wide.vGrass.toFixed(1)}`);
+
     /* ===== 截图 ===== */
     await page.evaluate(() => window.__game && window.__game.togglePause && window.__game.togglePause(true));
     await new Promise(r => setTimeout(r, 100));

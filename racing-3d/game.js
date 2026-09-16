@@ -1,6 +1,6 @@
 'use strict';
 /* =========================================================================
- * 极速飞车 Turbo Rush 3D — v1.2.9
+ * 极速飞车 Turbo Rush 3D — v1.3.0
  * 街机式 3D 环形赛道竞速（参考马车 / 山脊赛车式手感）
  * v1.1.0：双人分屏 PK + 路面方向箭头 + 出赛道车身不消失软回拉
  * v1.1.1：修复 A/D 转向方向（相机 right=-world X 导致视觉左右相反）
@@ -27,6 +27,9 @@
  *         压到路面（最急弯 κ=1/26 时 13m 悬臂偏 3.2m），缩短后任意弯道不入侵路面
  * v1.2.9：路牌指示符号重绘 —— 抽象 V 形斜线 → 实心直行大箭头（粗箭杆 + 三角头，
  *         白衬边 + 黄底渐变 + 底部速度线），远看一眼可知"沿此方向直行"
+ * v1.3.0：路面加宽（半宽 7→8.5m，路宽 14→17m）+ 草地惩罚渐变化——
+ *         路缘外 0~5m 过渡带（off 0→1），极速/滚阻/抓地/车尾跟随全部随 off 插值，
+ *         根除"出路面瞬间被吸住、回路面瞬间弹射"的悬崖式体感；深草惩罚力度不变
  * 纯前端：three.js r128（本地）+ 原生 JS，无任何构建工具
  * 坐标系约定：heading=0 朝 +z；heading 增大 = 右转；
  *            left 向量 = (t.z, 0, -t.x)（命名沿用，实际为行进方向右侧）
@@ -64,7 +67,7 @@ function disposeObj(root) {
 
 /* ---------------- 1. 常量 ---------------- */
 const CFG = {
-    ROAD_HALF: 7.0,          // 路面半宽
+    ROAD_HALF: 8.5,          // v1.3.0：路面半宽（7.0 → 8.5，路宽 14m → 17m）
     CURB_W: 1.3,             // 红白路肩宽
     SAMPLES: 900,            // 赛道采样数
     LAPS: 3,
@@ -910,10 +913,15 @@ class Player {
         this.idx = w.nearestIdx(this.pos.x, this.pos.z, this.idx);
         const near = w.smp[this.idx];
         const lat = w.lateralOffset(this.pos.x, this.pos.z, this.idx);
-        const onRoad = Math.abs(lat) <= CFG.ROAD_HALF + CFG.CURB_W;
+        // v1.3.0：草地惩罚改为路缘外 0~5m 渐入（off: 0=路面 → 1=深草地）——
+        // 旧版在路缘处是硬悬崖（极速 46→18.4 瞬间切换），出弯蹭上路缘外就"瞬间被吸住"，
+        // 回到路面又瞬间恢复满加速像"弹射"；渐变后出/回路都是平滑过渡
+        const roadEdge = CFG.ROAD_HALF + CFG.CURB_W;
+        const off = clamp((Math.abs(lat) - roadEdge) / 5, 0, 1);
+        const onRoad = off <= 0;
 
-        // v1.2.7：出赛道惩罚加重（草地极速 40%、滚阻 4.6× 路面）—— 抄近路必然亏本
-        const vmaxEff = (nitroOn ? CFG.VMAX_NITRO : CFG.VMAX) * (onRoad ? 1 : 0.40);
+        // 深草地（off=1）数值与 v1.2.7 一致：极速 40%、滚阻 4.6×、抓地 65%——抄近路仍然亏本
+        const vmaxEff = (nitroOn ? CFG.VMAX_NITRO : CFG.VMAX) * (1 - off * 0.60);
         let a = 0;
         if (throttle > 0) a += CFG.ACCEL * 1.35 * Math.max(0, 1 - this.speed / vmaxEff) * throttle * (nitroOn ? 1.6 : 1);
         if (brake > 0) {
@@ -922,7 +930,7 @@ class Player {
             else a -= 8 * brake * (1 - clamp(-this.speed / -CFG.REV_MAX, 0, 1));
         }
         const sgn = Math.abs(this.speed) > 0.15 ? Math.sign(this.speed) : 0;
-        a -= this.speed * (onRoad ? 0.012 : 0.055); // v1.2.7：草地滚阻 4.6× 路面（抄近路亏本）
+        a -= this.speed * (0.012 + off * 0.043); // v1.3.0：滚阻随 off 渐增（路面 0.012 → 深草 0.055）
         a -= 0.35 * sgn;
         if (hb) a -= 6 * sgn;
         this.speed += a * dt;
@@ -938,15 +946,15 @@ class Player {
         if (steerIn === 0) this.steerA = lerp(this.steerA, 0, 1 - Math.exp(-12 * dt));
         else this.steerA = lerp(this.steerA, steerIn * steerMax, 1 - Math.exp(-10 * dt));
         let yawRate = (this.speed / 2.6) * Math.tan(this.steerA);
-        // v1.2.7：草地抓地只有路面的 65%——出赛道后高速打方向会更滑，逼玩家回路面
-        const gripCap = CFG.LAT_GRIP * (hb ? 0.55 : (onRoad ? 1 : CFG.GRASS_GRIP));
+        // v1.3.0：抓地随 off 渐降（路面 100% → 深草 65%）——出赛道后高速打方向更滑
+        const gripCap = CFG.LAT_GRIP * (hb ? 0.55 : (1 - off * 0.35));
         const latCap = gripCap / Math.max(Math.abs(this.speed), 3);
         yawRate = clamp(yawRate, -latCap, latCap);
         this.heading = wrapAngle(this.heading + yawRate * dt);
 
         // 漂移：速度方向滞后于车头
-        // v1.2.7：路面 gripRate 11（车尾贴线）；草地 7（更滑）；侧滑掉速 0.40
-        const gripRate = hb ? 2.0 : (onRoad ? 11 : 7);
+        // v1.3.0：车尾跟随随 off 渐降（路面 11 → 深草 7）；侧滑掉速 0.40
+        const gripRate = hb ? 2.0 : (11 - off * 4);
         this.velAngle = wrapAngle(this.velAngle + wrapAngle(this.heading - this.velAngle) * clamp(gripRate * dt, 0, 1));
         this.slide = Math.abs(wrapAngle(this.heading - this.velAngle));
         if (this.slide > 0.12 && Math.abs(this.speed) > 8) this.speed -= this.slide * this.speed * 0.40 * dt;
@@ -1003,7 +1011,7 @@ class Player {
         this.accum = (this.accum || 0) + ds;
 
         this.drifting = (hb && Math.abs(this.speed) > 9) || (this.slide > 0.3 && Math.abs(this.speed) > 11);
-        return { lat, onRoad, drifting: this.drifting };
+        return { lat, onRoad, off, drifting: this.drifting };
     }
 }
 
@@ -1840,7 +1848,7 @@ const Game = {
         if (!info) info = { onRoad: true, drifting: false };
         const f = pp.forward();
         const dist = 8.2 + clamp(Math.abs(pp.speed) * 0.055, 0, 2.6);
-        const shake = info.onRoad ? 0 : Math.min(Math.abs(pp.speed) * 0.012, 0.5);
+        const shake = (info.off || 0) * Math.min(Math.abs(pp.speed) * 0.012, 0.5);
         const k = 1 - Math.exp(-5.5 * dt);
         cam.position.x = lerp(cam.position.x, pp.pos.x - f.x * dist + (Math.random() - 0.5) * shake, k);
         cam.position.y = lerp(cam.position.y, pp.pos.y + 3.4 + (Math.random() - 0.5) * shake * 0.5, k);
