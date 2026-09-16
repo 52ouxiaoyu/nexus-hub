@@ -770,6 +770,26 @@ const FILE = 'file://' + path.resolve(__dirname, 'index.html');
     t('T27.4 草地抓地明显低于路面（20 m/s 满舵 yaw 差 ≥ 25%）', grip2.yawGrass < grip2.yawRoad * 0.75, `grass=${grip2.yawGrass.toFixed(2)} road=${grip2.yawRoad.toFixed(2)}`);
     t('T27.5 路面满舵 1s 侧滑角 < 0.15（车尾贴线）', grip2.slide30 < 0.15, `slide=${grip2.slide30.toFixed(3)} rad`);
 
+    /* ===== T28 (v1.2.8): 终点看台缩短且完全离开路面 ===== */
+    const stand = await page.evaluate(() => {
+        const g = window.__game, w = g.world;
+        const out = { minLat: Infinity, hz: w.gateRects ? w.gateRects[0].hz : null };
+        if (!w.gateRects) return out;
+        for (const rc of w.gateRects) {
+            // 看台 4 个角（含碰撞余量前的真实几何）到赛道中心线的最小横向距离
+            for (const sx of [-rc.hx, rc.hx]) for (const sz of [-rc.hz, rc.hz]) {
+                const wx = rc.x + Math.cos(rc.yaw) * sx + Math.sin(rc.yaw) * sz;
+                const wz = rc.z - Math.sin(rc.yaw) * sx + Math.cos(rc.yaw) * sz;
+                const idx = w.nearestIdx(wx, wz, 0);
+                const lat = Math.abs(w.lateralOffset(wx, wz, idx));
+                if (lat < out.minLat) out.minLat = lat;
+            }
+        }
+        return out;
+    });
+    t('T28.1 看台长度已缩短（半长 7m，总长 14m）', stand.hz === 7, `hz=${stand.hz}`);
+    t('T28.2 看台任何一角都不压路面（离路缘 ≥ 0.5m）', stand.minLat >= 8.3 + 0.5, `minLat=${stand.minLat.toFixed(2)}m（路缘 8.3m）`);
+
     /* ===== 截图 ===== */
     await page.evaluate(() => window.__game && window.__game.togglePause && window.__game.togglePause(true));
     await new Promise(r => setTimeout(r, 100));

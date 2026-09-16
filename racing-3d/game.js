@@ -1,6 +1,6 @@
 'use strict';
 /* =========================================================================
- * 极速飞车 Turbo Rush 3D — v1.2.7
+ * 极速飞车 Turbo Rush 3D — v1.2.8
  * 街机式 3D 环形赛道竞速（参考马车 / 山脊赛车式手感）
  * v1.1.0：双人分屏 PK + 路面方向箭头 + 出赛道车身不消失软回拉
  * v1.1.1：修复 A/D 转向方向（相机 right=-world X 导致视觉左右相反）
@@ -23,6 +23,8 @@
  * v1.2.7：抓地力再增强 + 草地惩罚 —— LAT_GRIP 26→36（150 km/h 最小拐弯半径 67m→42m，
  *         赛道 90% 弯道全速拐得住）、路面 gripRate 11；草地极速 55%→40%、
  *         滚阻 2.5×→4.6×、草地抓地仅路面 65%（GRASS_GRIP）——抄近路必然亏本
+ * v1.2.8：终点看台缩短 26→14m 并外移 13→14m——直条看台在弯道处末端会向内偏移
+ *         压到路面（最急弯 κ=1/26 时 13m 悬臂偏 3.2m），缩短后任意弯道不入侵路面
  * 纯前端：three.js r128（本地）+ 原生 JS，无任何构建工具
  * 坐标系约定：heading=0 朝 +z；heading 增大 = 右转；
  *            left 向量 = (t.z, 0, -t.x)（命名沿用，实际为行进方向右侧）
@@ -442,13 +444,15 @@ class World {
         this.gateRects = []; this.gateCircleDefs = [];
         const gyaw = Math.atan2(s0.t.x, s0.t.z);
         for (const side of [1, -1]) {
-            const st = new THREE.Mesh(new THREE.BoxGeometry(3, 2.2, 26), standM);
-            st.position.set(s0.p.x + s0.left.x * (CFG.ROAD_HALF + 6) * side, s0.y + 1, s0.p.z + s0.left.z * (CFG.ROAD_HALF + 6) * side);
+            // v1.2.8：看台缩短 26→14m 并外移 13→14m——直条看台在弯道处末端会向内偏移
+            // （κ=1/26 时 13m 悬臂偏 3.2m，正好压上 8.3m 路宽），缩短后偏移 <1m 安全
+            const st = new THREE.Mesh(new THREE.BoxGeometry(3, 2.2, 14), standM);
+            st.position.set(s0.p.x + s0.left.x * (CFG.ROAD_HALF + 7) * side, s0.y + 1, s0.p.z + s0.left.z * (CFG.ROAD_HALF + 7) * side);
             st.rotation.y = gyaw;
             this.group.add(st);
             this.gateRects.push({
                 x: st.position.x, z: st.position.z,
-                hx: 1.5, hz: 13, yaw: gyaw,   // 半尺寸（left×tangent 方向）
+                hx: 1.5, hz: 7, yaw: gyaw,   // 半尺寸（left×tangent 方向）
             });
             this.gateCircleDefs.push({
                 x: s0.p.x + s0.left.x * span * side,
