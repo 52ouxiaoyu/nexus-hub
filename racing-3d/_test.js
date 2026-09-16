@@ -790,6 +790,31 @@ const FILE = 'file://' + path.resolve(__dirname, 'index.html');
     t('T28.1 看台长度已缩短（半长 7m，总长 14m）', stand.hz === 7, `hz=${stand.hz}`);
     t('T28.2 看台任何一角都不压路面（离路缘 ≥ 0.5m）', stand.minLat >= 8.3 + 0.5, `minLat=${stand.minLat.toFixed(2)}m（路缘 8.3m）`);
 
+    /* ===== T29 (v1.2.9): 路牌纹理 —— 实心直行箭头（真出像素） ===== */
+    const sign = await page.evaluate(() => {
+        const w = window.__game.world;
+        if (!w.signBoards || !w.signBoards.length) return { none: true };
+        const img = w.signBoards[0].material.map.image; // 纹理 canvas
+        const g2 = img.getContext('2d');
+        const px = (x, y) => Array.from(g2.getImageData(x, y, 1, 1).data);
+        const isDark = d => d[0] < 80 && d[1] < 80 && d[2] < 80;
+        const isYellow = d => d[0] > 200 && d[1] > 160 && d[2] < 120;
+        return {
+            shaftDark: isDark(px(256, 260)),   // 箭杆中心
+            headDark: isDark(px(256, 80)),     // 箭头顶点下方
+            bgYellow: isYellow(px(70, 70)),    // 左上角底色
+            borderDark: isDark(px(8, 192)),    // 左边框（描边中心线）
+        };
+    });
+    if (sign.none) {
+        t('T29.1 路牌纹理可读取', false, 'signBoards 为空');
+    } else {
+        t('T29.1 箭杆为黑色实心', sign.shaftDark === true);
+        t('T29.2 箭头三角为黑色实心', sign.headDark === true);
+        t('T29.3 牌面底色为黄色', sign.bgYellow === true);
+        t('T29.4 黑色边框存在', sign.borderDark === true);
+    }
+
     /* ===== 截图 ===== */
     await page.evaluate(() => window.__game && window.__game.togglePause && window.__game.togglePause(true));
     await new Promise(r => setTimeout(r, 100));

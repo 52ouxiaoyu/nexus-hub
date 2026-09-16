@@ -1,6 +1,6 @@
 'use strict';
 /* =========================================================================
- * 极速飞车 Turbo Rush 3D — v1.2.8
+ * 极速飞车 Turbo Rush 3D — v1.2.9
  * 街机式 3D 环形赛道竞速（参考马车 / 山脊赛车式手感）
  * v1.1.0：双人分屏 PK + 路面方向箭头 + 出赛道车身不消失软回拉
  * v1.1.1：修复 A/D 转向方向（相机 right=-world X 导致视觉左右相反）
@@ -25,6 +25,8 @@
  *         滚阻 2.5×→4.6×、草地抓地仅路面 65%（GRASS_GRIP）——抄近路必然亏本
  * v1.2.8：终点看台缩短 26→14m 并外移 13→14m——直条看台在弯道处末端会向内偏移
  *         压到路面（最急弯 κ=1/26 时 13m 悬臂偏 3.2m），缩短后任意弯道不入侵路面
+ * v1.2.9：路牌指示符号重绘 —— 抽象 V 形斜线 → 实心直行大箭头（粗箭杆 + 三角头，
+ *         白衬边 + 黄底渐变 + 底部速度线），远看一眼可知"沿此方向直行"
  * 纯前端：three.js r128（本地）+ 原生 JS，无任何构建工具
  * 坐标系约定：heading=0 朝 +z；heading 增大 = 右转；
  *            left 向量 = (t.z, 0, -t.x)（命名沿用，实际为行进方向右侧）
@@ -258,27 +260,39 @@ function makeBannerTexture() {
     g.fillText('🏁 FINISH', 256, 66);
     return new THREE.CanvasTexture(c);
 }
-/* v1.1.2：路边指示牌纹理 —— 真实赛道 V 字形箭头 + 黑黄警示色 */
+/* v1.2.9：路边指示牌纹理 —— 实心直行大箭头（粗箭杆 + 三角箭头），一眼可读 */
 function makeSignTexture() {
     const c = document.createElement('canvas'); c.width = 512; c.height = 384;
     const g = c.getContext('2d');
     g.clearRect(0, 0, 512, 384);
-    // 黑色边框 + 黄色底
-    g.fillStyle = '#ffd400';
+    // 黄底（轻微纵向渐变，接近真实反光牌面）
+    const bg = g.createLinearGradient(0, 0, 0, 384);
+    bg.addColorStop(0, '#ffdf30'); bg.addColorStop(1, '#fccb00');
+    g.fillStyle = bg;
     g.fillRect(0, 0, 512, 384);
-    // 黑色边框
+    // 黑色圆角边框
     g.lineWidth = 16; g.strokeStyle = '#101010';
     g.strokeRect(8, 8, 496, 368);
-    // 横向 V 字箭头（从中间向两侧斜下，再回到中心 → 实际更像 ▲ 的厚版）
-    g.lineWidth = 36; g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#101010';
+    // 实心直行箭头：箭杆 64px 宽 + 大三角头，轮廓先描白色衬边再填黑（远看清晰）
+    const arrow = () => {
+        g.beginPath();
+        g.moveTo(224, 322);      // 箭杆左下
+        g.lineTo(224, 184);      // 箭杆左上
+        g.lineTo(136, 184);      // 箭头三角左底
+        g.lineTo(256, 54);       // 箭头顶点
+        g.lineTo(376, 184);      // 箭头三角右底
+        g.lineTo(288, 184);      // 箭杆右上
+        g.lineTo(288, 322);      // 箭杆右下
+        g.closePath();
+    };
+    g.lineJoin = 'round'; g.lineCap = 'round';
+    g.lineWidth = 14; g.strokeStyle = '#ffffff'; arrow(); g.stroke();  // 白衬边
+    g.fillStyle = '#101010'; arrow(); g.fill();                        // 黑色箭身
+    // 箭杆底部两条"地面速度线"（增强向前行驶的直觉）
+    g.lineWidth = 12; g.strokeStyle = '#101010';
     g.beginPath();
-    g.moveTo(96, 270); g.lineTo(256, 110); g.lineTo(416, 270);  // V 形上沿
-    g.moveTo(96, 210); g.lineTo(256, 50); g.lineTo(416, 210);   // V 形下沿 → 双线形成粗箭头
-    g.stroke();
-    // 高光（让箭头从远处也清晰可见）
-    g.lineWidth = 6; g.strokeStyle = '#fff7c2';
-    g.beginPath();
-    g.moveTo(96, 268); g.lineTo(256, 108); g.lineTo(416, 268);
+    g.moveTo(120, 330); g.lineTo(210, 330);
+    g.moveTo(302, 330); g.lineTo(392, 330);
     g.stroke();
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace || THREE.LinearSRGBColorSpace;
