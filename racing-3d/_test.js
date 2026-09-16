@@ -716,6 +716,60 @@ const FILE = 'file://' + path.resolve(__dirname, 'index.html');
     const skidDelta = (skid1.cursor - skid0 + 160) % 160;
     t('T26.6 高速刹车留胎痕（新增痕迹 > 5）', skidDelta > 5, `drops=${skidDelta} braking=${skid1.brakingSeen} v=${skid1.v.toFixed(1)}`);
 
+    /* ===== T27 (v1.2.7): 抓地力再增强 + 草地惩罚（抄近路亏本） ===== */
+    const grip2 = await page.evaluate(() => {
+        const g = window.__game, w = g.world, p = g.player;
+        g.togglePause(true);
+        const out = {};
+        const inp = { throttle: 0, brake: 0, steer: 0, handbrake: false, nitro: false };
+        // A) 150 km/h (41.7 m/s) 满舵：角速度 & 有效拐弯半径
+        p.speed = 41.7; p.velAngle = 0; p.heading = 0; p.steerA = 0;
+        p.pos.set(0, 0, 0); p.idx = 0;
+        const st = { throttle: 0, brake: 0, steer: 1, handbrake: false, nitro: false };
+        for (let i = 0; i < 60; i++) p.update(0.016, true, st); // 稳态
+        out.yaw150 = Math.abs(p.update.call ? 0 : 0); // placeholder
+        // 重新测：直接用 heading 差分
+        p.speed = 41.7; p.velAngle = 0; p.heading = 0; p.steerA = 0;
+        p.pos.set(0, 0, 0); p.idx = 0;
+        for (let i = 0; i < 90; i++) p.update(0.016, true, st);
+        const h0 = p.heading;
+        for (let i = 0; i < 60; i++) p.update(0.016, true, st);
+        out.yaw150 = Math.abs((h0 - p.heading + Math.PI * 99) % (Math.PI * 2) - Math.PI) / (60 * 0.016);
+        out.r150 = 41.7 / out.yaw150;
+        // B) 草地极速：25 m/s 上草地给油 3 秒
+        p.pos.set(0, 0, 60); p.idx = 0; p.speed = 25; p.velAngle = 0; p.heading = 0;
+        const grass = { throttle: 1, brake: 0, steer: 0, handbrake: false, nitro: false };
+        for (let i = 0; i < 187; i++) p.update(0.016, true, grass);
+        out.grassTop = p.speed;
+        // C) 草地 vs 路面抓地：20 m/s 满舵短窗口测角速度
+        //    （路面组弯转半径 ~11m，窗口 0.32s 内横摆 <5m 不出 8.3m 路宽；草地组摆 40m 外）
+        const yawAt = (onGrass) => {
+            const base = w.smp[150];
+            p.speed = 20; p.velAngle = Math.atan2(base.t.x, base.t.z);
+            p.heading = p.velAngle; p.steerA = 0;
+            p.pos.copy(base.p).addScaledVector(base.left, onGrass ? 40 : 0);
+            p.idx = 150;
+            for (let i = 0; i < 20; i++) p.update(0.016, true, st); // 方向盘建立
+            const hh = p.heading;
+            for (let i = 0; i < 12; i++) p.update(0.016, true, st); // 测量窗口 0.192s
+            return Math.abs((hh - p.heading + Math.PI * 99) % (Math.PI * 2) - Math.PI) / (12 * 0.016);
+        };
+        out.yawRoad = yawAt(false);
+        out.yawGrass = yawAt(true);
+        // D) 路面满舵 1s 侧滑角（gripRate 11）
+        p.speed = 30; p.velAngle = 0; p.heading = 0; p.steerA = 0;
+        p.pos.set(0, 0, 0); p.idx = 0;
+        for (let i = 0; i < 62; i++) p.update(0.016, true, st);
+        out.slide30 = p.slide;
+        g.togglePause(false);
+        return out;
+    });
+    t('T27.1 150 km/h 满舵角速度 ≥ 0.80 rad/s', grip2.yaw150 >= 0.80, `yaw=${grip2.yaw150.toFixed(3)} rad/s`);
+    t('T27.2 150 km/h 有效拐弯半径 ≤ 52m（赛道 90% 弯道拐得住）', grip2.r150 <= 52, `r=${grip2.r150.toFixed(1)}m`);
+    t('T27.3 草地极速被压到 ≤ 21 m/s（抄近路亏本）', grip2.grassTop <= 21, `v=${grip2.grassTop.toFixed(1)} m/s`);
+    t('T27.4 草地抓地明显低于路面（20 m/s 满舵 yaw 差 ≥ 25%）', grip2.yawGrass < grip2.yawRoad * 0.75, `grass=${grip2.yawGrass.toFixed(2)} road=${grip2.yawRoad.toFixed(2)}`);
+    t('T27.5 路面满舵 1s 侧滑角 < 0.15（车尾贴线）', grip2.slide30 < 0.15, `slide=${grip2.slide30.toFixed(3)} rad`);
+
     /* ===== 截图 ===== */
     await page.evaluate(() => window.__game && window.__game.togglePause && window.__game.togglePause(true));
     await new Promise(r => setTimeout(r, 100));

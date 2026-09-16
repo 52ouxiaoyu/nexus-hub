@@ -1,6 +1,6 @@
 'use strict';
 /* =========================================================================
- * 极速飞车 Turbo Rush 3D — v1.2.6
+ * 极速飞车 Turbo Rush 3D — v1.2.7
  * 街机式 3D 环形赛道竞速（参考马车 / 山脊赛车式手感）
  * v1.1.0：双人分屏 PK + 路面方向箭头 + 出赛道车身不消失软回拉
  * v1.1.1：修复 A/D 转向方向（相机 right=-world X 导致视觉左右相反）
@@ -20,6 +20,9 @@
  *         刮蹭/被夹住不再每帧指数衰减）；立柱圆形推离若会推进看台矩形则跳过，消除互推夹车
  * v1.2.6：刹车反馈强化 —— 刹车时尾灯增亮（刹车灯）+ 车头点头（brake dive）+
  *         高速刹车留胎痕；菜单键位注明 S/↓ 为刹车（停稳后倒车）
+ * v1.2.7：抓地力再增强 + 草地惩罚 —— LAT_GRIP 26→36（150 km/h 最小拐弯半径 67m→42m，
+ *         赛道 90% 弯道全速拐得住）、路面 gripRate 11；草地极速 55%→40%、
+ *         滚阻 2.5×→4.6×、草地抓地仅路面 65%（GRASS_GRIP）——抄近路必然亏本
  * 纯前端：three.js r128（本地）+ 原生 JS，无任何构建工具
  * 坐标系约定：heading=0 朝 +z；heading 增大 = 右转；
  *            left 向量 = (t.z, 0, -t.x)（命名沿用，实际为行进方向右侧）
@@ -66,7 +69,8 @@ const CFG = {
     ACCEL: 15,
     BRAKE: 30,
     REV_MAX: -9,
-    LAT_GRIP: 26,            // v1.2.2：侧向抓地上限 m/s²（19 → 26，新手过弯更容易拐住）
+    LAT_GRIP: 36,            // v1.2.7：侧向抓地上限 m/s²（26 → 36，150 km/h 最小拐弯半径 67m → 48m）
+    GRASS_GRIP: 0.65,        // v1.2.7：草地抓地系数（出赛道打方向明显更滑，抄近路有代价）
     NITRO_MAX: 100,
     BOOST_MAX: 2.2,          // v1.2.0：一次氮气最长 2.2 秒
     BOOST_CD: 4,             // v1.2.0：氮气冷却 4 秒（用完/松开即进 CD）
@@ -890,8 +894,8 @@ class Player {
         const lat = w.lateralOffset(this.pos.x, this.pos.z, this.idx);
         const onRoad = Math.abs(lat) <= CFG.ROAD_HALF + CFG.CURB_W;
 
-        // v1.1.2：出赛道阻尼改成接近真实（草地滚阻约 2.5× 路面，最高速度约 55%）
-        const vmaxEff = (nitroOn ? CFG.VMAX_NITRO : CFG.VMAX) * (onRoad ? 1 : 0.55);
+        // v1.2.7：出赛道惩罚加重（草地极速 40%、滚阻 4.6× 路面）—— 抄近路必然亏本
+        const vmaxEff = (nitroOn ? CFG.VMAX_NITRO : CFG.VMAX) * (onRoad ? 1 : 0.40);
         let a = 0;
         if (throttle > 0) a += CFG.ACCEL * 1.35 * Math.max(0, 1 - this.speed / vmaxEff) * throttle * (nitroOn ? 1.6 : 1);
         if (brake > 0) {
@@ -900,7 +904,7 @@ class Player {
             else a -= 8 * brake * (1 - clamp(-this.speed / -CFG.REV_MAX, 0, 1));
         }
         const sgn = Math.abs(this.speed) > 0.15 ? Math.sign(this.speed) : 0;
-        a -= this.speed * (onRoad ? 0.012 : 0.030); // 草地滚阻 2.5× 路面（之前 0.30 太重）
+        a -= this.speed * (onRoad ? 0.012 : 0.055); // v1.2.7：草地滚阻 4.6× 路面（抄近路亏本）
         a -= 0.35 * sgn;
         if (hb) a -= 6 * sgn;
         this.speed += a * dt;
@@ -916,13 +920,15 @@ class Player {
         if (steerIn === 0) this.steerA = lerp(this.steerA, 0, 1 - Math.exp(-12 * dt));
         else this.steerA = lerp(this.steerA, steerIn * steerMax, 1 - Math.exp(-10 * dt));
         let yawRate = (this.speed / 2.6) * Math.tan(this.steerA);
-        const latCap = (hb ? CFG.LAT_GRIP * 0.55 : CFG.LAT_GRIP) / Math.max(Math.abs(this.speed), 3);
+        // v1.2.7：草地抓地只有路面的 65%——出赛道后高速打方向会更滑，逼玩家回路面
+        const gripCap = CFG.LAT_GRIP * (hb ? 0.55 : (onRoad ? 1 : CFG.GRASS_GRIP));
+        const latCap = gripCap / Math.max(Math.abs(this.speed), 3);
         yawRate = clamp(yawRate, -latCap, latCap);
         this.heading = wrapAngle(this.heading + yawRate * dt);
 
         // 漂移：速度方向滞后于车头
-        // v1.2.2：gripRate 7.0 → 9.5（车尾更跟手，过弯不易甩出去）；侧滑掉速 0.55 → 0.40
-        const gripRate = hb ? 2.0 : 9.5;
+        // v1.2.7：路面 gripRate 11（车尾贴线）；草地 7（更滑）；侧滑掉速 0.40
+        const gripRate = hb ? 2.0 : (onRoad ? 11 : 7);
         this.velAngle = wrapAngle(this.velAngle + wrapAngle(this.heading - this.velAngle) * clamp(gripRate * dt, 0, 1));
         this.slide = Math.abs(wrapAngle(this.heading - this.velAngle));
         if (this.slide > 0.12 && Math.abs(this.speed) > 8) this.speed -= this.slide * this.speed * 0.40 * dt;
