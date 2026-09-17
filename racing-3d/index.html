@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<html lang="zh-CN" data-page-node-id="Cl6XtN2IBrFwZ8NJdxnZFK">
+<head data-page-node-id="lMgi0wjZWyH2jup926JLqk">
+<meta charset="UTF-8" data-page-node-id="aSF1EBU3kxpDqkAvFrcqPx">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" data-page-node-id="bBIpbSYov57SnIFggdAOqy">
 <title>极速飞车 Turbo Rush 3D</title>
 <style>
     :root {
@@ -97,6 +97,16 @@
         padding: 12px 28px; border-radius: 14px; animation: blink 0.7s infinite;
     }
     @keyframes blink { 50% { opacity: 0.35; } }
+    /* v1.3.3 神秘事件提示条 */
+    #mysteryToast {
+        position: fixed; top: 30%; left: 50%; transform: translateX(-50%); z-index: 30; pointer-events: none;
+        font-size: 24px; font-weight: 900; letter-spacing: 1px; padding: 14px 32px; border-radius: 14px;
+        background: rgba(4, 26, 52, 0.78); border: 2px solid rgba(33, 150, 243, 0.75);
+        color: #eaf7ff; text-shadow: 0 0 26px rgba(33, 150, 243, 0.8);
+        animation: mpop 0.45s ease-out; white-space: nowrap;
+    }
+    #mysteryToast.bad { border-color: rgba(255, 82, 82, 0.8); color: #ffd9d9; text-shadow: 0 0 26px rgba(255, 82, 82, 0.7); }
+    @keyframes mpop { 0% { transform: translateX(-50%) scale(1.6); opacity: 0; } 60% { transform: translateX(-50%) scale(1); opacity: 1; } }
     #speedlines { position: fixed; inset: 0; z-index: 15; pointer-events: none; opacity: 0;
         background: radial-gradient(ellipse at center, transparent 42%, rgba(0, 229, 255, 0.14) 100%); }
 
@@ -160,113 +170,114 @@
     #loading .spin { font-size: 18px; color: #9fb3c8; letter-spacing: 2px; animation: blink 1.2s infinite; }
 </style>
 </head>
-<body>
-<canvas id="game-canvas"></canvas>
-<div id="speedlines"></div>
+<body data-page-node-id="BgoFuJsMLyM9EBiLLYouDm">
+<canvas id="game-canvas" data-page-node-id="8jQa5WbByfG8CxrETrnlF1"></canvas>
+<div id="speedlines" data-page-node-id="piNtz14y9QFc2HSkHj7GGU"></div>
 
 <!-- HUD P1 -->
-<div id="hud" class="hidden">
-    <div class="hud-panel" id="hud-pos">
-        <div id="posVal">1<small>/4</small></div>
-        <div id="lapVal">第 1/3 圈 · LAP</div>
+<div id="hud" class="hidden" data-page-node-id="Du3eA6BHYhhkTy6UrbDbkg">
+    <div class="hud-panel" id="hud-pos" data-page-node-id="DMsrS2TBoktICEfRshthyj">
+        <div id="posVal" data-page-node-id="BpCSQSkausMaRmLFJgFVje">1<small data-page-node-id="Fzzy87FPLJPokCqEdJZgYH">/4</small></div>
+        <div id="lapVal" data-page-node-id="t86NwK8G0yuUIISDuvTcC1">第 1/3 圈 · LAP</div>
     </div>
-    <div class="hud-panel" id="hud-time">
-        <div id="timeVal">00:00.00</div>
-        <div id="bestVal">最佳圈 --:--.--</div>
+    <div class="hud-panel" id="hud-time" data-page-node-id="O2mDFrncPP9LnCCy53qnIc">
+        <div id="timeVal" data-page-node-id="v0BXRCIWBWAjoWpDsmzNve">00:00.00</div>
+        <div id="bestVal" data-page-node-id="tpHgh2hgrz4PEILnoiAVn2">最佳圈 --:--.--</div>
     </div>
-    <div class="hud-panel" id="hud-speed">
-        <div id="speedVal">0<small> km/h</small></div>
-        <div id="gearVal">GEAR N</div>
-        <div class="nitro-wrap"><div id="nitroFill"></div></div>
+    <div class="hud-panel" id="hud-speed" data-page-node-id="dYuJWeBDbFodqMeQkD3LZh">
+        <div id="speedVal" data-page-node-id="qcQMMaPPMe2znDTvuT4PE3">0<small data-page-node-id="29PShHP1VJ7d5uAeEo6JCm"> km/h</small></div>
+        <div id="gearVal" data-page-node-id="jU6VBVLPEuKtCrSCX9zXx5">GEAR N</div>
+        <div class="nitro-wrap" data-page-node-id="6CxcSCZYTIhsMkcDRh4duB"><div id="nitroFill" data-page-node-id="V9yz97DDbw11p0dOVrCtPJ"></div></div>
     </div>
-    <div class="hud-panel" id="hud-map"><canvas id="minimap" width="300" height="300"></canvas></div>
-    <div id="trackTag">赛道 #--</div>
+    <div class="hud-panel" id="hud-map" data-page-node-id="JJLowUpJVfCNYsiB0ugtjl"><canvas id="minimap" width="300" height="300" data-page-node-id="k7FWQJVWXGVwSPo8BCxHGc"></canvas></div>
+    <div id="trackTag" data-page-node-id="kUPtyTbySkybEOWsyUrCeV">赛道 #--</div>
 </div>
 
 <!-- HUD P2（VS 模式启用） -->
-<div id="hudP2" class="hidden vs-hud">
-    <div class="hud-panel hud-panel-p2 pos-p2">
-        <div id="posVal2">P2<small>&nbsp;</small></div>
-        <div id="lapVal2">第 1/3 圈 · LAP</div>
+<div id="hudP2" class="hidden vs-hud" data-page-node-id="Ntn6FVfdNf92Sq8HEiW4cK">
+    <div class="hud-panel hud-panel-p2 pos-p2" data-page-node-id="ygCbFWWwc23CHQ5ABZ3vGe">
+        <div id="posVal2" data-page-node-id="lkG22GyRDoLZ5CUl5MVaCS">P2<small data-page-node-id="C6kftj0UMzuXLv628m07tt">&nbsp;</small></div>
+        <div id="lapVal2" data-page-node-id="llYNcyD1fF36BEolYH5AIF">第 1/3 圈 · LAP</div>
     </div>
-    <div class="hud-panel hud-panel-p2 time-p2">
-        <div id="timeVal2">P2</div>
-        <div class="hint-p2">🔵 蓝车 Blue</div>
+    <div class="hud-panel hud-panel-p2 time-p2" data-page-node-id="VHW3W0jS612Z3X1pNNPGzr">
+        <div id="timeVal2" data-page-node-id="kkCfcZRUXYYoVHjkP2E82p">P2</div>
+        <div class="hint-p2" data-page-node-id="XID8Ccg8UROYEdro8FPqXw">🔵 蓝车 Blue</div>
     </div>
-    <div class="hud-panel hud-panel-p2 speed-p2">
-        <div id="speedVal2">0<small> km/h</small></div>
-        <div id="gearVal2">GEAR N</div>
-        <div class="nitro-wrap"><div id="nitroFill2"></div></div>
+    <div class="hud-panel hud-panel-p2 speed-p2" data-page-node-id="PAaB30YUplWvfQE54idAF5">
+        <div id="speedVal2" data-page-node-id="QCG3C1086TVsrOtiqUFRbR">0<small data-page-node-id="F9VpZW2wukkoxOMWmw2ebf"> km/h</small></div>
+        <div id="gearVal2" data-page-node-id="k1DugfowDpUC66jUPL4wxe">GEAR N</div>
+        <div class="nitro-wrap" data-page-node-id="OtIH3DYtZohYfCmzvXWhGI"><div id="nitroFill2" data-page-node-id="68C9W0WUBLbv3CbLaDwEIg"></div></div>
     </div>
-    <div class="hud-panel hud-panel-p2 map-p2"><canvas id="minimap2" width="300" height="300"></canvas></div>
+    <div class="hud-panel hud-panel-p2 map-p2" data-page-node-id="zVfGFA8SvuuUr7CNzw6QDj"><canvas id="minimap2" width="300" height="300" data-page-node-id="wr647hBGR3KTuDNJcZSQwo"></canvas></div>
 </div>
 
 <!-- VS 中央分隔线 -->
-<div id="splitLine" class="hidden"></div>
+<div id="splitLine" class="hidden" data-page-node-id="Dmt3qCEkZB2A8UvkdUwF1P"></div>
 
-<div id="countdown" class="hidden"><div>3</div></div>
-<div id="wrongway" class="hidden">⚠ 逆行 WRONG WAY</div>
+<div id="countdown" class="hidden" data-page-node-id="GD9wQT8bd3n3wFdLgfGa1B"><div data-page-node-id="spqPskeCDAmGZbSskO3VHX">3</div></div>
+<div id="wrongway" class="hidden" data-page-node-id="2jzrlbMrqBcJBmTMyH3XQJ">⚠ 逆行 WRONG WAY</div>
+<div id="mysteryToast" class="hidden" data-page-node-id="EjAOSqoXU5ujo5P6zivEKB"></div>
 
 <!-- 触屏 -->
-<div id="touchUI">
-    <div class="tbtn" id="t-left">◀</div>
-    <div class="tbtn" id="t-right">▶</div>
-    <div class="tbtn" id="t-brake">↓</div>
-    <div class="tbtn" id="t-gas">▲</div>
-    <div class="tbtn" id="t-nitro">🔥</div>
+<div id="touchUI" data-page-node-id="LdT1sr5ctplMHLhfum01XA">
+    <div class="tbtn" id="t-left" data-page-node-id="K9riiL4KrVpjHfEGm3J5I2">◀</div>
+    <div class="tbtn" id="t-right" data-page-node-id="D22TGkaDQZm17CBU2BgDEa">▶</div>
+    <div class="tbtn" id="t-brake" data-page-node-id="XRcDLCNeTXroA3x5PZaG1H">↓</div>
+    <div class="tbtn" id="t-gas" data-page-node-id="AxQQ6ZPPupuhC25Pvs9pJz">▲</div>
+    <div class="tbtn" id="t-nitro" data-page-node-id="PGl7EXbehih057yAMFUYsl">🔥</div>
 </div>
-<button id="muteBtn" title="静音 (M)">🔊</button>
-<div id="version">Turbo Rush 3D v1.3.2</div>
+<button id="muteBtn" title="静音 (M)" data-page-node-id="3plBDXsAT7MqV33fEpISzu">🔊</button>
+<div id="version" data-page-node-id="QCUwcIoLoxZIz7JY1hEENe">Turbo Rush 3D v1.3.3</div>
 
 <!-- 主菜单 -->
-<div id="menu" class="overlay">
-    <div class="menu-title">极速飞车</div>
-    <div class="menu-sub">Turbo Rush 3D Racing</div>
-    <div class="menu-box">
-        <div class="diff-row" id="diffRow">
-            <div class="diff-btn" data-diff="0"><div class="d-name">🏁 轻松</div><div class="d-desc">新手巡航</div></div>
-            <div class="diff-btn sel" data-diff="1"><div class="d-name">⚡ 势均力敌</div><div class="d-desc">旗鼓相当</div></div>
-            <div class="diff-btn" data-diff="2"><div class="d-name">🔥 狂野</div><div class="d-desc">高手过招</div></div>
+<div id="menu" class="overlay" data-page-node-id="JcLYOvdiQh9WTDmfj3sZPs">
+    <div class="menu-title" data-page-node-id="OjcLjQkiULKh3ZHBcfsv9o">极速飞车</div>
+    <div class="menu-sub" data-page-node-id="cIvNTlSs1gl8J7gf0zu59t">Turbo Rush 3D Racing</div>
+    <div class="menu-box" data-page-node-id="Lg3UDr44iarxYaJLYJ7BhB">
+        <div class="diff-row" id="diffRow" data-page-node-id="qtxH6wRrN2I84Es1aojQze">
+            <div class="diff-btn" data-diff="0" data-page-node-id="lXOZJljxYZx3JaQVbQG5Eq"><div class="d-name" data-page-node-id="UtJlRDxiGXp3HfH1iD6cbE">🏁 轻松</div><div class="d-desc" data-page-node-id="l9dv4oEo4NYw6xvVEGi1lD">新手巡航</div></div>
+            <div class="diff-btn sel" data-diff="1" data-page-node-id="Xl7xUI8hBpgDfnQ5re74y9"><div class="d-name" data-page-node-id="CWzdgJkjxl80qAjAYCcYcf">⚡ 势均力敌</div><div class="d-desc" data-page-node-id="u3VrcDGJBIw8VbQcRsD8f9">旗鼓相当</div></div>
+            <div class="diff-btn" data-diff="2" data-page-node-id="cKVadwUeoECF1HauZNg2va"><div class="d-name" data-page-node-id="uQadKnnNXKZgBpyCGygAys">🔥 狂野</div><div class="d-desc" data-page-node-id="VOH2j143tpcwwDDNSQArct">高手过招</div></div>
         </div>
-        <button class="big-btn" id="btn-start">🏆 单人挑战 · SOLO</button>
-        <button class="big-btn btn-vs" id="btn-vs">⚔ 双人对战 · SPLIT-SCREEN VS</button>
-        <div class="menu-best" id="menuBest">历史最佳圈速：<b>--:--.--</b> ｜ 最佳总成绩：<b>--:--.--</b></div>
-        <div class="controls-hint" id="controlsHint">
-            <span><b>P1 红车</b> W A S D / 方向键驾驶 · Space 加速 · S/↓ 刹车（停稳后倒车）</span>
-            <span><b>P2 蓝车</b> ↑ ↓ ← → 驾驶 · Enter 加速 · ↓ 刹车（停稳后倒车）</span>
-            <span><b>加速</b> 一次最多 2.2s，用完冷却 4s</span>
-            <span><b>R</b> 回正</span><span><b>Esc</b> 暂停</span><span><b>M</b> 静音</span>
+        <button class="big-btn" id="btn-start" data-page-node-id="ucYqdphixwdEDFFDvZNgkW">🏆 单人挑战 · SOLO</button>
+        <button class="big-btn btn-vs" id="btn-vs" data-page-node-id="9b9cFkY3JCdh6TkrnNrLi5">⚔ 双人对战 · SPLIT-SCREEN VS</button>
+        <div class="menu-best" id="menuBest" data-page-node-id="yBoBPIGbVHVo3o06LOzAMS">历史最佳圈速：<b data-page-node-id="wH6xWnjKaDGMDjNRiKZDAZ">--:--.--</b> ｜ 最佳总成绩：<b data-page-node-id="abpxSNhn5kcft3cLmqMw06">--:--.--</b></div>
+        <div class="controls-hint" id="controlsHint" data-page-node-id="EMpzmJhcfhNPbRFm720rQw">
+            <span data-page-node-id="uH8hIy15uh8BVu0nfSmaTE"><b data-page-node-id="Nt65e3DTytXT32CE47svw0">P1 红车</b> W A S D / 方向键驾驶 · Space 加速 · S/↓ 刹车（停稳后倒车）</span>
+            <span data-page-node-id="HcWsVWIeTA5hyyFaHIqxZZ"><b data-page-node-id="iPs6xne2HrU44DPrCjzRO7">P2 蓝车</b> ↑ ↓ ← → 驾驶 · Enter 加速 · ↓ 刹车（停稳后倒车）</span>
+            <span data-page-node-id="Ton38lWWTkccnAhdOEOxlK"><b data-page-node-id="2PkZvS2NJYN8gTOWej7C3f">加速</b> 一次最多 2.2s，用完冷却 4s</span>
+            <span data-page-node-id="EeJZ5EuXCts8fOqhlV8wQp"><b style="color:#64b5f6" data-page-node-id="AVXDtz2kCmykhXiVA84KfM">蓝点</b> 单人模式神秘事件点（80% 好事 · 20% 坏事）</span><span data-page-node-id="0ZstIdYliY48ZGxLWcxdSn"><b data-page-node-id="kEOQFeYpmuEb37Wd9f8aKF">R</b> 回正</span><span data-page-node-id="1wanCMWXyMFds8ikTc3FFW"><b data-page-node-id="DhhpFBBUTcJKys59BvcWdx">Esc</b> 暂停</span><span data-page-node-id="g5RrNB2QzrgPks1VEARmDn"><b data-page-node-id="GEK3V4cc3Q9dvnMgpxn9W7">M</b> 静音</span>
         </div>
     </div>
 </div>
 
 <!-- 结算 -->
-<div id="results" class="overlay hidden">
-    <div class="result-title" id="resultTitle">🏆 第 1 名</div>
-    <div class="result-table" id="resultTable"></div>
-    <div class="btn-row">
-        <button class="big-btn" id="btn-again-new">🔄 新赛道再战</button>
-        <button class="big-btn btn-ghost" id="btn-again-same">↻ 重跑本赛道</button>
+<div id="results" class="overlay hidden" data-page-node-id="EhKanApkXGLjEQCgpXbjxG">
+    <div class="result-title" id="resultTitle" data-page-node-id="bp07AYEISUGIAaHn8ybvCY">🏆 第 1 名</div>
+    <div class="result-table" id="resultTable" data-page-node-id="B4lSne0LApYZFMOmf1gg0P"></div>
+    <div class="btn-row" data-page-node-id="m6pLGaBiWpU23ZC219oaDX">
+        <button class="big-btn" id="btn-again-new" data-page-node-id="dMNJIWntmccfG4tm0pEqyt">🔄 新赛道再战</button>
+        <button class="big-btn btn-ghost" id="btn-again-same" data-page-node-id="PzMFz6isVFPb7BxzHFvTW8">↻ 重跑本赛道</button>
     </div>
-    <div class="btn-row" style="margin-top:12px;">
-        <button class="big-btn btn-ghost" id="btn-menu">🏠 返回主菜单</button>
+    <div class="btn-row" style="margin-top:12px;" data-page-node-id="6KfGPKXD4ALKrBKFZpzBc0">
+        <button class="big-btn btn-ghost" id="btn-menu" data-page-node-id="XYK06RGrxVxt3HmIi3pDu3">🏠 返回主菜单</button>
     </div>
 </div>
 
 <!-- 暂停 -->
-<div id="pause" class="overlay hidden">
-    <div class="result-title blue">⏸ 已暂停</div>
-    <div class="btn-row" style="margin-top:26px;">
-        <button class="big-btn" id="btn-resume">▶ 继续比赛</button>
-        <button class="big-btn btn-ghost" id="btn-restart">↻ 重新开始</button>
+<div id="pause" class="overlay hidden" data-page-node-id="QFyP2j6WUvf4I8oi7hPY7a">
+    <div class="result-title blue" data-page-node-id="5W3GKdyOf9U16LeaiFOWTz">⏸ 已暂停</div>
+    <div class="btn-row" style="margin-top:26px;" data-page-node-id="FVe5pPYlTy5n24Eo4aNdzI">
+        <button class="big-btn" id="btn-resume" data-page-node-id="5p2TpMNOsfyjvJpWp9vRyJ">▶ 继续比赛</button>
+        <button class="big-btn btn-ghost" id="btn-restart" data-page-node-id="3PmbTyOrdPcX9odyIZp3iN">↻ 重新开始</button>
     </div>
-    <div class="btn-row" style="margin-top:12px;">
-        <button class="big-btn btn-ghost" id="btn-quit">🏠 返回主菜单</button>
+    <div class="btn-row" style="margin-top:12px;" data-page-node-id="DGdexeRPCUoJag9vvPD3Vy">
+        <button class="big-btn btn-ghost" id="btn-quit" data-page-node-id="AOvE0BYfXauEuPY6AemgTB">🏠 返回主菜单</button>
     </div>
 </div>
 
 <!-- 加载 -->
-<div id="loading" class="overlay"><div class="spin">正在生成赛道…</div></div>
+<div id="loading" class="overlay" data-page-node-id="3vX5VWJ73mH98oauuJnkfX"><div class="spin" data-page-node-id="DoByTDd4YgO7fKCf254eK2">正在生成赛道…</div></div>
 
 <script src="three.min.js"></script>
 <script src="game.js"></script>

@@ -914,6 +914,84 @@ const FILE = 'file://' + path.resolve(__dirname, 'index.html');
         await page.evaluate(() => { Input.keys['w'] = false; Input.keys['arrowup'] = false; });
     } catch (e) { t('T31 VS 发车同步性测试执行', false, e.message); }
 
+    /* ===== T32 (v1.3.3): SOLO 神秘事件点 —— 隐形直路 / 碰撞清空 / 事件概率与触发 ===== */
+    try {
+        await page.evaluate(() => { window.__game.backToMenu(); });
+        await new Promise(r => setTimeout(r, 300));
+        await page.evaluate(() => { document.getElementById('btn-start').click(); }); // SOLO
+        await new Promise(r => setTimeout(r, 250));
+        const my = await page.evaluate(() => {
+            const g = window.__game, w = g.world, m = w.mystery;
+            if (!m) return { has: false };
+            const sm = w.smp[m.idx];
+            const seg = { x: m.bx - m.ax, z: m.bz - m.az };
+            const segLen = Math.hypot(seg.x, seg.z);
+            const dot = Math.abs((seg.x * sm.t.x + seg.z * sm.t.z) / segLen); // 与赛道切线夹角
+            // 走廊/事件点碰撞清空检查
+            let colliderHit = 0;
+            for (const c of w.colliders) {
+                if (World.distToSeg(c.x, c.z, m.ax, m.az, m.bx, m.bz) < m.hw + 0.5) colliderHit++;
+                if (Math.hypot(c.x - m.bx, c.z - m.bz) < 8) colliderHit++;
+            }
+            // 走廊中点与沿赛道切线偏 12m 的参照点（切线⊥走廊，偏出后必是草地）
+            const mx = (m.ax + m.bx) / 2, mz = (m.az + m.bz) / 2;
+            return {
+                has: true, D: Math.hypot(m.bx - sm.p.x, m.bz - sm.p.z),
+                dot, colliderHit,
+                onMid: w.secretRoadOff(mx, mz),
+                offSide: w.secretRoadOff(mx + sm.t.x * 12, mz + sm.t.z * 12),
+                hasQ: !!w._mysteryQ,
+            };
+        });
+        t('T32.1 SOLO 存在神秘事件点', my.has);
+        t('T32.2 事件点离赛道中心 26~40m', my.D > 25 && my.D < 41, 'D=' + (my.D || 0).toFixed(1) + 'm');
+        t('T32.3 隐形直路垂直于赛道（|cosθ| < 0.25）', my.dot < 0.25, 'dot=' + (my.dot || 0).toFixed(3));
+        t('T32.4 走廊与事件点无碰撞体堵塞', my.colliderHit === 0, 'hit=' + my.colliderHit);
+        t('T32.5 走廊中点=马路物理', my.onMid === true);
+        t('T32.6 走廊外 12m=草地物理', my.offSide === false);
+        t('T32.7 蓝色光柱/悬浮?已生成', my.hasQ);
+        // 隐形路物理：把车放到走廊中点，滚阻应与马路一致（off=0）
+        const phys = await page.evaluate(() => {
+            const g = window.__game, p = g.player, m = g.world.mystery;
+            p.pos.x = (m.ax + m.bx) / 2; p.pos.z = (m.az + m.bz) / 2;
+            p.speed = 30; p.buffT = 0; p.buffMul = 1;
+            for (let i = 0; i < 10; i++) p.update(0.033, true);
+            return { off: p.lastOff, speed: p.speed };
+        });
+        t('T32.8 车在隐形直路上 off=0（不吃草地惩罚）', phys.off === 0, 'off=' + phys.off);
+        // 事件结算：好/坏分支
+        const ev = await page.evaluate(() => {
+            const g = window.__game, p = g.player, out = {};
+            const origRandom = Math.random;
+            g.mysteryDone = false;
+            Math.random = () => 0.1;  // good 且 pick=0 → 氮气充满
+            p.boostCd = 3; g.triggerMystery();
+            out.gift = (p.boostCd === 0 && p.boostT === 0);
+            let calls = 0;
+            Math.random = () => (calls++ === 0 ? 0.9 : 0.1); // 1st=0.9→坏；2nd=0.1→pick=0 打滑
+            p.speed = 20; g.mysteryDone = false; g.triggerMystery();
+            out.bad = p.speed < 9.1;
+            Math.random = () => 0.5;  // good pick=1 → 8s 极速 +30%
+            g.mysteryDone = false; g.triggerMystery();
+            out.buff = (p.buffT === 8 && p.buffMul === 1.3);
+            p.buffT = 0; p.buffMul = 1;
+            Math.random = origRandom;
+            return out;
+        });
+        t('T32.9 好事件：氮气立即充满', ev.gift);
+        t('T32.10 坏事件：打滑骤降（20% 概率分支）', ev.bad);
+        t('T32.11 好事件：限时极速 buff 生效', ev.buff);
+        // 驶近自动触发
+        const auto = await page.evaluate(() => {
+            const g = window.__game, p = g.player, m = g.world.mystery;
+            g.state = 'RACING'; g.mysteryDone = false;
+            p.pos.x = m.bx; p.pos.z = m.bz + 1; p.speed = 10;
+            g.frame(0.016);
+            return { done: g.mysteryDone, toast: !document.getElementById('mysteryToast').classList.contains('hidden') };
+        });
+        t('T32.12 驶近事件点自动触发（每局一次）', auto.done && auto.toast);
+    } catch (e) { t('T32 神秘事件点测试执行', false, e.message); }
+
     const passed = results.filter(r => r.pass).length;
     const total = results.length;
     console.log(`\n========== ${passed}/${total} PASSED ==========`);

@@ -1,6 +1,6 @@
 'use strict';
 /* =========================================================================
- * 极速飞车 Turbo Rush 3D — v1.3.2
+ * 极速飞车 Turbo Rush 3D — v1.3.3
  * 街机式 3D 环形赛道竞速（参考马车 / 山脊赛车式手感）
  * v1.1.0：双人分屏 PK + 路面方向箭头 + 出赛道车身不消失软回拉
  * v1.1.1：修复 A/D 转向方向（相机 right=-world X 导致视觉左右相反）
@@ -35,6 +35,11 @@
  * v1.3.2：修复 P2 抢跑——readInput 外部输入快照（in_）未受 controlsLive 门控，
  *         倒计时未放行 P2 就能起步而 P1 要等 GO；完赛后双车统一接管自动巡航
  *         （旧版 autopilot 只赋值从未消费，P1 完赛冻住、P2 还能继续开）
+ * v1.3.3：SOLO 神秘事件点 —— 赛道外 26~40m 随机选点（撞毁车/路人/篝火三种外观），
+ *         上方蓝色光柱 + 小地图蓝色圆点与淡蓝虚线路径；从路缘沿垂线开辟与马路
+ *         等宽的隐形直路（走廊内 off=0，极速/滚阻/抓地与马路完全一致）；
+ *         驶近触发：80% 好事件（氮气充满/8s 极速+30%/总成绩−2s）、20% 坏事件
+ *         （打滑骤降/6s 极速−40%），蓝色提示条弹出，每局一次
  * 纯前端：three.js r128（本地）+ 原生 JS，无任何构建工具
  * 坐标系约定：heading=0 朝 +z；heading 增大 = 右转；
  *            left 向量 = (t.z, 0, -t.x)（命名沿用，实际为行进方向右侧）
@@ -314,8 +319,9 @@ function makeSignTexture() {
 
 /* ---------------- 5. 赛道与世界 ---------------- */
 class World {
-    constructor(scene, seed) {
+    constructor(scene, seed, withMystery) {
         this.scene = scene; this.seed = seed; this.rng = mulberry32(seed);
+        this.withMystery = withMystery !== false; // v1.3.3：SOLO 生成神秘事件点（VS 不生成）
         this.group = new THREE.Group();
         this.buildTrack();
         this.buildTerrain();
@@ -701,6 +707,143 @@ class World {
         }
         this.group.add(this.clouds);
         this.updateClouds(0);
+
+        // v1.3.3：SOLO 神秘事件点（赛道外 + 垂线隐形直路 + 蓝色地标）
+        if (this.withMystery) this.buildMystery();
+    }
+
+    /* v1.3.3：点到线段最短距离（隐形直路判定用） */
+    static distToSeg(px, pz, ax, az, bx, bz) {
+        const dx = bx - ax, dz = bz - az;
+        const len2 = dx * dx + dz * dz;
+        let t = len2 > 1e-6 ? ((px - ax) * dx + (pz - az) * dz) / len2 : 0;
+        t = clamp(t, 0, 1);
+        return Math.hypot(px - (ax + dx * t), pz - (az + dz * t));
+    }
+    /* v1.3.3：是否在神秘事件点的隐形直路上（走廊内=马路物理） */
+    secretRoadOff(x, z) {
+        const m = this.mystery;
+        if (!m) return false;
+        return World.distToSeg(x, z, m.ax, m.az, m.bx, m.bz) <= m.hw;
+    }
+
+    /* v1.3.3：神秘事件点 —— 赛道旁 26~40m 选点（避开起终点、优先直道段），
+       从路缘沿垂线到事件点开辟一条与马路等宽的隐形直路（走廊内不吃草地惩罚），
+       走廊与事件点半径内清空树/岩石碰撞体；事件点随机三种外观，上方蓝色光柱 */
+    buildMystery() {
+        const rng = this.rng, S = CFG.SAMPLES;
+        const edge = CFG.ROAD_HALF + CFG.CURB_W;
+        const minArc = 90, maxArc = this.length - 90;
+        for (let attempt = 0; attempt < 80; attempt++) {
+            const idx = Math.floor(rng() * S);
+            const sm = this.smp[idx];
+            if (sm.s < minArc || sm.s > maxArc) continue;          // 避开起点龙门架/看台区
+            if (sm.curv > 1 / 110) continue;                        // 直道段（垂线方向稳定）
+            const side = rng() < 0.5 ? 1 : -1;
+            const D = 26 + rng() * 14;
+            const ax = sm.p.x + sm.left.x * edge * side, az = sm.p.z + sm.left.z * edge * side;
+            const bx = sm.p.x + sm.left.x * D * side,   bz = sm.p.z + sm.left.z * D * side;
+            const hw = CFG.ROAD_HALF;
+            // 走廊带 + 事件点半径内不能有树/岩石/立柱碰撞体（不然隐形路被堵死）
+            let blocked = false;
+            for (const c of this.colliders) {
+                if (World.distToSeg(c.x, c.z, ax, az, bx, bz) < hw + 1.5) { blocked = true; break; }
+                if (Math.hypot(c.x - bx, c.z - bz) < 9) { blocked = true; break; }
+            }
+            if (blocked) continue;
+            this.mystery = {
+                ax, az, bx, bz, hw, idx, side,
+                trigR: 9, variant: Math.floor(rng() * 3), hit: false,
+            };
+            this.buildMysteryProps();
+            return;
+        }
+        this.mystery = null; // 80 次都放不下（极小概率）→ 本局无神秘点
+    }
+
+    /* v1.3.3：事件点地标 —— 蓝色光柱 + 地面光环 + 悬浮"?" + 随机场景道具 */
+    buildMysteryProps() {
+        const m = this.mystery;
+        const y = this.groundY(m.bx, m.bz, m.idx);
+        const g = new THREE.Group();
+        // 蓝色光柱（加法混合，半透明，远处可见）
+        const pillar = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.5, 0.9, 7, 10, 1, true),
+            new THREE.MeshBasicMaterial({ color: 0x2196f3, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })
+        );
+        pillar.position.set(m.bx, y + 3.5, m.bz);
+        g.add(pillar);
+        // 地面光环
+        const ring = new THREE.Mesh(
+            new THREE.RingGeometry(2.2, 3.2, 28),
+            new THREE.MeshBasicMaterial({ color: 0x2196f3, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false })
+        );
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.set(m.bx, y + 0.12, m.bz);
+        g.add(ring);
+        // 悬浮 "?"（canvas 纹理 Sprite，原地缓慢上下浮动在 updateMystery 中处理）
+        const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+        const c2 = cv.getContext('2d');
+        c2.fillStyle = '#2196f3'; c2.beginPath(); c2.arc(32, 32, 26, 0, TAU); c2.fill();
+        c2.strokeStyle = '#ffffff'; c2.lineWidth = 3; c2.stroke();
+        c2.fillStyle = '#ffffff'; c2.font = '900 36px Arial'; c2.textAlign = 'center'; c2.textBaseline = 'middle';
+        c2.fillText('?', 32, 34);
+        const q = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false }));
+        q.scale.set(1.6, 1.6, 1);
+        q.position.set(m.bx, y + 2.4, m.bz);
+        this._mysteryQ = q;
+        g.add(q);
+        // 随机场景道具：0=撞毁的汽车（翻倒） 1=三个路人 2=篝火
+        const prop = new THREE.Group();
+        if (m.variant === 0) {
+            const body = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.1, 1.9), new THREE.MeshLambertMaterial({ color: 0x9a3b32 }));
+            const cab = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.8, 1.7), new THREE.MeshLambertMaterial({ color: 0x74291f }));
+            body.position.y = 0.55; cab.position.set(-0.3, 1.3, 0);
+            const wreck = new THREE.Group(); wreck.add(body, cab);
+            wreck.rotation.set(Math.PI / 2 * 0.92, 0.7, 0.15); // 侧翻
+            wreck.position.y = 0.8;
+            prop.add(wreck);
+        } else if (m.variant === 1) {
+            const skin = new THREE.MeshLambertMaterial({ color: 0xd9a066 });
+            const coat = new THREE.MeshLambertMaterial({ color: 0x3a5a8c });
+            const coat2 = new THREE.MeshLambertMaterial({ color: 0x8c3a3a });
+            [[-1.8, 0.6, coat], [0, 0, coat2], [1.8, -0.5, coat]].forEach(([ox, oz, cm]) => {
+                const man = new THREE.Group();
+                const b = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.4, 1.15, 7), cm);
+                b.position.y = 0.85;
+                const h = new THREE.Mesh(new THREE.SphereGeometry(0.26, 8, 6), skin);
+                h.position.y = 1.65;
+                man.add(b, h);
+                man.position.set(ox, 0, oz);
+                man.rotation.y = m.side * Math.PI; // 面朝赛道
+                prop.add(man);
+            });
+        } else {
+            const logM = new THREE.MeshLambertMaterial({ color: 0x5a4028 });
+            for (let i = 0; i < 3; i++) {
+                const log = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 1.5, 5), logM);
+                log.rotation.z = Math.PI / 2;
+                log.rotation.y = i * Math.PI / 3;
+                log.position.y = 0.14;
+                prop.add(log);
+            }
+            const flame = new THREE.Mesh(
+                new THREE.ConeGeometry(0.45, 1.2, 7),
+                new THREE.MeshBasicMaterial({ color: 0xff9f1c, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false })
+            );
+            flame.position.y = 0.75;
+            prop.add(flame);
+        }
+        prop.position.set(m.bx + m.hw * 0.45, y, m.bz + 1.2); // 道具放在光环边缘，不挡路
+        prop.rotation.y = this.rng() * TAU;
+        g.add(prop);
+        this.group.add(g);
+    }
+
+    /* v1.3.3：事件点动效 —— "?" 上下浮动 + 光柱呼吸 */
+    updateMystery(time) {
+        if (!this.mystery || !this._mysteryQ) return;
+        this._mysteryQ.position.y += Math.sin(time * 2.2) * 0.004;
     }
 
     /* v1.2.0：车辆与树/岩石碰撞。推出障碍 + 撞击减速，返回是否碰撞
@@ -865,6 +1008,8 @@ class Player {
         this.nitro = CFG.NITRO_MAX;
         this.boostT = 0;   // v1.2.0：本次氮气已持续时间
         this.boostCd = 0;  // v1.2.0：氮气冷却剩余
+        this.buffT = 0;    // v1.3.3：神秘事件限时增益/减益剩余秒数
+        this.buffMul = 1;  // v1.3.3：生效中的极速倍率（>1 增益 / <1 减益）
         this._crashCd = 0; // v1.2.0：碰撞音效冷却
         this.idx = 0;
         this.lastS = s0;
@@ -930,11 +1075,17 @@ class Player {
         // 旧版在路缘处是硬悬崖（极速 46→18.4 瞬间切换），出弯蹭上路缘外就"瞬间被吸住"，
         // 回到路面又瞬间恢复满加速像"弹射"；渐变后出/回路都是平滑过渡
         const roadEdge = CFG.ROAD_HALF + CFG.CURB_W;
-        const off = clamp((Math.abs(lat) - roadEdge) / 5, 0, 1);
+        let off = clamp((Math.abs(lat) - roadEdge) / 5, 0, 1);
+        // v1.3.3：神秘事件点隐形直路 —— 垂线走廊内与马路物理完全一致（off 置 0）
+        if (off > 0 && w.secretRoadOff && w.secretRoadOff(this.pos.x, this.pos.z)) off = 0;
+        this.lastOff = off; // 供测试断言
         const onRoad = off <= 0;
 
         // 深草地（off=1）数值与 v1.2.7 一致：极速 40%、滚阻 4.6×、抓地 65%——抄近路仍然亏本
-        const vmaxEff = (nitroOn ? CFG.VMAX_NITRO : CFG.VMAX) * (1 - off * 0.60);
+        // v1.3.3：神秘事件 buff（buffT 剩余秒数内极速乘 buffMul，可 >1 增益或 <1 减益）
+        if (this.buffT > 0) this.buffT = Math.max(0, this.buffT - dt);
+        const vmaxEff = (nitroOn ? CFG.VMAX_NITRO : CFG.VMAX) * (1 - off * 0.60)
+                      * (this.buffT > 0 ? this.buffMul : 1);
         let a = 0;
         if (throttle > 0) a += CFG.ACCEL * 1.35 * Math.max(0, 1 - this.speed / vmaxEff) * throttle * (nitroOn ? 1.6 : 1);
         if (brake > 0) {
@@ -1239,6 +1390,7 @@ const Game = {
             nitroFill2: document.getElementById('nitroFill2'), gearVal2: document.getElementById('gearVal2'),
             minimap2: document.getElementById('minimap2'),
             splitLine: document.getElementById('splitLine'),
+            mystery: document.getElementById('mysteryToast'), // v1.3.3：神秘事件提示条
         };
         this.mmCtx = this.els.minimap ? this.els.minimap.getContext('2d') : null;
         this.mmCtx2 = this.els.minimap2 ? this.els.minimap2.getContext('2d') : null;
@@ -1305,6 +1457,34 @@ const Game = {
         if (k === 'r' && this.state === 'RACING') this.resetPlayer();
     },
 
+    /* v1.3.3：神秘事件结算 —— 80% 好事件 / 20% 坏事件 */
+    triggerMystery() {
+        const p = this.player;
+        const good = Math.random() < 0.8;
+        let msg;
+        if (good) {
+            const pick = Math.floor(Math.random() * 3);
+            if (pick === 0) { p.boostCd = 0; p.boostT = 0; msg = '🎁 神秘馈赠：氮气立即充满！'; }
+            else if (pick === 1) { p.buffT = 8; p.buffMul = 1.3; msg = '🔥 神秘引擎：8 秒极速 +30%！'; }
+            else { this.raceTime = Math.max(0, this.raceTime - 2); msg = '⏱ 神秘裁判：总成绩 −2 秒！'; }
+        } else {
+            const pick = Math.floor(Math.random() * 2);
+            if (pick === 0) { p.speed *= 0.45; msg = '💥 厄运：车轮打滑，速度骤降！'; }
+            else { p.buffT = 6; p.buffMul = 0.6; msg = '🛞 厄运：轮胎被扎，6 秒极速 −40%'; }
+        }
+        this.showMysteryToast(msg, good);
+        AudioSys.beep(good ? 880 : 220, 0.35, good ? 'triangle' : 'sawtooth', 0.25);
+    },
+    showMysteryToast(msg, good) {
+        const el = this.els.mystery;
+        if (!el) return;
+        el.textContent = msg;
+        el.classList.remove('hidden');
+        el.classList.toggle('bad', !good);
+        clearTimeout(this._mysteryTimer);
+        this._mysteryTimer = setTimeout(() => el.classList.add('hidden'), 3000);
+    },
+
     buildRace(seed) {
         if (this.world) { this.world.dispose(); this.skids && this.skids.dispose(); }
         // 玩家组
@@ -1312,7 +1492,8 @@ const Game = {
         if (this.playerGroupP2) this._disposeObj(this.playerGroupP2);
         if (this.aiGroups) this.aiGroups.forEach(g => this._disposeObj(g));
 
-        this.world = new World(this.scene, seed);
+        const isVS = this.mode === 'VS';
+        this.world = new World(this.scene, seed, !isVS); // v1.3.3：仅 SOLO 生成神秘事件点
 
         // 单一 skids 系统（P1 + P2 共用）
         this.skids = new SkidMarks(this.scene);
@@ -1321,7 +1502,6 @@ const Game = {
         this.nitroFx = new NitroFx(this.scene);
 
         const L = this.world.length;
-        const isVS = this.mode === 'VS';
 
         if (!isVS) {
             // SOLO
@@ -1369,6 +1549,8 @@ const Game = {
         if (this.mode === 'VS' && this.els.hudP2) this.els.hudP2.classList.remove('hidden');
         this.raceTime = 0; this.lapTimes = []; this.crossings = 0; this.lapMark = 0;
         this.wrongTimer = 0;
+        this.mysteryDone = false; // v1.3.3：每局重置神秘事件触发
+        if (this.els.mystery) this.els.mystery.classList.add('hidden');
         this.cdTime = 3.6; this.cdShown = null;
         this.player && (this.player.gateLatch = false); // v1.2.4
         this.player2 && (this.player2.crossings = 0, this.player2.lapMark = 0, this.player2.lapTimes = [], this.player2.finished = false, this.player2.gateLatch = false);
@@ -1555,6 +1737,9 @@ const Game = {
     /* ---- 小地图 ---- */
     buildMinimapPath() {
         const pts = this.world.smp.map(s => [s.p.x, s.p.z]);
+        // v1.3.3：神秘事件点在赛道外，纳入范围计算，保证蓝点落在小地图内
+        const m = this.world.mystery;
+        if (m) pts.push([m.ax, m.az], [m.bx, m.bz]);
         let minX = 1e9, maxX = -1e9, minZ = 1e9, maxZ = -1e9;
         for (const [x, z] of pts) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z); }
         const W = 300, pad = 26;
@@ -1579,6 +1764,18 @@ const Game = {
             g.closePath(); g.stroke();
         }
         const [sx, sy] = this.mm.pts[0];
+        // v1.3.3：神秘事件点 —— 淡蓝虚线（隐形直路走向）+ 蓝色圆点地标
+        const m = this.world && this.world.mystery;
+        if (m && !forP2) {
+            const [ax, ay] = this.mm.map(m.ax, m.az), [bx, by] = this.mm.map(m.bx, m.bz);
+            g.strokeStyle = 'rgba(33, 150, 243, 0.55)';
+            g.lineWidth = 2; g.setLineDash([5, 5]);
+            g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke();
+            g.setLineDash([]);
+            const [mx2, my2] = this.mm.map(m.bx, m.bz);
+            g.fillStyle = '#2196f3'; g.strokeStyle = '#ffffff'; g.lineWidth = 2;
+            g.beginPath(); g.arc(mx2, my2, 6, 0, TAU); g.fill(); g.stroke();
+        }
         g.fillStyle = '#ffd166'; g.fillRect(sx - 4, sy - 4, 8, 8);
         const aiColors = ['#4361ee', '#f4a261', '#2a9d8f'];
         this.ais.forEach((ai, i) => {
@@ -1691,6 +1888,15 @@ const Game = {
         // 玩家
         const info = p.update(dt, live, fin ? p.autopilot : undefined);
 
+        // v1.3.3：SOLO 神秘事件点触发 —— 驶近事件点半径即结算（每局一次）
+        if (!isVS && racing && this.world.mystery && !this.mysteryDone) {
+            const m = this.world.mystery;
+            if (Math.hypot(p.pos.x - m.bx, p.pos.z - m.bz) < m.trigR) {
+                this.mysteryDone = true;
+                this.triggerMystery();
+            }
+        }
+
         // AI（仅 SOLO）
         if (!isVS) {
             for (const ai of this.ais) ai.update(dt, racing || this.state === 'FINISHED', p.accum);
@@ -1768,6 +1974,7 @@ const Game = {
 
         w.updateClouds(dt);
         if (this.world.updateSignBoards) this.world.updateSignBoards(performance.now() / 1000);
+        if (this.world.updateMystery) this.world.updateMystery(performance.now() / 1000); // v1.3.3
 
         // HUD
         if (this.state !== 'MENU') {
