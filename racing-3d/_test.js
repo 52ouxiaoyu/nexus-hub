@@ -885,6 +885,35 @@ const FILE = 'file://' + path.resolve(__dirname, 'index.html');
         await page.evaluate(() => { Input.keys['a'] = false; Input.keys['w'] = false; });
     } catch (e) { console.log('screenshot skipped', e.message); }
 
+    /* ===== T31 (v1.3.2): VS 发车同步性 —— 倒计时未放行 P2 不得抢跑 ===== */
+    try {
+        await page.evaluate(() => { window.__game.backToMenu(); });
+        await new Promise(r => setTimeout(r, 300));
+        await page.evaluate(() => { document.getElementById('btn-vs').click(); });
+        await new Promise(r => setTimeout(r, 250));
+        // 倒计时刚开始就按住双方油门
+        await page.evaluate(() => { Input.keys['w'] = true; Input.keys['arrowup'] = true; });
+        const cdSample = await page.evaluate(() => {
+            const g = window.__game;
+            return { cd: g.cdTime, p1v: g.player.speed, p2v: g.player2 ? g.player2.speed : null };
+        });
+        t('T31.1 采样落在倒计时早段（cd > 1.5s）', cdSample.cd > 1.5, 'cd=' + cdSample.cd.toFixed(2));
+        t('T31.2 倒计时未放行 P1 速度为 0', cdSample.p1v === 0, 'p1v=' + cdSample.p1v);
+        t('T31.3 倒计时未放行 P2 速度为 0（v1.3.2 抢跑修复）', cdSample.p2v === 0, 'p2v=' + cdSample.p2v);
+        // 放行后（GO 窗口 + RACING）双车应同窗起步
+        await page.waitForFunction(() => window.__game.state === 'RACING', { timeout: 10000 });
+        await new Promise(r => setTimeout(r, 1200));
+        const goSample = await page.evaluate(() => {
+            const g = window.__game;
+            return { p1v: g.player.speed, p2v: g.player2.speed };
+        });
+        t('T31.4 RACING 后双车都已起步（均 > 5 m/s）', goSample.p1v > 5 && goSample.p2v > 5,
+          `p1v=${goSample.p1v.toFixed(1)} p2v=${goSample.p2v.toFixed(1)}`);
+        t('T31.5 双车起步差距合理（|Δv| < 6 m/s）', Math.abs(goSample.p1v - goSample.p2v) < 6,
+          'Δv=' + Math.abs(goSample.p1v - goSample.p2v).toFixed(1));
+        await page.evaluate(() => { Input.keys['w'] = false; Input.keys['arrowup'] = false; });
+    } catch (e) { t('T31 VS 发车同步性测试执行', false, e.message); }
+
     const passed = results.filter(r => r.pass).length;
     const total = results.length;
     console.log(`\n========== ${passed}/${total} PASSED ==========`);

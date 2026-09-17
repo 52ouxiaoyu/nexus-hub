@@ -1,6 +1,6 @@
 'use strict';
 /* =========================================================================
- * 极速飞车 Turbo Rush 3D — v1.3.1
+ * 极速飞车 Turbo Rush 3D — v1.3.2
  * 街机式 3D 环形赛道竞速（参考马车 / 山脊赛车式手感）
  * v1.1.0：双人分屏 PK + 路面方向箭头 + 出赛道车身不消失软回拉
  * v1.1.1：修复 A/D 转向方向（相机 right=-world X 导致视觉左右相反）
@@ -32,6 +32,9 @@
  *         根除"出路面瞬间被吸住、回路面瞬间弹射"的悬崖式体感；深草惩罚力度不变
  * v1.3.1：输入健壮性 —— 窗口失焦/切后台时清空按键状态（keyup 丢失会导致按键残留，
  *         表现为转向/油门错乱）；附 _diag_steer.js 真实键盘事件转向诊断脚本
+ * v1.3.2：修复 P2 抢跑——readInput 外部输入快照（in_）未受 controlsLive 门控，
+ *         倒计时未放行 P2 就能起步而 P1 要等 GO；完赛后双车统一接管自动巡航
+ *         （旧版 autopilot 只赋值从未消费，P1 完赛冻住、P2 还能继续开）
  * 纯前端：three.js r128（本地）+ 原生 JS，无任何构建工具
  * 坐标系约定：heading=0 朝 +z；heading 增大 = 右转；
  *            left 向量 = (t.z, 0, -t.x)（命名沿用，实际为行进方向右侧）
@@ -888,7 +891,11 @@ class Player {
     /* 读取输入：P1 默认从全局 Input 读；自定义实例可传 in_={throttle,brake,steer,handbrake,nitro} */
     readInput(controlsLive, in_) {
         if (in_) {
-            return { throttle: in_.throttle, brake: in_.brake, steer: in_.steer, handbrake: in_.handbrake, nitro: in_.nitro };
+            // v1.3.2：外部输入快照同样受 controlsLive 门控——
+            // 旧版 in_ 分支直通，P2 倒计时未放行即可起步（抢跑）、P1 完赛后 P2 仍可继续开
+            return controlsLive
+                ? { throttle: in_.throttle, brake: in_.brake, steer: in_.steer, handbrake: in_.handbrake, nitro: in_.nitro }
+                : { throttle: 0, brake: 0, steer: 0, handbrake: false, nitro: false };
         }
         return { throttle: controlsLive ? Input.throttle : 0, brake: controlsLive ? Input.brake : 0, steer: controlsLive ? Input.steer : 0, handbrake: controlsLive && Input.handbrake, nitro: controlsLive && Input.nitro };
     }
@@ -1676,8 +1683,13 @@ const Game = {
         // 更新 P2 输入快照（即使 P1 不读 P2 也保持最新）
         if (isVS) Input.setP2();
 
+        // v1.3.2：完赛后双车接管为自动巡航——旧版 autopilot 只赋值从未消费，
+        // P1 完赛即冻住、P2 却还能继续开（同 readInput 门控漏洞）
+        const fin = this.state === 'FINISHED';
+        const live = controlsLive || fin;
+
         // 玩家
-        const info = p.update(dt, controlsLive);
+        const info = p.update(dt, live, fin ? p.autopilot : undefined);
 
         // AI（仅 SOLO）
         if (!isVS) {
@@ -1687,7 +1699,7 @@ const Game = {
         // P2 更新（仅 VS）
         let info2 = null;
         if (isVS && this.player2) {
-            info2 = this.player2.update(dt, controlsLive, Input.p2);
+            info2 = this.player2.update(dt, live, fin ? this.player2.autopilot : undefined);
         }
 
         // v1.2.1：车辆间碰撞（动量守恒）—— 在所有车位置更新完之后统一结算
