@@ -4,7 +4,7 @@
  * 双人对战俄罗斯方块 · 道具攻防系统
  * ============================================================ */
 
-const VERSION = 'v1.0.0';
+const VERSION = 'v1.0.1';
 const COLS = 10, ROWS = 20, CELL = 30;
 const MAX_CHARGE = 10;          // 必杀充能
 const ITEM_SLOTS = 3;           // 道具栏格数
@@ -442,17 +442,18 @@ const AI = {
 };
 
 // ---------- 键位 ----------
+// P1（左侧）= WASD + 小键盘；P2（右侧）= 方向键 + 空格
 const KEYMAP = {
     P1: {
-        left: ['ArrowLeft'], right: ['ArrowRight'], down: ['ArrowDown'],
-        rotate: ['ArrowUp'], hard: ['Space'],
-        item1: ['KeyF'], item2: ['KeyG'], item3: ['KeyH'], ult: ['KeyR'],
-    },
-    P2: {
         left: ['KeyA'], right: ['KeyD'], down: ['KeyS'],
         rotate: ['KeyW'], hard: ['NumpadEnter', 'ShiftRight'],
         item1: ['Numpad1', 'Comma'], item2: ['Numpad2', 'Period'], item3: ['Numpad3', 'Slash'],
         ult: ['Numpad0', 'KeyM'],
+    },
+    P2: {
+        left: ['ArrowLeft'], right: ['ArrowRight'], down: ['ArrowDown'],
+        rotate: ['ArrowUp'], hard: ['Space'],
+        item1: ['KeyF'], item2: ['KeyG'], item3: ['KeyH'], ult: ['KeyR'],
     }
 };
 function matchKey(map, code) {
@@ -773,7 +774,7 @@ const game = {
 
         // 道具栏
         const sy = iy + 104;
-        const keyHints = p.idx === 0 ? ['F', 'G', 'H'] : ['小1', '小2', '小3'];
+        const keyHints = p.idx === 0 ? ['小1', '小2', '小3'] : ['F', 'G', 'H'];
         for (let i = 0; i < ITEM_SLOTS; i++) {
             const y = sy + i * 52;
             ctx.fillStyle = p.items[i] ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.03)';
@@ -809,7 +810,7 @@ const game = {
         ctx.fillStyle = ratio >= 1 ? '#ffd600' : 'rgba(255,255,255,0.55)';
         ctx.font = 'bold 11px sans-serif';
         ctx.fillText(ratio >= 1 ? '💥 必杀就绪!' : `必杀充能 ${p.charge}/${MAX_CHARGE}`, ix, cy + 28);
-        const ultKey = p.idx === 0 ? 'R' : (p.isAI ? '' : '小0/M');
+        const ultKey = p.idx === 0 ? (p.isAI ? '' : '小0/M') : 'R';
         if (ultKey) {
             ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '10px sans-serif';
             ctx.fillText(`按 ${ultKey} 发动`, ix, cy + 42);
