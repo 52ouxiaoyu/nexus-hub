@@ -1,6 +1,6 @@
 'use strict';
 /* =========================================================================
- * 极速飞车 Turbo Rush 3D — v1.3.0
+ * 极速飞车 Turbo Rush 3D — v1.3.1
  * 街机式 3D 环形赛道竞速（参考马车 / 山脊赛车式手感）
  * v1.1.0：双人分屏 PK + 路面方向箭头 + 出赛道车身不消失软回拉
  * v1.1.1：修复 A/D 转向方向（相机 right=-world X 导致视觉左右相反）
@@ -30,6 +30,8 @@
  * v1.3.0：路面加宽（半宽 7→8.5m，路宽 14→17m）+ 草地惩罚渐变化——
  *         路缘外 0~5m 过渡带（off 0→1），极速/滚阻/抓地/车尾跟随全部随 off 插值，
  *         根除"出路面瞬间被吸住、回路面瞬间弹射"的悬崖式体感；深草惩罚力度不变
+ * v1.3.1：输入健壮性 —— 窗口失焦/切后台时清空按键状态（keyup 丢失会导致按键残留，
+ *         表现为转向/油门错乱）；附 _diag_steer.js 真实键盘事件转向诊断脚本
  * 纯前端：three.js r128（本地）+ 原生 JS，无任何构建工具
  * 坐标系约定：heading=0 朝 +z；heading 增大 = 右转；
  *            left 向量 = (t.z, 0, -t.x)（命名沿用，实际为行进方向右侧）
@@ -174,6 +176,10 @@ const Input = {
             Game.onKey(e.key.toLowerCase());
         });
         window.addEventListener('keyup', e => { this.keys[e.key.toLowerCase()] = false; });
+        // v1.3.1：窗口失焦/切后台时清空按键状态——alt-tab、点出页面后 keyup 会丢，
+        // 残留的按键状态会让转向/油门表现错乱（表现为按了没反应或自转）
+        window.addEventListener('blur', () => { this.keys = {}; });
+        document.addEventListener('visibilitychange', () => { if (document.hidden) this.keys = {}; });
         if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
             const ui = document.getElementById('touchUI');
             if (ui) ui.style.display = Game.mode === 'SOLO' ? 'block' : 'none';
