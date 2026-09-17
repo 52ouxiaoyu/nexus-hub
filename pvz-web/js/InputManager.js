@@ -194,8 +194,8 @@ class InputManager {
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1789482856`
-                : `assets/images/Plants/${imgName}.gif?v=1789482856`;
+                ? `assets/images/Plants/${imgName}.png?v=1789652399`
+                : `assets/images/Plants/${imgName}.gif?v=1789652399`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
         }
     }
