@@ -35,7 +35,9 @@ const POCKETS = [];
     for (const sx of [-1, 1]) for (const sz of [-1, 1])
         POCKETS.push({ x: sx * (L + 0.015), z: sz * (T + 0.015), r: CFG.cornerCapture, corner: true });
     for (const sz of [-1, 1])
-        POCKETS.push({ x: 0, z: sz * (T + 0.012), r: CFG.sideCapture, corner: false });
+        // 中袋：洞口大小不变，捕获圆心外移（上袋上移/下袋下移）——捕获圈不再朝桌内伸出，
+        // 贴库滚过不再自动进袋，正对直打照常进袋，薄擦会在袋角弹开
+        POCKETS.push({ x: 0, z: sz * (T + 0.07), r: CFG.sideCapture, corner: false });
 })();
 
 // ---------------- 全局状态 ----------------
@@ -659,7 +661,7 @@ function updateGuide() {
         let nx = hitBall.x - gx, nz = hitBall.z - gz;
         const nl = Math.hypot(nx, nz) || 1;
         nx /= nl; nz /= nl;
-        setLine(ud.objLine, hitBall.x, hitBall.z, hitBall.x + nx * 0.3, hitBall.z + nz * 0.3, y);
+        setLine(ud.objLine, hitBall.x, hitBall.z, hitBall.x + nx * 0.08, hitBall.z + nz * 0.08, y);
         ud.objLine.visible = true;
         // 母球分离方向（切线）
         const dot = d.x * nx + d.z * nz;
@@ -667,7 +669,7 @@ function updateGuide() {
         const tl = Math.hypot(tx, tz);
         if (tl > 0.15) {
             tx /= tl; tz /= tl;
-            setLine(ud.defLine, gx, gz, gx + tx * 0.16, gz + tz * 0.16, y);
+            setLine(ud.defLine, gx, gz, gx + tx * 0.09, gz + tz * 0.09, y);
             ud.defLine.visible = true;
         } else ud.defLine.visible = false;
     } else {
@@ -1930,6 +1932,9 @@ window.POOL = {
     setCamAngle(a) { camAngle = a; },
     // 调试：拿到场景对象（排查渲染问题时染色用）
     get scene() { return scene; },
+    // 测试用：辅助线
+    updateGuide,
+    get guideGroup() { return guideGroup; },
 };
 
 })();
