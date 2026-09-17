@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>方块大作战 · Tetris Battle</title>
+<style>
+    :root {
+        --bg: #07080f;
+        --panel: rgba(255,255,255,0.04);
+        --border: rgba(255,255,255,0.10);
+        --p1: #00e5ff;
+        --p2: #ff4081;
+        --accent: #7c4dff;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+        background: var(--bg);
+        background-image:
+            radial-gradient(circle at 20% 20%, rgba(0,229,255,0.06), transparent 45%),
+            radial-gradient(circle at 80% 30%, rgba(255,64,129,0.06), transparent 45%);
+        color: #fff;
+        font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+        display: flex; align-items: center; justify-content: center;
+        min-height: 100vh; overflow: hidden;
+        -webkit-user-select: none; user-select: none;
+    }
+    #stage { position: relative; }
+    canvas { display: block; border-radius: 12px; }
+
+    .overlay {
+        position: absolute; inset: 0;
+        background: rgba(4,5,12,0.86);
+        backdrop-filter: blur(6px);
+        border-radius: 12px;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        z-index: 10; text-align: center;
+    }
+    .overlay.hidden { display: none; }
+
+    .game-title {
+        font-size: 64px; font-weight: 900; letter-spacing: 4px;
+        background: linear-gradient(135deg, #00e5ff, #7c4dff 55%, #ff4081);
+        -webkit-background-clip: text; background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 6px; text-shadow: none;
+    }
+    .game-sub { color: #8a90a8; font-size: 15px; letter-spacing: 6px; margin-bottom: 42px; }
+
+    .menu-btn {
+        width: 280px; padding: 15px 0; margin: 9px 0;
+        font-size: 17px; font-weight: 700; letter-spacing: 2px;
+        color: #fff; background: var(--panel);
+        border: 1px solid var(--border); border-radius: 12px;
+        cursor: pointer; transition: all .2s ease;
+        font-family: inherit;
+    }
+    .menu-btn:hover { background: rgba(255,255,255,0.12); transform: translateY(-2px); border-color: rgba(255,255,255,0.3); }
+    .menu-btn:active { transform: scale(0.97); }
+    .menu-btn.primary {
+        background: linear-gradient(135deg, rgba(0,229,255,0.25), rgba(124,77,255,0.25));
+        border-color: rgba(0,229,255,0.5);
+    }
+    .menu-btn.primary:hover { border-color: #00e5ff; }
+
+    .badge {
+        display: inline-block; margin-top: 26px;
+        padding: 5px 14px; border-radius: 20px;
+        font-size: 12px; font-weight: 600; letter-spacing: 1px;
+        color: #8a90a8; border: 1px solid var(--border);
+        background: rgba(255,255,255,0.03);
+    }
+
+    .help-box {
+        max-width: 980px; max-height: 88%;
+        background: rgba(15,17,30,0.95);
+        border: 1px solid var(--border); border-radius: 16px;
+        padding: 30px 40px; overflow-y: auto; text-align: left;
+    }
+    .help-box h2 { text-align: center; margin-bottom: 18px; letter-spacing: 3px; }
+    .help-box h3 { margin: 18px 0 8px; font-size: 16px; color: #00e5ff; }
+    .help-box h3.p2c { color: #ff4081; }
+    .help-box table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .help-box td { padding: 5px 10px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #c3c8da; }
+    .help-box kbd {
+        display: inline-block; padding: 2px 9px; margin: 1px;
+        background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
+        border-bottom-width: 3px; border-radius: 6px;
+        font-family: inherit; font-size: 12px; font-weight: 700; color: #fff;
+    }
+    .item-line { display: flex; align-items: center; gap: 10px; padding: 4px 0; font-size: 14px; color: #c3c8da; }
+    .item-line .ic { font-size: 20px; }
+    .item-line b { color: #fff; }
+    .tag-a { color: #ff5252; font-size: 12px; border: 1px solid rgba(255,82,82,0.4); padding: 0 6px; border-radius: 8px; }
+    .tag-d { color: #69f0ae; font-size: 12px; border: 1px solid rgba(105,240,174,0.4); padding: 0 6px; border-radius: 8px; }
+
+    #result-title { font-size: 46px; font-weight: 900; letter-spacing: 3px; margin-bottom: 10px; }
+    #result-sub { color: #8a90a8; margin-bottom: 34px; font-size: 15px; }
+
+    .corner-tip {
+        position: absolute; left: 16px; bottom: 12px;
+        font-size: 11px; color: #4a5068; letter-spacing: 1px; z-index: 5;
+    }
+</style>
+</head>
+<body>
+<div id="stage">
+    <canvas id="game" width="1240" height="720"></canvas>
+    <div class="corner-tip">TETRIS BATTLE <span id="badge-tip">v1.0.0</span></div>
+
+    <!-- 主菜单 -->
+    <div id="menu" class="overlay">
+        <div class="game-title">方块大作战</div>
+        <div class="game-sub">TETRIS BATTLE · 道具攻防对战</div>
+        <button class="menu-btn primary" id="btn-duo">⚔️ 双人对战</button>
+        <button class="menu-btn" id="btn-ai">🤖 人机对战</button>
+        <button class="menu-btn" id="btn-help">📖 操作与道具说明</button>
+        <div class="badge" id="badge">v1.0.0</div>
+    </div>
+
+    <!-- 帮助 -->
+    <div id="help" class="overlay hidden">
+        <div class="help-box">
+            <h2>操作与道具说明</h2>
+            <h3>玩家 1（左侧 · 青色）</h3>
+            <table>
+                <tr><td>移动 / 软降 / 旋转</td><td><kbd>←</kbd><kbd>→</kbd><kbd>↓</kbd><kbd>↑</kbd>旋转</td></tr>
+                <tr><td>硬降（瞬间落底）</td><td><kbd>空格</kbd></td></tr>
+                <tr><td>使用道具 1 / 2 / 3</td><td><kbd>F</kbd><kbd>G</kbd><kbd>H</kbd></td></tr>
+                <tr><td>发动必杀 · 末日洪水</td><td><kbd>R</kbd>（充能满 10 时）</td></tr>
+            </table>
+            <h3 class="p2c">玩家 2（右侧 · 粉色）</h3>
+            <table>
+                <tr><td>左 / 下 / 右</td><td><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td></tr>
+                <tr><td>旋转</td><td><kbd>W</kbd></td></tr>
+                <tr><td>硬降</td><td><kbd>小键盘回车</kbd> 或 <kbd>右Shift</kbd></td></tr>
+                <tr><td>使用道具 1 / 2 / 3</td><td><kbd>小键盘1</kbd><kbd>小键盘2</kbd><kbd>小键盘3</kbd> 或 <kbd>,</kbd><kbd>.</kbd><kbd>/</kbd></td></tr>
+                <tr><td>发动必杀</td><td><kbd>小键盘0</kbd> 或 <kbd>M</kbd></td></tr>
+            </table>
+            <h3>道具系统</h3>
+            <div class="item-line"><span class="ic">🧱</span><b>垃圾行</b><span class="tag-a">攻</span>向对方底部加 2 行带洞垃圾</div>
+            <div class="item-line"><span class="ic">⚡</span><b>加速诅咒</b><span class="tag-a">攻</span>对方下落速度翻倍 15 秒</div>
+            <div class="item-line"><span class="ic">🌫️</span><b>迷雾</b><span class="tag-a">攻</span>遮蔽对方棋盘视野 8 秒</div>
+            <div class="item-line"><span class="ic">🛡️</span><b>护盾</b><span class="tag-d">防</span>自动抵挡下一次垃圾行攻击（可叠加）</div>
+            <div class="item-line"><span class="ic">🧹</span><b>清底</b><span class="tag-d">防</span>立即清除自己最底下一行</div>
+            <div class="item-line"><span class="ic">🐢</span><b>减速</b><span class="tag-d">防</span>自己下落速度放慢 20 秒</div>
+            <h3>规则要点</h3>
+            <table>
+                <tr><td>道具获得</td><td>一次消 2 行得 1 个道具，消 3 行得 2 个，消 4 行（Tetris!）得 3 个道具 + 1 充能</td></tr>
+                <tr><td>连击奖励</td><td>连续消行（Combo）每层 +1 必杀充能</td></tr>
+                <tr><td>必杀 · 末日洪水</td><td>道具栏（3 格）塞满后再获得的道具转为充能；攒满 10 点可发动：6 行垃圾 + 迷雾 + 加速同时砸向对方，基本一击必杀！</td></tr>
+                <tr><td>垃圾预警</td><td>对方进攻会在中间栏显示箭头预警，1.5 秒后落地，抓紧时间消行或开盾！</td></tr>
+                <tr><td>胜负</td><td>任一方方块堆到顶即输</td></tr>
+            </table>
+            <div style="text-align:center; margin-top:20px;">
+                <button class="menu-btn" id="btn-help-back" style="width:180px;">返回</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 结算 -->
+    <div id="result" class="overlay hidden">
+        <div id="result-title">P1 获胜!</div>
+        <div id="result-sub">比分 1 : 0</div>
+        <button class="menu-btn primary" id="btn-rematch">🔄 再来一局</button>
+        <button class="menu-btn" id="btn-back-menu">🏠 回到主菜单</button>
+    </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
