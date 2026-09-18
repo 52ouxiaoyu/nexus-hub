@@ -4,7 +4,7 @@
  * 双人对战俄罗斯方块 · 道具攻防系统
  * ============================================================ */
 
-const VERSION = 'v1.0.1';
+const VERSION = 'v1.0.2';
 const COLS = 10, ROWS = 20, CELL = 30;
 const MAX_CHARGE = 10;          // 必杀充能
 const ITEM_SLOTS = 3;           // 道具栏格数
@@ -442,18 +442,20 @@ const AI = {
 };
 
 // ---------- 键位 ----------
-// P1（左侧）= WASD + 小键盘；P2（右侧）= 方向键 + 空格
+// 分区原则：P1 = 键盘左半区（WASD 区），P2 = 键盘右半区（方向键 + 小键盘区）
+// 旋转为独立键：P1 = 空格，P2 = 小键盘回车
 const KEYMAP = {
     P1: {
         left: ['KeyA'], right: ['KeyD'], down: ['KeyS'],
-        rotate: ['KeyW'], hard: ['NumpadEnter', 'ShiftRight'],
-        item1: ['Numpad1', 'Comma'], item2: ['Numpad2', 'Period'], item3: ['Numpad3', 'Slash'],
-        ult: ['Numpad0', 'KeyM'],
+        rotate: ['Space'], hard: ['ShiftLeft', 'KeyQ'],
+        item1: ['KeyF', 'KeyZ'], item2: ['KeyG', 'KeyX'], item3: ['KeyH', 'KeyC'],
+        ult: ['KeyR', 'KeyE'],
     },
     P2: {
         left: ['ArrowLeft'], right: ['ArrowRight'], down: ['ArrowDown'],
-        rotate: ['ArrowUp'], hard: ['Space'],
-        item1: ['KeyF'], item2: ['KeyG'], item3: ['KeyH'], ult: ['KeyR'],
+        rotate: ['NumpadEnter'], hard: ['Numpad0', 'ShiftRight'],
+        item1: ['Numpad1', 'Comma'], item2: ['Numpad2', 'Period'], item3: ['Numpad3', 'Slash'],
+        ult: ['NumpadAdd', 'ControlRight'],
     }
 };
 function matchKey(map, code) {
@@ -501,10 +503,10 @@ const game = {
         window.addEventListener('keydown', e => {
             if (this.state !== 'playing') return;
             const code = e.code;
-            if (code === 'Space' || code.startsWith('Arrow') ||
-                code === 'NumpadEnter' || code === 'ShiftRight' ||
-                ['KeyA','KeyS','KeyD','KeyW','KeyF','KeyG','KeyH','KeyR','KeyM',
-                 'Numpad0','Numpad1','Numpad2','Numpad3','Comma','Period','Slash'].includes(code)) {
+            const gameCodes = ['Space','NumpadEnter','ShiftLeft','ShiftRight','ControlRight',
+                'KeyA','KeyS','KeyD','KeyF','KeyG','KeyH','KeyR','KeyQ','KeyE','KeyZ','KeyX','KeyC',
+                'Numpad0','Numpad1','Numpad2','Numpad3','NumpadAdd','Comma','Period','Slash'];
+            if (code === 'Space' || code.startsWith('Arrow') || gameCodes.includes(code)) {
                 e.preventDefault();
             }
             for (const pidx of [0, 1]) {
@@ -774,7 +776,7 @@ const game = {
 
         // 道具栏
         const sy = iy + 104;
-        const keyHints = p.idx === 0 ? ['小1', '小2', '小3'] : ['F', 'G', 'H'];
+        const keyHints = p.idx === 0 ? ['F', 'G', 'H'] : ['小1', '小2', '小3'];
         for (let i = 0; i < ITEM_SLOTS; i++) {
             const y = sy + i * 52;
             ctx.fillStyle = p.items[i] ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.03)';
@@ -810,7 +812,7 @@ const game = {
         ctx.fillStyle = ratio >= 1 ? '#ffd600' : 'rgba(255,255,255,0.55)';
         ctx.font = 'bold 11px sans-serif';
         ctx.fillText(ratio >= 1 ? '💥 必杀就绪!' : `必杀充能 ${p.charge}/${MAX_CHARGE}`, ix, cy + 28);
-        const ultKey = p.idx === 0 ? (p.isAI ? '' : '小0/M') : 'R';
+        const ultKey = p.idx === 0 ? 'R' : (p.isAI ? '' : '小+');
         if (ultKey) {
             ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '10px sans-serif';
             ctx.fillText(`按 ${ultKey} 发动`, ix, cy + 42);

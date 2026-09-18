@@ -108,7 +108,7 @@
 <body>
 <div id="stage">
     <canvas id="game" width="1240" height="720"></canvas>
-    <div class="corner-tip">TETRIS BATTLE <span id="badge-tip">v1.0.1</span></div>
+    <div class="corner-tip">TETRIS BATTLE <span id="badge-tip">v1.0.2</span></div>
 
     <!-- 主菜单 -->
     <div id="menu" class="overlay">
@@ -117,27 +117,28 @@
         <button class="menu-btn primary" id="btn-duo">⚔️ 双人对战</button>
         <button class="menu-btn" id="btn-ai">🤖 人机对战</button>
         <button class="menu-btn" id="btn-help">📖 操作与道具说明</button>
-        <div class="badge" id="badge">v1.0.1</div>
+        <div class="badge" id="badge">v1.0.2</div>
     </div>
 
     <!-- 帮助 -->
     <div id="help" class="overlay hidden">
         <div class="help-box">
             <h2>操作与道具说明</h2>
-            <h3>玩家 1（左侧 · 青色）</h3>
+            <h3>玩家 1（左侧 · 键盘左半区）</h3>
             <table>
                 <tr><td>左 / 下 / 右</td><td><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td></tr>
-                <tr><td>旋转</td><td><kbd>W</kbd></td></tr>
-                <tr><td>硬降</td><td><kbd>小键盘回车</kbd> 或 <kbd>右Shift</kbd></td></tr>
-                <tr><td>使用道具 1 / 2 / 3</td><td><kbd>小键盘1</kbd><kbd>小键盘2</kbd><kbd>小键盘3</kbd> 或 <kbd>,</kbd><kbd>.</kbd><kbd>/</kbd></td></tr>
-                <tr><td>发动必杀 · 末日洪水</td><td><kbd>小键盘0</kbd> 或 <kbd>M</kbd>（充能满 10 时）</td></tr>
+                <tr><td>旋转</td><td><kbd>空格</kbd></td></tr>
+                <tr><td>硬降</td><td><kbd>左Shift</kbd> 或 <kbd>Q</kbd></td></tr>
+                <tr><td>使用道具 1 / 2 / 3</td><td><kbd>F</kbd><kbd>G</kbd><kbd>H</kbd>（备用 <kbd>Z</kbd><kbd>X</kbd><kbd>C</kbd>）</td></tr>
+                <tr><td>发动必杀 · 末日洪水</td><td><kbd>R</kbd>（备用 <kbd>E</kbd>，充能满 10 时）</td></tr>
             </table>
-            <h3 class="p2c">玩家 2（右侧 · 粉色）</h3>
+            <h3 class="p2c">玩家 2（右侧 · 键盘右半区）</h3>
             <table>
-                <tr><td>移动 / 软降 / 旋转</td><td><kbd>←</kbd><kbd>→</kbd><kbd>↓</kbd><kbd>↑</kbd>旋转</td></tr>
-                <tr><td>硬降（瞬间落底）</td><td><kbd>空格</kbd></td></tr>
-                <tr><td>使用道具 1 / 2 / 3</td><td><kbd>F</kbd><kbd>G</kbd><kbd>H</kbd></td></tr>
-                <tr><td>发动必杀</td><td><kbd>R</kbd>（充能满 10 时）</td></tr>
+                <tr><td>移动 / 软降</td><td><kbd>←</kbd><kbd>→</kbd><kbd>↓</kbd></td></tr>
+                <tr><td>旋转</td><td><kbd>小键盘回车</kbd></td></tr>
+                <tr><td>硬降（瞬间落底）</td><td><kbd>小键盘0</kbd> 或 <kbd>右Shift</kbd></td></tr>
+                <tr><td>使用道具 1 / 2 / 3</td><td><kbd>小键盘1</kbd><kbd>小键盘2</kbd><kbd>小键盘3</kbd>（备用 <kbd>,</kbd><kbd>.</kbd><kbd>/</kbd>）</td></tr>
+                <tr><td>发动必杀</td><td><kbd>小键盘+</kbd> 或 <kbd>右Ctrl</kbd>（充能满 10 时）</td></tr>
             </table>
             <h3>道具系统</h3>
             <div class="item-line"><span class="ic">🧱</span><b>垃圾行</b><span class="tag-a">攻</span>向对方底部加 2 行带洞垃圾</div>
