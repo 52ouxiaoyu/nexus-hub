@@ -37,11 +37,7 @@ class EventManager {
                     g.entities.filter(e => Math.abs(e.x-x)<100 && Math.abs(e.y-y)<100 && e!==crater && !e.isProjectile).forEach(e => e.hp=0);
                 }, 3000);
             }},
-            { msg: '🌪️ 危机：狂风呼啸！', color: '#88ccff', minScore: 200, exec: g => {
-                g.entities.filter(e => e instanceof Zombie && !e.isDead).forEach(z => { z.x = Math.min(900, z.x + 150); });
-                const p = g.entities.filter(e => e instanceof Plant && !e.isDead && e.type!=='crater');
-                for(let i=0; i<2; i++) { if(p.length>0) { const idx=Math.floor(Math.random()*p.length); p[idx].hp=0; p.splice(idx,1); } }
-            }},
+            // v3.12.0：移除「狂风」（随机毁掉 2 株植物，植物无故消失类事件）
             { msg: '✨ 奇迹：阳光普照！', color: '#ffd700', exec: g => {
                 for(let i=0; i<15; i++) setTimeout(() => g.entities.push(new Sun(g, 100+Math.random()*700, 0)), i*200);
             }},
@@ -133,18 +129,7 @@ class EventManager {
             { msg: '🛡️ 破甲：防具剥落！', color: '#aaffff', exec: g => {
                 g.entities.filter(e => e instanceof Zombie).forEach(z => { if(z.type==='conehead'||z.type==='buckethead'||z.type==='screendoor') z.hp=150; });
             }},
-            { msg: '⭕ 麦田：怪圈现象！', color: '#aaff44', minScore: 300, exec: g => {
-                const p = g.entities.filter(e => e instanceof Plant && !e.isDead);
-                for(let i=0; i<3; i++) { if(p.length>0) { const idx=Math.floor(Math.random()*p.length); p[idx].hp=0; p.splice(idx,1); } }
-            }},
-            { msg: '🌱 变异：植物叛变！', color: '#ff44aa', minScore: 400, exec: g => {
-                const p = g.entities.filter(e => e instanceof Plant && !e.isDead && e.type!=='crater');
-                if(p.length > 0) {
-                    const target = p[Math.floor(Math.random()*p.length)];
-                    target.hp = 0;
-                    g.entities.push(new Zombie(g, target.row, 'normal'));
-                }
-            }},
+            // v3.12.0：移除「麦田怪圈」「植物叛变」（植物无故消失类事件）
             { msg: '🌧️ 腐蚀：酸雨降临！', color: '#44ff44', exec: g => {
                 g.entities.filter(e => e instanceof Zombie).forEach(z => z.hp -= 100);
             }},
@@ -170,13 +155,7 @@ class EventManager {
                 if(g.audioManager.sounds.bgm) g.audioManager.sounds.bgm.playbackRate = 0.5;
                 setTimeout(() => { if(g.audioManager.sounds.bgm) g.audioManager.sounds.bgm.playbackRate = 1.0; }, 10000);
             }},
-            { msg: '💪 兴奋剂：植物强壮！', color: '#ff0000', exec: g => {
-                // v3.9.1 主犯修复：原写法 `p.element.style.transform = 'scale(1.2)'` 会把
-                // .entity 的 translate(-50%,-50%) 覆盖掉，导致**全场植物**按左上角对齐 →
-                // 集体向右下偏移半个贴图（西瓜投手 (48,48)≈一格、小喷菇 (20,33)），
-                // 最后一行植物因此被顶出画面。改用 setTransform 保留居中（幂等，重复触发仍是 1.2 倍）。
-                g.entities.filter(e => e instanceof Plant).forEach(p => { p.hp += 2000; p.setTransform('scale(1.2)'); });
-            }},
+            // v3.12.0：移除「兴奋剂」（全场植物 scale(1.2)，版面图片不整齐）
             { msg: '🎰 彩票：僵尸带资进组！', color: '#ffff00', exec: g => {
                 const z = new Zombie(g, Math.floor(Math.random()*g.board.rows), 'normal');
                 z.hp = 100; // Weak zombie

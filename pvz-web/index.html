@@ -4,7 +4,7 @@
     <meta charset="UTF-8" data-page-node-id="fvct4kKB77qx0aDFZg0TFG">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="7cXFTDee52Hp5l8aujUlmz">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1789652399" data-page-node-id="Q5lrPWp6xqtldfdpxSWXxH">
+    <link rel="stylesheet" href="css/style.css?v=1789747172" data-page-node-id="Q5lrPWp6xqtldfdpxSWXxH">
 </head>
 <body data-page-node-id="lPg8spSQ9t6E6ZEWT8akzU">
     <div id="game-container" data-page-node-id="dle8H483OJAxh7uRwqXTVW">
@@ -136,7 +136,8 @@
             .pkt-art.formula .row.plants { gap: 8px; }
             .pkt-art.formula .row.plants img { height: 58px; width: auto; image-rendering: pixelated; display: block; }
             .pkt-art.formula .row.plants .img-a { transform: translateY(2px); }
-            .pkt-art.formula .row.plants .img-b { height: 48px; transform: translateY(4px); }
+            /* v3.12.0：倭瓜与豌豆射手同大（此前大蒜 48px 明显小于豌豆 58px） */
+            .pkt-art.formula .row.plants .img-b { height: 58px; transform: translateY(2px); }
             .pkt-art.formula .row.result  { gap: 4px; margin-top: -2px; }
             .pkt-art.formula .formula-op   { font-size: 22px; font-weight: 900; color: #a14b18; line-height: 1; }
             .pkt-art.formula .formula-eq   { font-size: 26px; font-weight: 900; color: #4a3414; line-height: 1; }
@@ -203,7 +204,7 @@
                             <div class="row plants">
                                 <img class="img-a" src="assets/images/Plants/Peashooter/0.gif" alt="豌豆射手">
                                 <span class="formula-op">+</span>
-                                <img class="img-b" src="assets/images/Plants/Garlic/0.gif" alt="大蒜">
+                                <img class="img-b" src="assets/images/Plants/Squash/0.gif" alt="倭瓜">
                             </div>
                             <div class="row result">
                                 <span class="formula-eq">=</span>
@@ -335,16 +336,16 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1789652399"></script>
-    <script src="js/Board.js?v=1789652399"></script>
-    <script src="js/entities/Entity.js?v=1789652399"></script>
-    <script src="js/entities/Plant.js?v=1789652399"></script>
-    <script src="js/entities/Zombie.js?v=1789652399"></script>
-    <script src="js/entities/Projectile.js?v=1789652399"></script>
-    <script src="js/entities/Sun.js?v=1789652399"></script>
-    <script src="js/managers/WaveManager.js?v=1789652399"></script>
-    <script src="js/managers/CollisionManager.js?v=1789652399"></script>
-    <script src="js/managers/EventManager.js?v=1789652399"></script>
-    <script src="js/GameLoop.js?v=1789652399"></script>
+    <script src="js/InputManager.js?v=1789747172"></script>
+    <script src="js/Board.js?v=1789747172"></script>
+    <script src="js/entities/Entity.js?v=1789747172"></script>
+    <script src="js/entities/Plant.js?v=1789747172"></script>
+    <script src="js/entities/Zombie.js?v=1789747172"></script>
+    <script src="js/entities/Projectile.js?v=1789747172"></script>
+    <script src="js/entities/Sun.js?v=1789747172"></script>
+    <script src="js/managers/WaveManager.js?v=1789747172"></script>
+    <script src="js/managers/CollisionManager.js?v=1789747172"></script>
+    <script src="js/managers/EventManager.js?v=1789747172"></script>
+    <script src="js/GameLoop.js?v=1789747172"></script>
 </body>
 </html>

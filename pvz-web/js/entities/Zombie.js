@@ -560,6 +560,16 @@ class Zombie extends Entity {
                     this.eatTarget = plant;
                     this.element.src = this.attackSrc;
                 }
+            } else if (this.game.vaseMode && this.game.vases && this.game.vases.length) {
+                // v3.12.0：南瓜套罐——僵尸走到罐格先啃壳（= 不占种植格的坚果）
+                const gv = this.game;
+                const v = gv.vases.find(x => !x.smashed && x.pumpkinHp > 0 && x.row === this.row &&
+                    Math.abs(gv.board.offsetX + x.col * gv.board.cellWidth + gv.board.cellWidth / 2 - this.x) < 40);
+                if (v) {
+                    this.state = 'EATING';
+                    this.eatVase = v;
+                    this.element.src = this.attackSrc;
+                }
             }
             } // 关闭"无魅惑僵尸 → 正常行走啃食"分支
         } else if (this.state === 'JUMPING') {
@@ -574,8 +584,48 @@ class Zombie extends Entity {
             }
         }
         else if (this.state === 'EATING') {
-            if (this.eatTarget && !this.eatTarget.isDead) {
-                if ((this.eatTarget.type === 'fusion_hypnoshroom' || this.eatTarget.type === 'hypnoshroom') && !this.eatTarget._hypnoUsed &&
+            // v3.12.0：啃南瓜套罐的壳（罐子不在棋盘格里，独立于 eatTarget 处理）
+            if (this.eatVase) {
+                if (!this.eatVase.smashed && this.eatVase.pumpkinHp > 0) {
+                    const mul = this.game.zombieMode ? 3 : 1;
+                    const left = this.game._damageVasePumpkin(this.eatVase, currentDamage * mul * deltaTime);
+                    if (!this.chompTimer) this.chompTimer = 0;
+                    this.chompTimer -= deltaTime;
+                    if (this.chompTimer <= 0) {
+                        this.game.audioManager.play('chomp');
+                        this.chompTimer = this.isSlowed ? 3.0 : 1.0;
+                    }
+                    if (left <= 0) {
+                        // 壳被啃穿：罐子留在场内（玩家仍可砸），僵尸继续前进
+                        this.eatVase = null;
+                        this.state = 'WALKING';
+                        this.element.src = this.walkSrc;
+                    }
+                } else {
+                    this.eatVase = null;
+                    this.state = 'WALKING';
+                    this.element.src = this.walkSrc;
+                }
+            } else if (this.eatTarget && !this.eatTarget.isDead) {
+                // v3.12.0：先吃南瓜壳——壳还有耐久时只消耗壳，宿主的"被吃效果"
+                // （魅惑策反/大蒜改行等）必须等真正啃到本尊才触发
+                if (this.eatTarget.shield && this.eatTarget.shield.hp > 0) {
+                    const dmg = (this.type === 'gargantuar') ? this.eatTarget.shield.maxHp : currentDamage * deltaTime;
+                    this.eatTarget.shield.hp -= dmg;
+                    if (this.eatTarget.shield.hp <= 0) {
+                        this.eatTarget.shield.hp = 0;
+                        this.eatTarget.removeShield(true); // 外壳碎裂（植物无损）
+                        this.game.audioManager.play('splat');
+                    } else {
+                        this.eatTarget.updateShieldAppearance();
+                    }
+                    if (!this.chompTimer) this.chompTimer = 0;
+                    this.chompTimer -= deltaTime;
+                    if (this.chompTimer <= 0) {
+                        this.game.audioManager.play('chomp');
+                        this.chompTimer = this.isSlowed ? 3.0 : 1.0;
+                    }
+                } else if ((this.eatTarget.type === 'fusion_hypnoshroom' || this.eatTarget.type === 'hypnoshroom') && !this.eatTarget._hypnoUsed &&
                     this.type !== 'gargantuar' && this.type !== 'zomboni' && this.type !== 'lgboss') {
                     // 魅惑菇（融合版/经典版通用）：吃下即被策反，转为友方僵尸（巨人与冰车不会"吃"，只会砸烂，故不触发）
                     this.eatTarget._hypnoUsed = true;
@@ -638,18 +688,8 @@ class Zombie extends Entity {
                     this.eatTarget = null;
                     this.element.src = this.walkSrc;
                 } else {
-                    // 南瓜壳优先吸收伤害：僵尸先啃穿外壳（4000 耐久），才会伤到里面的植物（PVZ 原版）
-                    if (this.eatTarget.shield && this.eatTarget.shield.hp > 0) {
-                        const dmg = (this.type === 'gargantuar') ? this.eatTarget.shield.maxHp : currentDamage * deltaTime;
-                        this.eatTarget.shield.hp -= dmg;
-                        if (this.eatTarget.shield.hp <= 0) {
-                            this.eatTarget.shield.hp = 0;
-                            this.eatTarget.removeShield(true); // 外壳碎裂（植物无损）
-                            this.game.audioManager.play('splat');
-                        } else {
-                            this.eatTarget.updateShieldAppearance();
-                        }
-                    } else if (this.type === 'gargantuar') {
+                    // （南瓜壳分支已上提：能走到这里说明壳已被啃穿或本来就没有）
+                    if (this.type === 'gargantuar') {
                         if (!this.smashTimer) this.smashTimer = 1.0;
                         this.smashTimer -= deltaTime;
                         if (this.smashTimer <= 0) {

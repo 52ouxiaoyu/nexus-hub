@@ -153,26 +153,26 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789652399';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789747172';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789652399';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789747172';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1789652399';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1789747172';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1789652399';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1789747172';
             stat.butterChance = 0.2;
         } else if (type === 'starfruit') {
             // 杨桃（v3.6.0 经典模式可种）：五向星光射击，弹道复用融合版（Projectile 'star'）
@@ -197,7 +197,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789652399';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789747172';
             stat.yOffset = 0;
         }
 
@@ -449,35 +449,47 @@ class Plant extends Entity {
     attachShield() {
         if (this.shield || this.shieldEl || this.isDead) return false;
         this.shield = { hp: 4000, maxHp: 4000 };
+        this._spawnShieldEl();
+        return true;
+    }
+
+    // 生成壳的 DOM 层（要求 this.shield 已就位；耐久可自定义——
+    // v3.12.0 植物放进已有壳时，壳的剩余耐久会转移为新宿主的护甲）
+    _spawnShieldEl() {
+        if (this.shieldEl || !this.shield) return;
         // 套壳视觉（PVZ 原版）：壳是"罩"在植物外的空心护甲——
         // 植物下半身被壳前壁遮挡、上半身从壳顶洞口伸出（穿插/部分被遮）。
         // 两层 z 序（低→高）：宿主植物 → 带洞壳前壁（洞口透明，直接透出植物本体，无黑影）。
         const S = 'assets/images/Plants/PumpkinHead/';
-        // 宿主显示尺寸：用布局像素(offsetHeight)，与 this.x/y 同处 900x600 逻辑系，
-        // 不受 game-container 的 CSS transform:scale 影响（getBoundingClientRect 会含缩放）。
-        const hostH = this.element.offsetHeight || this.element.naturalHeight || 74;
-        // 壳尺寸 = 宿主高度 62%（矮一截，让植物上部从洞口探出）
-        const shH = Math.max(40, Math.round(hostH * 0.62));
-        const shW = Math.round(shH * 97 / 67);
-        // 宿主可视底部(逻辑系): element top=y+yOffset 且 .entity translate(-50%,-50%) 居中
-        const hostBottom = this.y + this.yOffset + hostH / 2;
-        // 壳底贴宿主底(留 2px)，壳顶因此低于宿主顶 → 植物从壳顶洞口探出
-        const shCenterX = this.x;
-        const shCenterY = hostBottom - shH / 2 - 2;
-        // 壳前壁层（带顶洞，挖洞处透明 → 直接透出里面的植物探头，不再画洞底黑影）
+        // v3.12.0 尺寸匹配：壳的几何改为每帧按宿主当前显示尺寸重算（见 _shieldGeomCalc）。
+        // 此前只在 attachShield 时算一次，而 GIF 异步加载未完成时 offsetHeight/naturalHeight
+        // 均为 0 → 永远落到 74 兜底值，高坚果和向日葵顶着一模一样的壳。
         const el = document.createElement('img');
         el.src = S + 'shield_full.png';
         el.className = 'entity';
         el.style.pointerEvents = 'none';
-        el.style.width = shW + 'px';
-        el.style.height = shH + 'px';
         el.style.objectFit = 'contain';
         el.style.zIndex = String(Math.floor(this.y) + 3);
         this.shieldEl = el;
-        this.shieldGeom = { cx: shCenterX, cy: shCenterY };
+        this.shieldGeom = null; // 下一帧 update() 由 _shieldGeomCalc() 填充
         this.game.entityLayer.appendChild(el);
         this.updateShieldAppearance();
-        return true;
+    }
+
+    // 南瓜壳几何：按宿主当前显示尺寸实时计算（壳高=宿主高 62%，宽随原版 97:67 比例）。
+    // 高坚果壳自然大、向日葵壳自然小；素材异步加载完成前沿用上次几何（初始为空时调用方兜底）。
+    _shieldGeomCalc() {
+        if (!this.shield || !this.shieldEl) return null;
+        const hostH = this.element.offsetHeight || this.element.naturalHeight || 0;
+        if (!hostH) return this.shieldGeom;
+        const shH = Math.max(40, Math.round(hostH * 0.62));
+        const shW = Math.round(shH * 97 / 67);
+        if (this.shieldEl.style.height !== shH + 'px') {
+            this.shieldEl.style.width = shW + 'px';
+            this.shieldEl.style.height = shH + 'px';
+        }
+        const hostBottom = this.y + this.yOffset + hostH / 2;
+        return { cx: this.x, cy: hostBottom - shH / 2 - 2 };
     }
     
     // 移除南瓜壳（被打穿时带碎裂淡出动画；植物死亡时直接移除）
@@ -597,30 +609,25 @@ class Plant extends Entity {
             this.state = 'swelling';
             this.element.src = 'assets/images/Plants/DoomShroom/BeginBoom.gif';
             this.game.audioManager.play('plant'); // some sound
-            setTimeout(() => {
-                this.state = 'exploding';
-                this.game.audioManager.play('splat');
-                this.triggerBombFusion();
-                this.element.src = 'assets/images/Plants/DoomShroom/Boom.png';
-                this.element.style.zIndex = 3000; // Put boom on top
-                this.element.style.transform = 'translate(-50%, -80%)'; // Move boom up a bit
-                
-                // Deal damage
-                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
-                for (let z of zombies) {
-                    z.takeDamage(9999); // Full screen nuke
-                }
-                
                 setTimeout(() => {
-                    this.type = 'crater';
-                    this.element.src = 'assets/images/Plants/DoomShroom/crater11.png';
-                    this.element.style.zIndex = 10; // crater stays on bottom
-                    this.element.style.transform = 'translate(-50%, -50%)'; // Reset transform
-                    
-                    // We can just leave the crater visual indefinitely, or kill it after a long time
-                    setTimeout(() => { this.hp = 0; }, 30000); // 30 seconds crater
-                }, 1000); // Boom lasts 1 sec
-            }, 1000); // Swell lasts 1 sec
+                    this.state = 'exploding';
+                    this.game.audioManager.play('splat');
+                    this.triggerBombFusion();
+                    this.element.src = 'assets/images/Plants/DoomShroom/Boom.png';
+                    this.element.style.zIndex = 3000; // Put boom on top
+                    this.element.style.transform = 'translate(-50%, -80%)'; // Move boom up a bit
+
+                    // v3.12.0：毁灭菇改为"周围一圈"爆破（3×3，以放置位置为中心），
+                    // 不再是全屏核平；且不再产生陨石坑（爆炸后本体直接消失）
+                    const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+                    for (let z of zombies) {
+                        if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 150) {
+                            z.takeDamage(9999);
+                        }
+                    }
+
+                    setTimeout(() => { this.hp = 0; }, 1000); // Boom lasts 1 sec
+                }, 1000); // Swell lasts 1 sec
         }
     }
     
@@ -634,18 +641,14 @@ class Plant extends Entity {
             this.fusionOverlay.style.top = `${this.y + this.yOffset}px`;
         }
         if (this.shieldEl) {
-            const g = this.shieldGeom;
-            if (g) {
-                this.shieldEl.style.left = `${g.cx}px`;
-                this.shieldEl.style.top = `${g.cy}px`;
-                if (this.cavityEl) {
-                    this.cavityEl.style.left = `${g.cx}px`;
-                    this.cavityEl.style.top = `${g.cy}px`;
-                }
-            } else {
-                // 兜底：无几何信息时沿用植物中心（异常路径）
-                this.shieldEl.style.left = `${this.x}px`;
-                this.shieldEl.style.top = `${this.y + this.yOffset + 10}px`;
+            // v3.12.0：几何每帧重算（素材加载完成前后壳尺寸会自动贴合宿主）
+            const g = this._shieldGeomCalc() ||
+                      { cx: this.x, cy: this.y + this.yOffset + 10 };
+            this.shieldEl.style.left = `${g.cx}px`;
+            this.shieldEl.style.top = `${g.cy}px`;
+            if (this.cavityEl) {
+                this.cavityEl.style.left = `${g.cx}px`;
+                this.cavityEl.style.top = `${g.cy}px`;
             }
             this.shieldEl.style.zIndex = String(Math.floor(this.y) + 3);
             this.updateShieldAppearance();
@@ -654,10 +657,11 @@ class Plant extends Entity {
         if (this.hp <= 0 && !this.isDead) {
             this.isDead = true;
 
-            // 我是僵尸模式：我方僵尸啃死向日葵 → 立即发阳光奖励（普通 200 / 双子 500）
+            // 我是僵尸模式：我方僵尸啃死向日葵/阳光菇 → 立即发阳光奖励
+            // （向日葵 200 / 双子 500 / 阳光菇 450）
             // 由 Zombie EATING 分支打 _zombieKill 标记，确保只有"被啃死"才触发（爆炸/冻伤不触发）
             if (this.game.zombieMode && this._zombieKill &&
-                (this.type === 'sunflower' || this.type === 'twinsunflower')) {
+                (this.type === 'sunflower' || this.type === 'twinsunflower' || this.type === 'sunshroom')) {
                 this.game.zombieEatSunflowerReward(this.type);
             }
             
@@ -991,22 +995,17 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                         this.element.src = 'assets/images/Plants/DoomShroom/Boom.png';
                         this.element.style.zIndex = 3000; // Put boom on top
                         this.element.style.transform = 'translate(-50%, -80%)'; // Move boom up a bit
-                        
-                        // Deal damage
+
+                        // v3.12.0：毁灭菇改为"周围一圈"爆破（3×3，以放置位置为中心），
+                        // 不再是全屏核平；且不再产生陨石坑（爆炸后本体直接消失）
                         const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                         for (let z of zombies) {
-                            z.takeDamage(9999); // Full screen nuke
+                            if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 150) {
+                                z.takeDamage(9999);
+                            }
                         }
-                        
-                        setTimeout(() => {
-                            this.type = 'crater';
-                            this.element.src = 'assets/images/Plants/DoomShroom/crater11.png';
-                            this.element.style.zIndex = 10; // crater stays on bottom
-                            this.element.style.transform = 'translate(-50%, -50%)'; // Reset transform
-                            
-                            // We can just leave the crater visual indefinitely, or kill it after a long time
-                            setTimeout(() => { this.hp = 0; }, 30000); // 30 seconds crater
-                        }, 1000); // Boom lasts 1 sec
+
+                        setTimeout(() => { this.hp = 0; }, 1000); // Boom lasts 1 sec
                     }, 1000); // Swell lasts 1 sec
                 }
             }

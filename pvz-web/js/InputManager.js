@@ -111,7 +111,8 @@ class InputManager {
                     if (this.selectedSeed) {
                         this.game.tryPlanting(this.selectedSeed, gridPos.row, gridPos.col);
                     } else if (this.isShovelSelected) {
-                        this.game.board.removePlant(gridPos.row, gridPos.col);
+                        // v3.12.0：分层铲除——格子上半部铲植物（壳留）、下半部只铲南瓜壳
+                        this.game.shovelPlant(gridPos.row, gridPos.col, mouseY);
                     }
                 }
                 
@@ -194,8 +195,8 @@ class InputManager {
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1789652399`
-                : `assets/images/Plants/${imgName}.gif?v=1789652399`;
+                ? `assets/images/Plants/${imgName}.png?v=1789747172`
+                : `assets/images/Plants/${imgName}.gif?v=1789747172`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
         }
     }
