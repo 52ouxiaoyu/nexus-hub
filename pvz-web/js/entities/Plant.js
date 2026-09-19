@@ -103,6 +103,7 @@ class Plant extends Entity {
             stat.hp = 1200;
             stat.src = 'assets/images/Plants/Spikerock/Spikerock.gif';
             stat.yOffset = 20;
+            stat.damageTimer = 0; // v3.14.0：补初始化（此前 undefined→NaN，钢地刺从未真正造成过伤害）
         } else if (type === 'sunshroom') {
             stat.hp = 300;
             stat.sunRate = 24.0;
@@ -153,26 +154,26 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789811061';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789822797';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789811061';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789822797';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1789811061';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1789822797';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1789811061';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1789822797';
             stat.butterChance = 0.2;
         } else if (type === 'starfruit') {
             // 杨桃（v3.6.0 经典模式可种）：五向星光射击，弹道复用融合版（Projectile 'star'）
@@ -197,7 +198,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789811061';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789822797';
             stat.yOffset = 0;
         }
 
@@ -586,16 +587,16 @@ class Plant extends Entity {
             for (let z of zombies) {
                 if (this.hasTrait('cherrybomb') && this.hasTrait('snowpea')) {
                     if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 100) {
-                        z.takeDamage(900); // half damage
+                        z.takeDamage(900, { bomb: true }); // half damage
                         z.setSlow(10.0);
                     }
                 } else if (this.hasTrait('cherrybomb')) {
                     if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 150) {
-                        z.takeDamage(1800);
+                        z.takeDamage(1800, { bomb: true });
                     }
                 } else if (this.hasTrait('jalapeno')) {
                     if (z.row === this.row) {
-                        z.takeDamage(1800);
+                        z.takeDamage(1800, { bomb: true });
                     }
                 }
             }
@@ -636,7 +637,7 @@ class Plant extends Entity {
                     const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                     for (let z of zombies) {
                         if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 150) {
-                            z.takeDamage(9999);
+                            z.takeDamage(9999, { bomb: true });
                         }
                     }
 
@@ -645,6 +646,28 @@ class Plant extends Entity {
         }
     }
     
+    // v3.14.0：我是僵尸敌阵陷阱毁灭菇 —— 接触即爆 / 被啃死也爆（共用）：
+    // 全屏湮灭 + 地面留陨石坑 30 秒；炸弹坦化僵尸（橄榄球/铁门/冰车）按 bomb 规则结算。
+    // 经典模式种植的毁灭菇（1s 引信 + 周围一圈爆破、无坑）不受影响。
+    _trapDetonate() {
+        this.state = 'exploding';
+        this.game.audioManager.play('splat');
+        this.triggerBombFusion();
+        this.element.src = 'assets/images/Plants/DoomShroom/Boom.png';
+        this.element.style.zIndex = 3000;
+        this.element.style.transform = 'translate(-50%, -80%)';
+        const all = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+        for (let z of all) z.takeDamage(9999, { bomb: true });
+        setTimeout(() => {
+            this.type = 'crater';
+            this.state = 'crater';
+            this.element.src = 'assets/images/Plants/DoomShroom/crater11.png';
+            this.element.style.zIndex = 10;
+            this.element.style.transform = 'translate(-50%, -50%)';
+            setTimeout(() => { this._trapExpire = true; this.hp = 0; }, 30000);
+        }, 1000);
+    }
+
     update(deltaTime) {
 
         super.update(deltaTime);
@@ -675,6 +698,14 @@ class Plant extends Entity {
         }
         
         if (this.hp <= 0 && !this.isDead) {
+            // v3.14.0：陷阱毁灭菇被啃死也要引爆（此前"被吃掉之后没有爆炸"）——
+            // 爆炸/弹坑阶段免疫死亡，弹坑 30 秒到点(_trapExpire)才真正从场上消失
+            if (this._enemyTrap && this.type === 'doomshroom' && !this._trapExpire &&
+                (this.state === 'idle' || this.state === 'exploding' || this.state === 'crater')) {
+                if (this.state === 'idle') this._trapDetonate();
+                this.hp = Math.max(this.hp, 1);
+                return;
+            }
             this.isDead = true;
 
             // 我是僵尸模式：我方僵尸啃死向日葵/阳光菇 → 立即发阳光奖励
@@ -694,7 +725,7 @@ class Plant extends Entity {
                     for (let zombie of zombies) {
                         // Zombie 无 col 属性，用 x 距离判定（80px/格，差<200 ≈ 中心±2格）
                         if (Math.abs(zombie.row - this.row) <= 2 && Math.abs(zombie.x - this.x) < 200) {
-                            zombie.takeDamage(1800);
+                            zombie.takeDamage(1800, { bomb: true });
                         }
                     }
                 } else {
@@ -1008,16 +1039,17 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
             }
         } else if (this.hasTrait('doomshroom') && this.autoExplode) {
             if (this.state === 'idle') {
-                // v3.13.3：敌阵陷阱毁灭菇不做定时自爆（否则开局 1 秒就白白炸掉），
-                // 玩家僵尸贴近同格（<60px）才开始引信倒计时；普通种植仍走原计时
+                // v3.13.4：我是僵尸敌阵陷阱毁灭菇 = 地雷 —— 玩家僵尸一碰到（同格贴近）
+                // 立即引爆，不走引信/膨胀；全屏伤害 + 地面留陨石坑 30 秒。
+                // （经典模式种植的毁灭菇仍走原版 1 秒引信 + 周围一圈爆破，行为不变）
                 if (this._enemyTrap) {
-                    const near = this.game.entities.some(e => e instanceof Zombie && !e.isDead &&
+                    const touch = this.game.entities.some(e => e instanceof Zombie && !e.isDead &&
                         e.state !== 'DYING' && e.row === this.row && Math.abs(e.x - this.x) < 60);
-                    if (near) this.explodeTimer -= deltaTime;
+                    if (touch) this._trapDetonate();
                 } else {
                     this.explodeTimer -= deltaTime;
                 }
-                if (this.explodeTimer <= 0) {
+                if (!this._enemyTrap && this.explodeTimer <= 0) {
                     this.state = 'swelling';
                     this.element.src = 'assets/images/Plants/DoomShroom/BeginBoom.gif';
                     this.game.audioManager.play('plant'); // some sound
@@ -1034,7 +1066,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                         const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                         for (let z of zombies) {
                             if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 150) {
-                                z.takeDamage(9999);
+                                z.takeDamage(9999, { bomb: true });
                             }
                         }
 
@@ -1121,7 +1153,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
         
         if (this.hasTrait('spikeweed') || this.hasTrait('spikerock')) {
             this.damageTimer += deltaTime;
-            if (this.damageTimer >= 1.0) { // Deal damage every 1s
+            if (this.damageTimer >= 0.75) { // v3.14.0：攻速=2×豌豆射手(1.5s/发)
                 this.damageTimer = 0;
                 const zombies = this.game.entities.filter(e => 
                     e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 40 && !e.isDead
@@ -1129,7 +1161,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                 if (zombies.length > 0) {
                     this.game.audioManager.play('splat'); // Or a spikeweed sound
                     for (let z of zombies) {
-                        const dmg = this.hasTrait('spikerock') ? 160 : 40;
+                        const dmg = this.hasTrait('spikerock') ? 120 : 40; // v3.14.0：钢地刺=3×地刺
                         z.takeDamage(dmg); 
                     }
                 }

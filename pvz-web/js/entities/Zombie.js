@@ -85,13 +85,15 @@ class Zombie extends Entity {
             this.dieSrc = 'assets/images/Zombies/NewspaperZombie/Die.gif';
             this.hasLostNewspaper = false;
         } else if (type === 'screendoor') {
-            this.hp = 1300; this.maxHp = 1300;
+            // v3.14.0：《我是僵尸》里 铁门(1450) > 橄榄球(1300) = 铁桶(1300)；其它模式原版数值
+            this.hp = this.game.zombieMode ? 1450 : 1300; this.maxHp = this.hp;
             this.element.src = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombie.gif';
             this.walkSrc = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombie.gif';
             this.attackSrc = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
         } else if (type === 'football') {
-            this.hp = 1600; this.maxHp = 1600;
+            // v3.14.0：《我是僵尸》里橄榄球与铁桶同血量(1300)；其它模式维持原版 1600
+            this.hp = this.game.zombieMode ? 1300 : 1600; this.maxHp = this.hp;
             this.speed = 40; 
             this.element.src = 'assets/images/Zombies/FootballZombie/FootballZombie.gif';
             this.walkSrc = 'assets/images/Zombies/FootballZombie/FootballZombie.gif';
@@ -502,12 +504,34 @@ class Zombie extends Entity {
             
             const plant = this.game.entities.find(e => 
                 e instanceof Plant && 
-                (!e.hasTrait || !e.hasTrait('spikeweed')) &&
+                // v3.14.0：地刺/钢地刺都不可啃 —— 所有僵尸直接从上面走过
+                (!e.hasTrait || (!e.hasTrait('spikeweed') && !e.hasTrait('spikerock'))) &&
                 e.row === this.row && 
                 Math.abs(e.x - this.x) < 40 &&
                 !e.isDead && e.type !== 'crater'
             );
             
+            // v3.14.0：冰车碾地刺 —— 碰地刺同归于尽（冰车被扎爆）；钢地刺可扛 3 辆冰车，
+            // 第 3 辆碾过才毁；其余僵尸对两种地刺照旧直接走过（不可啃、撑杆跳也不跳）
+            if (this.type === 'zomboni') {
+                const spike = this.game.entities.find(e => e instanceof Plant && !e.isDead &&
+                    e.row === this.row && Math.abs(e.x - this.x) < 40 &&
+                    e.hasTrait && (e.hasTrait('spikeweed') || e.hasTrait('spikerock')));
+                if (spike) {
+                    if (spike.hasTrait('spikeweed')) {
+                        spike.hp = 0;
+                        this.hp = 0; // 冰车被地刺扎爆
+                    } else {
+                        // 每辆冰车只计 1 次（贴着钢地刺开的每一帧都满足 <40px）
+                        if (spike._lastCrusher !== this) {
+                            spike._lastCrusher = this;
+                            spike._zomboniRuns = (spike._zomboniRuns || 0) + 1;
+                            if (spike._zomboniRuns >= 3) spike.hp = 0;
+                        }
+                    }
+                }
+            }
+
             if (plant) {
                 // Ignore plants with ladders (except gargantuar and zomboni who smash it)
                 if (plant.hasLadder && this.type !== 'gargantuar' && this.type !== 'zomboni') {
@@ -762,6 +786,13 @@ class Zombie extends Entity {
         // 友方（被魅惑）僵尸免疫我方植物/子弹/爆炸的一切伤害，
         // 只能被敌方僵尸肉搏杀死（FIGHTING 直接扣血）
         if (this.hypnotized) return;
+        // v3.14.0：《我是僵尸》里 橄榄球/铁门/冰车 可以硬扛 3 次一次性炸弹引爆
+        //（炸弹照常爆炸、对其它僵尸照常生效），第 4 次才被炸死（opts.bomb 由各爆炸点传入）
+        if (opts && opts.bomb && this.game.zombieMode &&
+            (this.type === 'football' || this.type === 'screendoor' || this.type === 'zomboni')) {
+            this._bombTanked = (this._bombTanked || 0) + 1;
+            if (this._bombTanked <= 3) return;
+        }
         // ===== v3.10.0 破甲（仅卷心菜投手 / 玉米投手的投掷物）=====
         // opts.pierce=true 表示"越过护甲直接打本体"：
         //   · hp 正常扣（该掉多少血就掉多少血）

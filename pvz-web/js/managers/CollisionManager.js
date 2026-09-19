@@ -20,7 +20,8 @@ class CollisionManager {
                         if (p.type === 'fumeshroom') {
                             if (!p.hitZombies.has(z)) {
                                 p.hitZombies.add(z);
-                                z.takeDamage(p.damage);
+                                // v3.14.0：大喷菇雾气穿门（pierce）—— 铁门/铁桶挡不住，直接打本体
+                                z.takeDamage(p.damage, { pierce: true });
                                 this.game.audioManager.play('splat');
                             }
                         } else {
@@ -31,7 +32,8 @@ class CollisionManager {
                             // 该规则只给这三个投掷物开（其它植物仍是普通伤害）。
                             const pierce = p.type === 'cabbage' || p.type === 'icecabbage'
                                         || p.type === 'kernel' || p.type === 'popcorn'
-                                        || p.type === 'butter';
+                                        || p.type === 'butter'
+                                        || p.type === 'scaredyshroom'; // v3.14.0：胆小菇孢子穿门
                             z.takeDamage(p.damage, pierce ? { pierce: true } : undefined);
                             
                             if (p.type === 'snowpea' || p.type === 'wintermelon' || p.type === 'icecabbage') {
