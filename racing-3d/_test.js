@@ -914,6 +914,38 @@ const FILE = 'file://' + path.resolve(__dirname, 'index.html');
         await page.evaluate(() => { Input.keys['w'] = false; Input.keys['arrowup'] = false; });
     } catch (e) { t('T31 VS 发车同步性测试执行', false, e.message); }
 
+    /* ===== T34 (v1.4.1): VS 输入隔离 —— P1 的 AWSD 不得驱动 P2，反之亦然 =====
+       v1.3.2 回归：frame() 给 P2 的 in_ 误传 undefined，readInput 回退读全局
+       Input（P1 键位），两车被 P1 同控。本测试分别只按一方的键验证另一方不动。 */
+    try {
+        await page.evaluate(() => { window.__game.backToMenu(); });
+        await new Promise(r => setTimeout(r, 300));
+        await page.evaluate(() => { document.getElementById('btn-vs').click(); });
+        await page.waitForFunction(() => window.__game.state === 'RACING', { timeout: 10000 });
+        // 阶段 1：只按 P1 的 W（keys + e.code 双通道桩）
+        await page.evaluate(() => { Input.keys['w'] = true; Input.codes['KeyW'] = true; });
+        await new Promise(r => setTimeout(r, 1200));
+        const onlyP1 = await page.evaluate(() => ({
+            p1: window.__game.player.speed, p2: window.__game.player2.speed,
+        }));
+        t('T34.1 只按 P1 油门时 P1 已起步', onlyP1.p1 > 8, 'p1=' + onlyP1.p1.toFixed(1));
+        t('T34.2 只按 P1 油门时 P2 保持静止（P2 不被 P1 连带驱动）', onlyP1.p2 < 1.5,
+          'p2=' + onlyP1.p2.toFixed(1));
+        // 阶段 2：松开 P1，只按 P2 的 ↑
+        await page.evaluate(() => { Input.keys['w'] = false; Input.codes['KeyW'] = false;
+            Input.keys['arrowup'] = true; Input.codes['ArrowUp'] = true; });
+        const p1Before = onlyP1.p1;
+        await new Promise(r => setTimeout(r, 1200));
+        const onlyP2 = await page.evaluate(() => ({
+            p1: window.__game.player.speed, p2: window.__game.player2.speed,
+        }));
+        t('T34.3 只按 P2 油门时 P2 已起步', onlyP2.p2 > 8, 'p2=' + onlyP2.p2.toFixed(1));
+        t('T34.4 只按 P2 油门时 P1 不加速（P1 不被 P2 连带驱动）', onlyP2.p1 < p1Before + 0.5,
+          `p1 ${p1Before.toFixed(1)} -> ${onlyP2.p1.toFixed(1)}`);
+        await page.evaluate(() => { Input.keys['arrowup'] = false; Input.codes['ArrowUp'] = false; });
+    } catch (e) { t('T34 VS 输入隔离测试执行', false, e.message); }
+
+
     /* ===== T32 (v1.3.3): SOLO 神秘事件点 —— 隐形直路 / 碰撞清空 / 事件概率与触发 ===== */
     try {
         await page.evaluate(() => { window.__game.backToMenu(); });

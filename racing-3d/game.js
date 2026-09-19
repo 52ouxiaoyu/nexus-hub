@@ -1,6 +1,6 @@
 'use strict';
 /* =========================================================================
- * 极速飞车 Turbo Rush 3D — v1.4.0
+ * 极速飞车 Turbo Rush 3D — v1.4.1
  * 街机式 3D 环形赛道竞速（参考马车 / 山脊赛车式手感）
  * v1.1.0：双人分屏 PK + 路面方向箭头 + 出赛道车身不消失软回拉
  * v1.1.1：修复 A/D 转向方向（相机 right=-world X 导致视觉左右相反）
@@ -44,6 +44,9 @@
  *         ×1.30（弯心更紧）+ 车尾跟随 11→3.2（后轮滑出），侧滑掉速即漂移代价；
  *         复用 drifting 链路自动获得胎痕 + 轮胎音效；输入改 e.code 物理位置码
  *         双通道——输入法/修饰键改写 e.key 时 WASD/方向键不再失灵
+ * v1.4.1：修复 VS 输入隔离回归——v1.3.2 改自动巡航时 frame() 给 P2 的 in_ 误传
+ *         undefined，readInput 回退读全局 Input（P1 键位），两车被 P1 的 AWSD
+ *         同控；恢复传入 Input.p2 快照，新增 T34 双向隔离测试
  * 纯前端：three.js r128（本地）+ 原生 JS，无任何构建工具
  * 坐标系约定：heading=0 朝 +z；heading 增大 = 右转；
  *            left 向量 = (t.z, 0, -t.x)（命名沿用，实际为行进方向右侧）
@@ -1917,10 +1920,12 @@ const Game = {
             for (const ai of this.ais) ai.update(dt, racing || this.state === 'FINISHED', p.accum);
         }
 
-        // P2 更新（仅 VS）
+        // P2 更新（仅 VS）——正常行驶读 Input.p2 快照（方向键/回车/小键盘.），
+        // 完赛后接管自动巡航。v1.4.1：修复 v1.3.2 回归——in_ 误传 undefined 时
+        // readInput 回退读全局 Input（P1 的 AWSD），导致 VS 下两车被 P1 同控
         let info2 = null;
         if (isVS && this.player2) {
-            info2 = this.player2.update(dt, live, fin ? this.player2.autopilot : undefined);
+            info2 = this.player2.update(dt, live, fin ? this.player2.autopilot : Input.p2);
         }
 
         // v1.2.1：车辆间碰撞（动量守恒）—— 在所有车位置更新完之后统一结算
