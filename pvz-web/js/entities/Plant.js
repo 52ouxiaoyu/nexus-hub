@@ -153,26 +153,26 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789807452';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789809139';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789807452';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789809139';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1789807452';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1789809139';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1789807452';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1789809139';
             stat.butterChance = 0.2;
         } else if (type === 'starfruit') {
             // 杨桃（v3.6.0 经典模式可种）：五向星光射击，弹道复用融合版（Projectile 'star'）
@@ -197,7 +197,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789807452';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789809139';
             stat.yOffset = 0;
         }
 
@@ -471,7 +471,18 @@ class Plant extends Entity {
         el.style.objectFit = 'contain';
         el.style.zIndex = String(Math.floor(this.y) + 3);
         this.shieldEl = el;
+        // v3.13.2：原版双层机制 —— Pumpkin_back.gif 画在植物身后当"背壁"。
+        // 阳光菇/小喷菇这类小植物够不到壳顶洞口，单层壳的洞口会直接透出草地形成大缺口；
+        // 加了背壁后洞口里看到的是南瓜内壁，壳的观感完整（高植物照常从洞口探出头）。
+        const back = document.createElement('img');
+        back.src = S + 'Pumpkin_back.gif';
+        back.className = 'entity';
+        back.style.pointerEvents = 'none';
+        back.style.objectFit = 'contain';
+        back.style.zIndex = String(Math.floor(this.y) - 1); // 植物身后
+        this.shieldBackEl = back;
         this.shieldGeom = null; // 下一帧 update() 由 _shieldGeomCalc() 填充
+        this.game.entityLayer.appendChild(back);
         this.game.entityLayer.appendChild(el);
         this.updateShieldAppearance();
     }
@@ -496,10 +507,13 @@ class Plant extends Entity {
     removeShield(animate) {
         const el = this.shieldEl;
         const cav = this.cavityEl;
+        const back = this.shieldBackEl;
         this.shield = null;
         this.shieldEl = null;
+        this.shieldBackEl = null;
         this.cavityEl = null;
         this.shieldGeom = null;
+        if (back && back.parentNode) back.parentNode.removeChild(back);
         if (el && animate) {
             el.style.transition = 'transform 0.4s ease-in, opacity 0.4s ease-in';
             el.style.transform = 'translate(-50%, -30%) scale(0.75)';
@@ -511,13 +525,13 @@ class Plant extends Entity {
         if (cav && cav.parentNode) cav.parentNode.removeChild(cav);
     }
     
-    // 南瓜壳裂纹分三阶段（满/中裂/重裂），与原版 WallNut 裂纹一致
+    // v3.13.2：南瓜套从生到死只有一个外观 —— 完好态，不做任何裂纹/阶段变化
+    //（用户明确要求"死了就死了，不需要任何标明或样子变化"）。
+    // 耐久消耗只走数值（shield.hp），视觉保持 shield_full 不变。
     updateShieldAppearance() {
         if (!this.shield || !this.shieldEl) return;
-        const ratio = this.shield.hp / this.shield.maxHp;
-        const img = ratio < 0.34 ? 'shield_bad.png' : (ratio < 0.67 ? 'shield_mid.png' : 'shield_full.png');
-        if (this.shieldEl.src.indexOf(img) === -1) {
-            this.shieldEl.src = 'assets/images/Plants/PumpkinHead/' + img;
+        if (this.shieldEl.src.indexOf('shield_full.png') === -1) {
+            this.shieldEl.src = 'assets/images/Plants/PumpkinHead/shield_full.png';
         }
     }
     
@@ -650,6 +664,12 @@ class Plant extends Entity {
                 this.cavityEl.style.left = `${g.cx}px`;
                 this.cavityEl.style.top = `${g.cy}px`;
             }
+            if (this.shieldBackEl) {
+                this.shieldBackEl.style.left = `${g.cx}px`;
+                this.shieldBackEl.style.top = `${g.cy}px`;
+                this.shieldBackEl.style.width = '97px';
+                this.shieldBackEl.style.height = '67px';
+            }
             this.shieldEl.style.zIndex = String(Math.floor(this.y) + 3);
             this.updateShieldAppearance();
         }
@@ -708,8 +728,12 @@ class Plant extends Entity {
             if (this.cavityEl && this.cavityEl.parentNode) {
                 this.cavityEl.parentNode.removeChild(this.cavityEl);
             }
+            if (this.shieldBackEl && this.shieldBackEl.parentNode) {
+                this.shieldBackEl.parentNode.removeChild(this.shieldBackEl);
+            }
             this.shield = null;
             this.shieldEl = null;
+            this.shieldBackEl = null;
             this.cavityEl = null;
             return;
         }
@@ -788,12 +812,13 @@ class Plant extends Entity {
                     // 都是抛射物，命中时按"破甲"结算（打本体、护甲不脱落，见 CollisionManager）。
                     if (this.hasTrait('cabbagepult')) projType = 'cabbage';
                     if (this.hasTrait('kernelpult')) projType = 'kernel';
-                    // 双料投手（卷心菜投手+玉米投手）：两种投掷物交替出手
+                    // 双料投手（卷心菜投手+玉米投手）v3.13.2：3/4 卷心菜 + 1/4 黄油
+                    //（此前对半交替平均每发仅 30 伤，325 阳光的性价比倒挂；
+                    //  改后平均 40 伤/发 + 25% 概率定身 3 秒，定场能力对得起价格）
                     if (this.type === 'fusion_veggiepult') {
-                        this.veggieToggle = !this.veggieToggle;
-                        projType = this.veggieToggle ? 'cabbage' : 'kernel';
+                        projType = Math.random() < 0.75 ? 'cabbage' : 'butter';
                     }
-                    // 玉米系（含双料）20% 概率改投黄油：破甲 + 定身 3 秒
+                    // 玉米系 20% 概率改投黄油：破甲 + 定身 3 秒
                     if (projType === 'kernel' && Math.random() < (this.butterChance || 0.2)) {
                         projType = 'butter';
                     }
