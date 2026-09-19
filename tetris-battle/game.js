@@ -4,11 +4,13 @@
  * 双人对战俄罗斯方块 · 道具攻防系统
  * ============================================================ */
 
-const VERSION = 'v1.1.0';
+const VERSION = 'v1.1.1';
 const COLS = 10, ROWS = 20, CELL = 30;
 const MAX_CHARGE = 10;          // 必杀充能
 const ITEM_SLOTS = 3;           // 道具栏格数
 const GARBAGE_DELAY = 1500;     // 垃圾行预警时间 ms
+const DAS_DELAY = 160;          // 按住方向键后触发连移的延迟 ms
+const DAS_ARR = 40;             // 连移间隔 ms
 
 // ---------- 方块定义 ----------
 const PIECES = {
@@ -93,6 +95,8 @@ class Player {
         this.spawnId = 0;
         this.dropTimer = 0;
         this.softDropping = false;
+        this.held = { left: false, right: false };   // 方向键按住状态
+        this.das = { dir: 0, timer: 0, arr: 0 };     // DAS 连移状态
         this.items = [null, null, null];
         this.charge = 0;
         this.shields = 0;
@@ -537,8 +541,16 @@ const game = {
                 const action = matchKey(KEYMAP['P' + (pidx + 1)], code);
                 if (!action || e.repeat) continue;
                 switch (action) {
-                    case 'left':  p.move(-1); break;
-                    case 'right': p.move(1); break;
+                    case 'left':
+                        p.held.left = true;
+                        p.das = { dir: -1, timer: 0, arr: 0 };
+                        p.move(-1);
+                        break;
+                    case 'right':
+                        p.held.right = true;
+                        p.das = { dir: 1, timer: 0, arr: 0 };
+                        p.move(1);
+                        break;
                     case 'rotate': p.rotate(); break;
                     case 'hard':  p.hardDrop(); break;
                     case 'item1': p.useSlot(0); break;
@@ -554,8 +566,34 @@ const game = {
                 if (p.isAI) continue;
                 const map = KEYMAP['P' + (p.idx + 1)];
                 if (map.down.includes(e.code)) p.softDropping = false;
+                // 松开方向键：结束 DAS；若反向键仍按住则切换方向
+                if (map.left.includes(e.code)) {
+                    p.held.left = false;
+                    if (p.das.dir === -1) {
+                        p.das = p.held.right ? { dir: 1, timer: 0, arr: 0 } : { dir: 0, timer: 0, arr: 0 };
+                    }
+                }
+                if (map.right.includes(e.code)) {
+                    p.held.right = false;
+                    if (p.das.dir === 1) {
+                        p.das = p.held.left ? { dir: -1, timer: 0, arr: 0 } : { dir: 0, timer: 0, arr: 0 };
+                    }
+                }
             }
         });
+    },
+
+    // DAS：按住方向键，先立即移动一格，DAS_DELAY 后以 DAS_ARR 间隔连移
+    updateDAS(p, dt) {
+        if (!p.das.dir || p.dead || !p.cur) return;
+        p.das.timer += dt;
+        if (p.das.timer >= DAS_DELAY) {
+            p.das.arr += dt;
+            while (p.das.arr >= DAS_ARR) {
+                p.das.arr -= DAS_ARR;
+                if (!p.move(p.das.dir)) { p.das.arr = 0; break; }  // 撞墙停住
+            }
+        }
     },
 
     start(mode, aiLevel) {
@@ -632,6 +670,7 @@ const game = {
         if (this.state === 'playing') {
             const now = performance.now();
             for (const p of this.players) p.tick(now, dt);
+            for (const p of this.players) if (!p.isAI) this.updateDAS(p, dt);
             this.checkIncoming(now);
             for (const p of this.players) if (p.isAI) AI.update(p, now, dt);
             this.checkGameOver();
