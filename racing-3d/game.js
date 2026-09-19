@@ -1,6 +1,6 @@
 'use strict';
 /* =========================================================================
- * 极速飞车 Turbo Rush 3D — v1.3.3
+ * 极速飞车 Turbo Rush 3D — v1.4.0
  * 街机式 3D 环形赛道竞速（参考马车 / 山脊赛车式手感）
  * v1.1.0：双人分屏 PK + 路面方向箭头 + 出赛道车身不消失软回拉
  * v1.1.1：修复 A/D 转向方向（相机 right=-world X 导致视觉左右相反）
@@ -40,6 +40,10 @@
  *         等宽的隐形直路（走廊内 off=0，极速/滚阻/抓地与马路完全一致）；
  *         驶近触发：80% 好事件（氮气充满/8s 极速+30%/总成绩−2s）、20% 坏事件
  *         （打滑骤降/6s 极速−40%），蓝色提示条弹出，每局一次
+ * v1.4.0：漂移键 —— P1 右Alt/左Shift、P2 小键盘./右Shift；漂移中转首角速度上限
+ *         ×1.30（弯心更紧）+ 车尾跟随 11→3.2（后轮滑出），侧滑掉速即漂移代价；
+ *         复用 drifting 链路自动获得胎痕 + 轮胎音效；输入改 e.code 物理位置码
+ *         双通道——输入法/修饰键改写 e.key 时 WASD/方向键不再失灵
  * 纯前端：three.js r128（本地）+ 原生 JS，无任何构建工具
  * 坐标系约定：heading=0 朝 +z；heading 增大 = 右转；
  *            left 向量 = (t.z, 0, -t.x)（命名沿用，实际为行进方向右侧）
@@ -175,19 +179,24 @@ const AudioSys = {
 /* ---------------- 3. 输入（双玩家，P2 独立键位） ---------------- */
 const Input = {
     keys: {},
-    p2: { throttle: 0, brake: 0, steer: 0, handbrake: 0, nitro: 0 },
+    codes: {}, // v1.4.0：物理位置码（e.code）双通道——输入法/Alt 等修饰键改写 e.key 时转向油门不再失灵
+    p2: { throttle: 0, brake: 0, steer: 0, handbrake: 0, nitro: 0, drift: 0 },
     touch: { left: false, right: false, gas: false, brake: false, nitro: false },
     init() {
         window.addEventListener('keydown', e => {
-            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Shift', 'Enter'].includes(e.key)) e.preventDefault();
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Shift', 'Enter', 'Alt'].includes(e.key)) e.preventDefault();
             this.keys[e.key.toLowerCase()] = true;
+            this.codes[e.code] = true;
             Game.onKey(e.key.toLowerCase());
         });
-        window.addEventListener('keyup', e => { this.keys[e.key.toLowerCase()] = false; });
+        window.addEventListener('keyup', e => {
+            this.keys[e.key.toLowerCase()] = false;
+            this.codes[e.code] = false;
+        });
         // v1.3.1：窗口失焦/切后台时清空按键状态——alt-tab、点出页面后 keyup 会丢，
         // 残留的按键状态会让转向/油门表现错乱（表现为按了没反应或自转）
-        window.addEventListener('blur', () => { this.keys = {}; });
-        document.addEventListener('visibilitychange', () => { if (document.hidden) this.keys = {}; });
+        window.addEventListener('blur', () => { this.keys = {}; this.codes = {}; });
+        document.addEventListener('visibilitychange', () => { if (document.hidden) { this.keys = {}; this.codes = {}; } });
         if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
             const ui = document.getElementById('touchUI');
             if (ui) ui.style.display = Game.mode === 'SOLO' ? 'block' : 'none';
@@ -203,29 +212,32 @@ const Input = {
         }
     },
     /* v1.2.0 极简键位：4 方向键驾驶 + 1 个加速键（带 CD），无刹车/手刹
-       P1：W A S D 或方向键（SOLO 时两套都归 P1） + Space 加速
-       P2：方向键 + 回车加速 */
+       P1：W A S D 或方向键（SOLO 时两套都归 P1） + Space 加速 + 右Alt/左Shift 漂移（v1.4.0）
+       P2：方向键 + 回车加速 + 小键盘./右Shift 漂移（v1.4.0） */
     _soloArrow() { return typeof Game !== 'undefined' && Game.mode !== 'VS'; },
-    get throttle() { return (this.keys['w'] || (this._soloArrow() && this.keys['arrowup']) || this.touch.gas) ? 1 : 0; },
-    get brake()    { return (this.keys['s'] || (this._soloArrow() && this.keys['arrowdown']) || this.touch.brake) ? 1 : 0; },
+    get throttle() { return (this.keys['w'] || this.codes['KeyW'] || (this._soloArrow() && (this.keys['arrowup'] || this.codes['ArrowUp'])) || this.touch.gas) ? 1 : 0; },
+    get brake()    { return (this.keys['s'] || this.codes['KeyS'] || (this._soloArrow() && (this.keys['arrowdown'] || this.codes['ArrowDown'])) || this.touch.brake) ? 1 : 0; },
     /* 转向：+1 = 视觉左转（A / ←），-1 = 视觉右转（D / →） */
     get steer() {
         let s = 0;
-        if (this.keys['a'] || (this._soloArrow() && this.keys['arrowleft']) || this.touch.left) s += 1;
-        if (this.keys['d'] || (this._soloArrow() && this.keys['arrowright']) || this.touch.right) s -= 1;
+        if (this.keys['a'] || this.codes['KeyA'] || (this._soloArrow() && (this.keys['arrowleft'] || this.codes['ArrowLeft'])) || this.touch.left) s += 1;
+        if (this.keys['d'] || this.codes['KeyD'] || (this._soloArrow() && (this.keys['arrowright'] || this.codes['ArrowRight'])) || this.touch.right) s -= 1;
         return s;
     },
     get handbrake() { return false; }, // v1.2.0：移除手刹（简化操作）
-    get nitro()     { return !!(this.keys[' '] || this.touch.nitro); },
+    get nitro()     { return !!(this.keys[' '] || this.codes['Space'] || this.touch.nitro); },
+    /* v1.4.0：漂移键 —— P1 右Alt（AltRight）/左Shift 备选；不用左Alt（会激活浏览器菜单/改写其他按键） */
+    get drift()     { return !!(this.codes['AltRight'] || this.codes['ShiftLeft']); },
     setP2() {
-        this.p2.throttle = (this.keys['arrowup']) ? 1 : 0;
-        this.p2.brake = (this.keys['arrowdown']) ? 1 : 0;
+        this.p2.throttle = (this.keys['arrowup'] || this.codes['ArrowUp']) ? 1 : 0;
+        this.p2.brake = (this.keys['arrowdown'] || this.codes['ArrowDown']) ? 1 : 0;
         let s = 0;
-        if (this.keys['arrowleft']) s += 1;   // 视觉左转
-        if (this.keys['arrowright']) s -= 1; // 视觉右转
+        if (this.keys['arrowleft'] || this.codes['ArrowLeft']) s += 1;   // 视觉左转
+        if (this.keys['arrowright'] || this.codes['ArrowRight']) s -= 1; // 视觉右转
         this.p2.steer = s;
         this.p2.handbrake = false;
-        this.p2.nitro = !!this.keys['enter']; // 回车加速（主键盘/小键盘回车通用）
+        this.p2.nitro = !!(this.keys['enter'] || this.codes['Enter'] || this.codes['NumpadEnter']); // 回车加速（主键盘/小键盘回车通用）
+        this.p2.drift = !!(this.codes['NumpadDecimal'] || this.codes['ShiftRight']); // v1.4.0：小键盘. / 右Shift 漂移
     }
 };
 
@@ -1033,16 +1045,16 @@ class Player {
         this.update(0.016, false);
     }
     forward() { return new THREE.Vector3(Math.sin(this.heading), 0, Math.cos(this.heading)); }
-    /* 读取输入：P1 默认从全局 Input 读；自定义实例可传 in_={throttle,brake,steer,handbrake,nitro} */
+    /* 读取输入：P1 默认从全局 Input 读；自定义实例可传 in_={throttle,brake,steer,handbrake,nitro,drift} */
     readInput(controlsLive, in_) {
         if (in_) {
             // v1.3.2：外部输入快照同样受 controlsLive 门控——
             // 旧版 in_ 分支直通，P2 倒计时未放行即可起步（抢跑）、P1 完赛后 P2 仍可继续开
             return controlsLive
-                ? { throttle: in_.throttle, brake: in_.brake, steer: in_.steer, handbrake: in_.handbrake, nitro: in_.nitro }
-                : { throttle: 0, brake: 0, steer: 0, handbrake: false, nitro: false };
+                ? { throttle: in_.throttle, brake: in_.brake, steer: in_.steer, handbrake: in_.handbrake, nitro: in_.nitro, drift: !!in_.drift }
+                : { throttle: 0, brake: 0, steer: 0, handbrake: false, nitro: false, drift: false };
         }
-        return { throttle: controlsLive ? Input.throttle : 0, brake: controlsLive ? Input.brake : 0, steer: controlsLive ? Input.steer : 0, handbrake: controlsLive && Input.handbrake, nitro: controlsLive && Input.nitro };
+        return { throttle: controlsLive ? Input.throttle : 0, brake: controlsLive ? Input.brake : 0, steer: controlsLive ? Input.steer : 0, handbrake: controlsLive && Input.handbrake, nitro: controlsLive && Input.nitro, drift: controlsLive && Input.drift };
     }
 
     update(dt, controlsLive, in_) {
@@ -1051,7 +1063,8 @@ class Player {
         const throttle = inp.throttle;
         const brake = inp.brake;
         const steerIn = inp.steer;
-        const hb = !!inp.handbrake; // v1.2.0：恒为 false（手刹已移除）
+        // v1.4.0：漂移键（替代已废弃的手刹通道）——中高速按住才生效
+        const driftOn = !!inp.drift && Math.abs(this.speed) > 6;
         // v1.2.0：CD 氮气 —— 一次最长 BOOST_MAX 秒；用完或中途松开 → 进 BOOST_CD 冷却
         if (this.boostCd > 0) this.boostCd = Math.max(0, this.boostCd - dt);
         let nitroOn = false;
@@ -1096,7 +1109,6 @@ class Player {
         const sgn = Math.abs(this.speed) > 0.15 ? Math.sign(this.speed) : 0;
         a -= this.speed * (0.012 + off * 0.043); // v1.3.0：滚阻随 off 渐增（路面 0.012 → 深草 0.055）
         a -= 0.35 * sgn;
-        if (hb) a -= 6 * sgn;
         this.speed += a * dt;
         if (this.speed > vmaxEff) this.speed = Math.max(vmaxEff, this.speed - 7 * dt); // 软限速（之前 -16）
         if (this.speed < CFG.REV_MAX) this.speed = CFG.REV_MAX;
@@ -1111,14 +1123,17 @@ class Player {
         else this.steerA = lerp(this.steerA, steerIn * steerMax, 1 - Math.exp(-10 * dt));
         let yawRate = (this.speed / 2.6) * Math.tan(this.steerA);
         // v1.3.0：抓地随 off 渐降（路面 100% → 深草 65%）——出赛道后高速打方向更滑
-        const gripCap = CFG.LAT_GRIP * (hb ? 0.55 : (1 - off * 0.35));
+        // v1.4.0：漂移 —— 允许 30% 更大的转首角速度（弯心更紧），过抓地上限刻意侧滑
+        const gripCap = CFG.LAT_GRIP * (driftOn ? 1.30 : 1) * (1 - off * 0.35);
         const latCap = gripCap / Math.max(Math.abs(this.speed), 3);
         yawRate = clamp(yawRate, -latCap, latCap);
         this.heading = wrapAngle(this.heading + yawRate * dt);
 
         // 漂移：速度方向滞后于车头
         // v1.3.0：车尾跟随随 off 渐降（路面 11 → 深草 7）；侧滑掉速 0.40
-        const gripRate = hb ? 2.0 : (11 - off * 4);
+        // v1.4.0：按住漂移键车尾跟随骤降（11 → 3.2），车尾滑出形成漂移角，
+        //         侧滑掉速（0.40 系数）即为漂移的代价——用速度换弯道曲率
+        const gripRate = driftOn ? 3.2 : (11 - off * 4);
         this.velAngle = wrapAngle(this.velAngle + wrapAngle(this.heading - this.velAngle) * clamp(gripRate * dt, 0, 1));
         this.slide = Math.abs(wrapAngle(this.heading - this.velAngle));
         if (this.slide > 0.12 && Math.abs(this.speed) > 8) this.speed -= this.slide * this.speed * 0.40 * dt;
@@ -1174,7 +1189,7 @@ class Player {
         this.lastS = s;
         this.accum = (this.accum || 0) + ds;
 
-        this.drifting = (hb && Math.abs(this.speed) > 9) || (this.slide > 0.3 && Math.abs(this.speed) > 11);
+        this.drifting = (driftOn && Math.abs(this.speed) > 9) || (this.slide > 0.3 && Math.abs(this.speed) > 11);
         return { lat, onRoad, off, drifting: this.drifting };
     }
 }

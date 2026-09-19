@@ -950,10 +950,12 @@ const FILE = 'file://' + path.resolve(__dirname, 'index.html');
         t('T32.5 走廊中点=马路物理', my.onMid === true);
         t('T32.6 走廊外 12m=草地物理', my.offSide === false);
         t('T32.7 蓝色光柱/悬浮?已生成', my.hasQ);
-        // 隐形路物理：把车放到走廊中点，滚阻应与马路一致（off=0）
+        // 隐形路物理：把车放到走廊中点、车头对准走廊方向，滚阻应与马路一致（off=0）
         const phys = await page.evaluate(() => {
             const g = window.__game, p = g.player, m = g.world.mystery;
             p.pos.x = (m.ax + m.bx) / 2; p.pos.z = (m.az + m.bz) / 2;
+            // v1.4.0：车头必须对准走廊轴向（走廊⊥赛道，否则车会横着开出走廊）
+            p.heading = p.velAngle = Math.atan2(m.bx - m.ax, m.bz - m.az);
             p.speed = 30; p.buffT = 0; p.buffMul = 1;
             for (let i = 0; i < 10; i++) p.update(0.033, true);
             return { off: p.lastOff, speed: p.speed };
@@ -991,6 +993,74 @@ const FILE = 'file://' + path.resolve(__dirname, 'index.html');
         });
         t('T32.12 驶近事件点自动触发（每局一次）', auto.done && auto.toast);
     } catch (e) { t('T32 神秘事件点测试执行', false, e.message); }
+
+    /* ===== T33 (v1.4.0): 漂移键 —— 输入/物理/双玩家 ===== */
+    {
+        const driftBase = await page.evaluate(() => {
+            const g = window.__game, p = g.player;
+            // 基准：30 m/s 满舵左转 60 帧（不漂移）
+            p.speed = 30; p.heading = 0; p.velAngle = 0; p.buffT = 0; p.buffMul = 1;
+            Input.codes['KeyA'] = true;
+            for (let i = 0; i < 60; i++) p.update(0.033, true);
+            const base = { yaw: p.heading, slide: p.slide, drifting: p.drifting, speed: p.speed };
+            // 漂移：同样条件按住右Alt
+            p.speed = 30; p.heading = 0; p.velAngle = 0;
+            Input.codes['AltRight'] = true;
+            for (let i = 0; i < 60; i++) p.update(0.033, true);
+            const dr = { yaw: p.heading, slide: p.slide, drifting: p.drifting, speed: p.speed };
+            Input.codes['KeyA'] = false; Input.codes['AltRight'] = false;
+            return { base, dr };
+        });
+        t('T33.1 漂移时转首角更大（弯心更紧，Δyaw +20% 以上）',
+          driftBase.dr.yaw > driftBase.base.yaw * 1.2,
+          `yaw ${driftBase.base.yaw.toFixed(2)} → ${driftBase.dr.yaw.toFixed(2)}`);
+        t('T33.2 漂移时车尾滑出（侧滑角显著增大）',
+          driftBase.dr.slide > driftBase.base.slide * 3,
+          `slide ${driftBase.base.slide.toFixed(3)} → ${driftBase.dr.slide.toFixed(3)}`);
+        t('T33.3 漂移触发胎痕/音效判定（drifting=true）', driftBase.dr.drifting === true);
+        t('T33.4 漂移有速度代价（掉速比正常过弯多）',
+          driftBase.dr.speed < driftBase.base.speed - 1,
+          `v ${driftBase.base.speed.toFixed(1)} → ${driftBase.dr.speed.toFixed(1)}`);
+        const driftLow = await page.evaluate(() => {
+            const g = window.__game, p = g.player;
+            p.speed = 4; p.heading = 0; p.velAngle = 0;
+            Input.codes['AltRight'] = true;
+            for (let i = 0; i < 10; i++) p.update(0.033, true);
+            Input.codes['AltRight'] = false;
+            return p.drifting;
+        });
+        t('T33.5 低速（4 m/s）按漂移键不生效', driftLow === false);
+        const driftP2 = await page.evaluate(() => {
+            const g = window.__game;
+            g.backToMenu();
+            document.getElementById('btn-vs').click();
+            return new Promise(res => setTimeout(() => {
+                Input.codes['NumpadDecimal'] = true;
+                Input.setP2();
+                const p2 = g.player2;
+                p2.speed = 30; p2.heading = 0; p2.velAngle = 0;
+                for (let i = 0; i < 30; i++) p2.update(0.033, true, Input.p2);
+                const out = { drifting: p2.drifting, slide: p2.slide, p2drift: Input.p2.drift };
+                Input.codes['NumpadDecimal'] = false; Input.setP2();
+                res(out);
+            }, 250));
+        });
+        t('T33.6 P2 小键盘. 漂移生效', driftP2.drifting === true && driftP2.p2drift === true,
+          `drift=${driftP2.p2drift} drifting=${driftP2.drifting}`);
+        const driftShift = await page.evaluate(() => {
+            const g = window.__game;
+            g.backToMenu(); document.getElementById('btn-start').click();
+            return new Promise(res => setTimeout(() => {
+                const p = g.player;
+                p.speed = 30; p.heading = 0; p.velAngle = 0;
+                Input.codes['ShiftLeft'] = true;
+                for (let i = 0; i < 30; i++) p.update(0.033, true);
+                Input.codes['ShiftLeft'] = false;
+                res(p.drifting);
+            }, 250));
+        });
+        t('T33.7 P1 左Shift 备选漂移键生效', driftShift === true);
+    }
 
     const passed = results.filter(r => r.pass).length;
     const total = results.length;
