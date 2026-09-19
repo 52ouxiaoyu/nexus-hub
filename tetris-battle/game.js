@@ -4,7 +4,7 @@
  * 双人对战俄罗斯方块 · 道具攻防系统
  * ============================================================ */
 
-const VERSION = 'v1.0.2';
+const VERSION = 'v1.1.0';
 const COLS = 10, ROWS = 20, CELL = 30;
 const MAX_CHARGE = 10;          // 必杀充能
 const ITEM_SLOTS = 3;           // 道具栏格数
@@ -354,6 +354,15 @@ class Player {
     }
 }
 
+// ---------- AI 难度 ----------
+// actInterval: 每步操作间隔（越小越快）; itemChance: 主动用攻击道具概率; planNoise: 落点评分噪声（越大越菜）
+const AI_LEVELS = {
+    1: { name: '初级',   actInterval: 420, itemChance: 0.10, planNoise: 300 },
+    2: { name: '中级',   actInterval: 220, itemChance: 0.22, planNoise: 110 },
+    3: { name: '高级',   actInterval: 110, itemChance: 0.35, planNoise: 30 },
+    4: { name: '地狱级', actInterval: 60,  itemChance: 0.50, planNoise: 0 },
+};
+
 // ---------- 简单 AI ----------
 const AI = {
     actTimer: 0,
@@ -377,8 +386,9 @@ const AI = {
         for (let r = 0; r < ROWS; r++) if (board[r].every(v => v)) n++;
         return n;
     },
-    plan(p) {
-        // 枚举旋转与落点，评分选最优
+    plan(p, noise) {
+        // 枚举旋转与落点，评分选最优（noise 越大越容易选到差位置）
+        noise = noise || 0;
         let best = null;
         let m = p.cur.m.map(r => r.slice());
         for (let rot = 0; rot < 4; rot++) {
@@ -399,7 +409,8 @@ const AI = {
                 if (!ok) continue;
                 const ev = this.evalBoard(b);
                 const clears = this.countClears(b);
-                const score = clears * 320 - ev.holes * 380 - ev.bump * 18 - ev.agg * 9;
+                const score = clears * 320 - ev.holes * 380 - ev.bump * 18 - ev.agg * 9
+                    + (Math.random() - 0.5) * 2 * noise;
                 if (!best || score > best.score) best = { score, rot, x };
             }
             m = rotateMat(m, 1);
@@ -409,6 +420,7 @@ const AI = {
     },
     update(p, now, dt) {
         if (p.dead || !p.cur) return;
+        const cfg = AI_LEVELS[p.aiLevel] || AI_LEVELS[4];
         // 道具决策
         this.itemTimer = (this.itemTimer || 0) + dt;
         if (this.itemTimer > 900) {
@@ -420,16 +432,16 @@ const AI = {
                 if (it === 'shield' && incoming > 0) { p.useSlot(i); break; }
                 if (it === 'sweep' && p.stackHeight() >= 13) { p.useSlot(i); break; }
                 if (it === 'slow' && p.stackHeight() >= 14) { p.useSlot(i); break; }
-                if (ITEMS[it].atk && Math.random() < 0.35) { p.useSlot(i); break; }
+                if (ITEMS[it].atk && Math.random() < cfg.itemChance) { p.useSlot(i); break; }
             }
             if (p.charge >= MAX_CHARGE) p.fireUltimate();
         }
         // 移动决策
         this.actTimer += dt;
-        if (this.actTimer < 70) return;
+        if (this.actTimer < cfg.actInterval) return;
         this.actTimer = 0;
         if (!p.plan || p.planSpawn !== p.spawnId) {
-            p.plan = this.plan(p);
+            p.plan = this.plan(p, cfg.planNoise);
             p.planSpawn = p.spawnId;
             if (!p.plan) { p.hardDrop(); return; }
         }
@@ -486,7 +498,17 @@ const game = {
 
     bindUI() {
         document.getElementById('btn-duo').onclick = () => this.start('duo');
-        document.getElementById('btn-ai').onclick = () => this.start('ai');
+        document.getElementById('btn-ai').onclick = () => {
+            document.getElementById('menu-main').style.display = 'none';
+            document.getElementById('ai-levels').style.display = 'flex';
+        };
+        document.getElementById('btn-ai-back').onclick = () => {
+            document.getElementById('ai-levels').style.display = 'none';
+            document.getElementById('menu-main').style.display = 'block';
+        };
+        document.querySelectorAll('#ai-levels .lvl-btn').forEach(b => {
+            b.onclick = () => this.start('ai', parseInt(b.dataset.lvl));
+        });
         document.getElementById('btn-help').onclick = () => {
             document.getElementById('menu').classList.add('hidden');
             document.getElementById('help').classList.remove('hidden');
@@ -536,10 +558,12 @@ const game = {
         });
     },
 
-    start(mode) {
+    start(mode, aiLevel) {
         this.mode = mode;
+        this.aiLevel = aiLevel || 4;   // 默认地狱级
         this.players[0].reset(); this.players[0].isAI = false;
         this.players[1].reset(); this.players[1].isAI = (mode === 'ai');
+        this.players[1].aiLevel = this.aiLevel;
         AI.reset();
         this.startTime = performance.now();
         this.lastTime = this.startTime;
@@ -733,7 +757,9 @@ const game = {
         ctx.font = 'bold 17px sans-serif';
         ctx.textAlign = 'center';
         const nameX = L.info === 'left' ? bx - 75 : bx + COLS * CELL + 99;
-        ctx.fillText(p.idx === 0 ? (p.isAI ? '🤖 电脑' : 'P1 玩家') : (p.isAI ? '🤖 电脑' : 'P2 玩家'),
+        ctx.fillText(p.idx === 0
+            ? 'P1 玩家'
+            : (p.isAI ? '🤖 电脑 · ' + (AI_LEVELS[p.aiLevel] || AI_LEVELS[4]).name : 'P2 玩家'),
             nameX, by - 18);
     },
 
