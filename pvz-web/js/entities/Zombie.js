@@ -566,9 +566,21 @@ class Zombie extends Entity {
                 const v = gv.vases.find(x => !x.smashed && x.pumpkinHp > 0 && x.row === this.row &&
                     Math.abs(gv.board.offsetX + x.col * gv.board.cellWidth + gv.board.cellWidth / 2 - this.x) < 40);
                 if (v) {
-                    this.state = 'EATING';
-                    this.eatVase = v;
-                    this.element.src = this.attackSrc;
+                    if (this.type === 'polevaulting' && !this.hasVaulted) {
+                        // v3.13.3：撑杆跳把套罐当普通障碍 —— 直接跳过（与跳过植物一致）
+                        this.hasVaulted = true;
+                        this.state = 'JUMPING';
+                        this.jumpTimer = 1.0;
+                        this.jumpDuration = 1.0;
+                        this.jumpStartX = this.x;
+                        this.element.src = 'assets/images/Zombies/PoleVaultingZombie/PoleVaultingZombieJump.gif';
+                        const vcx = gv.board.offsetX + v.col * gv.board.cellWidth + gv.board.cellWidth / 2;
+                        this.jumpTargetX = Math.max(40, vcx - 80);
+                    } else {
+                        this.state = 'EATING';
+                        this.eatVase = v;
+                        this.element.src = this.attackSrc;
+                    }
                 }
             }
             } // 关闭"无魅惑僵尸 → 正常行走啃食"分支

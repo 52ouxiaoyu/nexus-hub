@@ -153,26 +153,26 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789809139';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789811061';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789809139';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789811061';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1789809139';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1789811061';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1789809139';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1789811061';
             stat.butterChance = 0.2;
         } else if (type === 'starfruit') {
             // 杨桃（v3.6.0 经典模式可种）：五向星光射击，弹道复用融合版（Projectile 'star'）
@@ -197,7 +197,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789809139';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789811061';
             stat.yOffset = 0;
         }
 
@@ -1008,7 +1008,15 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
             }
         } else if (this.hasTrait('doomshroom') && this.autoExplode) {
             if (this.state === 'idle') {
-                this.explodeTimer -= deltaTime;
+                // v3.13.3：敌阵陷阱毁灭菇不做定时自爆（否则开局 1 秒就白白炸掉），
+                // 玩家僵尸贴近同格（<60px）才开始引信倒计时；普通种植仍走原计时
+                if (this._enemyTrap) {
+                    const near = this.game.entities.some(e => e instanceof Zombie && !e.isDead &&
+                        e.state !== 'DYING' && e.row === this.row && Math.abs(e.x - this.x) < 60);
+                    if (near) this.explodeTimer -= deltaTime;
+                } else {
+                    this.explodeTimer -= deltaTime;
+                }
                 if (this.explodeTimer <= 0) {
                     this.state = 'swelling';
                     this.element.src = 'assets/images/Plants/DoomShroom/BeginBoom.gif';
@@ -1067,8 +1075,15 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
             }
         }
         
-        if (this.type === 'fusion_pumpkinhead' || this.type === 'pumpkinhead') {
-            // 南瓜壳（独立成株兜底形态）自身三阶段裂纹，素材直接沿用 PumpkinHead 目录
+        if (this.type === 'pumpkinhead') {
+            // v3.13.3：南瓜套从始至终只有一个形态（用户明确要求：不会反、不会发生形态变化，
+            // 哪怕被咬死都不会）—— 耐久只走数值，外观恒为完好态 PumpkinHead.gif。
+            // 此前的三阶段裂纹正是"砸罐后壳墙一落地就显示碎裂/模糊"的根源（壳墙 hp<67%）。
+            if (this.element.src.indexOf('PumpkinHead.gif') === -1) {
+                this.element.src = 'assets/images/Plants/PumpkinHead/PumpkinHead.gif';
+            }
+        } else if (this.type === 'fusion_pumpkinhead') {
+            // 南瓜壳融合株（坚果墙+高坚果配方）保留三阶段裂纹（不是南瓜套本体）
             const ratio = this.hp / this.maxHp;
             const img = ratio < 0.34 ? 'PumpkinHead2.gif' : (ratio < 0.67 ? 'PumpkinHead1.gif' : 'PumpkinHead.gif');
             if (this.element.src.indexOf(img) === -1) {
