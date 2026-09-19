@@ -5,1543 +5,1098 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>葫芦兄弟：拯救爷爷</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap');
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #0a0a1a; font-family: 'Noto Sans SC', 'Microsoft YaHei', 'SimHei', sans-serif; color: #eee; width: 100vw; height: 100vh; overflow: hidden; margin: 0; padding: 0; }
-#game { width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; background: #0a0a1a; }
+/* ============ 基础 ============ */
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body { height:100%; }
+body {
+  font-family:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:#f5f0e4; color:#2d2a26; overflow:hidden;
+}
+#app { width:100vw; height:100vh; display:flex; flex-direction:column; position:relative; overflow:hidden; }
+/* 宣纸质感 + 远山水墨水印 */
+#app::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background:
+    radial-gradient(1200px 600px at 20% -10%, rgba(255,255,255,.7), transparent 60%),
+    radial-gradient(1000px 500px at 90% 110%, rgba(210,180,120,.12), transparent 60%);
+}
+#watermark { position:absolute; bottom:0; left:0; width:100%; height:38%; pointer-events:none; opacity:.07; }
 
-/* 顶栏 */
-#top-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 30px; background: rgba(0,0,0,0.5); border-bottom: 1px solid #333; flex-shrink: 0; }
-#chapter { font-size: 20px; color: #ffd700; font-weight: bold; }
-#turn { font-size: 18px; color: #aaa; }
-#boss-warning { color: #ff6b6b; font-size: 16px; animation: pulse 1s infinite; }
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+.screen { position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; padding:24px; overflow:auto; }
+.screen.active { display:flex; }
 
-/* 主区域 */
-#main-area { display: flex; flex: 1; min-height: 0; }
+/* ============ 通用组件 ============ */
+.btn {
+  font-family:inherit; font-size:17px; font-weight:600; letter-spacing:2px;
+  background:#2d2a26; color:#f5f0e4; border:none; border-radius:10px;
+  padding:14px 38px; cursor:pointer; transition:transform .15s, box-shadow .15s;
+  box-shadow:0 4px 14px rgba(45,42,38,.25);
+}
+.btn:hover { transform:translateY(-2px); box-shadow:0 7px 18px rgba(45,42,38,.3); }
+.btn:active { transform:translateY(0); }
+.btn.ghost { background:transparent; color:#2d2a26; border:1.5px solid #b9b19d; box-shadow:none; }
+.btn.small { font-size:14px; padding:8px 20px; letter-spacing:1px; }
+.btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
 
-/* 左右面板 */
-#left-panel, #right-panel { flex: 1; padding: 20px 25px; overflow-y: auto; }
-#left-panel { border-right: 1px solid #333; }
-.panel-title { font-size: 22px; font-weight: bold; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid; }
-.player-title { color: #4ecdc4; border-color: #4ecdc4; }
-.boss-title { color: #ff6b6b; border-color: #ff6b6b; }
+.chip { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:600;
+  background:rgba(45,42,38,.08); color:#6b6455; border-radius:99px; padding:3px 12px; }
 
-/* 属性行 */
-.stat-row { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; font-size: 18px; }
-.stat-bar { width: 250px; height: 20px; background: #333; border-radius: 10px; overflow: hidden; }
-.stat-fill { height: 100%; border-radius: 10px; transition: width 0.5s; }
-.hp-fill { background: linear-gradient(90deg, #ff6b6b, #ff8e8e); }
-.power-fill { background: linear-gradient(90deg, #ffd700, #ffed4a); }
-.brave-fill { background: linear-gradient(90deg, #4ecdc4, #7ee8e0); }
-.karma-fill { background: linear-gradient(90deg, #a78bfa, #c4b5fd); }
-.stat-name { width: 70px; font-weight: bold; }
-.stat-num { width: 100px; text-align: right; font-size: 16px; font-weight: bold; }
+.title-main { font-size:64px; font-weight:900; letter-spacing:14px; text-indent:14px; line-height:1.2;
+  background:linear-gradient(135deg,#b8322a 0%, #d69e2e 35%, #38a169 62%, #3182ce 85%, #805ad5 100%);
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+.subtitle { font-size:20px; letter-spacing:8px; text-indent:8px; color:#8a8371; margin-top:10px; font-weight:600; }
+.ver-chip { font-size:12px; font-weight:700; color:#fff; background:#38a169; border-radius:6px; padding:2px 9px; vertical-align:middle; letter-spacing:1px; }
 
-/* 技能 */
-#skills { margin-top: 15px; }
-.skill-tag { display: inline-block; padding: 8px 14px; margin: 5px; border-radius: 12px; font-size: 16px; background: rgba(255,255,255,0.08); border: 1px solid #444; }
-.skill-active { background: rgba(78,205,196,0.3); border-color: #4ecdc4; color: #4ecdc4; }
+.seven-dots { display:flex; gap:14px; margin:30px 0 40px; }
+.seven-dots i { width:16px; height:16px; border-radius:50%; box-shadow:0 2px 6px rgba(0,0,0,.15); }
 
-/* 叙事区 */
-#narrative { padding: 25px 35px; flex: 1; min-height: 0; background: rgba(0,0,0,0.4); overflow-y: auto; display: flex; flex-direction: column; }
-#speaker { font-size: 24px; font-weight: bold; color: #ffd700; margin-bottom: 12px; }
-#text { font-size: 20px; line-height: 1.9; color: #ddd; min-height: 80px; flex: 1; }
-#choices { margin-top: 15px; display: flex; flex-wrap: wrap; gap: 12px; padding-bottom: 15px; }
-.choice-btn { padding: 14px 24px; background: linear-gradient(135deg, #3a3a5a, #2a2a4a); border: 2px solid #555; border-radius: 12px; color: #fff; font-size: 18px; cursor: pointer; transition: all 0.2s; }
-.choice-btn:hover { background: linear-gradient(135deg, #5a5a8a, #4a4a7a); border-color: #ffd700; transform: translateY(-2px); }
+.panel { background:#fffdf7; border:1.5px solid #e2dbc8; border-radius:16px;
+  box-shadow:0 10px 30px rgba(120,100,60,.12); }
 
-/* 底部操作栏 */
-#actions { display: flex; justify-content: center; gap: 20px; padding: 18px; background: rgba(0,0,0,0.5); border-top: 1px solid #333; flex-shrink: 0; }
-.action-btn { padding: 16px 32px; border-radius: 12px; font-size: 20px; font-weight: bold; cursor: pointer; border: 2px solid; transition: all 0.2s; }
-.btn-search { background: linear-gradient(135deg, #9b59b6, #8e44ad); border-color: #bb77dd; color: #fff; }
-.btn-fight { background: linear-gradient(135deg, #ff6b6b, #cc4444); border-color: #ff8888; color: #fff; }
-.btn-explore { background: linear-gradient(135deg, #4ecdc4, #2a9d8f); border-color: #6ee8e0; color: #fff; }
-.btn-rest { background: linear-gradient(135deg, #ffd700, #cc9900); border-color: #ffed4a; color: #333; }
-.action-btn:hover { transform: scale(1.05); }
+h2.sec { font-size:24px; font-weight:800; letter-spacing:6px; margin-bottom:6px; }
+p.hint { color:#8a8371; font-size:14px; letter-spacing:1px; }
 
-/* 开始界面 */
-#start-screen { padding: 60px; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; }
-#start-screen h1 { font-size: 56px; color: #ffd700; margin-bottom: 20px; }
-.char-select { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 30px; }
-.char-card { width: 140px; padding: 20px 15px; background: linear-gradient(135deg, #2a2a4a, #1a1a3a); border: 2px solid #555; border-radius: 14px; cursor: pointer; transition: all 0.3s; }
-.char-card:hover { border-color: #ffd700; transform: translateY(-8px); }
-.char-name { font-size: 20px; font-weight: bold; margin-top: 8px; }
-.char-skill { font-size: 14px; color: #888; margin-top: 6px; }
+/* ============ 选人界面 ============ */
+.char-grid { display:flex; flex-wrap:wrap; gap:16px; justify-content:center; max-width:1050px; margin-top:26px; }
+.char-card { width:170px; padding:20px 14px 16px; text-align:center; cursor:pointer; transition:all .2s; position:relative; }
+.char-card:hover { transform:translateY(-6px); box-shadow:0 16px 34px rgba(120,100,60,.22); }
+.char-avatar { width:58px; height:58px; border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center;
+  font-size:26px; font-weight:900; color:#fff; box-shadow:inset 0 -8px 14px rgba(0,0,0,.18), 0 4px 10px rgba(0,0,0,.15); }
+.char-name { font-size:19px; font-weight:800; letter-spacing:3px; }
+.char-passive { font-size:12.5px; color:#6b6455; margin-top:8px; line-height:1.65; min-height:52px; }
+.char-sig { margin-top:8px; display:flex; justify-content:center; gap:6px; flex-wrap:wrap; }
+.char-sig span { font-size:11px; padding:2px 8px; border-radius:6px; background:rgba(45,42,38,.06); color:#6b6455; }
 
-/* 日志 */
-#log { max-height: 120px; overflow-y: auto; font-size: 15px; color: #666; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; margin-top: 12px; }
+/* ============ 顶栏 ============ */
+#topbar { position:absolute; top:0; left:0; right:0; height:54px; display:none; align-items:center;
+  padding:0 22px; gap:14px; z-index:20; background:rgba(245,240,228,.85); backdrop-filter:blur(6px);
+  border-bottom:1px solid #e2dbc8; }
+#topbar.on { display:flex; }
+#topbar .chapter-label { font-weight:800; letter-spacing:2px; font-size:15px; }
+#topbar .spacer { flex:1; }
+#hp-mini { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; }
+#hp-mini .bar { width:130px; height:10px; background:#e2dbc8; border-radius:99px; overflow:hidden; }
+#hp-mini .bar i { display:block; height:100%; background:linear-gradient(90deg,#e05a4e,#c0392b); border-radius:99px; transition:width .3s; }
+#mute-btn { border:none; background:none; font-size:17px; cursor:pointer; opacity:.65; }
+#mute-btn:hover { opacity:1; }
 
-/* 实力分析 */
-.analysis-box { margin-top: 10px; padding: 10px; background: rgba(255,107,107,0.1); border-radius: 6px; }
-.analysis-title { color: #ff6b6b; font-size: 14px; font-weight: bold; }
-.analysis-text { color: #aaa; font-size: 14px; margin-top: 4px; }
+/* ============ 地图 ============ */
+.map-wrap { display:flex; flex-direction:column; align-items:center; gap:30px; max-width:900px; width:100%; }
+.chapter-banner { text-align:center; }
+.chapter-banner .no { font-size:13px; letter-spacing:5px; color:#a89e85; font-weight:700; }
+.chapter-banner .name { font-size:34px; font-weight:900; letter-spacing:10px; margin-top:4px; }
+.chapter-banner .story { font-size:14px; color:#8a8371; margin-top:8px; letter-spacing:1px; }
+.node-track { display:flex; align-items:center; justify-content:center; width:100%; margin:14px 0 6px; }
+.node { width:66px; height:66px; border-radius:50%; background:#fffdf7; border:2px solid #d8d0ba;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+  font-size:22px; cursor:default; transition:all .2s; position:relative; flex-shrink:0;
+  box-shadow:0 4px 10px rgba(120,100,60,.1); }
+.node .nl { font-size:10.5px; color:#8a8371; font-weight:600; letter-spacing:1px; }
+.node.done { background:#efe8d5; border-color:#c9c0a6; opacity:.65; }
+.node.done::after { content:'✓'; position:absolute; top:-4px; right:-4px; width:20px; height:20px; border-radius:50%;
+  background:#38a169; color:#fff; font-size:12px; display:flex; align-items:center; justify-content:center; }
+.node.cur { border-color:#b8322a; border-width:2.5px; cursor:pointer; transform:scale(1.12);
+  box-shadow:0 6px 18px rgba(184,50,42,.25); animation:pulse 1.6s infinite; }
+.node.cur:hover { transform:scale(1.2); }
+@keyframes pulse { 0%,100%{ box-shadow:0 0 0 0 rgba(184,50,42,.3);} 50%{ box-shadow:0 0 0 12px rgba(184,50,42,0);} }
+.node-link { width:52px; height:2px; background:#d8d0ba; flex-shrink:0; }
+.player-strip { display:flex; gap:12px; align-items:center; margin-top:16px; flex-wrap:wrap; justify-content:center; }
+.player-strip .chip b { color:#2d2a26; }
+.bro-dots { display:flex; gap:5px; align-items:center; }
+.bro-dots i { width:13px; height:13px; border-radius:50%; opacity:.22; }
+.bro-dots i.got { opacity:1; box-shadow:0 1px 4px rgba(0,0,0,.2); }
+
+/* ============ 战斗 ============ */
+#screen-combat { justify-content:flex-start; padding:66px 24px 14px; }
+.combat-head { text-align:center; margin-bottom:4px; min-height:26px; }
+#combat-log { font-size:14px; color:#6b6455; letter-spacing:.5px; }
+.enemy-zone { display:flex; gap:46px; justify-content:center; align-items:flex-start; margin:12px 0 4px; min-height:190px; }
+.enemy { position:relative; display:flex; flex-direction:column; align-items:center; width:150px; }
+.intent { background:#fffdf7; border:1.5px solid #e2dbc8; border-radius:99px; padding:4px 14px; font-size:13px; font-weight:700;
+  box-shadow:0 3px 8px rgba(120,100,60,.12); margin-bottom:10px; display:flex; gap:6px; align-items:center; white-space:nowrap; }
+.intent.atk { color:#c0392b; } .intent.def { color:#2a9d8f; } .intent.buf { color:#d69e2e; } .intent.deb { color:#805ad5; }
+.enemy-body { width:104px; height:104px; border-radius:50%; background:linear-gradient(160deg,#fffdf7,#f0e9d8);
+  border:2px solid #d8d0ba; display:flex; align-items:center; justify-content:center; font-size:48px;
+  box-shadow:0 6px 16px rgba(120,100,60,.16); transition:transform .12s; position:relative; }
+.enemy.hurt .enemy-body { transform:scale(.92); filter:brightness(.85); }
+.enemy.dead { opacity:0; transform:scale(.5); pointer-events:none; transition:all .5s; }
+.enemy-name { font-size:14px; font-weight:800; margin-top:8px; letter-spacing:2px; }
+.enemy-hp { width:100px; height:8px; background:#e2dbc8; border-radius:99px; overflow:hidden; margin-top:5px; }
+.enemy-hp i { display:block; height:100%; background:linear-gradient(90deg,#e05a4e,#c0392b); transition:width .3s; }
+.enemy-sub { font-size:11.5px; color:#8a8371; margin-top:3px; display:flex; gap:6px; align-items:center; }
+.enemy-sub .blk { color:#2a9d8f; font-weight:700; }
+.status-tag { font-size:10.5px; font-weight:700; border-radius:5px; padding:1px 6px; }
+.status-tag.str { background:rgba(214,158,46,.18); color:#a3651a; }
+.status-tag.weak { background:rgba(128,90,213,.15); color:#6b46a8; }
+.status-tag.vuln { background:rgba(192,57,43,.13); color:#b03a2e; }
+
+.player-zone { margin-top:auto; width:100%; max-width:1060px; }
+.stat-row { display:flex; align-items:center; gap:18px; justify-content:center; margin-bottom:12px; flex-wrap:wrap; }
+.stat-row .chip { font-size:13px; padding:5px 16px; }
+.energy-orbs { display:flex; gap:8px; }
+.energy-orbs i { width:24px; height:24px; border-radius:50%; background:#e2dbc8; position:relative; }
+.energy-orbs i.full { background:radial-gradient(circle at 35% 30%, #ffd76e, #d69e2e); box-shadow:0 2px 6px rgba(214,158,46,.5); }
+
+.hand { display:flex; justify-content:center; align-items:flex-end; min-height:212px; padding-bottom:6px; }
+.card { width:150px; height:196px; background:#fffdf7; border:1.5px solid #ddd5c1; border-radius:13px;
+  padding:12px 12px 10px; cursor:pointer; position:relative; flex-shrink:0;
+  box-shadow:0 5px 14px rgba(120,100,60,.16); transition:transform .18s, box-shadow .18s;
+  display:flex; flex-direction:column; }
+.card:hover { transform:translateY(-18px) !important; box-shadow:0 14px 28px rgba(120,100,60,.28); z-index:5; }
+.card .cost { position:absolute; top:-9px; left:-9px; width:30px; height:30px; border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, #ffd76e, #d69e2e); color:#fff; font-weight:900; font-size:15px;
+  display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,.25); }
+.card .cname { font-size:15.5px; font-weight:800; letter-spacing:1px; margin-top:4px; }
+.card .ctype { font-size:10.5px; font-weight:700; letter-spacing:2px; margin-top:2px; }
+.card.attack .ctype { color:#c0392b; } .card.skill .ctype { color:#2a9d8f; } .card.power .ctype { color:#805ad5; }
+.card .cdesc { font-size:12.5px; line-height:1.7; color:#5a544a; margin-top:8px; flex:1; }
+.card .cbar { height:4px; border-radius:99px; margin-top:6px; }
+.card.disabled { opacity:.5; filter:grayscale(.7); cursor:not-allowed; }
+.card.exhaust-mark::after { content:'消耗'; position:absolute; top:8px; right:8px; font-size:10px; color:#b03a2e; font-weight:700;
+  border:1px solid rgba(176,58,46,.4); border-radius:5px; padding:0 4px; }
+.combat-actions { display:flex; align-items:center; justify-content:center; gap:26px; margin-top:2px; }
+.pile-chip { font-size:12.5px; color:#8a8371; font-weight:600; }
+
+/* 飘字 */
+.float-txt { position:absolute; font-size:22px; font-weight:900; pointer-events:none; z-index:50;
+  animation:floatUp 1s forwards; text-shadow:0 2px 6px rgba(0,0,0,.18); }
+@keyframes floatUp { 0%{opacity:0; transform:translateY(6px) scale(.8);} 15%{opacity:1; transform:translateY(0) scale(1.15);}
+  100%{opacity:0; transform:translateY(-46px) scale(1);} }
+
+/* ============ 事件 / 奖励 / 结局 ============ */
+.story-card { max-width:560px; width:100%; padding:38px 42px; text-align:center; }
+.story-card .ev-title { font-size:23px; font-weight:900; letter-spacing:4px; margin-bottom:14px; }
+.story-card .ev-text { font-size:15.5px; line-height:2; color:#5a544a; margin-bottom:26px; white-space:pre-line; }
+.ev-choices { display:flex; flex-direction:column; gap:12px; }
+.choice-btn { font-family:inherit; font-size:15px; font-weight:600; padding:13px 20px; border-radius:10px;
+  background:#faf6ec; border:1.5px solid #ddd5c1; color:#2d2a26; cursor:pointer; transition:all .15s; letter-spacing:1px; }
+.choice-btn:hover { border-color:#b8322a; background:#fff; transform:translateY(-2px); box-shadow:0 6px 14px rgba(120,100,60,.14); }
+
+.reward-grid { display:flex; gap:22px; margin:28px 0 22px; flex-wrap:wrap; justify-content:center; }
+.reward-grid .card { transform:scale(1.04); }
+.reward-grid .card:hover { transform:scale(1.04) translateY(-14px) !important; }
+.reward-grid .card.taken { outline:3px solid #38a169; }
+
+.bro-choice { display:flex; gap:22px; margin-top:24px; flex-wrap:wrap; justify-content:center; }
+.bro-choice .char-card { width:210px; }
+
+.end-title { font-size:46px; font-weight:900; letter-spacing:10px; margin-bottom:14px; }
+.end-sub { font-size:16px; color:#6b6455; line-height:2; text-align:center; white-space:pre-line; margin-bottom:30px; }
+.end-stats { display:flex; gap:14px; margin-bottom:34px; flex-wrap:wrap; justify-content:center; }
+.end-stats .chip { font-size:13px; padding:6px 18px; }
+
+/* 转场横幅 */
+#banner { position:absolute; inset:0; display:none; align-items:center; justify-content:center; z-index:60;
+  background:rgba(45,42,38,.55); backdrop-filter:blur(3px); }
+#banner.on { display:flex; }
+#banner .b-txt { font-size:34px; font-weight:900; letter-spacing:8px; color:#fff; text-align:center; line-height:1.9; animation:bannerIn .5s; }
+@keyframes bannerIn { from{opacity:0; transform:scale(1.15);} to{opacity:1; transform:scale(1);} }
+
+@media (max-width:900px){
+  .title-main { font-size:42px; letter-spacing:8px; }
+  .char-card { width:140px; }
+  .node { width:52px; height:52px; font-size:18px; } .node-link { width:30px; }
+  .card { width:126px; height:172px; } .hand { min-height:184px; }
+}
 </style>
 </head>
 <body>
-<div id="game">
-  <div id="start-screen">
-    <h1>🎮 葫芦兄弟：拯救爷爷 <span style="font-size:24px;">Calabash Bros</span> <span style="font-size: 14px; background: #4caf50; border-radius: 4px; padding: 2px 6px; margin-left: 10px; border: 1px solid #fff; color: #fff; vertical-align: middle;">v1.0.0</span></h1>
-    <p style="color:#aaa; margin-bottom:8px;">选择你的葫芦娃，踏上拯救爷爷的冒险之旅！ Choose your hero!</p>
-    <p style="color:#ff6b6b; font-size:16px; margin-top: 10px;">⚠️ 蛇精每回合都在变强！拖太久就打不过了！ Boss grows stronger every turn!</p>
-    <div class="char-select" id="charSelect"></div>
+<div id="app">
+  <!-- 远山水墨水印 -->
+  <svg id="watermark" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMax slice">
+    <path d="M0,300 L0,220 Q120,120 240,200 T480,170 Q600,80 720,180 T960,150 Q1080,100 1200,190 L1200,300 Z" fill="#2d2a26"/>
+    <path d="M0,300 L0,260 Q180,190 360,250 T720,235 Q900,180 1200,250 L1200,300 Z" fill="#2d2a26" opacity=".55"/>
+  </svg>
+
+  <!-- 顶栏 -->
+  <div id="topbar">
+    <span class="chapter-label" id="tb-chapter"></span>
+    <span class="chip" id="tb-node"></span>
+    <span class="spacer"></span>
+    <div id="hp-mini"><span>❤</span><div class="bar"><i id="tb-hpfill"></i></div><span id="tb-hptext"></span></div>
+    <span class="chip ver-chip" id="tb-ver"></span>
+    <button id="mute-btn" title="静音 (M)">🔊</button>
   </div>
-  <div id="game-screen" style="display:none;">
-    <div id="top-bar">
-      <div id="chapter">序章</div>
-      <div id="turn">回合 1</div>
-      <div id="boss-warning"></div>
-    </div>
-    <div id="main-area">
-      <div id="left-panel">
-        <div class="panel-title player-title">🧑 我方 Player</div>
-        <div id="playerStats"></div>
-        <div id="skills"></div>
+
+  <!-- 标题 -->
+  <section class="screen active" id="screen-title">
+    <div class="title-main">葫芦兄弟</div>
+    <div class="subtitle">拯 救 爷 爷 <span class="ver-chip" id="title-ver"></span></div>
+    <div class="seven-dots" id="title-dots"></div>
+    <button class="btn" id="btn-start">开 始 冒 险</button>
+    <p class="hint" style="margin-top:22px;">选择一位葫芦娃 · 三章闯关 · 救出兄弟 · 集齐七子，唤醒金刚葫芦娃</p>
+    <p class="hint" style="margin-top:8px;">快捷键：1-8 出牌 · E 结束回合 · M 静音</p>
+  </section>
+
+  <!-- 选人 -->
+  <section class="screen" id="screen-select">
+    <h2 class="sec">选择你的葫芦娃</h2>
+    <p class="hint">每位兄弟都有专属卡组与被动天赋</p>
+    <div class="char-grid" id="char-grid"></div>
+  </section>
+
+  <!-- 地图 -->
+  <section class="screen" id="screen-map">
+    <div class="map-wrap">
+      <div class="chapter-banner">
+        <div class="no" id="map-no"></div>
+        <div class="name" id="map-name"></div>
+        <div class="story" id="map-story"></div>
       </div>
-      <div id="right-panel">
-        <div class="panel-title boss-title">🐍 蛇精 Boss</div>
-        <div id="bossStats"></div>
-        <div style="margin-top:8px; padding:8px; background:rgba(255,107,107,0.1); border-radius:4px;">
-          <div style="color:#ff6b6b; font-size:14px; font-weight:bold;">⚠️ 实力分析 Analysis</div>
-          <div id="bossAnalysis" style="color:#aaa; font-size:14px; margin-top:4px;"></div>
-        </div>
-        <div id="log"></div>
+      <div class="node-track" id="node-track"></div>
+      <button class="btn" id="btn-enter">前 往</button>
+      <div class="player-strip" id="player-strip"></div>
+    </div>
+  </section>
+
+  <!-- 战斗 -->
+  <section class="screen" id="screen-combat">
+    <div class="combat-head"><div id="combat-log"></div></div>
+    <div class="enemy-zone" id="enemy-zone"></div>
+    <div class="player-zone">
+      <div class="stat-row" id="player-stats"></div>
+      <div class="hand" id="hand"></div>
+      <div class="combat-actions">
+        <span class="pile-chip" id="draw-pile"></span>
+        <button class="btn small" id="btn-endturn">结束回合 (E)</button>
+        <span class="pile-chip" id="discard-pile"></span>
       </div>
     </div>
-    <div id="narrative">
-      <div id="speaker">旁白</div>
-      <div id="text"></div>
-      <div id="choices"></div>
+  </section>
+
+  <!-- 通用故事面板（事件/休整/兄弟/结局前的横幅都走这里） -->
+  <section class="screen" id="screen-story">
+    <div class="panel story-card">
+      <div class="ev-title" id="ev-title"></div>
+      <div class="ev-text" id="ev-text"></div>
+      <div class="ev-choices" id="ev-choices"></div>
+      <div class="ev-choices" id="ev-extra" style="margin-top:18px;"></div>
     </div>
-    <div id="actions">
-      <button class="action-btn btn-explore" onclick="doAction('explore')">🔍 探索 Explore</button>
-      <button class="action-btn btn-search" onclick="doAction('search')">👥 寻找兄弟 Find Bros</button>
-      <button class="action-btn btn-rest" onclick="doAction('rest')">💤 休息 Rest</button>
-      <button class="action-btn btn-fight" onclick="doAction('fight')">⚔️ 挑战蛇精 Fight Boss</button>
-    </div>
-  </div>
+  </section>
+
+  <!-- 卡牌奖励 -->
+  <section class="screen" id="screen-reward">
+    <h2 class="sec">战利品 · 选择一张卡牌</h2>
+    <p class="hint">也可放弃，保持卡组精炼</p>
+    <div class="reward-grid" id="reward-grid"></div>
+    <button class="btn ghost small" id="btn-skip-reward">放 弃</button>
+  </section>
+
+  <!-- 结局 -->
+  <section class="screen" id="screen-end">
+    <div class="end-title" id="end-title"></div>
+    <div class="end-sub" id="end-sub"></div>
+    <div class="end-stats" id="end-stats"></div>
+    <button class="btn" id="btn-restart">再 来 一 局</button>
+  </section>
+
+  <div id="banner"><div class="b-txt" id="banner-txt"></div></div>
 </div>
 
 <script>
-const characters = [
-  { id: 0, name: '大娃', color: '#ff0000', skill: '力大无穷', icon: '🔴', desc: '力大无穷，能举起巨石', personality: '勇敢冲动', motto: '没有什么是一拳解决不了的！' },
-  { id: 1, name: '二娃', color: '#ff8c00', skill: '千里眼', icon: '🟠', desc: '千里眼顺风耳，洞察一切', personality: '聪明机智', motto: '我什么都看得到！' },
-  { id: 2, name: '三娃', color: '#ffd700', skill: '铜头铁臂', icon: '🟡', desc: '铜头铁臂，刀枪不入', personality: '坚强不屈', motto: '我的身体就是最好的盾牌！' },
-  { id: 3, name: '四娃', color: '#00cc00', skill: '喷火', icon: '🟢', desc: '能喷出烈焰', personality: '热情似火', motto: '让火焰燃烧一切！' },
-  { id: 4, name: '五娃', color: '#00cccc', skill: '吸水', icon: '🔵', desc: '能吸干江河', personality: '冷静沉着', motto: '水能载舟，亦能覆舟。' },
-  { id: 5, name: '六娃', color: '#0066ff', skill: '隐身', icon: '🔷', desc: '来无影去无踪', personality: '神秘莫测', motto: '你看不到我～' },
-  { id: 6, name: '七娃', color: '#9933ff', skill: '宝葫芦', icon: '🟣', desc: '宝葫芦能收万物', personality: '天真善良', motto: '宝葫芦，收！' }
-];
-const allSkills = ['力大无穷', '千里眼', '铜头铁臂', '喷火', '吸水', '隐身', '宝葫芦'];
+'use strict';
+/* =====================================================
+   葫芦兄弟：拯救爷爷 v2.0 重制版
+   架构：DATA(数据) → SFX(音效) → ENGINE(状态机+战斗) → UI(渲染)
+   ===================================================== */
+const VERSION = '2.0.0';
 
-// 50种NPC - 每个都有独特的对话选项
-const npcs = [
-  { 
-    name: '👴 山中老爷爷', 
-    desc: '一位白胡子老爷爷出现了，手里拿着一个药葫芦',
-    dialogues: [
-      { text: '🤝 恭敬地接受', effect: { hp: 20, karma: 5 }, result: '老爷爷欣慰地笑了，把草药送给了你' },
-      { text: '❓ 询问来历', effect: { hp: 10, power: 3 }, result: '老爷爷讲述了山中的秘密，你学到新知识' },
-      { text: '👋 礼貌告别', effect: { karma: 3 }, result: '老爷爷点头称赞你的礼貌' },
-      { text: '😤 不理睬', effect: { brave: 5 }, result: '老爷爷摇摇头走了，你觉得自己太粗鲁了' }
-    ]
+/* ---------------- 音效（WebAudio 合成） ---------------- */
+const SFX = {
+  ctx:null, muted:false,
+  ensure(){ if(!this.ctx){ try{ this.ctx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } },
+  tone(f, dur, type='sine', vol=0.12, slideTo){
+    if(this.muted) return; this.ensure(); if(!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t+dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+    o.connect(g).connect(this.ctx.destination); o.start(t); o.stop(t+dur);
   },
-  { 
-    name: '🐒 孙悟空', 
-    desc: '齐天大圣出现了！金箍棒闪闪发光',
-    dialogues: [
-      { text: '🙏 请教武艺', effect: { power: 12, brave: 5 }, result: '大圣传你七十二变基础！战力大增！' },
-      { text: '🎮 比试比试', effect: { power: 8, brave: 10 }, result: '虽然输了，但学到了实战经验' },
-      { text: '🍺 请喝酒', effect: { hp: 15, karma: 8 }, result: '大圣很开心，送你一根猴毛护身' },
-      { text: '😈 偷金箍棒', effect: { power: -10, hp: -20 }, result: '大圣发现后把你打飞了！贪心的下场！' }
-    ]
-  },
-  { 
-    name: '🧚 七仙女', 
-    desc: '七仙女下凡，仙气飘飘',
-    dialogues: [
-      { text: '🌺 赞美她们', effect: { hp: 25, karma: 10 }, result: '仙女们开心地用花瓣治愈了你' },
-      { text: '🎵 一起跳舞', effect: { hp: 15, brave: 8, karma: 5 }, result: '欢快的舞蹈让你身心舒畅' },
-      { text: '🍑 偷仙桃', effect: { hp: 30, karma: -10 }, result: '你成功偷到了仙桃！但仙女们很生气...' },
-      { text: '👀 偷看洗澡', effect: { hp: -30, brave: -15 }, result: '被仙女们发现，用水袖把你打飞了！流氓！' }
-    ]
-  },
-  { 
-    name: '👹 哪吒', 
-    desc: '哪吒三太子踩着风火轮来了',
-    dialogues: [
-      { text: '⚔️ 挑战哪吒', effect: { power: 10, brave: 12 }, result: '虽然被打败，但学到了三头六臂的技巧' },
-      { text: '🤝 结为兄弟', effect: { power: 8, hp: 10, karma: 5 }, result: '哪吒认你做小弟，送你乾坤圈碎片' },
-      { text: '🔥 比喷火', effect: { power: 6 }, result: '四娃的喷火技能得到提升！' },
-      { text: '🚫 不服气', effect: { brave: 15 }, result: '你勇敢地表示不服，哪吒欣赏你的勇气' }
-    ]
-  },
-  { 
-    name: '🦢 观音菩萨', 
-    desc: '观音菩萨慈悲降临，手持净瓶',
-    dialogues: [
-      { text: '🙏 虔诚祈祷', effect: { hp: 40, karma: 15 }, result: '观音用净瓶水治愈了你的伤势' },
-      { text: '📖 请教佛法', effect: { karma: 20, power: 5 }, result: '你领悟了佛法，内心变得更加平静' },
-      { text: '😶 沉默不语', effect: { karma: 5, brave: 5 }, result: '观音欣赏你的沉稳' },
-      { text: '🙅 转身就走', effect: { brave: 10, karma: -5 }, result: '观音叹了口气，觉得你太傲慢了' }
-    ]
-  },
-  { 
-    name: '🐺 二郎神', 
-    desc: '二郎神杨戬带着哮天犬出现了',
-    dialogues: [
-      { text: '⚔️ 正面交锋', effect: { power: 15, hp: -15 }, result: '激战三百回合，你虽败犹荣！' },
-      { text: '🤝 切磋武艺', effect: { power: 10, brave: 8 }, result: '二郎神欣赏你的实力，教你一招' },
-      { text: '🐕 喂哮天犬', effect: { hp: 10, karma: 8 }, result: '哮天犬很喜欢你，二郎神对你印象不错' },
-      { text: '😴 打瞌睡', effect: { hp: 15, brave: -10 }, result: '二郎神看你在打瞌睡，无语地走了' }
-    ]
-  },
-  { 
-    name: '👸 女娲', 
-    desc: '女娲娘娘显灵，补天石散发光芒',
-    dialogues: [
-      { text: '💎 请求补天石', effect: { power: 15, hp: 20 }, result: '女娲赐予你补天石碎片，力量大增！' },
-      { text: '🌍 请教造人术', effect: { power: 8, karma: 10 }, result: '女娲教你用泥土造小兵的技巧' },
-      { text: '🧘 静坐悟道', effect: { karma: 15, power: 5 }, result: '你领悟了天地之道' },
-      { text: '🤷 表示不信', effect: { brave: 10, karma: -10 }, result: '女娲无奈地消失了，你错过了机缘' }
-    ]
-  },
-  { 
-    name: '🐉 龙王', 
-    desc: '东海龙王驾着水浪而来',
-    dialogues: [
-      { text: '🧜 求取龙鳞', effect: { hp: 20, power: 8 }, result: '龙王赐予你龙鳞护甲！' },
-      { text: '⚔️ 比试游泳', effect: { power: 6, brave: 8 }, result: '你在水中表现不错，龙王赏识你' },
-      { text: '🦐 帮抓海鲜', effect: { hp: 25 }, result: '龙王请你吃了一顿海鲜大餐' },
-      { text: '🙅 拒绝臣服', effect: { brave: 15 }, result: '龙王欣赏你的骨气，暗中帮你' }
-    ]
-  },
-  { 
-    name: '🔥 火神祝融', 
-    desc: '火神祝融从天而降，烈焰环绕',
-    dialogues: [
-      { text: '🔥 学习火术', effect: { power: 12 }, result: '你的火焰之力大幅提升！' },
-      { text: '⚔️ 挑战火神', effect: { power: 8, hp: -20, brave: 12 }, result: '虽然被烧伤，但学到了真火精髓' },
-      { text: '🧊 用冰对抗', effect: { power: 10 }, result: '五娃的吸水技能进化了！' },
-      { text: '🏃 快速逃跑', effect: { hp: -5, brave: -5 }, result: '被火焰擦伤，但保住了小命' }
-    ]
-  },
-  { 
-    name: '📖 说书人', 
-    desc: '一个说书人在树下讲故事',
-    dialogues: [
-      { text: '👂 认真听讲', effect: { brave: 12, power: 3 }, result: '英雄故事让你热血沸腾！勇气大增！' },
-      { text: '🎭 一起表演', effect: { hp: 10, brave: 8 }, result: '说书人很开心，送你一本武功秘籍' },
-      { text: '😴 听睡着了', effect: { hp: 15 }, result: '你睡了个好觉，体力恢复了' },
-      { text: '🗣️ 打断他', effect: { brave: 5, karma: -3 }, result: '说书人生气了，讲了个鬼故事吓你' }
-    ]
-  },
-  { 
-    name: '🎲 赌徒', 
-    desc: '一个赌徒想和你赌一把',
-    dialogues: [
-      { text: '💰 赌大的', effect: { power: 12, hp: -10 }, result: '你赢了！获得战利品！' },
-      { text: '🎲 小赌怡情', effect: { hp: 8, power: 5 }, result: '小赢一把，心情不错' },
-      { text: '🚫 拒绝赌博', effect: { karma: 8 }, result: '赌徒失望地走了，你避免了风险' },
-      { text: '😈 出老千', effect: { power: 15, karma: -15 }, result: '你赢了但被发现了，赌徒很生气！' }
-    ]
-  },
-  { 
-    name: '🍜 面摊老板', 
-    desc: '路边有个热气腾腾的面摊',
-    dialogues: [
-      { text: '🍜 大碗宽面', effect: { hp: 30 }, result: '面很好吃！体力大增！' },
-      { text: '🍜 小碗细面', effect: { hp: 15, power: 3 }, result: '面很精致，回味无穷' },
-      { text: '🚫 不饿', effect: {}, result: '老板有点失望' },
-      { text: '💰 多给钱', effect: { hp: 20, karma: 10 }, result: '老板感动，多送了你一碗！' }
-    ]
-  },
-  { 
-    name: '🗡️ 流浪剑客', 
-    desc: '一个背着长剑的流浪者',
-    dialogues: [
-      { text: '⚔️ 请求指教', effect: { power: 10, brave: 5 }, result: '剑客教你一招剑法！' },
-      { text: '🍺 请喝酒', effect: { hp: 10, karma: 5 }, result: '剑客很开心，讲述了他的冒险故事' },
-      { text: '🤝 结伴同行', effect: { power: 8, brave: 8 }, result: '剑客和你成为朋友，传授经验' },
-      { text: '😠 挑衅他', effect: { hp: -25, brave: 5 }, result: '你被剑客教训了一顿...' }
-    ]
-  },
-  { 
-    name: '🧚 小精灵', 
-    desc: '一个小精灵在花丛中飞舞',
-    dialogues: [
-      { text: '🌺 追逐玩耍', effect: { hp: 15, brave: 5 }, result: '欢快的玩耍让你心情愉快' },
-      { text: '🔮 请教魔法', effect: { power: 8 }, result: '小精灵教你一些基础魔法' },
-      { text: '🍎 分享食物', effect: { hp: 10, karma: 8 }, result: '小精灵送你一个魔法苹果' },
-      { text: '🤲 想抓住它', effect: { hp: -5, brave: -3 }, result: '小精灵调皮地飞走了' }
-    ]
-  },
-  { 
-    name: '🐯 山大王', 
-    desc: '一只巨大的老虎精拦住了去路',
-    dialogues: [
-      { text: '⚔️ 正面迎战', effect: { power: 10, hp: -15, brave: 12 }, result: '你勇敢地战斗，虽然受伤但赢得尊重' },
-      { text: '🤝 谈判', effect: { hp: 5, power: 5 }, result: '你和老虎精达成协议，互不侵犯' },
-      { text: '🏃 战术撤退', effect: { hp: 5, brave: -5 }, result: '你明智地避开了战斗' },
-      { text: '🗣️ 大吼一声', effect: { brave: 15 }, result: '你的勇气震慑住了老虎精！' }
-    ]
-  },
-  { 
-    name: '🎭 戏班主', 
-    desc: '一个戏班主带着一群演员',
-    dialogues: [
-      { text: '🎪 一起表演', effect: { hp: 15, brave: 8, karma: 5 }, result: '精彩的表演让你心情大好' },
-      { text: '🎭 学习变脸', effect: { power: 6, brave: 5 }, result: '你学会了变脸技巧！' },
-      { text: '💰 给赏钱', effect: { hp: 10, karma: 10 }, result: '戏班主很感激，表演了一段精彩节目' },
-      { text: '😶 在旁边看', effect: { hp: 8 }, result: '你安静地看完了表演' }
-    ]
-  },
-  { 
-    name: '🧩 谜语人', 
-    desc: '一个喜欢出谜语的怪人',
-    dialogues: [
-      { text: '🧠 答题', effect: { power: 8, karma: 5 }, result: '你答对了！获得智慧奖励！' },
-      { text: '🤔 想一想', effect: { power: 5 }, result: '你认真思考，领悟了一些道理' },
-      { text: '🚫 不猜了', effect: {}, result: '谜语人觉得你没意思' },
-      { text: '😤 反问一个', effect: { brave: 10 }, result: '谜语人被你问住了，对你刮目相看' }
-    ]
-  },
-  { 
-    name: '🧚 七仙女', 
-    desc: '七仙女在湖边嬉戏',
-    dialogues: [
-      { text: '🎵 唱歌助兴', effect: { hp: 20, karma: 8 }, result: '仙女们很开心，用花瓣治愈你' },
-      { text: '💃 一起跳舞', effect: { hp: 15, brave: 5, karma: 5 }, result: '欢快的舞蹈让你身心舒畅' },
-      { text: '👀 远远看着', effect: { hp: 5 }, result: '你安静地欣赏美景' },
-      { text: '🏃 不好意思走了', effect: { brave: -5 }, result: '你害羞地离开了' }
-    ]
-  },
-  { 
-    name: '🐺 狼王', 
-    desc: '狼王带领狼群出现',
-    dialogues: [
-      { text: '⚔️ 挑战狼王', effect: { power: 12, hp: -10, brave: 15 }, result: '你与狼王激战，赢得尊重！' },
-      { text: '🐺 学习狼嚎', effect: { power: 8, brave: 10 }, result: '你学会了狼嚎，士气大增！' },
-      { text: '🤝 和平共处', effect: { hp: 10, karma: 5 }, result: '狼群接受了你的友好' },
-      { text: '😨 装死', effect: { hp: 5, brave: -10 }, result: '狼群觉得你无聊，走了' }
-    ]
-  },
-  { 
-    name: '🦅 鹰眼', 
-    desc: '一只巨大的老鹰在天空盘旋',
-    dialogues: [
-      { text: '🦅 请它侦察', effect: { power: 6, brave: 8 }, result: '鹰眼帮你发现了敌人的弱点！' },
-      { text: '🏆 比飞行', effect: { brave: 12 }, result: '虽然输了，但你体验了飞翔的感觉' },
-      { text: '🍖 喂食', effect: { hp: 15, karma: 8 }, result: '鹰眼很感激，送你一根羽毛' },
-      { text: '🏹 想射它', effect: { hp: -15, brave: -5 }, result: '鹰眼生气地俯冲攻击你！' }
-    ]
-  },
-  { 
-    name: '💎 石头精', 
-    desc: '一块巨大的石头变成了人形',
-    dialogues: [
-      { text: '💎 请求宝石', effect: { power: 8 }, result: '石头精送你一块魔法宝石！' },
-      { text: '⛏️ 挖矿', effect: { power: 5, hp: 5 }, result: '你挖到了一些矿石' },
-      { text: '🧘 静坐', effect: { karma: 10, hp: 10 }, result: '你和石头精一起静坐冥想' },
-      { text: '🔨 敲它', effect: { hp: -10 }, result: '石头精很痛，用石头砸你！' }
-    ]
-  },
-  { 
-    name: '🌸 花仙子', 
-    desc: '花仙子在花丛中翩翩起舞',
-    dialogues: [
-      { text: '🌺 赞美花朵', effect: { hp: 20, karma: 8 }, result: '花仙子用花瓣治愈了你' },
-      { text: '💃 一起跳舞', effect: { hp: 15, brave: 5 }, result: '优美的舞蹈让你身心愉悦' },
-      { text: '🌱 帮忙浇水', effect: { hp: 10, karma: 10 }, result: '花仙子很感激，送你花环' },
-      { text: '💐 摘花', effect: { hp: -5, karma: -5 }, result: '花仙子生气了，花粉让你打喷嚏' }
-    ]
-  },
-  { 
-    name: '🌙 嫦娥', 
-    desc: '嫦娥从月亮上飘然而下',
-    dialogues: [
-      { text: '🌙 请教仙术', effect: { power: 10, hp: 15 }, result: '嫦娥教你月光仙术！' },
-      { text: '🥮 分享月饼', effect: { hp: 25, karma: 8 }, result: '嫦娥很开心，送你月光精华' },
-      { text: '💃 月下共舞', effect: { hp: 15, brave: 8, karma: 5 }, result: '美好的月下时光' },
-      { text: '😢 诉说思念', effect: { karma: 10, hp: 10 }, result: '嫦娥被你的真诚打动' }
-    ]
-  },
-  { 
-    name: '🎭 脸谱怪', 
-    desc: '一个戴着各种脸谱的怪人',
-    dialogues: [
-      { text: '🎭 学习变脸', effect: { power: 8, brave: 5 }, result: '你学会了川剧变脸！' },
-      { text: '😱 被吓到', effect: { hp: -5, brave: -5 }, result: '脸谱怪觉得你胆子太小' },
-      { text: '🤣 笑他', effect: { brave: 10 }, result: '脸谱怪表演得更卖力了' },
-      { text: '🤔 猜他是谁', effect: { power: 5 }, result: '你猜对了！他是退休的戏神' }
-    ]
-  },
-  { 
-    name: '🎪 马戏团长', 
-    desc: '马戏团带着各种动物来了',
-    dialogues: [
-      { text: '🎪 看表演', effect: { hp: 15, brave: 5 }, result: '精彩的表演让你大开眼界' },
-      { text: '🦁 驯兽', effect: { power: 8, brave: 10 }, result: '你成功驯服了一只狮子！' },
-      { text: '🎁 收礼物', effect: { hp: 10, power: 5 }, result: '团长送你一个魔术道具' },
-      { text: '🤡 扮小丑', effect: { hp: 10, karma: 8 }, result: '你的表演逗笑了所有人' }
-    ]
-  },
-  { 
-    name: '🧙‍♂️ 神秘巫师', 
-    desc: '一个戴着尖帽子的巫师',
-    dialogues: [
-      { text: '🧪 喝药水', effect: { power: 10, hp: 15 }, result: '药水效果很好！力量提升！' },
-      { text: '📖 学魔法', effect: { power: 8, karma: 5 }, result: '你学会了一个新魔法' },
-      { text: '🔮 看水晶球', effect: { power: 5, hp: 5 }, result: '你看到了未来的景象' },
-      { text: '🚫 怀疑是骗子', effect: { brave: 8 }, result: '巫师证明了自己是真的，但你不信' }
-    ]
-  },
-  { 
-    name: '🐲 应龙', 
-    desc: '上古神龙从云中降下',
-    dialogues: [
-      { text: '🐲 请求龙力', effect: { power: 15, hp: 20 }, result: '应龙赐予你龙之力量！' },
-      { text: '🐉 骑龙飞行', effect: { brave: 15, hp: 10 }, result: '你体验了翱翔天际的感觉！' },
-      { text: '📖 听龙族历史', effect: { power: 8, karma: 8 }, result: '你学到了龙族的智慧' },
-      { text: '⚔️ 挑战神龙', effect: { hp: -30, brave: 10 }, result: '你被神龙轻轻一尾巴扇飞了...' }
-    ]
-  },
-  {
-    name: '👴 穿西装的土地公公',
-    desc: '一位戴着墨镜、穿着西装的土地公公从地下钻了出来',
-    dialogues: [
-      { text: '🤝 递上名片', effect: { power: 15, karma: 10 }, result: '土地公公很欣赏你的职场礼仪，送你地仙之力！' },
-      { text: '❓ 问他要钱', effect: { hp: -10, brave: 10 }, result: '「年轻人不讲武德！」土地公公用拐杖敲了你的头。' },
-      { text: '💼 探讨房地产', effect: { power: 10, brave: 5 }, result: '他向你传授了山神圈的买房秘籍，你智力大增。' },
-      { text: '🏃 假装没看见', effect: { brave: -5 }, result: '你无视了他，他嘀咕着钻回了地下。' }
-    ]
-  },
-  {
-    name: '🐔 战斗鸡',
-    desc: '一只戴着拳击手套、肌肉发达的战斗鸡咯咯叫着走来',
-    dialogues: [
-      { text: '🥊 拜师学艺', effect: { power: 20, brave: 15 }, result: '战斗鸡教了你一套「无敌金鸡独立」，战力暴涨！' },
-      { text: '🍗 扔一把米', effect: { hp: 15, karma: 5 }, result: '它吃饱后下了一个金蛋送给你。' },
-      { text: '嘲笑它的发型', effect: { hp: -25, brave: 10 }, result: '战斗鸡使出了一招「夺命连环啄」，你被啄得满头包。' },
-      { text: '💃 一起跳鸡你太美', effect: { hp: 20, power: 5, brave: 10 }, result: '你们成了跨越物种的知音。' }
-    ]
-  },
-  {
-    name: '🤖 穿越来的AI机器人',
-    desc: '一个浑身冒着火花、嘴里喊着「消灭人类」却在帮你扫地的机器人',
-    dialogues: [
-      { text: '🔋 给它充电', effect: { power: 18, hp: 10 }, result: '机器人充饱了电，为你下载了最新战斗芯片！' },
-      { text: '💬 和它聊天', effect: { power: 12, karma: 8 }, result: '你们聊了聊宇宙的尽头，你感觉自己的境界提升了。' },
-      { text: '💻 尝试重启它', effect: { hp: -20, brave: 15 }, result: '机器人短路爆炸了，你被炸黑了脸。' },
-      { text: '🧹 让它继续扫地', effect: { hp: 15 }, result: '看着它扫地，你感觉非常解压，恢复了体力。' }
-    ]
-  },
-  {
-    name: '💪 健身教练唐僧',
-    desc: '一位穿着紧身背心、肌肉鼓鼓的光头和尚',
-    dialogues: [
-      { text: '🏋️‍♂️ 跟着举铁', effect: { power: 25, hp: 20, brave: 10 }, result: '「徒儿们，给我练！」你练得大汗淋漓，力量倍增！' },
-      { text: '🙏 听他念经', effect: { karma: 15, power: 5 }, result: '他的经文里全是如何增肌减脂，你获益良多。' },
-      { text: '🍔 当面吃汉堡', effect: { hp: -15, brave: 20 }, result: '教练气疯了，一拳把你打飞：「这是碳水炸弹！」' },
-      { text: '🏃 说自己要减肥', effect: { hp: 10, brave: 5 }, result: '他塞给你一桶蛋白粉，鼓励你加油。' }
-    ]
-  },
-  {
-    name: '🐱 卖萌的肥橘猫',
-    desc: '一只胖得像个球的橘猫四脚朝天躺在地上',
-    dialogues: [
-      { text: '✋ 吸猫', effect: { hp: 40, karma: 10 }, result: '你把脸埋在它肚子里，感觉整个人都被治愈了！生命大回血！' },
-      { text: '🐟 喂小鱼干', effect: { power: 15, hp: 15 }, result: '橘猫吃饱后，打了个嗝，居然吐出一把绝世好剑！' },
-      { text: '👀 戳它肚子', effect: { hp: -10, brave: 5 }, result: '橘猫很不爽，给了你一套「喵喵连环拳」。' },
-      { text: '🤷 无视走开', effect: { karma: -5 }, result: '橘猫幽怨地看着你的背影。' }
-    ]
-  },
-  {
-    name: '📦 疯狂的外卖小哥',
-    desc: '一个穿着黄色制服、骑着飞天摩托的外卖小哥',
-    dialogues: [
-      { text: '🥡 接收外卖', effect: { hp: 35, power: 10 }, result: '「这是您的十全大补汤！」喝完感觉浑身充满了力量！' },
-      { text: '⭐ 给五星好评', effect: { karma: 15, brave: 5 }, result: '小哥感动得热泪盈眶，传授了你「神行百变」的轻功！' },
-      { text: '😠 投诉他迟到', effect: { hp: -20, karma: -15 }, result: '小哥一气之下把汤泼你脸上了。' },
-      { text: '🛵 问他摩托哪买的', effect: { power: 10 }, result: '他给你讲了一堆机械知识，你变得更聪明了。' }
-    ]
-  }
+  click(){ this.tone(660, .06, 'triangle', .07); },
+  card(){ this.tone(520, .07, 'triangle', .09); },
+  attack(){ this.tone(180, .16, 'square', .1, 60); },
+  block(){ this.tone(920, .1, 'square', .08); this.tone(620, .12, 'triangle', .07); },
+  hurt(){ this.tone(160, .28, 'sawtooth', .12, 55); },
+  heal(){ this.tone(520, .12, 'sine', .1); setTimeout(()=>this.tone(780, .16, 'sine', .1), 90); },
+  buff(){ this.tone(440, .1, 'triangle', .09); setTimeout(()=>this.tone(660, .14, 'triangle', .09), 80); },
+  win(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>this.tone(f,.18,'triangle',.11), i*110)); },
+  lose(){ [392,330,262,196].forEach((f,i)=>setTimeout(()=>this.tone(f,.24,'sine',.11), i*160)); },
+  transform(){ [262,392,523,659,784,1046,1318].forEach((f,i)=>setTimeout(()=>this.tone(f,.2,'triangle',.1), i*100)); }
+};
+
+/* ---------------- 数据：七位葫芦娃 ---------------- */
+const BROTHERS = [
+  { id:'dawa',  name:'大娃', num:'大', color:'#c0392b', passive:'力大无穷：每场战斗开始时力量 +1', sig:['smash','uproot'] },
+  { id:'erwa',  name:'二娃', num:'二', color:'#dd6b20', passive:'千里眼：每回合多抽 1 张牌', sig:['insight','divineEye'] },
+  { id:'sanwa', name:'三娃', num:'三', color:'#b8860b', passive:'铜头铁臂：每场战斗开始时获得 6 点格挡', sig:['ironwall','headbutt'] },
+  { id:'siwa',  name:'四娃', num:'四', color:'#38a169', passive:'烈焰灼体：你的攻击伤害 +15%', sig:['firebreath','fireball'] },
+  { id:'wuwa',  name:'五娃', num:'五', color:'#319795', passive:'润物无声：每回合开始回复 2 点生命', sig:['spring','waterdragon'] },
+  { id:'liuwa', name:'六娃', num:'六', color:'#3182ce', passive:'隐身术：12% 概率完全闪避一次攻击', sig:['vanish','shadowkick'] },
+  { id:'qiwa',  name:'七娃', num:'七', color:'#805ad5', passive:'宝葫芦：每场战斗开始时将【宝葫芦·收】置入手牌', sig:['gourd','purpleFlame'] },
 ];
 
-// 50种敌人
-const enemies = [
-  { name: '🐍 小蛇妖', hp: 20, power: 8, desc: '一只小蛇妖挡路' },
-  { name: '🦇 蝙蝠怪', hp: 15, power: 10, desc: '蝙蝠群来袭' },
-  { name: '🕷️ 蜘蛛精', hp: 25, power: 6, desc: '巨蛛出现' },
-  { name: '👹 山妖', hp: 30, power: 12, desc: '山妖拦路' },
-  { name: '💀 骷髅兵', hp: 18, power: 9, desc: '骷髅从地下爬出' },
-  { name: '👻 幽灵', hp: 12, power: 11, desc: '幽灵飘来' },
-  { name: '🧟 僵尸', hp: 35, power: 7, desc: '僵尸跳过来' },
-  { name: '🐺 狼人', hp: 28, power: 13, desc: '狼人出现' },
-  { name: '🧛 吸血鬼', hp: 22, power: 14, desc: '吸血鬼来了' },
-  { name: '🤥 骗子', hp: 10, power: 5, desc: '一个骗子想骗你' },
-  { name: '🗡️ 刺客', hp: 16, power: 15, desc: '刺客偷袭！' },
-  { name: '🏹 弓箭手', hp: 14, power: 12, desc: '箭雨来袭' },
-  { name: '⚔️ 剑士', hp: 25, power: 11, desc: '剑士挑战' },
-  { name: '🛡️ 盾兵', hp: 40, power: 6, desc: '盾兵挡路' },
-  { name: '🔥 火焰精灵', hp: 18, power: 16, desc: '火焰精灵' },
-  { name: '❄️ 冰霜巨人', hp: 45, power: 10, desc: '冰霜巨人' },
-  { name: '⚡ 雷电兽', hp: 20, power: 18, desc: '雷电兽来袭' },
-  { name: '🌪️ 风暴鸟', hp: 22, power: 14, desc: '风暴鸟俯冲' },
-  { name: '🌿 毒藤怪', hp: 30, power: 8, desc: '毒藤缠绕' },
-  { name: '🍄 毒蘑菇', hp: 15, power: 10, desc: '毒蘑菇喷孢子' },
-  { name: '🪨 石像鬼', hp: 50, power: 8, desc: '石像活了' },
-  { name: '🗿 巨人', hp: 60, power: 12, desc: '巨人出现' },
-  { name: '🦴 骨龙', hp: 40, power: 15, desc: '骨龙飞来' },
-  { name: '🐉 小龙', hp: 35, power: 14, desc: '小龙拦路' },
-  { name: '🦑 海怪', hp: 45, power: 11, desc: '海怪触手' },
-  { name: '🐙 章鱼精', hp: 38, power: 13, desc: '章鱼精攻击' },
-  { name: '🦐 虾兵', hp: 12, power: 7, desc: '虾兵来了' },
-  { name: '🦀 蟹将', hp: 25, power: 10, desc: '蟹将夹你' },
-  { name: '🐢 龟丞相', hp: 55, power: 6, desc: '龟丞相挡路' },
-  { name: '🐚 蚌精', hp: 20, power: 9, desc: '蚌精喷水' },
-  { name: '🐊 鳄鱼怪', hp: 42, power: 13, desc: '鳄鱼张嘴' },
-  { name: '🐸 蛤蟆精', hp: 18, power: 8, desc: '蛤蟆喷毒' },
-  { name: '🦎 蜥蜴人', hp: 28, power: 11, desc: '蜥蜴人潜行' },
-  { name: '🐢 玄武', hp: 70, power: 10, desc: '玄武出现' },
-  { name: '🦊 妖狐', hp: 22, power: 16, desc: '妖狐施法' },
-  { name: '🐻 熊罴', hp: 50, power: 14, desc: '熊罴扑来' },
-  { name: '🐯 虎妖', hp: 40, power: 16, desc: '虎妖咆哮' },
-  { name: '🦁 狮精', hp: 45, power: 15, desc: '狮精怒吼' },
-  { name: '🐒 猴妖', hp: 20, power: 12, desc: '猴妖偷袭' },
-  { name: '🐗 野猪精', hp: 35, power: 11, desc: '野猪冲锋' },
-  { name: '🐴 马面', hp: 30, power: 13, desc: '马面来了' },
-  { name: '🐂 牛头', hp: 45, power: 12, desc: '牛头冲撞' },
-  { name: '🐑 羊妖', hp: 18, power: 9, desc: '羊妖顶你' },
-  { name: '🐔 鸡精', hp: 15, power: 10, desc: '鸡精啄你' },
-  { name: '🐕 狗妖', hp: 22, power: 11, desc: '狗妖咬你' },
-  { name: '🐖 猪妖', hp: 30, power: 8, desc: '猪妖拱你' },
-  { name: '🐭 鼠精', hp: 12, power: 14, desc: '鼠精偷袭' },
-  { name: '🐸 蛙精', hp: 16, power: 9, desc: '蛙精弹舌' },
-  { name: '🐛 虫群', hp: 25, power: 7, desc: '虫群围攻' }
+/* ---------------- 数据：卡牌 ----------------
+   effect 字段：dmg 单体伤害 / hits 段数 / dmgAll 全体 / block 格挡 / heal 回复 /
+   draw 抽牌 / str 力量 / vuln 易伤 / weak 虚弱 / self 自伤 / exhaust 消耗 */
+const CARDS = {
+  /* 基础 */
+  punch:  { name:'葫芦拳',   cost:1, type:'attack', desc:'造成 6 点伤害。', dmg:6 },
+  guard:  { name:'举盾',     cost:1, type:'skill',  desc:'获得 5 点格挡。', block:5 },
+  /* 大娃 */
+  smash:  { name:'巨力挥击', cost:2, type:'attack', desc:'造成 12 点伤害。', dmg:12, owner:'dawa' },
+  uproot: { name:'拔山',     cost:2, type:'power',  desc:'力量 +2。', str:2, owner:'dawa' },
+  /* 二娃 */
+  insight:{ name:'明察秋毫', cost:1, type:'skill',  desc:'抽 2 张牌。', draw:2, owner:'erwa' },
+  divineEye:{ name:'神目如电', cost:1, type:'attack', desc:'造成 4 点伤害，施加易伤 1。', dmg:4, vuln:1, owner:'erwa' },
+  /* 三娃 */
+  ironwall:{ name:'铜墙铁壁', cost:2, type:'skill', desc:'获得 14 点格挡。', block:14, owner:'sanwa' },
+  headbutt:{ name:'铜头撞',  cost:1, type:'attack', desc:'造成 4 点伤害，获得 4 点格挡。', dmg:4, block:4, owner:'sanwa' },
+  /* 四娃 */
+  firebreath:{ name:'烈焰吐息', cost:2, type:'attack', desc:'对所有敌人造成 8 点伤害。', dmgAll:8, owner:'siwa' },
+  fireball:{ name:'火球术',   cost:1, type:'attack', desc:'造成 7 点伤害。', dmg:7, owner:'siwa' },
+  /* 五娃 */
+  spring: { name:'清泉涌动', cost:1, type:'skill',  desc:'回复 6 点生命。', heal:6, owner:'wuwa' },
+  waterdragon:{ name:'水龙翻身', cost:2, type:'attack', desc:'造成 10 点伤害，获得 3 点格挡。', dmg:10, block:3, owner:'wuwa' },
+  /* 六娃 */
+  vanish: { name:'隐身术',   cost:1, type:'skill',  desc:'获得 6 点格挡，抽 1 张牌。', block:6, draw:1, owner:'liuwa' },
+  shadowkick:{ name:'无影脚', cost:1, type:'attack', desc:'造成 5 点伤害；目标处于虚弱时改为 10 点。', dmg:5, vsWeak:10, owner:'liuwa' },
+  /* 七娃 */
+  gourd:  { name:'宝葫芦·收', cost:0, type:'attack', desc:'造成 15 点伤害，抽 1 张牌。', dmg:15, draw:1, exhaust:true, owner:'qiwa' },
+  purpleFlame:{ name:'紫金妖焰', cost:2, type:'attack', desc:'造成 10 点伤害，施加易伤 1。', dmg:10, vuln:1, owner:'qiwa' },
+  /* 奖励池 */
+  flurry: { name:'葫芦连打', cost:1, type:'attack', desc:'造成 3 点伤害，共 2 次。', dmg:3, hits:2 },
+  whirl:  { name:'葫芦旋风', cost:2, type:'attack', desc:'对所有敌人造成 6 点伤害。', dmgAll:6 },
+  rend:   { name:'破势一击', cost:1, type:'attack', desc:'造成 4 点伤害，施加易伤 1。', dmg:4, vuln:1 },
+  aegis:  { name:'金刚罩',   cost:2, type:'skill',  desc:'获得 12 点格挡。', block:12 },
+  focus:  { name:'凝神聚力', cost:1, type:'power',  desc:'力量 +2。', str:2, exhaust:true },
+  observe:{ name:'观察入微', cost:1, type:'skill',  desc:'抽 2 张牌。', draw:2 },
+  seed:   { name:'葫芦籽',   cost:0, type:'skill',  desc:'抽 1 张牌。', draw:1, exhaust:true },
+  bloodprice:{ name:'血战到底', cost:2, type:'attack', desc:'失去 3 点生命，造成 15 点伤害。', dmg:15, self:3 },
+  mountain:{ name:'稳如山岳', cost:1, type:'skill', desc:'获得 8 点格挡。', block:8 },
+  rainbow:{ name:'七彩气波', cost:2, type:'attack', desc:'造成 9 点伤害，抽 1 张牌。', dmg:9, draw:1 },
+  qizi:   { name:'七子连心', cost:3, type:'attack', desc:'对所有敌人造成 30 点伤害，获得 12 点格挡。', dmgAll:30, block:12, exhaust:true, special:true },
+};
+const REWARD_POOL = ['flurry','whirl','rend','aegis','observe','mountain','rainbow','bloodprice','seed','focus'];
+
+/* ---------------- 数据：敌人 ----------------
+   move: { n 名称, t 类型 atk/block/buff/debuff/heal, v 数值, hits 段数, weak/vuln 附加 }
+   ai: 索引数组循环 或 自定义函数(me, turn) */
+const ENEMIES = {
+  xiaoshe:  { name:'小蛇妖', emoji:'🐍', hp:18, moves:[
+    { n:'啃咬', t:'atk', v:7 }, { n:'缠绕', t:'atk', v:5, weak:1 }, { n:'蓄势', t:'buff', str:2 } ], ai:[0,1,0,2] },
+  hama:     { name:'蛤蟆精', emoji:'🐸', hp:26, moves:[
+    { n:'舌弹', t:'atk', v:8 }, { n:'鼓气', t:'block', v:8 } ], ai:[0,0,1] },
+  zhizhu:   { name:'蜘蛛精', emoji:'🕷️', hp:22, moves:[
+    { n:'毒牙', t:'atk', v:7, vuln:1 }, { n:'织网', t:'block', v:6 } ], ai:[0,1] },
+  bianfu:   { name:'蝙蝠怪', emoji:'🦇', hp:24, moves:[
+    { n:'音波', t:'atk', v:7 }, { n:'吸血', t:'heal', v:6, heal:4 } ], ai:[0,1] },
+  shitou:   { name:'石头精', emoji:'🪨', hp:38, moves:[
+    { n:'巨石砸', t:'atk', v:11 }, { n:'硬化', t:'block', v:10 } ], ai:[0,1] },
+  langyao:  { name:'狼妖', emoji:'🐺', hp:20, moves:[ { n:'撕咬', t:'atk', v:6 } ], ai:[0] },
+  sheyubing:{ name:'蛇妖兵', emoji:'🐍', hp:28, moves:[
+    { n:'矛刺', t:'atk', v:9 }, { n:'铁鳞', t:'block', v:7 } ], ai:[0,1] },
+  xiaoyao:  { name:'巡山小妖', emoji:'👺', hp:26, moves:[
+    { n:'木棒', t:'atk', v:8 }, { n:'呐喊', t:'buff', str:2 }, { n:'偷袭', t:'atk', v:6 } ], ai:[0,1,2] },
+  /* Boss */
+  xiezi: { name:'蝎子精', emoji:'🦂', hp:70, boss:true, moves:[
+    { n:'毒尾刺', t:'atk', v:10 }, { n:'双钳', t:'atk', v:5, hits:2 }, { n:'淬毒', t:'atk', v:8, vuln:1 } ], ai:[0,1,0,2,1] },
+  weishi: { name:'金蛇卫士', emoji:'🛡️', hp:95, boss:true, moves:[
+    { n:'长矛突刺', t:'atk', v:12 }, { n:'蛇形连击', t:'atk', v:6, hits:2 }, { n:'铁鳞', t:'block', v:12 } ], ai:[0,1,0,2] },
+  shejing: { name:'蛇精', emoji:'🐍', hp:150, boss:true, finalBoss:true, moves:[
+    { n:'如意击', t:'atk', v:11 }, { n:'魔音', t:'atk', v:6, weak:1 }, { n:'妖法护体', t:'block', v:12 },
+    { n:'狂暴', t:'buff', str:3 }, { n:'毒雾', t:'atk', v:9, vuln:1 }, { n:'如意大泥石流', t:'atk', v:18 } ],
+    ai: function(me, turn){
+      const r = me.hp / me.maxHp;
+      if (r > 0.66) return [0,1,0,2][turn % 4];
+      if (r > 0.33) return (turn % 3 === 2) ? 3 : [4,0][turn % 2];
+      return (turn % 2 === 0) ? 5 : 0;
+    } },
+};
+
+/* ---------------- 数据：章节与遭遇 ---------------- */
+const CHAPTERS = [
+  { no:'第一章', name:'妖谷寻踪', story:'蛇精与蝎子精掳走了爷爷。穿过妖精出没的谷地，追寻踪迹……',
+    fights:[['xiaoshe'],['hama'],['zhizhu'],['xiaoshe','hama']], elite:[['xiezi']], boss:['xiezi'] },
+  { no:'第二章', name:'峭壁救亲', story:'兄弟们被囚禁在峭壁各处。翻越险山，救出兄弟，积蓄力量！',
+    fights:[['bianfu'],['shitou'],['langyao','langyao'],['sheyubing']], elite:[['weishi']], boss:['weishi'] },
+  { no:'第三章', name:'蛇精洞府', story:'蛇精的老巢就在眼前。集齐七子，唤醒金刚葫芦娃，救出爷爷！',
+    fights:[['sheyubing','xiaoyao'],['xiaoyao'],['shitou','bianfu'],['hama','zhizhu']], elite:[['weishi','xiaoyao']], boss:['shejing'] },
 ];
 
-let player = null, boss = null, turn = 1, logEntries = [];
-let winStreak = 0; // 连胜计数
+/* ---------------- 数据：事件 ---------------- */
+const EVENTS = [
+  { id:'spring', title:'山间清泉',
+    text:'潺潺清泉从石缝中涌出，在月光下泛着微光。\n旅途劳顿，正是歇脚的好地方。',
+    choices:[
+      { label:'掬水而饮（回复 14 生命）', act:()=>{ healPlayer(14); showStory('清泉','泉水甘冽，你只觉浑身舒畅。\n\n（回复 14 生命）',[{label:'继续前行', next:'map'}]); } },
+      { label:'打坐修炼（移除一张牌）', act:()=>{ startRemoveFlow('你盘膝而坐，摒弃杂念。\n卡牌已精简，心境更加澄明。'); } },
+    ] },
+  { id:'pangolin', title:'穿山甲的求助',
+    text:'一只穿山甲被困在塌落的巨石下，急得团团转。\n「葫芦娃！帮我推开这块石头，山那边的路我就告诉你！」',
+    choices:[
+      { label:'奋力推石（失去 5 生命，获得一张卡牌）', act:()=>{
+          damagePlayerDirect(5);
+          const c = addRandomPoolCard();
+          showStory('穿山甲','「多谢恩人！」穿山甲飞快钻进山里。\n你在石缝中发现了一枚发光的葫芦籽，学会了新的招式。\n\n（失去 5 生命，获得【'+CARDS[c].name+'】）',[{label:'继续前行', next:'map'}]); } },
+      { label:'婉拒离开', act:()=>{ showStory('穿山甲','「唉……」穿山甲失落地垂下了脑袋。\n你继续赶路。',[{label:'继续前行', next:'map'}]); } },
+    ] },
+  { id:'vine', title:'神秘的葫芦藤',
+    text:'山崖边垂着一根古老的葫芦藤，\n枝头挂着一枚未曾见过的小葫芦，隐隐发光。',
+    choices:[
+      { label:'摘下小葫芦（获得一张卡牌）', act:()=>{
+          const c = addRandomPoolCard();
+          showStory('葫芦藤','小葫芦落入掌心，化作一道流光没入你的葫芦。\n\n（获得【'+CARDS[c].name+'】）',[{label:'继续前行', next:'map'}]); } },
+      { label:'悉心浇灌（生命上限 +8）', act:()=>{
+          run.maxHp += 8; run.hp += 8;
+          showStory('葫芦藤','你舀来泉水浇灌葫芦藤。\n藤叶舒展，一缕暖流涌入你的身体。\n\n（生命上限 +8）',[{label:'继续前行', next:'map'}]); } },
+    ] },
+  { id:'butterfly', title:'受伤的小蝴蝶',
+    text:'一只小蝴蝶被蛛丝缠住了翅膀，瑟瑟发抖。\n传说它是山神的信使。',
+    choices:[
+      { label:'小心救助（回复 12 生命）', act:()=>{
+          healPlayer(12);
+          showStory('小蝴蝶','你轻轻解开蛛丝，小蝴蝶绕你飞了三圈。\n一阵温柔的山风拂过，伤口竟隐隐愈合。\n\n（回复 12 生命）',[{label:'继续前行', next:'map'}]); } },
+      { label:'继续赶路', act:()=>{ showStory('赶路','你压低斗笠，加快了脚步。\n救爷爷要紧，容不得分心。',[{label:'继续前行', next:'map'}]); } },
+    ] },
+  { id:'depot', title:'蛇精的物资库',
+    text:'路边藏着一处蛇精囤积物资的山洞，\n洞口只有两个小妖把守，正打着瞌睡。',
+    choices:[
+      { label:'冒险潜入（失去 8 生命，获得一张卡牌）', act:()=>{
+          damagePlayerDirect(8);
+          const c = addRandomPoolCard();
+          showStory('潜入','你屏息摸进洞中，背了一袋物资出来。\n撤离时被守卫的毒烟燎了一下，好在收获颇丰。\n\n（失去 8 生命，获得【'+CARDS[c].name+'】）',[{label:'继续前行', next:'map'}]); } },
+      { label:'谨慎离开', act:()=>{ showStory('绕行','小心驶得万年船。\n你绕开山洞，继续赶路。',[{label:'继续前行', next:'map'}]); } },
+    ] },
+];
 
-function initGame(charId) {
-  player = { char: characters[charId], hp: 80, maxHp: 80, power: 8 + charId, maxPower: 80, brave: 20, karma: 0, skills: [characters[charId].skill], inventory: [] };
-  boss = { hp: 200, maxHp: 200, power: 35, maxPower: 80, brave: 80, growRate: 1.1 };
-  turn = 1; logEntries = []; window.isIdle = false;
-  document.getElementById('start-screen').style.display = 'none';
-  document.getElementById('game-screen').style.display = 'block';
-  document.getElementById('actions').style.opacity = '0.5';
-  document.getElementById('actions').style.pointerEvents = 'none';
-  updateUI(); showEvent('intro');
+/* =====================================================
+   ENGINE：运行时状态
+   ===================================================== */
+let run = null;      // 整局状态
+let combat = null;   // 当前战斗
+let busy = false;    // 动画锁
+
+function newRun(brotherIdx){
+  const b = BROTHERS[brotherIdx];
+  run = {
+    brother: b.id, brothers:[b.id],
+    hp:60, maxHp:60, energy:3,
+    deck:['punch','punch','punch','punch','guard','guard','guard','guard', ...b.sig],
+    chapter:0, node:0, nodes:genNodes(0),
+    stats:{ kills:0, cardsPlayed:0, turns:0 },
+    qizi:false,
+  };
+  SFX.click();
+  showMap();
 }
 
-function updateUI() {
-  document.getElementById('turn').textContent = '回合 ' + turn;
-  const warn = document.getElementById('boss-warning');
-  if (turn >= 15) warn.textContent = '💀 蛇精即将变得无法战胜！';
-  else if (turn >= 10) warn.textContent = '⚠️ 蛇精越来越强了...';
-  else if (turn >= 6) warn.textContent = '⚠️ 时间紧迫...';
-  else warn.textContent = '';
+function genNodes(ch){
+  const r = Math.random;
+  return ['fight', (r()<0.5?'fight':'event'), 'elite', 'rest', (r()<0.5?'event':'fight'), 'boss'];
+}
+const NODE_INFO = {
+  fight:{ icon:'⚔️', label:'战斗' }, elite:{ icon:'🏛️', label:'精英' },
+  event:{ icon:'⛰️', label:'奇遇' }, rest:{ icon:'♨️', label:'休整' },
+  boss:{ icon:'👑', label:'首领' },
+};
 
-  document.getElementById('playerStats').innerHTML = `
-    <div class="stat-row"><span class="stat-name">生命</span><div class="stat-bar"><div class="stat-fill hp-fill" style="width:${Math.max(0, Math.min(100, Math.round(player.hp/player.maxHp*100)))}%"></div></div><span class="stat-num">${Math.round(player.hp)}/${Math.round(player.maxHp)}</span></div>
-    <div class="stat-row"><span class="stat-name">战力</span><div class="stat-bar"><div class="stat-fill power-fill" style="width:${Math.max(0, Math.min(100, Math.round(player.power/player.maxPower*100)))}%"></div></div><span class="stat-num">${Math.round(player.power)}/${Math.round(player.maxPower)}</span></div>
-    <div class="stat-row"><span class="stat-name">勇气</span><div class="stat-bar"><div class="stat-fill brave-fill" style="width:${Math.max(0, Math.min(100, Math.round(player.brave)))}%"></div></div><span class="stat-num">${Math.round(player.brave)}/100</span></div>
-    <div class="stat-row"><span class="stat-name">善恶</span><div class="stat-bar"><div class="stat-fill karma-fill" style="width:${Math.round(Math.min(100,Math.max(0,50+player.karma)))}%"></div></div><span class="stat-num">${player.karma>0?'+':''}${Math.round(player.karma)}</span></div>`;
+/* ---------- 工具 ---------- */
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function healPlayer(n){ run.hp = Math.min(run.maxHp, run.hp + n); syncTopbar(); }
+function damagePlayerDirect(n){ run.hp = Math.max(1, run.hp - n); syncTopbar(); } // 事件伤害不致死
+function addRandomPoolCard(){ const c = pick(REWARD_POOL); run.deck.push(c); return c; }
+function aliveEnemies(){ return combat.enemies.filter(e=>e.hp>0); }
 
-  document.getElementById('bossStats').innerHTML = `
-    <div class="stat-row"><span class="stat-name">生命</span><div class="stat-bar"><div class="stat-fill hp-fill" style="width:${Math.max(0, Math.min(100, Math.round(boss.hp/boss.maxHp*100)))}%"></div></div><span class="stat-num">${Math.round(boss.hp)}/${Math.round(boss.maxHp)}</span></div>
-    <div class="stat-row"><span class="stat-name">战力</span><div class="stat-bar"><div class="stat-fill power-fill" style="width:${Math.max(0, Math.min(100, Math.round(boss.power/boss.maxPower*100)))}%"></div></div><span class="stat-num">${Math.round(boss.power)}/${Math.round(boss.maxPower)}</span></div>
-    <div class="stat-row"><span class="stat-name">气势</span><div class="stat-bar"><div class="stat-fill brave-fill" style="width:${Math.max(0, Math.min(100, Math.round(boss.brave)))}%"></div></div><span class="stat-num">${Math.round(boss.brave)}/100</span></div>
-    <div style="margin-top:8px; padding:8px; background:rgba(255,107,107,0.1); border-radius:4px;">
-      <div style="color:#ff6b6b; font-size:14px; font-weight:bold;">📍 蛇精动态</div>
-      <div style="color:#aaa; font-size:14px; margin-top:4px;">${boss.lastAction || '正在修炼中...'}</div>
-    </div>`;
+/* ---------- 屏幕切换 ---------- */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('topbar').classList.toggle('on', ['screen-map','screen-combat','screen-story','screen-reward'].includes(id));
+}
+function banner(text, cb, ms=1400){
+  const b = document.getElementById('banner');
+  document.getElementById('banner-txt').innerHTML = text;
+  b.classList.add('on');
+  setTimeout(()=>{ b.classList.remove('on'); if(cb) cb(); }, ms);
+}
+function syncTopbar(){
+  const ch = CHAPTERS[run.chapter];
+  document.getElementById('tb-chapter').textContent = ch.no + ' · ' + ch.name;
+  document.getElementById('tb-node').textContent = '第 ' + (run.node+1) + ' / 6 节点';
+  document.getElementById('tb-hpfill').style.width = Math.max(0, run.hp/run.maxHp*100) + '%';
+  document.getElementById('tb-hptext').textContent = Math.max(0,Math.round(run.hp)) + '/' + run.maxHp;
+}
 
-  const ratio = player.power / boss.power;
-  const analysis = document.getElementById('bossAnalysis');
-  if (ratio >= 1.1) { analysis.textContent = '✅ 可以一战！'; analysis.style.color = '#4ecdc4'; }
-  else if (ratio >= 0.9) { analysis.textContent = '⚠️ 有风险但可试'; analysis.style.color = '#ffd700'; }
-  else if (ratio >= 0.7) { analysis.textContent = '❌ 实力不足'; analysis.style.color = '#ff8844'; }
-  else { analysis.textContent = '💀 几乎不可能赢'; analysis.style.color = '#ff6b6b'; }
+/* =====================================================
+   地图
+   ===================================================== */
+function completeNode(){ run.node++; showMap(); }
 
-  let sh = '<div style="color:#eee; font-size:15px; font-weight:bold; margin-bottom:6px;">已找到的兄弟 (' + player.skills.length + '/7)：</div>';
-  player.skills.forEach(s => { 
-    const brother = characters.find(c => c.skill === s);
-    sh += `<span class="skill-tag skill-active" style="background:${brother.color}33; border-color:${brother.color}">${brother.icon} ${brother.name}</span>`; 
+function showMap(){
+  const ch = CHAPTERS[run.chapter];
+  document.getElementById('map-no').textContent = ch.no;
+  document.getElementById('map-name').textContent = ch.name;
+  document.getElementById('map-story').textContent = ch.story;
+  const track = document.getElementById('node-track');
+  track.innerHTML = '';
+  run.nodes.forEach((t,i)=>{
+    const el = document.createElement('div');
+    el.className = 'node' + (i<run.node?' done': i===run.node?' cur':'');
+    el.innerHTML = '<div>'+NODE_INFO[t].icon+'</div><div class="nl">'+NODE_INFO[t].label+'</div>';
+    if(i===run.node) el.onclick = enterNode;
+    track.appendChild(el);
+    if(i<run.nodes.length-1){ const l=document.createElement('div'); l.className='node-link'; track.appendChild(l); }
   });
-  const missing = allSkills.filter(s => !player.skills.includes(s));
-  if (missing.length > 0) {
-    sh += '<div style="color:#eee; font-size:15px; font-weight:bold; margin-top:10px; margin-bottom:6px;">未找到：</div>';
-    missing.forEach(s => { sh += `<span class="skill-tag">???</span>`; });
-  }
-  document.getElementById('skills').innerHTML = sh;
-  document.getElementById('log').innerHTML = logEntries.slice(-4).map(e => `<div style="font-size:13px;color:${e.color};padding:4px 0;">${e.text}</div>`).join('');
+  document.getElementById('btn-enter').onclick = enterNode;
+  /* 玩家信息条 */
+  const strip = document.getElementById('player-strip');
+  strip.innerHTML = '';
+  const hpChip = document.createElement('span'); hpChip.className='chip';
+  hpChip.innerHTML = '❤ 生命 <b>'+Math.max(0,Math.round(run.hp))+'</b> / '+run.maxHp;
+  const deckChip = document.createElement('span'); deckChip.className='chip';
+  deckChip.innerHTML = '🂠 卡组 <b>'+run.deck.length+'</b> 张';
+  const energyChip = document.createElement('span'); energyChip.className='chip';
+  energyChip.innerHTML = '✦ 能量上限 <b>'+run.energy+'</b>';
+  const broWrap = document.createElement('span'); broWrap.className='chip bro-dots';
+  broWrap.innerHTML = '兄弟 ';
+  BROTHERS.forEach(b=>{ const d=document.createElement('i'); d.style.background=b.color; if(run.brothers.includes(b.id)) d.classList.add('got'); broWrap.appendChild(d); });
+  strip.append(hpChip, deckChip, energyChip, broWrap);
+  syncTopbar();
+  showScreen('screen-map');
 }
 
-function addLog(text, color) { logEntries.push({ text, color: color || '#666' }); }
-
-function typeText(text, callback) {
-  let idx = 0; document.getElementById('text').textContent = '';
-  const iv = setInterval(() => { if (idx < text.length) { document.getElementById('text').textContent += text[idx]; idx++; } else { clearInterval(iv); if (callback) callback(); } }, 18);
+function enterNode(){
+  const t = run.nodes[run.node];
+  SFX.click();
+  if(t==='fight' || t==='elite' || t==='boss') startCombat(t);
+  else if(t==='event') showEvent();
+  else if(t==='rest') showRest();
 }
 
-function showText(speaker, text, choices) {
-  document.getElementById('speaker').textContent = speaker;
-  document.getElementById('choices').innerHTML = '';
-  typeText(text, () => {
-    // If the only choice is to continue exploring, we don't render the button.
-    // Instead, we just apply its effect and enter idle state.
-    if (choices && choices.length === 1 && choices[0].next === 'explore') {
-      const c = choices[0];
-      if (c.data) events._tempData = c.data;
-      let effectFeedback = '';
-      if (c.effect) {
-        const changes = applyEffect(c.effect);
-        if (changes && changes.length > 0) effectFeedback = showFeedback(changes);
-      } 
-      
-      let resultStr = '';
-      if (c.effect) {
-        if (c.effect.hp) resultStr += `生命 ${c.effect.hp > 0 ? '+' : ''}${c.effect.hp} `;
-        if (c.effect.power) resultStr += `战力 ${c.effect.power > 0 ? '+' : ''}${c.effect.power} `;
-        if (c.effect.brave) resultStr += `勇气 ${c.effect.brave > 0 ? '+' : ''}${c.effect.brave} `;
-        if (c.effect.karma) resultStr += `善恶 ${c.effect.karma > 0 ? '+' : ''}${c.effect.karma} `;
-      }
-      if (resultStr || effectFeedback) {
-        document.getElementById('text').textContent += (resultStr ? `\n\n(🎯 自动结算：${resultStr})` : '') + effectFeedback;
-      }
-      
-      updateUI();
-      window.isIdle = true;
-      document.getElementById('actions').style.opacity = '1';
-      document.getElementById('actions').style.pointerEvents = 'auto';
-      return;
-    }
-
-    if (choices && choices.length > 0) {
-      const div = document.getElementById('choices');
-      choices.forEach(c => {
-        const btn = document.createElement('button');
-        btn.className = 'choice-btn'; btn.textContent = c.text;
-        btn.onclick = () => { 
-          if (c.data) events._tempData = c.data;
-          let effectFeedback = '';
-          if (c.effect) {
-            const changes = applyEffect(c.effect);
-            if (changes && changes.length > 0) effectFeedback = showFeedback(changes);
-          } 
-          
-          if (c.next === 'explore') {
-            // 直接显示选项结果，不再展示傻逼旁白
-            let resultStr = '';
-            if (c.effect) {
-              if (c.effect.hp) resultStr += `生命 ${c.effect.hp > 0 ? '+' : ''}${c.effect.hp} `;
-              if (c.effect.power) resultStr += `战力 ${c.effect.power > 0 ? '+' : ''}${c.effect.power} `;
-              if (c.effect.brave) resultStr += `勇气 ${c.effect.brave > 0 ? '+' : ''}${c.effect.brave} `;
-            }
-            document.getElementById('speaker').textContent = '🎯 结果';
-            let baseText = c.resultMsg ? c.resultMsg : (resultStr ? `你选择了「${c.text}」... (🎯 自动结算：${resultStr})` : `你选择了「${c.text}」。行动结束。`);
-            document.getElementById('text').textContent = baseText + effectFeedback;
-            document.getElementById('choices').innerHTML = '';
-            window.isIdle = true;
-            document.getElementById('actions').style.opacity = '1';
-            document.getElementById('actions').style.pointerEvents = 'auto';
-          } else {
-            if (c.next) showEvent(c.next); 
-          }
-          
-          updateUI(); 
-        };
-        div.appendChild(btn);
-      });
-    }
+/* =====================================================
+   事件 / 休整
+   ===================================================== */
+function showEvent(){
+  const ev = pick(EVENTS);
+  showStory(ev.title, ev.text, ev.choices.map(c=>({label:c.label, fn:c.act})));
+}
+function showStory(title, text, choices){
+  document.getElementById('ev-title').textContent = title;
+  document.getElementById('ev-text').textContent = text;
+  const box = document.getElementById('ev-choices'); box.innerHTML='';
+  const extra = document.getElementById('ev-extra'); extra.innerHTML=''; extra.style.display='none';
+  choices.forEach(c=>{
+    const b = document.createElement('button'); b.className='choice-btn'; b.textContent = c.label;
+    b.onclick = ()=>{ SFX.click(); const f = c.fn || c.act; f ? f() : (c.next==='map' && completeNode()); };
+    box.appendChild(b);
   });
+  syncTopbar();
+  showScreen('screen-story');
 }
-
-function checkDeath() {
-  if (player.hp <= 0) {
-    const deathTexts = [
-      `你的生命值降到了0...\n\n${player.char.name}倒在了地上，意识渐渐模糊...\n\n「爷爷...我...对不起...」\n\n你的冒险就这样结束了...`,
-      `${player.char.name}再也撑不住了...\n\n「不...还差一点...就能救出爷爷了...」\n\n你倒在了冰冷的地上...`,
-      `你的身体已经到达极限...\n\n葫芦开始发出微弱的光芒，仿佛在为你哭泣...\n\n${player.char.name}闭上了眼睛...`
-    ];
-    showText('💀 你倒下了', deathTexts[Math.floor(Math.random() * deathTexts.length)], [
-      { text: '🔄 重新开始', next: 'restart' }
+function showRest(){
+  showStory('休整','你在山洞里点起篝火。夜风穿过林梢，远处隐约有妖气的气息。\n趁现在，让自己恢复状态。',
+    [
+      { label:'生火取暖（回复 '+Math.round(run.maxHp*0.35)+' 生命）', act:()=>{
+          healPlayer(Math.round(run.maxHp*0.35));
+          showStory('休整','篝火噼啪作响，暖意渗入四肢百骸。\n\n（回复 '+Math.round(run.maxHp*0.35)+' 生命）',[{label:'继续前行', next:'map'}]); } },
+      { label:'去芜存菁（移除一张牌）', act:()=>{ startRemoveFlow('你把卡组摊在地上，逐一端详。\n去芜存菁后，招式更加凝练。'); } },
     ]);
+}
+
+/* 移除卡牌流程：先在本面板列出卡组供点击，完成后回调展示 */
+function startRemoveFlow(doneText){
+  const box = document.getElementById('ev-choices'); box.innerHTML='';
+  const extra = document.getElementById('ev-extra');
+  document.getElementById('ev-text').textContent = '点击要移除的卡牌：';
+  extra.style.display='flex';
+  run.deck.forEach((cid, idx)=>{
+    const b = document.createElement('button'); b.className='choice-btn';
+    b.textContent = CARDS[cid].name;
+    b.onclick = ()=>{
+      run.deck.splice(idx,1); SFX.card();
+      showStory('去芜存菁', doneText, [{label:'继续前行', next:'map'}]);
+    };
+    extra.appendChild(b);
+  });
+  const cancel = document.createElement('button'); cancel.className='choice-btn'; cancel.textContent='再想想';
+  cancel.onclick = ()=>{ extra.innerHTML=''; extra.style.display='none'; showRest(); };
+  box.appendChild(cancel);
+}
+
+/* =====================================================
+   战斗引擎
+   ===================================================== */
+function makeEnemy(id){
+  const d = ENEMIES[id];
+  return { id, name:d.name, emoji:d.emoji, boss:!!d.boss, maxHp:d.hp, hp:d.hp,
+    block:0, str:0, vuln:0, weak:0, ai:d.ai, moves:d.moves, turnCount:0, pending:null };
+}
+
+function startCombat(kind){
+  const ch = CHAPTERS[run.chapter];
+  let ids;
+  if(kind==='boss') ids = ch.boss;
+  else if(kind==='elite') ids = pick(ch.elite);
+  else ids = pick(ch.fights);
+  combat = {
+    kind, enemies: ids.map(makeEnemy),
+    draw: shuffle(run.deck.slice()), discard:[], hand:[],
+    playerBlock:0, playerStr:0, playerVuln:0, playerWeak:0,
+    turn:0, over:false,
+  };
+  /* 被动：大娃 */
+  if(run.brother==='dawa') combat.playerStr += 1;
+  if(run.brother==='sanwa') combat.playerBlock += 6;
+  run.stats.turns++;
+  startPlayerTurn(true);
+  if(kind==='boss') SFX.buff();
+  showScreen('screen-combat');
+  renderCombat();
+  log('遭遇 ' + combat.enemies.map(e=>e.name).join('、') + '！');
+}
+
+function startPlayerTurn(first){
+  combat.turn++;
+  combat.playerBlock = first ? combat.playerBlock : 0;
+  combat.playerVuln = Math.max(0, combat.playerVuln - 0); // 玩家易伤在自己回合结束结算
+  if(run.brother==='wuwa' && run.hp < run.maxHp){ run.hp = Math.min(run.maxHp, run.hp+2); }
+  /* 抽牌 */
+  const n = 5 + (run.brother==='erwa' ? 1 : 0);
+  drawCards(n);
+  /* 七娃：宝葫芦置入手牌 */
+  if(run.brother==='qiwa' && combat.turn===1){ combat.hand.push('gourd'); }
+  decideIntents(); // 敌人意图只在玩家回合开始时决定一次
+  renderCombat();
+}
+function drawCards(n){
+  for(let i=0;i<n;i++){
+    if(combat.hand.length>=9) break;
+    if(combat.draw.length===0){
+      if(combat.discard.length===0) break;
+      combat.draw = shuffle(combat.discard); combat.discard=[];
+    }
+    combat.hand.push(combat.draw.pop());
+  }
+}
+
+/* 伤害计算：src/target 拥有 str/weak/vuln 字段 */
+function calcDmg(base, src, tgt, isAttackCard){
+  let d = base + (src.str||0);
+  if(src.weak>0) d = Math.floor(d*0.75);
+  if(tgt.vuln>0) d = Math.floor(d*1.5);
+  if(isAttackCard && run.brother==='siwa') d = Math.floor(d*1.15);
+  return Math.max(0, d);
+}
+function dealToPlayer(raw, src, opts={}){
+  /* 六娃闪避（仅攻击类） */
+  if(!opts.pierce && run.brother==='liuwa' && Math.random()<0.12){
+    log('六娃的隐身术让你闪过了攻击！'); floatOn('.enemy-zone','闪避!','#3182ce'); SFX.block();
+    return;
+  }
+  let d = raw;
+  if(combat.playerBlock>0){
+    const absorbed = Math.min(combat.playerBlock, d);
+    combat.playerBlock -= absorbed; d -= absorbed;
+    if(absorbed>0){ SFX.block(); floatOn('#player-stats','格挡 '+absorbed,'#2a9d8f'); }
+  }
+  if(d>0){ run.hp -= d; SFX.hurt(); floatOn('#player-stats','-'+d,'#c0392b'); }
+  syncTopbar();
+  if(run.hp<=0){ combat.over=true; setTimeout(gameOver, 700); }
+}
+function dealToEnemy(e, raw, src){
+  let d = raw;
+  if(e.block>0){ const ab=Math.min(e.block,d); e.block-=ab; d-=ab; if(ab>0) floatOnEnemy(e,'格挡 '+ab,'#2a9d8f'); }
+  if(d>0){ e.hp -= d; floatOnEnemy(e,'-'+d,'#c0392b'); bumpEnemy(e); SFX.attack(); }
+  if(e.hp<=0){ run.stats.kills++; log(e.name+' 被击败了！'); }
+}
+
+/* ---------- 出牌 ---------- */
+function canPlay(cid){ return CARDS[cid].cost <= run.energy; }
+
+function playCard(handIdx){
+  if(busy || combat.over) return;
+  const cid = combat.hand[handIdx]; if(!cid) return;
+  const c = CARDS[cid];
+  if(!canPlay(cid)){ log('能量不足！'); return; }
+  busy = true;
+  run.energy -= c.cost;
+  run.stats.cardsPlayed++;
+  combat.hand.splice(handIdx,1);
+  if(!c.exhaust) combat.discard.push(cid);
+  SFX.card();
+
+  const targets = aliveEnemies();
+  const main = targets.sort((a,b)=>a.hp-b.hp)[0]; // 优先残血
+  const atkSrc = { str:combat.playerStr, weak:combat.playerWeak };
+
+  /* 单体攻击（含多段） */
+  if(c.dmg && main){
+    const base = (main.weak>0 && c.vsWeak) ? c.vsWeak : c.dmg;
+    const hits = c.hits || 1;
+    for(let i=0;i<hits;i++){
+      const d = calcDmg(base, atkSrc, main, true);
+      dealToEnemy(main, d, atkSrc);
+    }
+  }
+  /* 全体攻击 */
+  if(c.dmgAll){
+    targets.forEach(e=>{
+      const d = calcDmg(c.dmgAll, atkSrc, e, true);
+      dealToEnemy(e, d, atkSrc);
+    });
+  }
+  if(c.block){ combat.playerBlock += c.block; SFX.block(); floatOn('#player-stats','格挡 +'+c.block,'#2a9d8f'); }
+  if(c.heal){ healPlayer(c.heal); SFX.heal(); floatOn('#player-stats','+'+c.heal,'#38a169'); }
+  if(c.self){ run.hp -= c.self; floatOn('#player-stats','-'+c.self,'#c0392b'); }
+  if(c.draw){ drawCards(c.draw); }
+  if(c.str){ combat.playerStr += c.str; SFX.buff(); floatOn('#player-stats','力量 +'+c.str,'#d69e2e'); }
+  if(c.vuln && main){ main.vuln += c.vuln; floatOnEnemy(main,'易伤 +'+c.vuln,'#805ad5'); }
+
+  renderCombat();
+  if(c.self && run.hp<=0){ combat.over=true; setTimeout(gameOver,700); busy=false; return; }
+  if(checkWin()) { busy=false; return; }
+  setTimeout(()=>{ busy=false; renderCombat(); }, 150);
+}
+
+function checkWin(){
+  if(combat.over) return false;
+  if(aliveEnemies().length===0){
+    combat.over = true;
+    log('战斗胜利！');
+    SFX.win();
+    setTimeout(winCombat, 900);
     return true;
   }
   return false;
 }
 
-function applyEffect(e) {
-  let changes = [];
-  
-  // 处理生命值 - 可以死亡
-  if (e.hp) {
-    player.hp = player.hp + e.hp;
-    
-    // 如果生命值超过上限，提升上限
-    if (player.hp > player.maxHp) {
-      const increase = Math.floor((player.hp - player.maxHp) * 0.1);
-      player.maxHp += increase;
-      player.hp = player.maxHp;
-      changes.push(`❤️ 生命上限 +${increase}！达到 ${Math.round(player.maxHp)}`);
-    } else if (e.hp > 0) {
-      changes.push(`❤️ 生命 +${e.hp} (${Math.round(player.hp)}/${Math.round(player.maxHp)})`);
-    } else {
-      changes.push(`💔 生命 ${e.hp} (${Math.round(Math.max(0, player.hp))}/${Math.round(player.maxHp)})`);
+/* ---------- 回合结束 / 敌人行动 ---------- */
+function endTurn(){
+  if(busy || combat.over) return;
+  busy = true;
+  /* 玩家状态衰减 */
+  combat.playerVuln = Math.max(0, combat.playerVuln-1);
+  combat.playerWeak = Math.max(0, combat.playerWeak-1);
+  combat.discard.push(...combat.hand); combat.hand=[];
+  renderCombat();
+  enemyPhase();
+}
+function enemyPhase(){
+  const list = aliveEnemies();
+  let i = 0;
+  const step = ()=>{
+    if(combat.over){ busy=false; return; }
+    if(i>=list.length){ 
+      combat.enemies.forEach(e=>{ e.vuln=Math.max(0,e.vuln-1); e.weak=Math.max(0,e.weak-1); });
+      run.energy = 3;
+      startPlayerTurn(false);
+      busy = false; renderCombat(); return;
     }
-  }
-  
-  // 处理战力 - 可以突破上限
-  if (e.power) {
-    player.power = Math.max(0, player.power + e.power);
-    // 如果战力超过上限，提升上限
-    if (player.power > player.maxPower) {
-      const increase = Math.floor(player.power * 0.1);
-      player.maxPower += increase;
-      player.power = player.maxPower;
-      changes.push(`⚔️ 战力上限 +${increase}！达到 ${Math.round(player.maxPower)}`);
-    } else {
-      changes.push(`⚔️ 战力 ${e.power > 0 ? '+' : ''}${e.power} (${Math.round(player.power)}/${Math.round(player.maxPower)})`);
+    const e = list[i++];
+    e.turnCount++;
+    if(e.hp<=0){ step(); return; }
+    e.vuln = Math.max(0, e.vuln-1); e.weak = Math.max(0, e.weak-1);
+    const mv = e.pending;
+    if(!mv){ step(); return; }
+    if(mv.t==='atk'){
+      const hits = mv.hits || 1;
+      for(let h=0; h<hits; h++){
+        const d = calcDmg(mv.v, e, {vuln:combat.playerVuln}, false);
+        dealToPlayer(d, e);
+        if(combat.over){ busy=false; return; }
+      }
+      if(mv.weak){ combat.playerWeak += mv.weak; floatOn('#player-stats','虚弱 +'+mv.weak,'#805ad5'); }
+      if(mv.vuln){ combat.playerVuln += mv.vuln; floatOn('#player-stats','易伤 +'+mv.vuln,'#b03a2e'); }
+    } else if(mv.t==='block'){
+      e.block += mv.v; floatOnEnemy(e,'格挡 +'+mv.v,'#2a9d8f'); SFX.block();
+    } else if(mv.t==='buff'){
+      e.str += mv.str; floatOnEnemy(e,'力量 +'+mv.str,'#d69e2e'); SFX.buff();
+    } else if(mv.t==='heal'){
+      e.hp = Math.min(e.maxHp, e.hp+mv.heal); floatOnEnemy(e,'+'+mv.heal,'#38a169');
     }
-  }
-  
-  // 处理勇气
-  if (e.brave) {
-    player.brave = Math.max(0, Math.min(100, player.brave + e.brave));
-    changes.push(`💪 勇气 ${e.brave > 0 ? '+' : ''}${e.brave} (${Math.round(player.brave)}/100)`);
-  }
-  
-  // 处理善恶
-  if (e.karma) {
-    player.karma += e.karma;
-    changes.push(`✨ 善恶 ${e.karma > 0 ? '+' : ''}${e.karma} (${player.karma >= 0 ? '+' : ''}${Math.round(player.karma)})`);
-  }
-  
-  // 处理技能 - 每获得一个技能提升上限
-  if (e.skill && !player.skills.includes(e.skill)) {
-    player.skills.push(e.skill);
-    player.maxHp += 15; // 每个技能增加15点生命上限
-    player.maxPower += 10; // 每个技能增加10点战力上限
-    player.hp = Math.min(player.maxHp, player.hp + 10); // 同时恢复一些生命
-    changes.push(`🌟 获得技能：${e.skill}`);
-    changes.push(`📈 属性上限提升！生命上限+15→${player.maxHp}，战力上限+10→${player.maxPower}`);
-    
-    // 金刚葫芦娃合体！
-    if (player.skills.length >= 7 && !player.isKingKong) {
-      player.isKingKong = true;
-      player.maxHp += 200;
-      player.maxPower += 150;
-      player.hp = player.maxHp;
-      player.power = player.maxPower;
-      changes.push(`\n🌈 七子连心！奇迹发生了！\n你进化成了【金刚葫芦娃】！\n生命和战力上限暴涨，且全部恢复全满！`);
-    }
-  }
-  
-  // 处理Boss伤害
-  if (e.bossHp) boss.hp = Math.max(0, boss.hp + e.bossHp);
-  if (e.bossPower) boss.power = Math.max(0, Math.min(boss.maxPower, boss.power + e.bossPower));
-  
-  return changes;
+    renderCombat();
+    setTimeout(step, 420);
+  };
+  setTimeout(step, 350);
 }
 
-function showFeedback(changes) {
-  if (!changes || changes.length === 0) return '';
-  return '\n\n━━━━━━━━━━━━━━━━━━\n📊 属性变化：\n' + changes.join('\n') + '\n━━━━━━━━━━━━━━━━━━';
+/* 敌人意图：在玩家回合开始时确定并展示 */
+function decideIntents(){
+  combat.enemies.forEach(e=>{
+    if(e.hp<=0){ e.pending=null; return; }
+    let idx;
+    if(typeof e.ai==='function') idx = e.ai(e, e.turnCount);
+    else idx = e.ai[e.turnCount % e.ai.length];
+    e.pending = e.moves[idx];
+  });
 }
 
-function growBoss() {
-  // Boss基础成长：每回合不仅增加属性，也提升上限
-  const baseGain = Math.floor(boss.power * 0.08 + turn * 0.5);
-  boss.maxPower += 2;
-  boss.maxHp += 5;
-  boss.power = Math.min(boss.maxPower, boss.power + baseGain);
-  boss.hp = Math.min(boss.maxHp, boss.hp + 10);
-  boss.lastAction = `修炼中... 战力+${baseGain}`;
-  addLog(`🐍 蛇精修炼中...战力+${baseGain}，上限提升`, '#ff6b6b');
-  
-  // 蛇精偶遇事件（增加概率和结盟事件）
-  const bossEvent = Math.random();
-  if (bossEvent < 0.08) { // 提高结盟概率，因为反派变多了
-    // 🤝 新增：反派大妖结盟事件
-    const villains = ['黑熊精', '金角大王', '银角大王', '黄袍怪', '白骨精', '牛魔王', '红孩儿', '六耳猕猴', '蝎子精', '百眼魔君', 
-                      '广场舞大妈（魔化）', '键盘侠统领', '加班怨灵', '永远晚点的公交车精', '容嬷嬷', '复读机成精', '杠精转世', '甲方爸爸的化身', '五仁月饼怪', '没带纸的厕所幽灵'];
-    const villain = villains[Math.floor(Math.random() * villains.length)];
-    const hpMaxGain = Math.floor(Math.random() * 30) + 20;
-    const powerMaxGain = Math.floor(Math.random() * 15) + 10;
-    boss.maxHp += hpMaxGain;
-    boss.maxPower += powerMaxGain;
-    boss.hp += hpMaxGain;
-    boss.power += powerMaxGain;
-    boss.lastAction = `与【${villain}】结盟！`;
-    addLog(`🤝 蛇精与${villain}结盟！生命上限+${hpMaxGain}，战力上限+${powerMaxGain}！`, '#ff4444');
-  } else if (bossEvent < 0.12) {
-    // 💥 蛇精遇到强敌，两败俱伤
-    const damage = Math.floor(Math.random() * 30) + 20;
-    boss.hp = Math.max(30, boss.hp - damage);
-    boss.maxPower += 5;
-    boss.power = Math.min(boss.maxPower, boss.power + 15);
-    boss.lastAction = `与神秘强者激战！`;
-    addLog(`💥 蛇精与神秘强者激战！生命-${damage}，但战力上限+5！`, '#ff8800');
-  } else if (bossEvent < 0.18) {
-    // 🎁 蛇精获得神秘法器
-    const artifacts = ['千年蛇丹', '妖王内丹', '毒蛇胆', '蛇皮护甲', '魔蛇之眼', '灭霸的无限手套', '伏地魔的魔杖', '东方不败的绣花针', '恶毒王后的毒苹果', '容嬷嬷的银针', '夜王的长矛', '死神海拉的夜空之剑'];
-    const artifact = artifacts[Math.floor(Math.random() * artifacts.length)];
-    const hpGain = Math.floor(Math.random() * 25) + 15;
-    const powerGain = Math.floor(Math.random() * 10) + 5;
-    boss.maxHp += Math.floor(hpGain / 2);
-    boss.maxPower += Math.floor(powerGain / 2);
-    boss.hp = Math.min(boss.maxHp, boss.hp + hpGain);
-    boss.power = Math.min(boss.maxPower, boss.power + powerGain);
-    boss.lastAction = `获得了${artifact}！`;
-    addLog(`🎁 蛇精找到了${artifact}！生命上限+${Math.floor(hpGain/2)}，战力上限+${Math.floor(powerGain/2)}！`, '#9b59b6');
-  } else if (bossEvent < 0.23) {
-    // 😈 蛇精蛊惑了无辜
-    const victims = ['村民', '商人', '书生', '农夫', '猎人'];
-    const victim = victims[Math.floor(Math.random() * victims.length)];
-    const powerGain = Math.floor(Math.random() * 8) + 3;
-    boss.maxPower += Math.floor(powerGain / 2);
-    boss.power = Math.min(boss.maxPower, boss.power + powerGain);
-    boss.lastAction = `吸取了${victim}的精气！`;
-    addLog(`😈 蛇精蛊惑了${victim}，吸取精气！战力上限+${Math.floor(powerGain/2)}`, '#ff8800');
-  } else if (bossEvent < 0.28) {
-    // 🐍 蛇精遇到手下
-    const minions = ['小妖精', '蜘蛛精', '蝙蝠怪', '蛤蟆精', '蛇妖'];
-    const minion = minions[Math.floor(Math.random() * minions.length)];
-    const gainBonus = Math.floor(Math.random() * 6) + 2;
-    boss.maxPower += 2;
-    boss.power = Math.min(boss.maxPower, boss.power + gainBonus);
-    boss.lastAction = `收服了${minion}！`;
-    addLog(`🐍 蛇精收服了${minion}！战力上限+2`, '#ff6b6b');
-  } else if (bossEvent < 0.32) {
-    // 😵 蛇精走火入魔
-    const moodLoss = Math.floor(Math.random() * 10) + 5;
-    boss.power = Math.max(10, boss.power - moodLoss);
-    boss.lastAction = `修炼走火入魔！`;
-    addLog(`😵 蛇精修炼走火入魔！战力-${moodLoss}`, '#4ecdc4');
-  } else if (bossEvent < 0.38) {
-    // 💪 蛇精怒气爆发
-    const 怒气Gain = Math.floor(Math.random() * 12) + 8;
-    boss.maxPower += 5;
-    boss.power = Math.min(boss.maxPower, boss.power + 怒气Gain);
-    boss.brave = Math.min(100, boss.brave + 10);
-    boss.lastAction = `怒气爆发！`;
-    addLog(`💪 蛇精怒气爆发！战力上限+5，气势+10！`, '#ff4444');
+/* ---------- 战斗胜利结算 ---------- */
+function winCombat(){
+  const kind = combat.kind;
+  combat = null;
+  if(kind==='boss'){
+    afterBoss();
+  } else if(kind==='elite'){
+    offerBrother(()=>offerReward());
+  } else {
+    offerReward();
+  }
+}
+function afterBoss(){
+  if(run.chapter < 2){
+    banner(CHAPTERS[run.chapter].no+' 完成！', ()=>{
+      offerBrother(()=>{
+        run.chapter++; run.node=0; run.nodes=genNodes(run.chapter);
+        run.hp = Math.min(run.maxHp, run.hp + Math.round(run.maxHp*0.25)); // 章节间小幅恢复
+        banner(CHAPTERS[run.chapter].no+' · '+CHAPTERS[run.chapter].name, ()=>{ showMap(); renderMapSafe(); });
+      });
+    }, 1600);
+  } else {
+    victory();
+  }
+}
+function renderMapSafe(){ syncTopbar(); }
+
+/* ---------- 兄弟救援 ---------- */
+function offerBrother(cbAfter){
+  const missing = BROTHERS.filter(b=>!run.brothers.includes(b.id));
+  if(missing.length===0){
+    /* 七子已全：葫芦籽奖励 */
+    run.maxHp += 10; healPlayer(10);
+    showStory('葫芦藤','洞中的葫芦藤已全部结出兄弟，\n藤上又生出一枚小小的葫芦籽。\n\n（生命上限 +10）',[{label:'继续', fn:cbAfter}]);
+    return;
+  }
+  const options = shuffle(missing).slice(0,2);
+  document.getElementById('ev-title').textContent = '兄弟被困在这里！';
+  document.getElementById('ev-text').textContent = '妖洞深处传来熟悉的声音。砸开石牢——\n选择一位兄弟加入你的队伍：';
+  const box = document.getElementById('ev-choices'); box.innerHTML='';
+  const extra = document.getElementById('ev-extra'); extra.innerHTML=''; extra.style.display='none';
+  const grid = document.createElement('div'); grid.className='bro-choice';
+  options.forEach(b=>{
+    const card = document.createElement('div'); card.className='char-card panel';
+    card.style.borderColor = b.color;
+    card.innerHTML = `
+      <div class="char-avatar" style="background:${b.color}">${b.num}</div>
+      <div class="char-name" style="color:${b.color}">${b.name}</div>
+      <div class="char-passive">${b.passive}</div>
+      <div class="char-sig">${b.sig.map(s=>'<span>'+CARDS[s].name+'</span>').join('')}</div>`;
+    card.onclick = ()=>{
+      SFX.transform();
+      run.brothers.push(b.id);
+      run.deck.push(...b.sig);
+      checkQizi();
+      showStory(b.name+' 加入了队伍！',
+        '「'+b.name+'」挣脱枷锁，与你并肩而立！\n专属卡牌已加入卡组。'+(run.qizi?'\n\n🌈 七子连心，金刚葫芦娃降临！':''),
+        [{label:'继续', fn:cbAfter}]);
+    };
+    grid.appendChild(card);
+  });
+  box.appendChild(grid);
+  showScreen('screen-story');
+}
+function checkQizi(){
+  if(run.brothers.length>=7 && !run.qizi){
+    run.qizi = true;
+    run.maxHp += 25; run.hp = run.maxHp;
+    run.deck.push('qizi');
   }
 }
 
-const events = {
-  _tempData: {},
-  intro: () => showText('旁白', `你选择了${player.char.name}！\n\n蛇精抓走了爷爷，你必须提升实力去救他。\n\n⚠️ 蛇精每回合都在变强！要在实力足够时尽快挑战！`, [{ text: '🔍 开始冒险', next: 'explore' }]),
+/* ---------- 卡牌奖励 ---------- */
+function offerReward(){
+  const opts = shuffle(REWARD_POOL.slice()).slice(0,3);
+  const grid = document.getElementById('reward-grid'); grid.innerHTML='';
+  opts.forEach(cid=>{
+    const el = makeCardEl(cid); el.classList.add('taken-target');
+    el.onclick = ()=>{ run.deck.push(cid); SFX.card(); proceedAfterReward(); };
+    grid.appendChild(el);
+  });
+  document.getElementById('btn-skip-reward').onclick = ()=>{ SFX.click(); proceedAfterReward(); };
+  showScreen('screen-reward');
+  syncTopbar();
+}
+function proceedAfterReward(){ completeNode(); }
 
-  explore: () => {
-    window.isIdle = true;
-    document.getElementById('choices').innerHTML = '';
-    document.getElementById('actions').style.opacity = '1';
-    document.getElementById('actions').style.pointerEvents = 'auto';
-  },
+/* =====================================================
+   结局
+   ===================================================== */
+function gameOver(){
+  SFX.lose();
+  document.getElementById('end-title').textContent = '倒下了…';
+  document.getElementById('end-title').style.color = '#c0392b';
+  document.getElementById('end-sub').textContent = run.qizi
+    ? '即使化作金刚葫芦娃，终究还是没能撑住……\n但兄弟们不会放弃，下一次一定救出爷爷！'
+    : '「爷爷……对不起……」\n意识消散前，你仿佛看到了兄弟们的身影。';
+  fillEndStats();
+  showScreen('screen-end');
+}
+function victory(){
+  SFX.transform();
+  document.getElementById('end-title').textContent = '爷爷得救了！';
+  document.getElementById('end-title').style.color = '#b8860b';
+  document.getElementById('end-sub').textContent = run.qizi
+    ? '金刚葫芦娃力挽狂澜，蛇精被收入宝葫芦，永世不得翻身！\n七子连心，其利断金——爷爷抚摸着你们的头，笑得无比欣慰。'
+    : '蛇精仓皇逃窜，爷爷从石牢中被救了出来。\n虽然没能集齐七子，但团结的力量已足以守护正义！';
+  fillEndStats();
+  showScreen('screen-end');
+}
+function fillEndStats(){
+  const box = document.getElementById('end-stats'); box.innerHTML='';
+  [['击败妖精', run.stats.kills], ['打出卡牌', run.stats.cardsPlayed], ['经历回合', run.stats.turns], ['找到兄弟', run.brothers.length+'/7']]
+  .forEach(([k,v])=>{ const c=document.createElement('span'); c.className='chip'; c.innerHTML=k+' <b>'+v+'</b>'; box.appendChild(c); });
+}
 
-  find_ally: () => {
-    const missing = allSkills.filter(s => !player.skills.includes(s));
-    if (missing.length === 0) { 
-      showText('旁白', `你已集齐所有七兄弟！\n\n已获得的技能：${player.skills.join('、')}\n\n现在可以去挑战蛇精了！`, [{ text: '继续', next: 'explore' }]); 
-      return; 
+/* =====================================================
+   UI 渲染
+   ===================================================== */
+function makeCardEl(cid){
+  const c = CARDS[cid];
+  const el = document.createElement('div');
+  el.className = 'card ' + c.type + (c.exhaust?' exhaust-mark':'');
+  const accent = c.owner ? BROTHERS.find(b=>b.id===c.owner).color : (c.type==='attack'?'#c0392b':c.type==='skill'?'#2a9d8f':'#805ad5');
+  el.innerHTML = `<div class="cost">${c.cost}</div><div class="cname">${c.name}</div>
+    <div class="ctype">${c.type==='attack'?'攻击':c.type==='skill'?'技能':'能力'}</div>
+    <div class="cdesc">${c.desc}</div><div class="cbar" style="background:${accent}"></div>`;
+  return el;
+}
+function log(t){ document.getElementById('combat-log').textContent = t; }
+
+function renderCombat(){
+  if(!combat) return;
+  /* 敌人 */
+  const zone = document.getElementById('enemy-zone'); zone.innerHTML='';
+  combat.enemies.forEach(e=>{
+    const div = document.createElement('div');
+    div.className = 'enemy' + (e.hp<=0?' dead':''); div.dataset.eid = e.id;
+    let intentHtml = '';
+    if(e.pending && e.hp>0){
+      const mv = e.pending;
+      if(mv.t==='atk'){
+        const d = calcDmg(mv.v, e, {vuln:combat.playerVuln}, false);
+        const n = (mv.hits||1) > 1 ? d+'×'+mv.hits : d;
+        intentHtml = `<div class="intent atk">⚔️ ${n}</div>`;
+      } else if(mv.t==='block') intentHtml = `<div class="intent def">🛡️ ${mv.v}</div>`;
+      else if(mv.t==='buff') intentHtml = `<div class="intent buf">⬆️ 强化</div>`;
+      else if(mv.t==='heal') intentHtml = `<div class="intent def">💧 吸血</div>`;
+      else intentHtml = `<div class="intent deb">✨ 弱化</div>`;
     }
-    const skill = missing[Math.floor(Math.random() * missing.length)];
-    const brother = characters.find(c => c.skill === skill);
-    const foundCount = player.skills.length;
-    
-    // 随机决定是友方还是被蛊惑的兄弟
-    const isCorrupted = Math.random() < 0.3 && foundCount >= 2;
-    
-    if (isCorrupted) {
-      showText(`😈 ${brother.name}（被蛊惑）`, 
-        `${brother.name}被蛇精的妖术蛊惑了！\n\n他眼神空洞，似乎认不出你...\n\n「你是谁？蛇精才是我的主人！」`, 
-        [
-          { text: '🗣️ 呼唤他的名字', next: 'convince_brother', effect: { brave: 5 }, data: { brother, skill } },
-          { text: '⚔️ 用武力唤醒', next: 'force_brother', effect: { brave: 10 }, data: { brother, skill } },
-          { text: '😢 诉说亲情', next: 'emotion_brother', effect: { karma: 10 }, data: { brother, skill } }
-        ]);
-    } else {
-      showText(`🌟 ${brother.name}`, 
-        `终于找到你了！${brother.name}！\n\n「${brother.motto}」\n\n我的技能是「${brother.skill}」！\n\n兄弟，我们一起救爷爷！`, 
-        [
-          { text: `🤝 携手同行（获得 ${brother.skill}）`, next: 'explore', effect: { skill, power: 8 + foundCount * 2 } },
-          { text: '💬 聊聊天', next: 'talk_brother', data: { brother } }
-        ]);
+    const st = [];
+    if(e.str>0) st.push(`<span class="status-tag str">力${e.str}</span>`);
+    if(e.weak>0) st.push(`<span class="status-tag weak">弱${e.weak}</span>`);
+    if(e.vuln>0) st.push(`<span class="status-tag vuln">易${e.vuln}</span>`);
+    div.innerHTML = `${intentHtml}
+      <div class="enemy-body">${e.emoji}</div>
+      <div class="enemy-name">${e.name}</div>
+      <div class="enemy-hp"><i style="width:${Math.max(0,e.hp/e.maxHp*100)}%"></i></div>
+      <div class="enemy-sub"><span>${Math.max(0,e.hp)}/${e.maxHp}</span>
+        ${e.block>0?`<span class="blk">🛡${e.block}</span>`:''}${st.join('')}</div>`;
+    zone.appendChild(div);
+  });
+  /* 玩家状态 */
+  const ps = document.getElementById('player-stats'); ps.innerHTML='';
+  const chips = [];
+  chips.push(`<span class="chip">❤ <b>${Math.max(0,Math.round(run.hp))}</b>/${run.maxHp}</span>`);
+  if(combat.playerBlock>0) chips.push(`<span class="chip" style="color:#2a9d8f">🛡 格挡 <b>${combat.playerBlock}</b></span>`);
+  chips.push('<span class="chip energy-orbs" style="background:none;padding:2px 0;">'+ Array.from({length:3},(_,i)=>`<i class="${i<run.energy?'full':''}"></i>`).join('') +'</span>');
+  if(combat.playerStr>0) chips.push(`<span class="chip" style="color:#a3651a">力量 +${combat.playerStr}</span>`);
+  if(combat.playerWeak>0) chips.push(`<span class="chip" style="color:#6b46a8">虚弱 ${combat.playerWeak}</span>`);
+  if(combat.playerVuln>0) chips.push(`<span class="chip" style="color:#b03a2e">易伤 ${combat.playerVuln}</span>`);
+  ps.innerHTML = chips.join('');
+  /* 手牌 */
+  const hand = document.getElementById('hand'); hand.innerHTML='';
+  const n = combat.hand.length;
+  combat.hand.forEach((cid,i)=>{
+    const el = makeCardEl(cid);
+    const mid = (n-1)/2, off = i-mid;
+    el.style.transform = `translateY(${Math.abs(off)*7}px) rotate(${off*3}deg)`;
+    el.style.zIndex = i;
+    if(!canPlay(cid)) el.classList.add('disabled');
+    el.onclick = ()=>playCard(i);
+    el.title = '快捷键 ' + (i+1);
+    hand.appendChild(el);
+  });
+  document.getElementById('draw-pile').textContent = '抽牌堆 '+combat.draw.length;
+  document.getElementById('discard-pile').textContent = '弃牌堆 '+combat.discard.length;
+  syncTopbar();
+}
+
+/* 飘字 */
+function floatOn(sel, text, color){
+  const host = document.querySelector(sel); if(!host) return;
+  const f = document.createElement('span'); f.className='float-txt';
+  f.textContent = text; f.style.color = color;
+  f.style.left = '50%'; f.style.top = '10px'; f.style.transform='translateX(-50%)';
+  host.style.position = 'relative';
+  host.appendChild(f); setTimeout(()=>f.remove(), 1000);
+}
+function floatOnEnemy(e, text, color){
+  const el = document.querySelector(`.enemy[data-eid="${e.id}"] .enemy-body`);
+  if(!el) return;
+  const f = document.createElement('span'); f.className='float-txt';
+  f.textContent = text; f.style.color=color;
+  f.style.left='50%'; f.style.top='18%'; f.style.transform='translateX(-50%)';
+  el.appendChild(f); setTimeout(()=>f.remove(), 1000);
+}
+function bumpEnemy(e){
+  const el = document.querySelector(`.enemy[data-eid="${e.id}"]`);
+  if(!el) return;
+  el.classList.add('hurt'); setTimeout(()=>el.classList.remove('hurt'), 180);
+}
+
+/* =====================================================
+   入口与全局
+   ===================================================== */
+function init(){
+  document.getElementById('title-ver').textContent = 'v'+VERSION;
+  document.getElementById('tb-ver').textContent = 'v'+VERSION;
+  const dots = document.getElementById('title-dots');
+  BROTHERS.forEach(b=>{ const i=document.createElement('i'); i.style.background=b.color; dots.appendChild(i); });
+  const grid = document.getElementById('char-grid');
+  BROTHERS.forEach((b,i)=>{
+    const card = document.createElement('div');
+    card.className = 'char-card panel';
+    card.innerHTML = `
+      <div class="char-avatar" style="background:${b.color}">${b.num}</div>
+      <div class="char-name" style="color:${b.color}">${b.name}</div>
+      <div class="char-passive">${b.passive}</div>
+      <div class="char-sig">${b.sig.map(s=>'<span>'+CARDS[s].name+'</span>').join('')}</div>`;
+    card.onclick = ()=>{ SFX.ensure(); newRun(i); };
+    grid.appendChild(card);
+  });
+  document.getElementById('btn-start').onclick = ()=>{ SFX.ensure(); SFX.click(); showScreen('screen-select'); };
+  document.getElementById('btn-restart').onclick = ()=>location.reload();
+  document.getElementById('btn-endturn').onclick = endTurn;
+  document.getElementById('mute-btn').onclick = toggleMute;
+  document.addEventListener('keydown', (ev)=>{
+    if(ev.repeat) return;
+    if(ev.key==='m'||ev.key==='M') toggleMute();
+    if(document.getElementById('screen-combat').classList.contains('active')){
+      if(ev.key>='1' && ev.key<='9'){ playCard(parseInt(ev.key)-1); }
+      if(ev.key==='e'||ev.key==='E'||ev.key===' '){ ev.preventDefault(); endTurn(); }
     }
-  },
+  });
+}
+function toggleMute(){
+  SFX.muted = !SFX.muted;
+  document.getElementById('mute-btn').textContent = SFX.muted ? '🔇' : '🔊';
+}
 
-  convince_brother: () => {
-    const brother = events._tempData?.brother;
-    const skill = events._tempData?.skill;
-    const success = player.brave >= 40 || player.karma >= 10;
-    
-    if (success) {
-      showText(`🌟 ${brother.name}`, 
-        `你的呼唤唤醒了${brother.name}！\n\n「哥哥...我想起来了...蛇精骗了我...」\n\n${brother.name}加入队伍！`, 
-        [{ text: `获得 ${skill}！`, next: 'explore', effect: { skill, power: 12 } }]);
-    } else {
-      showText(`😈 ${brother.name}`, 
-        `${brother.name}摇了摇头...\n\n「不...蛇精说得对...你们都是坏人...」\n\n你的勇气或善恶值不够，需要更多历练。`, 
-        [{ text: '继续', next: 'explore', effect: { hp: -10 } }]);
-    }
-  },
-
-  force_brother: () => {
-    const brother = events._tempData?.brother;
-    const skill = events._tempData?.skill;
-    const success = player.power >= 25;
-    
-    if (success) {
-      showText(`⚔️ 战斗`, 
-        `${brother.name}展开激战！\n\n经过一番搏斗，你用强大的力量震醒了他！\n\n「我...我怎么了...」`, 
-        [{ text: `${brother.name}恢复清醒！`, next: 'explore', effect: { skill, power: 10, hp: -15 } }]);
-    } else {
-      showText(`😤 失败`, 
-        `${brother.name}的力量太强了！\n\n你被击退了...`, 
-        [{ text: '撤退', next: 'explore', effect: { hp: -20 } }]);
-    }
-  },
-
-  emotion_brother: () => {
-    const brother = events._tempData?.brother;
-    const skill = events._tempData?.skill;
-    const success = player.karma >= 5;
-    
-    if (success) {
-      showText(`😢 ${brother.name}`, 
-        `你含泪讲述了爷爷被抓的故事...\n\n${brother.name}的眼眶湿润了...\n\n「爷爷...我想起来了...蛇精是坏人！」`, 
-        [{ text: `${brother.name}清醒了！`, next: 'explore', effect: { skill, power: 8, karma: 5 } }]);
-    } else {
-      showText(`😠 ${brother.name}`, 
-        `${brother.name}不为所动...\n\n「废话少说！」`, 
-        [{ text: '无奈离开', next: 'explore' }]);
-    }
-  },
-
-  talk_brother: () => {
-    const brother = events._tempData?.brother;
-    const dialogues = [
-      `${brother.name}说：「${brother.desc}」`,
-      `${brother.name}说：「我的性格是${brother.personality}。」`,
-      `${brother.name}说：「${brother.motto}」`,
-      `${brother.name}说：「我们七兄弟各有本领，团结起来力量更大！」`
-    ];
-    showText(`💬 ${brother.name}`, 
-      dialogues[Math.floor(Math.random() * dialogues.length)], 
-      [{ text: '🤝 加入队伍', next: 'explore', effect: { skill: brother.skill, power: 6 } }]);
-  },
-
-  use_item: () => {
-    const { enemy } = events._tempData;
-    const item = player.inventory.pop();
-    const r = Math.random();
-    if (r < 0.5) {
-      showText('🎒 乱扔道具', `你掏出【${item.name}】砸向${enemy.name}！\n\n效果拔群！敌人被砸晕了！\n\n获得了大量战力加成！`, [{ text: '继续战斗', next: 'combat_result', effect: { power: item.power || 20, hp: item.hp || 10 }, data: { enemy, successRate: 1.5 } }]);
-    } else {
-      showText('🎒 乱扔道具', `你掏出【${item.name}】想对付${enemy.name}...\n\n结果不小心反弹砸到了自己！\n\n受到了伤害！`, [{ text: '继续战斗', next: 'combat_result', effect: { hp: -20, power: -5 }, data: { enemy, successRate: 0.3 } }]);
-    }
-  },
-
-  boss_harass: () => {
-    showText('⚠️ 蛇精的袭击', '蛇精觉得你太跳了，远程向你扔了一个【如意大泥石流】！', [
-      { text: '😤 硬抗', next: 'explore', effect: { hp: -25, brave: 5 } },
-      { text: '🏃 躲避', next: 'explore', effect: { hp: -5, brave: -2 } }
-    ]);
-  },
-
-  npc_encounter: () => {
-    const npc = npcs[Math.floor(Math.random() * npcs.length)];
-    if (player.karma <= -30 && Math.random() < 0.5) {
-      showText(npc.name, `${npc.desc}\n\n看到你满身邪气，${npc.name}觉得你比蛇精还像反派，决定直接对你动手！`, [
-        { text: '暴揍一顿', next: 'explore', effect: { hp: -15, power: 10, karma: -5 } },
-        { text: '仓皇逃窜', next: 'explore', effect: { hp: -5, brave: -5 } }
-      ]);
-      return;
-    }
-    if (npc.dialogues && npc.dialogues.length > 0) {
-      const choices = npc.dialogues.map(d => ({
-        text: d.text,
-        next: 'npc_dialogue_result',
-        effect: d.effect,
-        data: { npc, dialogue: d }
-      }));
-      showText(npc.name, npc.desc, choices);
-    } else {
-      const good = Math.random() > 0.4;
-      if (good) {
-        showText(npc.name, npc.desc, [{ 
-          text: '🤝 接受', 
-          next: 'npc_result', 
-          effect: npc.effectGood,
-          data: { npc, isGood: true }
-        }, { 
-          text: '👋 离开', 
-          next: 'npc_leave',
-          data: { npc }
-        }]);
-      } else {
-        showText(npc.name, npc.desc + '\n\n⚠️ 感觉不太对劲...', [{ 
-          text: '🤝 接受', 
-          next: 'npc_result', 
-          effect: npc.effectBad,
-          data: { npc, isGood: false }
-        }, { 
-          text: '🚫 拒绝', 
-          next: 'npc_reject',
-          data: { npc }
-        }]);
-      }
-    }
-  },
-
-  npc_dialogue_result: () => {
-    const { npc, dialogue } = events._tempData;
-    
-    // 构建属性变化字符串
-    let effectStr = '';
-    if (dialogue.effect) {
-      if (dialogue.effect.hp) effectStr += `生命 ${dialogue.effect.hp > 0 ? '+' : ''}${dialogue.effect.hp} `;
-      if (dialogue.effect.power) effectStr += `战力 ${dialogue.effect.power > 0 ? '+' : ''}${dialogue.effect.power} `;
-      if (dialogue.effect.brave) effectStr += `勇气 ${dialogue.effect.brave > 0 ? '+' : ''}${dialogue.effect.brave} `;
-      if (dialogue.effect.karma) effectStr += `善恶 ${dialogue.effect.karma > 0 ? '+' : ''}${dialogue.effect.karma} `;
-    }
-    const finalResult = dialogue.result + (effectStr ? `\n\n(🎯 后果：${effectStr})` : '');
-
-    // 10%概率触发搞笑意外反转
-    const surprise = Math.random() < 0.10;
-    if (surprise) {
-      // 意外反转 - 随机选择一个搞笑结果
-      const surprises = [
-        { text: '🎭 意外！', result: `你刚选完，突然发现${npc.name}其实是蛇精变的！\n\n「哈哈哈，你上当了！」\n\n${npc.name}现出原形，对你喷出一团毒雾！`, effect: { hp: -15, brave: 5 } },
-        { text: '🎪 搞笑！', result: `你以为${npc.name}会给你宝物...\n\n结果他掏出一个遥控器，「啪」一声，你被弹飞了！\n\n「不好意思，拿错了...这是我的玩具」`, effect: { hp: -10, power: 3 } },
-        { text: '🤯 反转！', result: `${npc.name}突然变成了一只蝴蝶飞走了！\n\n你愣在原地...「我刚才在跟谁说话？」\n\n不过地上掉了一颗神秘的种子...`, effect: { hp: 15, power: 5 } },
-        { text: '😂 意外惊喜！', result: `你拒绝了${npc.name}的好意...\n\n结果${npc.name}说「你是我见过最诚实的孩子！」\n\n送了你双倍的礼物！`, effect: { hp: 30, karma: 10 } },
-        { text: '🎭 真假难辨！', result: `${npc.name}突然摘下面具，露出另一张脸！\n\n「我其实是他的双胞胎兄弟，刚才是测试你的！」\n\n你通过了考验，获得额外奖励！`, effect: { hp: 25, power: 8, karma: 5 } },
-        { text: '🃏 恶作剧！', result: `${npc.name}突然开始表演魔术...\n\n「变！」你手里的武器变成了一朵花！\n\n「哈哈别担心，开个玩笑而已」\n\n不过你发现这朵花能治愈伤口！`, effect: { hp: 20 } },
-        { text: '🤡 尴尬时刻！', result: `你自信满满地说了一段话...\n\n结果${npc.name}一脸懵：「你说的是外语吗？我听不懂...」\n\n全场沉默...但${npc.name}觉得你很有趣，送了你一个小礼物`, effect: { power: 8, karma: 3 } },
-        { text: '💥 意外冲突！', result: `你和${npc.name}不小心撞到了一起！\n\n「砰！」你们俩都摔了个四脚朝天...\n\n但奇怪的是，你感觉力量增强了？也许是肾上腺素的作用！`, effect: { hp: -5, power: 6, brave: 8 } }
-      ];
-      const s = surprises[Math.floor(Math.random() * surprises.length)];
-      
-      let sEffectStr = '';
-      if (s.effect) {
-        if (s.effect.hp) sEffectStr += `生命 ${s.effect.hp > 0 ? '+' : ''}${s.effect.hp} `;
-        if (s.effect.power) sEffectStr += `战力 ${s.effect.power > 0 ? '+' : ''}${s.effect.power} `;
-        if (s.effect.brave) sEffectStr += `勇气 ${s.effect.brave > 0 ? '+' : ''}${s.effect.brave} `;
-        if (s.effect.karma) sEffectStr += `善恶 ${s.effect.karma > 0 ? '+' : ''}${s.effect.karma} `;
-      }
-      const finalSurpriseResult = s.result + (sEffectStr ? `\n\n(🎯 反转后果：${sEffectStr})` : '');
-      
-      showText(s.text, finalSurpriseResult, [{ text: '继续探索', next: 'explore', effect: s.effect }]);
-    } else {
-      // 正常结果
-      showText(`🎭 ${npc.name}`, finalResult, [{ text: '继续探索', next: 'explore' }]);
-    }
-  },
-
-  npc_result: () => {
-    const { npc, isGood } = events._tempData;
-    const resultText = isGood ? (npc.result || '你做出了选择...') : (npc.result || '结果出乎意料...');
-    const emoji = isGood ? '✅' : '❌';
-    showText(`${emoji} ${npc.name}`, resultText, [{ text: '继续探索', next: 'explore' }]);
-  },
-
-  npc_leave: () => {
-    const { npc } = events._tempData;
-    const leaveTexts = [
-      `${npc.name}看着你离去的背影，摇了摇头...`,
-      `你礼貌地告别了${npc.name}，继续你的旅程。`,
-      `${npc.name}微微点头，目送你离开。`
-    ];
-    showText('👋 离开', leaveTexts[Math.floor(Math.random() * leaveTexts.length)], [{ text: '继续', next: 'explore' }]);
-  },
-
-  npc_reject: () => {
-    const { npc } = events._tempData;
-    const rejectTexts = [
-      `你警惕地拒绝了${npc.name}。${npc.name}看起来有些失望...`,
-      `你保持距离，${npc.name}无奈地离开了。`,
-      `你的警惕心救了你一命！${npc.name}其实是蛇精的眼线。`
-    ];
-    showText('🚫 拒绝', rejectTexts[Math.floor(Math.random() * rejectTexts.length)], [{ text: '继续', next: 'explore', effect: { brave: 5 } }]);
-  },
-
-  enemy_encounter: () => {
-    const e = enemies[Math.floor(Math.random() * enemies.length)];
-    const powerRatio = player.power / e.power;
-    
-    // 根据实力对比显示不同信息
-    let difficulty = '';
-    if (powerRatio >= 1.5) difficulty = '🟢 轻松碾压';
-    else if (powerRatio >= 1.1) difficulty = '🟡 有优势';
-    else if (powerRatio >= 0.9) difficulty = '🟠 势均力敌';
-    else if (powerRatio >= 0.7) difficulty = '🔴 有风险';
-    else difficulty = '💀 危险！';
-    
-    const strategies = [
-      { text: `⚔️ 正面迎战`, effect: { hp: -e.power * 0.3, power: 3, brave: 5 }, successRate: Math.min(0.95, powerRatio * 0.8) },
-      { text: `🎯 偷袭弱点`, effect: { hp: -e.power * 0.2, power: 5 }, condition: player.skills.includes('隐身'), successRate: 0.9 },
-      { text: `🔥 火焰攻击`, effect: { hp: -e.power * 0.15, power: 4 }, condition: player.skills.includes('喷火'), successRate: 0.85 },
-      { text: `❄️🔥 冰火两重天`, effect: { hp: -e.power * 0.05, power: 15 }, condition: player.skills.includes('喷火') && player.skills.includes('吸水'), successRate: 0.95, desc: '组合技！' },
-      { text: `👻💪 无形大逼兜`, effect: { hp: 0, power: 20 }, condition: player.skills.includes('隐身') && player.skills.includes('力大无穷'), successRate: 1, desc: '组合技！' },
-      { text: `🎒 乱扔道具`, effect: { hp: 0 }, condition: player.inventory && player.inventory.length > 0, next: 'use_item', data: { enemy: e }, successRate: 1 },
-      { text: `💪 蛮力碾压`, effect: { hp: -e.power * 0.1, power: 6 }, condition: player.skills.includes('力大无穷'), successRate: Math.min(0.95, powerRatio * 1.2) },
-      { text: `👀 侦查敌情`, effect: { power: 2 }, condition: player.skills.includes('千里眼'), successRate: 1 },
-      { text: `🛡️ 铜墙铁壁`, effect: { hp: -e.power * 0.05, power: 4 }, condition: player.skills.includes('铜头铁臂'), successRate: 0.95 },
-      { text: `💧 水幕护体`, effect: { hp: -e.power * 0.08, power: 3, hp: 5 }, condition: player.skills.includes('吸水'), successRate: 0.9, desc: '用水流抵挡伤害' },
-      { text: `🏺 宝葫芦收妖`, effect: { hp: -e.power * 0.25, power: 8 }, condition: player.skills.includes('宝葫芦'), successRate: 0.92, desc: '用宝葫芦直接收服敌人' },
-      { text: `💨 战术撤退`, effect: { hp: -2, brave: -2 }, successRate: 1 }
-    ].filter(s => !s.condition || s.condition);
-    
-    showText(e.name, `⚔️ ${e.desc}！\n\n${difficulty}\n敌人战力：${Math.round(e.power)} | 敌人生命：${Math.round(e.hp)}\n你的战力：${Math.round(player.power)}`, strategies.map(s => ({
-      text: s.text,
-      next: s.next || 'combat_result',
-      effect: s.effect,
-      data: { enemy: e, successRate: s.successRate }
-    })));
-  },
-
-  combat_result: () => {
-    const { enemy, successRate } = events._tempData;
-    let success = Math.random() < successRate;
-    
-    // 15%概率战斗意外反转
-    const combatSurprise = Math.random() < 0.15;
-    
-    if (success && !combatSurprise) {
-      // 正常胜利
-      winStreak++;
-      let streakBonus = '';
-      // 基础保底战利品
-      let bonusEffect = { power: Math.floor(Math.random() * 3) + 1, hp: Math.floor(Math.random() * 8) + 2 };
-      
-      if (winStreak >= 5) {
-        streakBonus = `\n\n🔥 连胜 ${winStreak} 场！触发"战神附体"效果！`;
-        bonusEffect.power += 5; bonusEffect.hp += 10; bonusEffect.brave = 5;
-      } else if (winStreak >= 3) {
-        streakBonus = `\n\n⚡ 连胜 ${winStreak} 场！气势如虹！`;
-        bonusEffect.power += 3; bonusEffect.brave = 3;
-      } else if (winStreak >= 2) {
-        streakBonus = `\n\n✨ 连胜 ${winStreak} 场！士气大振！`;
-        bonusEffect.power += 2;
-      }
-      
-      const winTexts = [
-        `你英勇地击退了${enemy.name}！\n\n你从敌人身上搜刮到了战利品。`,
-        `战斗胜利！${enemy.name}落荒而逃，留下了一些物资！`,
-        `经过激战，你取得了胜利！\n\n你在战场上获得了一些启发和战利品。`,
-        `你用实力证明了自己！战后你顺手拿走了敌人的宝贝。`
-      ];
-      
-      showText('✅ 胜利', winTexts[Math.floor(Math.random() * winTexts.length)] + streakBonus, 
-        [{ text: '打扫战场', next: 'explore', effect: bonusEffect }]);
-    } else if (!success && !combatSurprise) {
-      // 正常失败
-      winStreak = 0;
-      const failTexts = [
-        `${enemy.name}的实力超出了你的预期！你被打败了...`,
-        `战斗失败！${enemy.name}太强了...`,
-        `你低估了${enemy.name}的实力，被打得落花流水...`
-      ];
-      const damage = Math.floor(enemy.power * 0.5);
-      showText('❌ 失败', failTexts[Math.floor(Math.random() * failTexts.length)] + `\n\n受到 ${damage} 点伤害！`, 
-        [{ text: '狼狈逃走', next: 'explore', effect: { hp: -damage, brave: -5 } }]);
-    } else if (success && combatSurprise) {
-      // 胜利但有意外
-      const winSurprises = [
-        { text: '🎉 胜利！但...', result: `你打败了${enemy.name}，正要庆祝...\n\n突然从它身上掉出一封信！原来它是${enemy.name}的双胞胎兄弟假扮的！\n\n「我哥哥会来找你算账的...」\n\n你获得了胜利，但也惹上了麻烦...`, effect: { power: 5, brave: 5 } },
-        { text: '💪 胜利！但...', result: `你打败了${enemy.name}！正得意时...\n\n「啪！」它的尸体突然爆炸了！\n\n你被炸飞了一段距离，好在只是受了点轻伤。`, effect: { hp: -10, power: 3 } },
-        { text: '🏆 胜利！但...', result: `你打败了${enemy.name}！正要离开...\n\n它的手下突然冲出来围攻你！\n\n你不得不边打边退...`, effect: { hp: -15, power: 2, brave: 3 } },
-        { text: '🎉 胜利！但...', result: `你打败了${enemy.name}！正要庆祝...\n\n结果它其实是${enemy.name}的全息投影！真正的${enemy.name}在背后偷袭了你！\n\n「哈哈哈，你以为打败我了？」`, effect: { hp: -20, brave: 5 } }
-      ];
-      const s = winSurprises[Math.floor(Math.random() * winSurprises.length)];
-      winStreak++;
-      showText(s.text, s.result, [{ text: '继续探索', next: 'explore', effect: s.effect }]);
-    } else {
-      // 失败但有意外（好结果）
-      const failSurprises = [
-        { text: '😅 失败！但...', result: `你被${enemy.name}打败了！正要认输...\n\n${enemy.name}突然说：「等等，你是葫芦娃？我认识你爷爷！」\n\n「他是我的老朋友，我不能伤害你」\n\n${enemy.name}不但放过了你，还送了你一些补给！`, effect: { hp: 30, karma: 5 } },
-        { text: '💥 失败！但...', result: `你被${enemy.name}打倒在地！\n\n「哈哈哈...等等，你身上的葫芦好眼熟...」\n\n${enemy.name}认出了你是葫芦娃的兄弟，决定放你一马，还给了你一些情报！`, effect: { power: 8, hp: 15 } },
-        { text: '😵 失败！但...', result: `你被${enemy.name}打败了！正要放弃...\n\n突然葫芦发光，你体内的力量觉醒了！\n\n虽然受了伤，但你感觉变强了！`, effect: { hp: -5, power: 10, brave: 8 } },
-        { text: '😅 失败！但...', result: `你被${enemy.name}打趴下了！\n\n「小子，你太弱了...不过我欣赏你的勇气」\n\n${enemy.name}居然给了你一本秘籍，让你回去好好修炼！`, effect: { power: 6, hp: 10 } }
-      ];
-      const s = failSurprises[Math.floor(Math.random() * failSurprises.length)];
-      winStreak = 0;
-      showText(s.text, s.result, [{ text: '继续探索', next: 'explore', effect: s.effect }]);
-    }
-  },
-
-
-  cave_explore: () => {
-    const r = Math.random();
-    // 10%概率触发搞笑意外
-    const caveSurprise = Math.random() < 0.10;
-    
-    if (r < 0.4) {
-      if (caveSurprise) {
-        // 宝箱意外
-        const surpriseItems = [
-          { name: '📦 神秘盒子', desc: '一个闪闪发光的盒子，看起来很珍贵...', result: '你打开盒子...「砰！」一只弹簧小丑跳出来吓了你一跳！\n\n不过盒子里还有一颗糖果，吃掉后恢复了体力！', effect: { hp: 15, brave: 5 } },
-          { name: '💎 钻石宝箱', desc: '一个镶满钻石的宝箱，太诱人了...', result: '你打开宝箱...里面是一面镜子！\n\n你看到了自己的脸...「原来我这么帅！」\n\n自信心大增！', effect: { power: 8, brave: 8 } },
-          { name: '🎁 礼物盒', desc: '一个包装精美的礼物盒', result: '你拆开礼物...是一条围巾！\n\n「冬天用得上的...」等等，现在是夏天...\n\n不过围巾很暖和，你感觉身体舒服多了', effect: { hp: 20 } },
-          { name: '🔮 水晶球', desc: '一个神秘的水晶球，散发着诡异的光芒', result: '你触碰水晶球...突然看到了自己的未来！\n\n「你会...变成一只鸡？」\n\n水晶球碎了，但碎片似乎有神奇的力量...', effect: { power: 10, hp: -5 } }
-        ];
-        const s = surpriseItems[Math.floor(Math.random() * surpriseItems.length)];
-        showText(s.name, `你走进了一个神秘的洞穴...\n\n${s.desc}\n\n你决定...`, [
-          { text: '🔍 打开看看', next: 'explore', effect: s.effect, resultMsg: s.result },
-          { text: '👀 保持警惕', next: 'explore', effect: { hp: 5, brave: 3 }, resultMsg: '你谨慎地观察了一会儿，发现没什么异常...' }
-        ]);
-      } else {
-        const items = [
-          { name: '💰 古老宝箱', desc: '一个布满灰尘的宝箱，看起来很久没人打开过了', effect: { power: 5, hp: 10 } },
-          { name: '📜 神秘书籍', desc: '一本泛黄的古籍，上面记载着失传的武学', effect: { power: 8 } },
-          { name: '💊 千年仙丹', desc: '散发着金色光芒的丹药', effect: { hp: 25 } },
-          { name: '🔮 魔法水晶', desc: '蕴含神秘力量的水晶', effect: { power: 6, hp: 8 } },
-          { name: '⚔️ 古代兵器', desc: '一把锋利的古剑，寒光闪闪', effect: { power: 10 } },
-          { name: '🛡️ 神秘护符', desc: '一个古老的护符，散发着温暖的光芒', effect: { hp: 30 } }
-        ];
-        const item = items[Math.floor(Math.random() * items.length)];
-        showText(item.name, `你走进了一个神秘的洞穴...\n\n${item.desc}\n\n你决定...`, [
-          { text: '🔍 仔细检查', next: 'explore', effect: item.effect },
-          { text: '👀 保持警惕', next: 'explore', effect: { hp: 5, brave: 3 } }
-        ]);
-      }
-    } else if (r < 0.7) {
-      if (caveSurprise) {
-        // 陷阱意外
-        const surpriseTraps = [
-          { name: '🎈 气球陷阱', desc: '一个巨大的气球挡住了去路', result: '你戳破气球...「嘭！」里面掉出一堆糖果！\n\n原来这是某个妖怪的糖果罐...', effect: { hp: 20, power: 3 } },
-          { name: '🎭 面具陷阱', desc: '地上有一个奇怪的面具', result: '你捡起面具戴上...「哇，我变成了一只猪！」\n\n原来这是猪八戒的面具！不过戴上后力量竟然增强了！', effect: { power: 8, brave: 5 } },
-          { name: '🎵 音乐陷阱', desc: '洞穴里传来奇怪的音乐...', result: '你不由自主地开始跳舞...\n\n跳着跳着，你发现自己的身体变得灵活了！\n\n「这音乐有毒...但好像挺有用的」', effect: { hp: 10, power: 5 } }
-        ];
-        const s = surpriseTraps[Math.floor(Math.random() * surpriseTraps.length)];
-        showText(s.name, `你走进了一个阴暗的洞穴...\n\n${s.desc}\n\n你如何应对？`, [
-          { text: '😤 硬抗', next: 'explore', effect: s.effect, resultMsg: s.result },
-          { text: '🏃 快速躲避', next: 'explore', effect: { hp: 10, brave: 3 }, resultMsg: '你机智地避开了陷阱...' }
-        ]);
-      } else {
-        const dangers = [
-          { name: '💣 古老炸弹', desc: '你踩到了一个生锈的陷阱！轰隆一声！', effect: { hp: -20 } },
-          { name: '☠️ 毒气弥漫', desc: '洞穴里弥漫着紫色的毒雾，你吸入了一些...', effect: { hp: -15, power: -2 } },
-          { name: '🪤 精密陷阱', desc: '一个精心设计的机关突然触发！', effect: { hp: -18 } },
-          { name: '👻 远古亡灵', desc: '洞穴深处传来诡异的声音...', effect: { hp: -12, brave: -8 } },
-          { name: '💀 骷髅守卫', desc: '一个骷髅战士从阴影中冲出！', effect: { hp: -25 } }
-        ];
-        const d = dangers[Math.floor(Math.random() * dangers.length)];
-        showText(d.name, `你走进了一个阴暗的洞穴...\n\n${d.desc}\n\n你如何应对？`, [
-          { text: '😤 硬抗', next: 'explore', effect: d.effect },
-          { text: '🏃 快速躲避', next: 'explore', effect: { hp: Math.floor(d.effect.hp * 0.5), brave: 2 } },
-          { text: '🧠 用智慧化解', next: 'explore', effect: { hp: Math.floor(d.effect.hp * 0.3), power: 2 } }
-        ]);
-      }
-    } else {
-      // 发现隐藏区域
-      const discoveries = [
-        { name: '🏛️ 远古遗迹', desc: '你发现了一个远古文明的遗迹，墙壁上刻满了神秘的符文...', effect: { power: 8, karma: 5 } },
-        { name: '🌿 神秘花园', desc: '洞穴深处竟然有一个生机勃勃的花园，花朵散发着治愈的气息...', effect: { hp: 35, karma: 3 } },
-        { name: '📖 武学秘境', desc: '你发现了一个武学秘境，墙壁上记载着各种武学招式...', effect: { power: 12 } }
-      ];
-      const disc = discoveries[Math.floor(Math.random() * discoveries.length)];
-      showText(disc.name, disc.desc, [
-        { text: '🌟 探索', next: 'explore', effect: disc.effect },
-        { text: '📸 记录下来', next: 'explore', effect: { power: 3, karma: 2 } }
-      ]);
-    }
-  },
-
-  trap: () => {
-    const traps = [
-      { name: '🍌 香蕉皮陷阱', desc: '一个巨大的香蕉皮！你一脚踩上去滑飞了！', effect: { hp: -10 }, humor: '你在空中转了三圈才落地...' },
-      { name: '🕳️ 弹射陷阱', desc: '地面突然弹开，你被弹到了空中！', effect: { hp: -15 }, humor: '你看到了远处的风景，然后重重落地...' },
-      { name: '🌪️ 毒雾陷阱', desc: '一团紫色的毒雾突然喷出！', effect: { hp: -8, power: -2 }, humor: '你感觉自己变轻了...是力量在流失...' },
-      { name: '😱 幻术陷阱', desc: '你眼前出现了可怕的幻象！', effect: { brave: -10 }, humor: '你看到了...自己变成了一只鸡？！' },
-      { name: '🪤 缠绕陷阱', desc: '无数藤蔓从地下冒出，缠住了你！', effect: { hp: -5, brave: -5 }, humor: '你像一个粽子一样被包了起来...' },
-      { name: '⚡ 雷电陷阱', desc: '一道闪电劈向你！', effect: { hp: -12 }, humor: '你的头发竖起来了，像一个刺猬...' },
-      { name: '🔥 火焰陷阱', desc: '地面突然喷出火焰！', effect: { hp: -18 }, humor: '你闻到了...烤肉的味道？是你自己！' },
-      { name: '❄️ 冰冻陷阱', desc: '你被瞬间冻成了冰块！', effect: { hp: -10, power: -3 }, humor: '你变成了一座冰雕，过了好久才融化...' }
-    ];
-    const t = traps[Math.floor(Math.random() * traps.length)];
-    showText(t.name, `${t.desc}\n\n${t.humor}`, [
-      { text: '😤 爬起来继续', next: 'explore', effect: t.effect },
-      { text: '🧘 冥想恢复', next: 'explore', effect: { hp: Math.floor(t.effect.hp * 0.5), brave: 3 } }
-    ]);
-  },
-
-  lucky_event: () => {
-    const r = Math.random();
-    // 20%概率触发特殊大事件
-    if (r < 0.08) {
-      // 💥 奇遇：力量暴涨
-      const bonus = Math.floor(Math.random() * 20) + 15;
-      player.power = Math.min(player.maxPower, player.power + bonus);
-      showText('💥 奇遇！', `你误入了一个神秘洞穴，发现了一颗千年内丹！\n\n战力瞬间暴涨 +${bonus}！\n\n「这股力量...太强了！」`, [{ text: '🎉 太棒了', next: 'explore', effect: {} }]);
-    } else if (r < 0.15) {
-      // 💀 灾难：身受重伤
-      const damage = Math.floor(player.hp * 0.5);
-      player.hp = Math.max(1, player.hp - damage);
-      showText('💀 灾难！', `你踩到了一个古老的诅咒陷阱！\n\n生命值骤降 -${damage}！\n\n「不...这怎么可能...」`, [{ text: '😤 坚持住', next: 'explore', effect: { brave: 10 } }]);
-    } else if (r < 0.22) {
-      // 🎁 获得神秘法器
-      const artifacts = [
-        { name: '⚔️ 上古神剑', power: 25, desc: '一把散发寒光的神剑！战力+25！' },
-        { name: '🛡️ 金刚护盾', hp: 50, desc: '一个金色护盾！生命+50！' },
-        { name: '🔮 魔法水晶', power: 15, hp: 20, desc: '一颗神秘水晶！战力+15，生命+20！' },
-        { name: '💊 九转金丹', hp: 80, desc: '一颗金丹！生命直接回满！' },
-        { name: '📖 天书秘籍', power: 30, desc: '一本古老秘籍！战力+30！' },
-        { name: '⚔️ 倚天剑', power: 35, desc: '武林至尊，宝刀屠龙，号令天下，莫敢不从！战力+35！' },
-        { name: '🪓 屠龙刀', power: 40, desc: '一把沉甸甸的黑色大刀，蕴含着无尽的煞气！战力+40！' },
-        { name: '🐒 如意金箍棒', power: 50, desc: '重达一万三千五百斤的定海神针！战力+50！' },
-        { name: '🪭 芭蕉扇', power: 30, desc: '一扇熄火，二扇生风，三扇下雨！战力+30！' },
-        { name: '💍 至尊魔戒', power: 25, hp: -10, desc: '一枚统御众戒的魔戒！战力+25，但会反噬生命-10！' },
-        { name: '⚡ 雷神之锤', power: 45, desc: '只有被认可的人才能举起的锤子！战力+45！' },
-        { name: '🛡️ 美国队长的盾牌', hp: 60, desc: '振金打造的绝对防御！生命+60！' },
-        { name: '💊 九转大肠', hp: 80, desc: '保留了一部分原味的九转大肠...吃了生命+80！' },
-        { name: '📖 九阴真经', power: 35, desc: '天下武学总纲！战力+35！' },
-        { name: '✨ 仙豆', hp: 100, desc: '卡林塔的神奇豆子，吃一颗满血复活！生命+100！' }
-      ];
-      const artifact = artifacts[Math.floor(Math.random() * artifacts.length)];
-      player.inventory.push(artifact);
-      showText(artifact.name, `你发现了一个神秘宝箱！\n\n打开后里面是...${artifact.name}！\n\n${artifact.desc}\n\n(已放入背包，可在战斗中使用)`, 
-        [{ text: '继续探索', next: 'explore' }]);
-    } else if (r < 0.28) {
-      // 🎭 遇到骗子
-      showText('🎭 神秘人', '一个神秘人出现，声称要给你力量...\n\n但你感觉不太对劲...', [
-        { text: '🤝 相信他', next: 'explore', effect: Math.random() < 0.5 ? { power: 12 } : { hp: -30, power: -10 } },
-        { text: '🚫 警惕拒绝', next: 'explore', effect: { brave: 8 } }
-      ]);
-    } else if (r < 0.35) {
-      // ⚡ 意外触发机关
-      showText('⚡ 意外！', '你意外触发了一个古老机关！\n\n一道光芒闪过...', [
-        { text: '✨ 接受洗礼', next: 'explore', effect: { power: Math.floor(Math.random() * 10) + 5, hp: Math.floor(Math.random() * 20) + 10 } },
-        { text: '🏃 赶紧跑', next: 'explore', effect: { brave: 5 } }
-      ]);
-    } else {
-      // 普通幸运事件
-      const luckies = [
-        { name: '🍀 幸运草', effect: { hp: 12, power: 3 } },
-        { name: '💰 宝箱', effect: { power: 6, hp: 8 } },
-        { name: '🌟 灵泉', effect: { hp: 20 } },
-        { name: '📜 秘籍', effect: { power: 8 } },
-        { name: '🔮 法杖', effect: { power: 5, hp: 10 } },
-        { name: '💎 宝石', effect: { power: 7 } },
-        { name: '🎁 礼物', effect: { hp: 15, power: 4 } },
-        { name: '📱 诺基亚手机', effect: { hp: 25, power: 5 } },
-        { name: '🍳 灰太狼的平底锅', effect: { power: 15, hp: 5 } },
-        { name: '🥤 肥宅快乐水', effect: { hp: 30, brave: 5 } },
-        { name: '🥿 妈妈的拖鞋', effect: { power: 20 } },
-        { name: '🔦 哆啦A梦的缩小电筒', effect: { power: 12, brave: 10 } }
-      ];
-      const l = luckies[Math.floor(Math.random() * luckies.length)];
-      showText(l.name, '你发现了好东西！', [{ text: '🎉 太好了', next: 'explore', effect: l.effect }]);
-    }
-  },
-
-  rest_spot: () => {
-    const restDescs = [
-      '你找到了一个隐蔽的山洞，洞口被藤蔓遮挡着...\n\n这里很安全，可以好好休息一下。',
-      '你发现了一片宁静的竹林，微风轻轻吹过...\n\n是个休息的好地方。',
-      '你找到了一个废弃的猎人小屋，里面有干草和水...\n\n可以在这里恢复体力。',
-      '你发现了一处温泉，热气腾腾...\n\n泡一泡会很舒服。'
-    ];
-    showText('🏕️ 安全地带', restDescs[Math.floor(Math.random() * restDescs.length)], [
-      { text: '💤 睡觉恢复', next: 'explore', effect: { hp: 25 } },
-      { text: '🧘 打坐修炼', next: 'explore', effect: { power: 5, hp: 10 } },
-      { text: '🎯 练习技能', next: 'explore', effect: { power: 8 } },
-      { text: '📖 研究秘籍', next: 'explore', effect: { power: 3, karma: 3 } }
-    ]);
-  },
-
-  boss_entrance: () => {
-    if (player.karma <= -50) {
-      showText('😈 魔王降临', `蛇精看到满身邪气的你，瑟瑟发抖：\n\n「大哥，原来你才是反派，爷爷还给你，我给你当小弟行不行？」\n\n你收服了蛇精，成为了新的大魔王！`, [{ text: '达成：魔王结局', next: 'ending' }]);
-      return;
-    }
-    document.getElementById('chapter').textContent = '终章：蛇精洞府';
-    const ratio = player.power / boss.power;
-    let difficulty = '';
-    if (ratio >= 1.3) difficulty = '你感觉蛇精已不是你的对手！';
-    else if (ratio >= 1.0) difficulty = '这将是一场势均力敌的战斗...';
-    else if (ratio >= 0.8) difficulty = '蛇精比你想象的更强！';
-    else difficulty = '蛇精的力量远超你的预期...';
-    
-    showText('🐍 蛇精', 
-      `哈哈哈！你终于来了！\n\n我现在的战力是 ${Math.round(boss.power)}，生命是 ${Math.round(boss.hp)}！\n\n${difficulty}\n\n💡 提示：收集更多兄弟可以大幅降低受到的伤害！`, 
-      [
-        { text: '⚔️ 决战！', next: 'boss_fight' },
-        { text: '😰 再准备', next: 'explore', effect: { hp: 10 } }
-      ]);
-  },
-
-  boss_fight: () => {
-    // 战斗公式：基于实力对比
-    const powerRatio = player.power / boss.power;
-    const skillBonus = 1 + player.skills.length * 0.03;
-    
-    // 玩家伤害（基于实力对比）- 大幅降低
-    let pDmg;
-    if (powerRatio >= 1.5) pDmg = Math.floor(player.power * 0.5 * skillBonus);
-    else if (powerRatio >= 1.2) pDmg = Math.floor(player.power * 0.4 * skillBonus);
-    else if (powerRatio >= 1.0) pDmg = Math.floor(player.power * 0.3 * skillBonus);
-    else if (powerRatio >= 0.8) pDmg = Math.floor(player.power * 0.2 * skillBonus);
-    else pDmg = Math.floor(player.power * 0.12 * skillBonus);
-    
-    // Boss伤害 - 修复之前过于离谱的指数级加成
-    const baseBossDmg = boss.power * 0.45;
-    const defenseBonus = player.isKingKong ? 0.3 : Math.max(0.4, 1 - player.skills.length * 0.08); // 金刚葫芦娃免伤70%，普通兄弟每个减伤8%
-    let bDmg = Math.floor(baseBossDmg * defenseBonus);
-    
-    // 加入随机因素
-    const randomFactor = 0.85 + Math.random() * 0.3;
-    pDmg = Math.floor(pDmg * randomFactor);
-    bDmg = Math.floor(bDmg * (1.8 - randomFactor * 0.6));
-    
-    applyEffect({ hp: -bDmg, bossHp: -pDmg });
-    
-    if (boss.hp <= 0) {
-      // 多种胜利结局
-      const endings = [
-        `你终于击败了蛇精！\n造成 ${pDmg} 伤害，受到 ${bDmg} 伤害。\n\n爷爷得救了！`,
-        `蛇精倒下了！\n你和兄弟们齐心协力，终于战胜了强敌！\n\n造成 ${pDmg} 伤害，受到 ${bDmg} 伤害。`,
-        `战斗结束！蛇精被消灭了！\n你的勇气和智慧让你取得了胜利！`
-      ];
-      showText('🎉 胜利！', endings[Math.floor(Math.random() * endings.length)], [{ text: '🏆 结局', next: 'ending' }]);
-    }
-    else if (player.hp <= 0) {
-      const failTexts = [
-        `你被打败了...蛇精还剩 ${Math.round(boss.hp)} 生命。\n\n看来还需要更多历练...`,
-        `蛇精的力量太强了！你倒在了地上...\n\n蛇精还剩 ${Math.round(boss.hp)} 生命。`
-      ];
-      showText('💀 失败', failTexts[Math.floor(Math.random() * failTexts.length)], [{ text: '🔄 重来', next: 'restart' }]);
-    }
-    else {
-      const progress = Math.floor((1 - boss.hp / boss.maxHp) * 100);
-      
-      // 根据Boss剩余生命触发不同阶段
-      let phaseEffect = '';
-      let phaseChoices = [];
-      
-      if (boss.hp <= boss.maxHp * 0.1 && boss.hp > 0) {
-        // Phase 3: 拔网线魔法 (Glitch UI)
-        showText('💻 系统警告', '蛇精眼看打不过，使出了绝招：【拔网线魔法】！\n\n你的界面开始崩溃，按钮乱码了！\n\n「哈哈哈，找不到攻击按钮了吧！」', [
-          { text: '锟斤拷锟斤拷', next: 'boss_fight', effect: { hp: -20 } },
-          { text: '烫烫烫烫', next: 'boss_fight', effect: { hp: -20 } },
-          { text: '宝葫芦收妖', next: 'boss_fight', effect: { bossHp: -999 } },
-          { text: '0x000000', next: 'boss_fight', effect: { hp: -20 } }
-        ].sort(() => Math.random() - 0.5));
-        return; // Skip normal fight texts
-      } else if (boss.hp <= boss.maxHp * 0.3 && boss.hp > 0) {
-        // Phase 2: 狂暴 / 摇人阶段
-        const狂暴 = Math.floor(Math.random() * 15) + 10;
-        boss.power = Math.min(boss.maxPower, boss.power + 狂暴);
-        phaseEffect = `\n\n🔥 蛇精进入二阶段！开始摇人！战力+${狂暴}！\n「黑熊精、白骨精，给我上！」`;
-        phaseChoices = [
-          { text: '⚔️ 继续战斗', next: 'boss_fight' },
-          { text: '🌀 使用联合技', next: 'combo_attack', effect: { power: 15 }, data: { pDmg, bDmg } },
-          { text: '😰 撤退', next: 'explore', effect: { hp: 15 } }
-        ];
-      } else if (boss.hp <= boss.maxHp * 0.6 && boss.hp > 0) {
-        // Boss 中等血量 - 特殊攻击
-        const attacks = [
-          '🐍 蛇精释放毒雾！你受到持续伤害！',
-          '⚡ 蛇精召唤雷电！地面震动！',
-          '🌪️ 蛇精制造幻象！你分不清真假！'
-        ];
-        phaseEffect = `\n\n${attacks[Math.floor(Math.random() * attacks.length)]}`;
-        bDmg += Math.floor(Math.random() * 10) + 5;
-        applyEffect({ hp: -Math.floor(Math.random() * 10) - 5 });
-        phaseChoices = [
-          { text: '⚔️ 继续战斗', next: 'boss_fight' },
-          { text: '🛡️ 防御反击', next: 'boss_fight', effect: { hp: 10 } }
-        ];
-      } else {
-        phaseChoices = [
-          { text: `继续战斗（${progress}%）`, next: 'boss_fight' },
-          { text: '😰 撤退', next: 'explore', effect: { hp: 15 } }
-        ];
-      }
-      
-      const fightTexts = [
-        `激烈的战斗！造成 ${Math.round(pDmg)} 伤害，受到 ${Math.round(bDmg)} 伤害。\n蛇精还剩 ${Math.round(boss.hp)} 生命！（${progress}%）${phaseEffect}`,
-        `你和蛇精打得难解难分！\n造成 ${Math.round(pDmg)} 伤害，受到 ${Math.round(bDmg)} 伤害。\n蛇精还剩 ${Math.round(boss.hp)} 生命！（${progress}%）${phaseEffect}`
-      ];
-      showText('⚔️ 战斗', fightTexts[Math.floor(Math.random() * fightTexts.length)], phaseChoices);
-    }
-  },
-
-  combo_attack: () => {
-    // 联合技 - 大幅伤害但消耗大量生命
-    const comboDmg = Math.floor(player.power * 0.8);
-    const comboCost = Math.floor(player.hp * 0.3);
-    applyEffect({ hp: -comboCost, bossHp: -comboDmg });
-    
-    showText('🌀 联合技！', 
-      `你使出了七兄弟的联合技能！\n\n造成 ${Math.round(comboDmg)} 伤害！\n但你消耗了 ${Math.round(comboCost)} 生命值...\n\n蛇精还剩 ${Math.round(boss.hp)} 生命！`, 
-      [{ text: '⚔️ 继续', next: boss.hp > 0 ? 'boss_fight' : 'ending' }]);
-  },
-
-  ending: () => { document.getElementById('chapter').textContent = '🌟 完美结局'; showText('爷爷', '好孩子！你做到了！', [{ text: '🔄 再玩', next: 'restart' }]); },
-  restart: () => location.reload()
+/* 测试与调试钩子 */
+window.GAME = {
+  VERSION, get run(){ return run; }, get combat(){ return combat; },
+  newRun, enterNode, playCard, endTurn, decideIntents, checkWin,
+  BROTHERS, CARDS, ENEMIES, CHAPTERS,
+  _cheat: {
+    killEnemies(){ if(combat){ combat.enemies.forEach(e=>e.hp=0); checkWin(); } },
+    godmode(){ if(run) run.hp = 999, run.maxHp = 999; },
+    setHp(n){ if(run) run.hp = n; },
+  }
 };
-
-function showEvent(id) { if (events[id]) events[id](); }
-
-function doAction(action) {
-  if (!window.isIdle) return;
-  window.isIdle = false;
-  document.getElementById('actions').style.opacity = '0.5';
-  document.getElementById('actions').style.pointerEvents = 'none';
-
-  if (action === 'explore') {
-    growBoss(); turn++;
-    const r = Math.random();
-    if (r < 0.08) { showEvent('boss_harass'); }
-    else if (r < 0.18) { winStreak = 0; showEvent('find_ally'); }
-    else if (r < 0.35) { winStreak = 0; showEvent('npc_encounter'); }
-    else if (r < 0.55) showEvent('enemy_encounter');
-    else if (r < 0.70) { winStreak = 0; showEvent('cave_explore'); }
-    else if (r < 0.80) { winStreak = 0; showEvent('trap'); }
-    else if (r < 0.90) { winStreak = 0; showEvent('lucky_event'); }
-    else { winStreak = 0; showEvent('rest_spot'); }
-  }
-  else if (action === 'search') {
-    growBoss(); turn++;
-    if (Math.random() < 0.4) showEvent('find_ally');
-    else showText('🔍 寻找', '你仔细搜寻兄弟的踪迹...\n\n但这次没有找到...', [{ text: '继续', next: 'explore' }]);
-  }
-  else if (action === 'rest') { growBoss(); turn++; applyEffect({ hp: 22 }); showText('💤 休息', '恢复了体力。', [{ text: '继续', next: 'explore' }]); }
-  else if (action === 'fight') { 
-    const ratio = player.power / boss.power;
-    if (ratio >= 1.2) {
-      showEvent('boss_entrance');
-    } else if (ratio >= 0.9) {
-      showText('⚠️ 实力分析', 
-        `蛇精战力：${Math.round(boss.power)}\n你的战力：${Math.round(player.power)}\n\n实力接近但还有风险...`, 
-        [
-          { text: '⚔️ 要挑战', next: 'boss_entrance' },
-          { text: '😰 再准备', next: 'explore', effect: { hp: 10 } }
-        ]);
-    } else {
-      showText('💀 实力分析', 
-        `蛇精战力：${Math.round(boss.power)}\n你的战力：${Math.round(player.power)}\n\n蛇精比你强太多了！但现在就去挑战是勇敢还是鲁莽？`, 
-        [
-          { text: '🔥 明知山有虎，偏向虎山行！', next: 'boss_entrance' },
-          { text: '😰 还是再准备吧', next: 'explore', effect: { hp: 15 } }
-        ]);
-    }
-  }
-}
-
-document.getElementById('charSelect').innerHTML = characters.map(c =>
-  `<div class="char-card" style="border-color:${c.color}" onclick="initGame(${c.id})">
-    <div style="font-size:24px;">${c.icon}</div>
-    <div class="char-name" style="color:${c.color}">${c.name}</div>
-    <div class="char-skill">${c.skill}</div>
-  </div>`
-).join('');
+init();
 </script>
 </body>
 </html>
