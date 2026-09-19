@@ -153,26 +153,26 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789747172';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789805599';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789747172';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789805599';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1789747172';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1789805599';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1789747172';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1789805599';
             stat.butterChance = 0.2;
         } else if (type === 'starfruit') {
             // 杨桃（v3.6.0 经典模式可种）：五向星光射击，弹道复用融合版（Projectile 'star'）
@@ -197,7 +197,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789747172';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789805599';
             stat.yOffset = 0;
         }
 
@@ -476,14 +476,14 @@ class Plant extends Entity {
         this.updateShieldAppearance();
     }
 
-    // 南瓜壳几何：按宿主当前显示尺寸实时计算（壳高=宿主高 62%，宽随原版 97:67 比例）。
-    // 高坚果壳自然大、向日葵壳自然小；素材异步加载完成前沿用上次几何（初始为空时调用方兜底）。
+    // 南瓜壳几何：固定为南瓜套独立种植时的原版尺寸（97×67），不随宿主大小变化（v3.13.0）。
+    // 用户实测：按宿主 62% 缩放时向日葵等小株的壳小得看不清，统一保持最大；
+    // 宿主高度只用于把壳锚定在宿主脚下。素材异步加载完成前沿用上次几何（初始为空时调用方兜底）。
     _shieldGeomCalc() {
         if (!this.shield || !this.shieldEl) return null;
         const hostH = this.element.offsetHeight || this.element.naturalHeight || 0;
         if (!hostH) return this.shieldGeom;
-        const shH = Math.max(40, Math.round(hostH * 0.62));
-        const shW = Math.round(shH * 97 / 67);
+        const shH = 67, shW = 97;
         if (this.shieldEl.style.height !== shH + 'px') {
             this.shieldEl.style.width = shW + 'px';
             this.shieldEl.style.height = shH + 'px';
