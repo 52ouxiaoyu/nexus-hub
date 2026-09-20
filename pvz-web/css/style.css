@@ -438,7 +438,7 @@ body {
 .diff-btn.diff-hell .diff-name { color: #7e1030; text-shadow: 1px 1px 0 rgba(255,255,255,0.7); }
 .diff-btn.diff-hell .diff-desc { color: rgba(70, 10, 30, 0.78); }
 .diff-foot { margin-top: 20px; }
-#diff-back {
+#diff-back, #zdiff-back {
     font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif;
     font-size: 17px;
     font-weight: bold;
@@ -452,8 +452,8 @@ body {
     box-shadow: 0 4px 0 #241708, 0 6px 12px rgba(0,0,0,0.4);
     transition: transform 0.1s ease, filter 0.1s ease;
 }
-#diff-back:hover { filter: brightness(1.15); }
-#diff-back:active { transform: translateY(2px); box-shadow: 0 1px 0 #241708; }
+#diff-back:hover, #zdiff-back:hover { filter: brightness(1.15); }
+#diff-back:active, #zdiff-back:active { transform: translateY(2px); box-shadow: 0 1px 0 #241708; }
 
 /* ================= v3.5.2 砸罐子胜利弹窗(居中 modal) ================= */
 .vase-win-overlay {
