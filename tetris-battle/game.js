@@ -4,7 +4,7 @@
  * 双人对战俄罗斯方块 · 道具攻防系统
  * ============================================================ */
 
-const VERSION = 'v1.1.1';
+const VERSION = 'v1.1.2';
 const COLS = 10, ROWS = 20, CELL = 30;
 const MAX_CHARGE = 10;          // 必杀充能
 const ITEM_SLOTS = 3;           // 道具栏格数
@@ -598,7 +598,9 @@ const game = {
 
     start(mode, aiLevel) {
         this.mode = mode;
-        this.aiLevel = aiLevel || 4;   // 默认地狱级
+        // 未显式传难度时（如「再来一局」）保留上局选择的难度
+        if (aiLevel) this.aiLevel = aiLevel;
+        else if (this.aiLevel == null) this.aiLevel = 4;
         this.players[0].reset(); this.players[0].isAI = false;
         this.players[1].reset(); this.players[1].isAI = (mode === 'ai');
         this.players[1].aiLevel = this.aiLevel;
