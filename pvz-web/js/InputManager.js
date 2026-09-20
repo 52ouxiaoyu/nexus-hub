@@ -190,13 +190,15 @@ class InputManager {
             else if (type === 'plantern') imgName = 'Plantern/0';   // 路灯花用 0.gif 透明大画布(白天),Plantern.gif 是夜版
             else if (type === 'cabbagepult') imgName = 'CabbagePult/CabbagePult';  // v3.10.0
             else if (type === 'kernelpult') imgName = 'KernelPult/KernelPult';     // v3.10.0
+            else if (type === 'gloomshroom') imgName = 'GloomShroom/GloomShroom';  // v3.16.0 修复拖拽无图（目录名大写 S，默认映射 404）
+            else if (type === 'spikerock') imgName = 'Spikerock/Spikerock';        // v3.16.0 补钢地刺拖拽图
 
             // Melon / Winter Melon / 两个投手 图是 PNG，其他植物是 GIF
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1789910615`
-                : `assets/images/Plants/${imgName}.gif?v=1789910615`;
+                ? `assets/images/Plants/${imgName}.png?v=1789913495`
+                : `assets/images/Plants/${imgName}.gif?v=1789913495`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
         }
     }
