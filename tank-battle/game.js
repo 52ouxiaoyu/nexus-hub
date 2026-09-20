@@ -455,7 +455,9 @@ class PowerUp {
                 player.lives++;
                 this.game.updateHUD();
             }
-            else { player.health += 5; player.maxHealth += 5; this.game.showAnnouncement('⚠️ 敌方坦克获得了强效治疗!', '#f00'); }
+            // v1.4.15：敌人捡 LIFE 只回血不涨上限——旧版 maxHealth+5 可无限叠加，
+            // HEAVY 掉落池就含 LIFE，连吃两三个直接 13+ 血，是"普通坦克血厚如 Boss"的主因
+            else { player.health = Math.min(player.maxHealth, player.health + 3); this.game.showAnnouncement('⚠️ 敌方坦克获得了强效治疗!', '#f00'); }
         }
         else if (this.type === POWERUP_TYPES.TIME) {
             if (isPlayer) this.game.enemyFrozenTimer = 300;
@@ -464,12 +466,18 @@ class PowerUp {
         else if (this.type === POWERUP_TYPES.MAX_WEAPON) {
             // v1.4.5：原实现直接 level=9 —— 捡到几个道具就"非常强非常强"，分配失衡。
             // 改为「至少提到 5 级，且至多在本级基础上 +2 级」，满血奖励保留。
-            const hpBonus = isPlayer ? 1 + player.level * 2 : 1 + 9 * 2;
+            // v1.4.15：血量奖励仅限玩家（旧版敌人分支写死 1+9*2=19 血上限+满血，
+            // 踩到空投遗产火箭的普通坦克直接 Boss 血量）；敌人只涨火力、回 3 血
+            const hpBonus = isPlayer ? 1 + player.level * 2 : 0;
             player.level = Math.min(9, Math.max(player.level + FIRE_MAX_WEAPON_STEP, FIRE_MAX_WEAPON_FLOOR));
             player.fireProgress = 0;
             player.speed = Math.min(8, 4 + player.level * 0.15);
-            player.maxHealth = Math.max(player.maxHealth, hpBonus);
-            player.health = player.maxHealth;
+            if (isPlayer) {
+                player.maxHealth = Math.max(player.maxHealth, hpBonus);
+                player.health = player.maxHealth;
+            } else {
+                player.health = Math.min(player.maxHealth, player.health + 3);
+            }
             if (isPlayer) {
                 this.game.showAnnouncement(`终极武器 MAX WEAPON! 火力 Lv.${player.level}`, '#f0f');
                 this.game.updateHUD();
@@ -2128,11 +2136,11 @@ class Enemy extends Tank {
 
         if (this.variant === 'FAST') { this.speed = (2.5 + Math.min(stage * 0.05, 0.8)) * diffMult; this.health = 1; this.color = '#FF9999'; }
         else if (this.variant === 'HEAVY') { 
-            this.speed = (1.0 + Math.min(stage * 0.02, 0.5)) * diffMult; this.health = 3 + Math.floor(stage / 10); this.color = '#777777'; 
+            this.speed = (1.0 + Math.min(stage * 0.02, 0.5)) * diffMult; this.health = Math.min(5, 3 + Math.floor(stage / 10)); this.color = '#777777'; // v1.4.15 封顶 5
             if (Math.random() < 0.3) this.weaponClass = 'EXPLOSIVE';
         }
         else if (this.variant === 'ELITE') { 
-            this.speed = (1.8 + Math.min(stage * 0.05, 0.8)) * diffMult; this.health = 3 + Math.floor(stage / 5); this.level = Math.min(3, 1 + Math.floor(stage / 10)); this.color = '#FF55FF'; 
+            this.speed = (1.8 + Math.min(stage * 0.05, 0.8)) * diffMult; this.health = Math.min(7, 3 + Math.floor(stage / 5)); this.level = Math.min(3, 1 + Math.floor(stage / 10)); this.color = '#FF55FF'; // v1.4.15 封顶 7
             const wClasses = ['LASER', 'SPREAD', 'BOUNCE'];
             this.weaponClass = wClasses[Math.floor(Math.random() * wClasses.length)];
         }
