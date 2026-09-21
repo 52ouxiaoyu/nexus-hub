@@ -479,6 +479,10 @@ class Zombie extends Entity {
             }
         }
 
+        // v3.18.0：砸罐子罐中僵尸站定 —— 行走/啃食/跳跨全部短路；
+        // 上方已处理 死亡判定/护甲掉落/黄油定身/魅惑/状态滤镜，站定不影响被击杀
+        if (this._vaseStatic && this.state === 'WALKING') return;
+
         if (this.state === 'WALKING') {
             // 同排附近出现被魅惑的友方僵尸 → 停下与它搏斗（僵尸之间唯一的敌对交互）
             const hypnoFoe = this.game.entities.find(e =>
