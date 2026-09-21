@@ -325,6 +325,29 @@ class Zombie extends Entity {
         }
     }
     
+    // v3.19.0：罐中僵尸站定立绘统一出口——用原版单帧站姿 0.gif（不啃不踏步）。
+    // 护甲掉落等会强制换回行走/啃食动画，这里拦一道保持站姿；返回是否已处理。
+    // 例外：读报僵尸掉报纸后无"愤怒站姿"原版图，退回行走动画。
+    _vaseApplyStaticPose() {
+        if (!this._vaseStatic) return false;
+        if (this.type === 'newspaper' && this.hasLostNewspaper) {
+            this.element.src = this.walkSrc;
+            return true;
+        }
+        const dir = {
+            normal:'Zombie', flag:'FlagZombie', conehead:'ConeheadZombie', buckethead:'BucketheadZombie',
+            polevaulting:'PoleVaultingZombie', newspaper:'NewspaperZombie', screendoor:'ScreenDoorZombie',
+            football:'FootballZombie', zomboni:'Zomboni', dancing:'DancingZombie',
+            peahead:'Zombie', nuthead:'Zombie', sunhead:'Zombie', snowpeahead:'Zombie', gargantuar:'Zombie'
+        }[this.type];
+        if (dir) {
+            this.element.src = `assets/images/Zombies/${dir}/0.gif`;
+            return true;
+        }
+        if (this.walkSrc) { this.element.src = this.walkSrc; return true; }
+        return false;
+    }
+
     update(deltaTime) {
         super.update(deltaTime);
         this.element.style.top = `${this.y + this.yOffset}px`;
@@ -354,7 +377,7 @@ class Zombie extends Entity {
             this.type = 'normal';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
-            this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
+            if (!this._vaseApplyStaticPose()) this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
         }
         
         // Handle bucket falling off
@@ -362,7 +385,7 @@ class Zombie extends Entity {
             this.type = 'normal';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
-            this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
+            if (!this._vaseApplyStaticPose()) this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
         }
         
         // 植物头僵尸的头顶植物是纯外观：不提供装甲/不掉落，随僵尸一起行动直到死亡。
@@ -373,7 +396,7 @@ class Zombie extends Entity {
             this.speed = 45; // Gets very angry and fast
             this.walkSrc = 'assets/images/Zombies/NewspaperZombie/HeadWalk0.gif';
             this.attackSrc = 'assets/images/Zombies/NewspaperZombie/HeadAttack0.gif';
-            this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
+            if (!this._vaseApplyStaticPose()) this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
         }
 
         // Handle screendoor falling off
@@ -381,7 +404,7 @@ class Zombie extends Entity {
             this.type = 'normal';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
-            this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
+            if (!this._vaseApplyStaticPose()) this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
         }
 
         // Handle jack-in-the-box explosion
