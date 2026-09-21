@@ -197,9 +197,23 @@ class InputManager {
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1789998390`
-                : `assets/images/Plants/${imgName}.gif?v=1789998390`;
+                ? `assets/images/Plants/${imgName}.png?v=1789999390`
+                : `assets/images/Plants/${imgName}.gif?v=1789999390`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
+
+            // v3.20.0：倭瓜立绘画布 100×226（身体只占底部 68×82），60×60 contain 后
+            // 只有 ~26px —— 拖动时"骤然变小"。单独按原尺寸裁底部身体区域显示。
+            if (type === 'squash') {
+                this.dragGhost.style.width = '70px';
+                this.dragGhost.style.height = '85px';
+                this.dragGhost.style.backgroundSize = '100px 226px';
+                this.dragGhost.style.backgroundPosition = 'center bottom';
+            } else {
+                this.dragGhost.style.width = '60px';
+                this.dragGhost.style.height = '60px';
+                this.dragGhost.style.backgroundSize = 'contain';
+                this.dragGhost.style.backgroundPosition = 'center';
+            }
         }
     }
 }

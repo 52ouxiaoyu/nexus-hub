@@ -154,26 +154,26 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789998390';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789999390';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789998390';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789999390';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1789998390';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1789999390';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1789998390';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1789999390';
             stat.butterChance = 0.2;
         } else if (type === 'starfruit') {
             // 杨桃（v3.6.0 经典模式可种）：五向星光射击，弹道复用融合版（Projectile 'star'）
@@ -198,7 +198,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789998390';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789999390';
             stat.yOffset = 0;
         }
 
@@ -591,7 +591,8 @@ class Plant extends Entity {
                         z.setSlow(10.0);
                     }
                 } else if (this.hasTrait('cherrybomb')) {
-                    if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 150) {
+                    // v3.20.0：爆炸范围收敛为标准 3×3 格（±1 行 / ±1.5 格宽）
+                    if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 120) {
                         z.takeDamage(1800, { bomb: true });
                     }
                 } else if (this.hasTrait('jalapeno')) {
@@ -602,11 +603,19 @@ class Plant extends Entity {
             }
             
             if (this.hasTrait('cherrybomb')) {
-                this.element.src = 'assets/images/Plants/CherryBomb/Boom.gif';
-                this.element.style.transform = 'translate(-50%, -50%) scale(1.5)';
+                // v3.20.0：不再把本体元素放大 1.5 倍充作爆炸（"变大一半就直接消失"）——
+                // 改为在场地上叠一张覆盖 3×3 格的原版 Boom.gif，播放完整爆破动画
+                this.element.style.visibility = 'hidden';
+                const boom = document.createElement('img');
+                boom.src = 'assets/images/Plants/CherryBomb/Boom.gif';
+                boom.style.cssText = 'position:absolute;pointer-events:none;z-index:3000;' +
+                    'left:' + (this.x - 130) + 'px;top:' + (this.y - 120) + 'px;width:260px;height:240px;object-fit:contain;';
+                this.game.container.appendChild(boom);
+                setTimeout(() => boom.remove(), 1000);
             } else {
                 this.element.src = 'assets/images/Plants/Jalapeno/JalapenoAttack.gif';
-                this.element.style.transform = 'translate(-50%, -50%) scaleX(3)';
+                // v3.20.0：去掉 scaleX(3) —— 火力条原尺寸铺满整行，拉 3 倍就是"突然变长"
+                this.element.style.transform = 'translate(-50%, -50%)';
             }
             
             setTimeout(() => { this.hp = 0; }, 500);
@@ -632,13 +641,11 @@ class Plant extends Entity {
                     this.element.style.zIndex = 3000; // Put boom on top
                     this.element.style.transform = 'translate(-50%, -80%)'; // Move boom up a bit
 
-                    // v3.12.0：毁灭菇改为"周围一圈"爆破（3×3，以放置位置为中心），
-                    // 不再是全屏核平；且不再产生陨石坑（爆炸后本体直接消失）
+                    // v3.20.0：恢复全屏核平（用户："只打周围一圈的不叫毁灭菇"）；
+                    // 仍不产生陨石坑（爆炸后本体直接消失）
                     const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                     for (let z of zombies) {
-                        if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 150) {
-                            z.takeDamage(9999, { bomb: true });
-                        }
+                        z.takeDamage(9999, { bomb: true });
                     }
 
                     setTimeout(() => { this.hp = 0; }, 1000); // Boom lasts 1 sec
@@ -776,7 +783,8 @@ class Plant extends Entity {
             // Handle Scaredy-shroom hiding
             if (this.hasTrait('scaredyshroom')) {
                 const zombieNear = this.game.entities.some(e => 
-                    e instanceof Zombie && e.row === this.row && !e.isDead && e.state !== 'DYING' && !e.hypnotized && e.x - this.x > -40 && e.x - this.x < 120
+                    // v3.20.0：周围一圈（8 邻格）有僵尸就缩头，不再只看同一行
+                    e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized && Math.abs(e.row - this.row) <= 1 && e.x - this.x > -120 && e.x - this.x < 120
                 );
                 if (zombieNear && !this.isHiding) {
                     this.isHiding = true;
@@ -918,21 +926,22 @@ class Plant extends Entity {
             }
         
         // 杨桃（融合版/经典版通用）：PVZ 原版五向星光射击（独立分支，避免触发三线/后射逻辑）。
-        // 五颗星星分别飞向 → / ↗ / ↘ / ↑ / ↓；穿透、可跨行命中（命中逻辑在 Projectile 'star' 类型里）。
+        // v3.20.0：五颗星星对应立绘 5 个角 —— 前二斜 ↗↘ / 正上 ↑ / 正下 ↓ / 正后 ←；穿透、可跨行命中（命中逻辑在 Projectile 'star' 类型里）。星星伤害=胆小菇（40）。
         if (this.type === 'fusion_starfruit' || this.type === 'starfruit') {
             this.fireTimer += deltaTime;
             if (this.fireTimer >= this.fireRate) {
                 // 只要前方（含斜向可及范围）有敌方僵尸就齐射五颗
                 const hasEnemy = this.game.entities.some(e =>
                     e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized &&
-                    e.x > this.x - 20
+                    // v3.20.0：五星覆盖前后 —— 前方任意方向 + 同行身后 4 格内有敌人也齐射
+                    (e.x > this.x - 20 || (e.row === this.row && e.x < this.x && this.x - e.x < 320))
                 );
                 if (hasEnemy) {
                     this.fireTimer = 0;
                     if (this.game.audioManager) this.game.audioManager.play('splat');
                     const starSpeed = 350;
                     const dirs = [
-                        [1, 0],               // →
+                        [-1, 0],              // ←（后方，对应立绘左角）
                         [0.7071, -0.7071],    // ↗
                         [0.7071, 0.7071],     // ↘
                         [0, -1],              // ↑
@@ -1004,7 +1013,8 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                             z.setSlow(10.0);
                         }
                     } else if (this.hasTrait('cherrybomb')) {
-                        if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 150) {
+                        // v3.20.0：爆炸范围收敛为标准 3×3 格（±1 行 / ±1.5 格宽）
+                        if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 120) {
                             z.takeDamage(1800);
                         }
                     } else if (this.hasTrait('jalapeno')) {
@@ -1015,11 +1025,18 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                 }
                 
                 if (this.hasTrait('cherrybomb')) {
-                    this.element.src = 'assets/images/Plants/CherryBomb/Boom.gif';
-                    this.element.style.transform = 'translate(-50%, -50%) scale(1.5)';
+                    // v3.20.0：同 explodeNow —— 叠 3×3 原版 Boom.gif，不再本体放大充数
+                    this.element.style.visibility = 'hidden';
+                    const boom = document.createElement('img');
+                    boom.src = 'assets/images/Plants/CherryBomb/Boom.gif';
+                    boom.style.cssText = 'position:absolute;pointer-events:none;z-index:3000;' +
+                        'left:' + (this.x - 130) + 'px;top:' + (this.y - 120) + 'px;width:260px;height:240px;object-fit:contain;';
+                    this.game.container.appendChild(boom);
+                    setTimeout(() => boom.remove(), 1000);
                 } else {
                     this.element.src = 'assets/images/Plants/Jalapeno/JalapenoAttack.gif';
-                    this.element.style.transform = 'translate(-50%, -50%) scaleX(3)';
+                    // v3.20.0：去掉 scaleX(3) —— 火力条 755×131 原尺寸已铺满整行，拉 3 倍就是"突然变长"
+                    this.element.style.transform = 'translate(-50%, -50%)';
                 }
                 
                 setTimeout(() => { this.hp = 0; }, 500);
@@ -1260,13 +1277,26 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                         z.takeDamage(1800);
                     }
                     
-                    this.element.src = 'assets/images/Plants/PotatoMine/ExplosionSpudow.gif';
-                    this.element.style.zIndex = 3000;
-                    setTimeout(() => {
-                        this.element.src = 'assets/images/Plants/PotatoMine/PotatoMine_mashed.gif';
-                        this.element.style.zIndex = 10;
-                    }, 500); // SPUDOW lasts half a second
-                    setTimeout(() => { this.hp = 0; }, 2000); // Leave mashed sprite for a bit
+                    // v3.20.0：去掉"踢破"的 SPUDOW 爆破图（用户不需要）—— 炸完直接留土豆泥残渣
+                    this.element.src = 'assets/images/Plants/PotatoMine/PotatoMine_mashed.gif';
+                    this.element.style.zIndex = 10;
+                    if (this.type === 'fusion_sporemine') {
+                        // 孢子地雷（小喷菇+土豆地雷）：不再"一个地雷换一只普通僵尸"——
+                        // 蘑菇部分让它在炸完后 1.5 秒重新聚拢孢子、15 秒后再武装，可反复使用
+                        setTimeout(() => {
+                            if (this.isDead || this.hp <= 0) return;
+                            this.hasExploded = false;
+                            this.isArmed = false;
+                            this.armTimer = 15.0;
+                            this.hp = this.maxHp;
+                            this.element.src = 'assets/images/Plants/PotatoMine/PotatoMineNotReady.gif';
+                            if (this.fusionOverlay) {
+                                this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(0px, -30px) scale(0.9)';
+                            }
+                        }, 1500);
+                    } else {
+                        setTimeout(() => { this.hp = 0; }, 2000); // Leave mashed sprite for a bit
+                    }
                 }
             }
         } else if (this.hasTrait('chomper')) {
@@ -1275,7 +1305,8 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
             const isBigNutChomper = (this.type === 'fusion_chomper_wallnut');
             if (this.state === 'idle') {
                 const zombieNear = this.game.entities.find(e => 
-                    e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 140 && !e.isDead && !e.hypnotized && e.type !== 'crater'
+                    // v3.20.0：只咬前方一格（80px）—— 旧值 140px≈1.75 格，僵尸还没进嘴就被判咬中
+                    e instanceof Zombie && e.row === this.row && (e.x - this.x) > -40 && (e.x - this.x) < 95 && !e.isDead && !e.hypnotized && e.type !== 'crater'
                 );
                 if (zombieNear) {
                     this.state = 'biting';

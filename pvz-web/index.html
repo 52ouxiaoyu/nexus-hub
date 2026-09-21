@@ -1,67 +1,67 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<html lang="en" data-page-node-id="trY81WEtkqFdwjHLAGqAF6">
+<head data-page-node-id="EX60tqVQa77KrCwDaOVILP">
+    <meta charset="UTF-8" data-page-node-id="WZxE7wvYGWCcDGGkGt3rHQ">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="cghiFAijUHvq19v87QCAiU">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1789998390">
+    <link rel="stylesheet" href="css/style.css?v=1789999390" data-page-node-id="UQQmpmLCOGmRL46LWzu6Hq">
 </head>
-<body>
-    <div id="game-container">
-        <div id="background-layer"></div>
-        <div id="entity-layer"></div>
+<body data-page-node-id="vDzpSTKnp92p1pVb6B5BBw">
+    <div id="game-container" data-page-node-id="YON9ldVH0aL2qWz51K7vKC">
+        <div id="background-layer" data-page-node-id="UJee92M7vrGPxBR8DP5INa"></div>
+        <div id="entity-layer" data-page-node-id="QQh1l7jZZUq73NZ6eiCPHl"></div>
         
         <!-- UI Layer -->
-        <div id="ui-layer">
-            <div id="top-bar">
+        <div id="ui-layer" data-page-node-id="EveHgXQ7peXLSbfu1yMNxi">
+            <div id="top-bar" data-page-node-id="6UbPO69JEXjZHVf3Js5C2G">
                 <!-- 种子选卡栏：占满剩余宽度，卡多时横向滚动 -->
-                <div id="seed-bank"></div>
+                <div id="seed-bank" data-page-node-id="EjVlSnJtEVLUOLLzBamQDH"></div>
 
                 <!-- 我是僵尸（v3.7.0）：僵尸卡带，点击选僵尸 → 点草坪行释放（与 seed-bank 互斥显示） -->
-                <div id="zombie-bank" style="display:none; flex:1 1 0; min-width:0; flex-wrap:wrap; gap:6px; align-items:center;"></div>
+                <div id="zombie-bank" style="display:none; flex:1 1 0; min-width:0; flex-wrap:wrap; gap:6px; align-items:center;" data-page-node-id="Kb5J8lGaP8SZ18oFCz6eWK"></div>
                 
-                <div id="shovel-bank">
-                    <div id="shovel" class="tool-card" title="铲子"></div>
+                <div id="shovel-bank" data-page-node-id="aq0MeR1PvOI3uxcKDJ4VjR">
+                    <div id="shovel" class="tool-card" title="铲子" data-page-node-id="tfABHfTSGwQcoQ02QPMuA5"></div>
                 </div>
                 
-                <div id="glove-bank" title="融合手套（空格键切换 手/手套）">
-                    <div class="tool-emoji">🧤</div>
+                <div id="glove-bank" title="融合手套（空格键切换 手/手套）" data-page-node-id="jm28UhM26Ls3qMCtEst7z3">
+                    <div class="tool-emoji" data-page-node-id="MqxrUQHDP91giojCguVC9q">🧤</div>
                 </div>
                 
-                <div id="recipe-book-btn" title="融合图鉴">
-                    <div class="tool-emoji">📖</div>
+                <div id="recipe-book-btn" title="融合图鉴" data-page-node-id="ItTe1uUBZJqY6exjnDzobs">
+                    <div class="tool-emoji" data-page-node-id="wkfhxDMignMekT23GLVIis">📖</div>
                 </div>
                 <!-- 右侧双行仪表：上行=太阳数量，下行=分数 -->
-                <div id="meta-bank">
-                    <div id="sun-bank">
-                        <span id="sun-count">50</span>
+                <div id="meta-bank" data-page-node-id="HdH0ffu0kr2BTjMInFGPOi">
+                    <div id="sun-bank" data-page-node-id="VvYBrDNHK2262L33l7TUzQ">
+                        <span id="sun-count" data-page-node-id="ZEHheIe933rdfAKCH3Z7AV">50</span>
                     </div>
-                    <div id="score-bank">分数 <span id="score-count">0</span></div>
+                    <div id="score-bank" data-page-node-id="m7K5f90oUN90h5Y5NjKMdL">分数 <span id="score-count" data-page-node-id="g2uaOU1GJBxcfznvmwL1HN">0</span></div>
                 </div>
-                <button id="btn-speed">Speed: 1x</button>
+                <button id="btn-speed" data-page-node-id="Jl2R5gm2DRxOAU3492hTrN">Speed: 1x</button>
             </div>
         <!-- Recipe Modal -->
-        <div id="recipe-modal" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; background: #c69c6d; border: 4px solid #4a3018; border-radius: 10px; z-index: 3000; padding: 20px; box-shadow: 0 0 20px #000; pointer-events: auto;">
-            <h2 style="text-align: center; color: #fff; text-shadow: 2px 2px 0 #000; margin-top: 0;">融合配方大全</h2>
-            <ul id="recipe-list" style="list-style: none; padding: 0; max-height: 300px; overflow-y: auto; background: #fff; border: 2px inset #000; padding: 10px; color: #000;">
+        <div id="recipe-modal" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; background: #c69c6d; border: 4px solid #4a3018; border-radius: 10px; z-index: 3000; padding: 20px; box-shadow: 0 0 20px #000; pointer-events: auto;" data-page-node-id="yHKNGWf64oAXMQmoC2DGgm">
+            <h2 style="text-align: center; color: #fff; text-shadow: 2px 2px 0 #000; margin-top: 0;" data-page-node-id="NYPPltjFMa6Ia8sAu4eGfR">融合配方大全</h2>
+            <ul id="recipe-list" style="list-style: none; padding: 0; max-height: 300px; overflow-y: auto; background: #fff; border: 2px inset #000; padding: 10px; color: #000;" data-page-node-id="NsbBCbPSJrFkwnDZhcHk6m">
             </ul>
-            <div style="text-align: center; margin-top: 15px;">
-                <button id="close-recipe" style="padding: 5px 20px; font-weight: bold; cursor: pointer;">关闭</button>
+            <div style="text-align: center; margin-top: 15px;" data-page-node-id="xsiwY2lV3fxgzYdgjobkNE">
+                <button id="close-recipe" style="padding: 5px 20px; font-weight: bold; cursor: pointer;" data-page-node-id="3ExnTzFZDAgb5ajROzOxN7">关闭</button>
             </div>
         </div>
-            <div id="drag-ghost" style="display: none;"></div>
+            <div id="drag-ghost" style="display: none;" data-page-node-id="SqHZyuJWBcDNfbXQ8sKWjp"></div>
         </div>
         
         <!-- Seed Chooser UI -->
-        <div id="seed-chooser" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 1500; flex-direction: column; align-items: center; justify-content: center; display: none;">
-            <div style="background-color: #6b4a2b; padding: 25px; border-radius: 15px; border: 4px solid #3c2a11; box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.8); width: 650px;">
-                <h2 style="color: #f5deb3; text-align: center; margin-bottom: 15px; text-shadow: 2px 2px 2px black; font-family: monospace; font-size: 24px;">Choose Your Plants (<span id="chooser-count">0</span>/10)</h2>
-                <div id="chooser-grid" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 25px; max-height: 350px; overflow-y: auto; background-color: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; box-shadow: inset 0 0 10px black;">
+        <div id="seed-chooser" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 1500; flex-direction: column; align-items: center; justify-content: center; display: none;" data-page-node-id="sKUPZH9OreCfnLOb71fUt9">
+            <div style="background-color: #6b4a2b; padding: 25px; border-radius: 15px; border: 4px solid #3c2a11; box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.8); width: 650px;" data-page-node-id="qTe5uszMduXAS2NzwZNKoD">
+                <h2 style="color: #f5deb3; text-align: center; margin-bottom: 15px; text-shadow: 2px 2px 2px black; font-family: monospace; font-size: 24px;" data-page-node-id="DNnVLFME71piBC0vyCP0Df">Choose Your Plants (<span id="chooser-count" data-page-node-id="AsAOUunkhoHkqnuumWgUD3">0</span>/10)</h2>
+                <div id="chooser-grid" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 25px; max-height: 350px; overflow-y: auto; background-color: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; box-shadow: inset 0 0 10px black;" data-page-node-id="4pC7pNNVCIyHNDR2sbfkRI">
                     <!-- Seeds will be injected here -->
                 </div>
-                <div style="display: flex; justify-content: center; gap: 20px;">
-                    <button id="btn-back" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 30px; font-size: 18px; font-family: monospace; font-weight: bold; color: white; cursor: pointer; border-radius: 10px; text-shadow: 1px 1px 2px black;">Return</button>
-                    <button id="btn-lets-rock" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 40px; font-size: 20px; font-family: monospace; font-weight: bold; color: white; cursor: pointer; border-radius: 10px; opacity: 0.5; text-shadow: 1px 1px 2px black;" disabled>Let's Rock!</button>
+                <div style="display: flex; justify-content: center; gap: 20px;" data-page-node-id="FlNMD8hFzz0gGdCniWerp0">
+                    <button id="btn-back" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 30px; font-size: 18px; font-family: monospace; font-weight: bold; color: white; cursor: pointer; border-radius: 10px; text-shadow: 1px 1px 2px black;" data-page-node-id="hgv5UNCdwJ5HvZ5V1avZK4">Return</button>
+                    <button id="btn-lets-rock" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 40px; font-size: 20px; font-family: monospace; font-weight: bold; color: white; cursor: pointer; border-radius: 10px; opacity: 0.5; text-shadow: 1px 1px 2px black;" disabled data-page-node-id="xoRPl86DUygTLowLNPKyGa">Let's Rock!</button>
                 </div>
             </div>
         </div>
@@ -182,118 +182,118 @@
                 text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
             }
         </style>
-        <div id="start-menu">
-            <div class="menu-scene">
-                <div class="menu-title">
-                    <div class="game-title">植物大战<span class="pz">僵尸</span></div>
-                    <div class="game-sub">PLANTS vs ZOMBIES · WEB EDITION</div>
+        <div id="start-menu" data-page-node-id="ZHKD5YcPpwHBpuCHg2cLAV">
+            <div class="menu-scene" data-page-node-id="ywVrrSFgWj5H0xtJRFkQDK">
+                <div class="menu-title" data-page-node-id="8vnkas0JvwrUVTAshHjcoB">
+                    <div class="game-title" data-page-node-id="MngjjKXDRmzVRlyHhRLq7k">植物大战<span class="pz" data-page-node-id="IG0FLQIPG4e2ZybLFyGDjL">僵尸</span></div>
+                    <div class="game-sub" data-page-node-id="6jXEFNIINaSqNwIGepBBKJ">PLANTS vs ZOMBIES · WEB EDITION</div>
                 </div>
 
-                <div class="menu-cards">
-                    <button id="btn-adventure" class="mode-card">
-                        <div class="pkt-art">
-                            <img src="assets/images/Plants/SunFlower/0.gif" alt="向日葵" class="solo">
+                <div class="menu-cards" data-page-node-id="M1FIJF3v9ja7Rtmca3rDue">
+                    <button id="btn-adventure" class="mode-card" data-page-node-id="8HOxjeZa9cBt8CCnuRtEKF">
+                        <div class="pkt-art" data-page-node-id="Eu5xoiViVLVlT3DmDLYQ1G">
+                            <img src="assets/images/Plants/SunFlower/0.gif" alt="向日葵" class="solo" data-page-node-id="wldjMDP63SEFP47dFEwpVL">
                         </div>
-                        <div class="pkt-name">经典冒险</div>
-                        <div class="pkt-tag">ADVENTURE</div>
-                        <div class="pkt-sub">原汁原味的防线塔防<br>白昼草地 · 经典植物 · 波次攻防</div>
+                        <div class="pkt-name" data-page-node-id="q3vxNMzk26xQU0bMXe97YJ">经典冒险</div>
+                        <div class="pkt-tag" data-page-node-id="jCbeDx1PHrO1PBZrKHJ9nP">ADVENTURE</div>
+                        <div class="pkt-sub" data-page-node-id="tbmbJVibCp9JwNylbFYMYC">原汁原味的防线塔防<br data-page-node-id="RuuXmGKevd9zWhv1FpIJrD">白昼草地 · 经典植物 · 波次攻防</div>
                     </button>
 
-                    <button id="btn-fusion" class="mode-card">
-                        <div class="pkt-art fusion formula">
-                            <div class="row plants">
-                                <img class="img-a" src="assets/images/Plants/Peashooter/0.gif" alt="豌豆射手">
-                                <span class="formula-op">+</span>
-                                <img class="img-b" src="assets/images/Plants/CherryBomb/0.gif" alt="樱桃炸弹">
+                    <button id="btn-fusion" class="mode-card" data-page-node-id="nCNgzhp9UcH2bw5FY3amAt">
+                        <div class="pkt-art fusion formula" data-page-node-id="lIXboFZjCoAhO9upO722UH">
+                            <div class="row plants" data-page-node-id="rTQX5zRex9RcKo0peTRmhZ">
+                                <img class="img-a" src="assets/images/Plants/Peashooter/0.gif" alt="豌豆射手" data-page-node-id="lrWVM8XDDMxS29CNCJpzW3">
+                                <span class="formula-op" data-page-node-id="SHOAGuPaOCIV16swhQcQ1Q">+</span>
+                                <img class="img-b" src="assets/images/Plants/CherryBomb/0.gif" alt="樱桃炸弹" data-page-node-id="8Iccc02iqq0u2gkf7mu02A">
                             </div>
-                            <div class="row result">
-                                <span class="formula-eq">=</span>
-                                <span class="formula-q">？</span>
+                            <div class="row result" data-page-node-id="ywsV0GiGcd2xWFo9J0UpI7">
+                                <span class="formula-eq" data-page-node-id="fGeCROFeB0LVwq7ajAqw1U">=</span>
+                                <span class="formula-q" data-page-node-id="G3tX4eKVXUTlmS430PuMPm">？</span>
                             </div>
                         </div>
-                        <div class="pkt-name">融合进化</div>
-                        <div class="pkt-tag">FUSION</div>
-                        <div class="pkt-sub">两种植物合二为一 · 进化新形态<br>手套融合 · 探索 15+ 秘密配方</div>
+                        <div class="pkt-name" data-page-node-id="3SagXFvBLq7FbhAYOS0SYL">融合进化</div>
+                        <div class="pkt-tag" data-page-node-id="z9AzFrhEDO8mG9mG6QEi1d">FUSION</div>
+                        <div class="pkt-sub" data-page-node-id="bUvmyTVtE2ce7nDjKUAVLd">两种植物合二为一 · 进化新形态<br data-page-node-id="8lZSJeVKYhc5F4FzRuosQi">手套融合 · 探索 15+ 秘密配方</div>
                     </button>
 
-                    <button id="btn-vase" class="mode-card">
-                        <div class="pkt-art vase">
-                            <img src="assets/images/Vase/Vase_Question.png" alt="问号罐子" class="vase-hero" style="height: 102px; width: auto; image-rendering: pixelated;">
+                    <button id="btn-vase" class="mode-card" data-page-node-id="XzlwR5Lf7h5UJkpSMQbKtd">
+                        <div class="pkt-art vase" data-page-node-id="mtzhJyjV3tcqfs8tKmrdhr">
+                            <img src="assets/images/Vase/Vase_Question.png" alt="问号罐子" class="vase-hero" style="height: 102px; width: auto; image-rendering: pixelated;" data-page-node-id="g0FhuoTrx62vcGuihwn8nh">
                         </div>
-                        <div class="pkt-name">砸罐子</div>
-                        <div class="pkt-tag">VASEBREAKER</div>
-                        <div class="pkt-sub">锤开罐子 · 里面是植物还是僵尸？<br>植物罐稳赚 · 僵尸罐提防 · 问号罐惊喜</div>
+                        <div class="pkt-name" data-page-node-id="h6ZspYdvOw5B3ih1MFMTLH">砸罐子</div>
+                        <div class="pkt-tag" data-page-node-id="bOu0mUlP76nW9GHCYkKBRr">VASEBREAKER</div>
+                        <div class="pkt-sub" data-page-node-id="KJR55hbB5gQ5ZcST8FisGe">锤开罐子 · 里面是植物还是僵尸？<br data-page-node-id="Q5KGmOWvtoWE7eBNfU90QR">植物罐稳赚 · 僵尸罐提防 · 问号罐惊喜</div>
                     </button>
 
-                    <button id="btn-zombie" class="mode-card">
-                        <div class="pkt-art zombie">
-                            <img src="assets/images/Zombies/Zombie/0.gif" alt="我是僵尸" style="height: 104px; width: auto; image-rendering: pixelated; transform: translateY(4px);">
+                    <button id="btn-zombie" class="mode-card" data-page-node-id="WdfupeVtZ70QTBppvftrtC">
+                        <div class="pkt-art zombie" data-page-node-id="FypRHGm7NVIwBaFxatxrTB">
+                            <img src="assets/images/Zombies/Zombie/0.gif" alt="我是僵尸" style="height: 104px; width: auto; image-rendering: pixelated; transform: translateY(4px);" data-page-node-id="IBBFZVEGFKnqSfk03D9T4m">
                         </div>
-                        <div class="pkt-name">我是僵尸</div>
-                        <div class="pkt-tag">I, ZOMBIE</div>
-                        <div class="pkt-sub">这次换你当僵尸 · 指挥僵尸大军<br>啃穿植物防线 · 吃掉脑子即可通关</div>
+                        <div class="pkt-name" data-page-node-id="t0aSALgcZlRYE6KLb9gHFy">我是僵尸</div>
+                        <div class="pkt-tag" data-page-node-id="6c3Kc1ykvKPFOQDJCBZAlU">I, ZOMBIE</div>
+                        <div class="pkt-sub" data-page-node-id="cNwgHjFvuVsA3zlsc2lm3I">这次换你当僵尸 · 指挥僵尸大军<br data-page-node-id="GWRurIIvkKdZA2IFecOBDJ">啃穿植物防线 · 吃掉脑子即可通关</div>
                     </button>
                 </div>
             </div>
 
-            <div class="menu-footer">
-                <div class="player" id="player-name">区耀丁<small>PLAYER</small></div>
-                <div class="ver" id="start-version">加载版本号...</div>
+            <div class="menu-footer" data-page-node-id="l69mt6MHipFXxWSDggEsLG">
+                <div class="player" id="player-name" data-page-node-id="u9bzuFScc9ypDPBkNRy1DZ">区耀丁<small data-page-node-id="8B0o3URp28QIE1UB8fuAzr">PLAYER</small></div>
+                <div class="ver" id="start-version" data-page-node-id="x7LKay5O9mbcXp2LaYqlX4">加载版本号...</div>
             </div>
         </div>
 
         <!-- 砸罐子难度选择（v3.5.0：简单 / 困难 / 地狱） -->
-        <div id="difficulty-modal" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.78); z-index:2400; align-items:center; justify-content:center; flex-direction:column;">
-            <div class="diff-panel">
-                <div class="diff-title">砸罐子<span>VASEBREAKER · 难度选择</span></div>
-                <div class="diff-sub">罐子里的秘密，会随难度大不一样……</div>
-                <div class="diff-row">
-                    <button id="diff-easy" class="diff-btn diff-easy">
-                        <span class="diff-name">简单</span>
-                        <span class="diff-en">EASY</span>
-                        <span class="diff-desc">罐子较少 · 绿罐扎堆<br>僵尸又少又弱 · 轻松上手</span>
+        <div id="difficulty-modal" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.78); z-index:2400; align-items:center; justify-content:center; flex-direction:column;" data-page-node-id="xswkkvhsABpxzMYzGfE9Jn">
+            <div class="diff-panel" data-page-node-id="m6vzm0owE329JpUHm8OuED">
+                <div class="diff-title" data-page-node-id="Cc28bm4gwKWYOIzWVzeMXQ">砸罐子<span data-page-node-id="k7H3GZv4M3DZ3ougRpElaF">VASEBREAKER · 难度选择</span></div>
+                <div class="diff-sub" data-page-node-id="clcbELYIlJjGJji7AbltfW">罐子里的秘密，会随难度大不一样……</div>
+                <div class="diff-row" data-page-node-id="qtAEHGlq7W3b4bxbHqaHwE">
+                    <button id="diff-easy" class="diff-btn diff-easy" data-page-node-id="Pdfzfq2zURl4ZyXuvRppth">
+                        <span class="diff-name" data-page-node-id="tg1nuVU6nQ9bblRcsSz8XT">简单</span>
+                        <span class="diff-en" data-page-node-id="sUQzy1kEqIBGUNGygJVrUy">EASY</span>
+                        <span class="diff-desc" data-page-node-id="YIAXWETsFbHkCe1oxyTNJG">罐子较少 · 绿罐扎堆<br data-page-node-id="LqlAL2m1xqG8yAVziCA1Ef">僵尸又少又弱 · 轻松上手</span>
                     </button>
-                    <button id="diff-hard" class="diff-btn diff-hard">
-                        <span class="diff-name">困难</span>
-                        <span class="diff-en">HARD</span>
-                        <span class="diff-desc">问号罐为主 · 陷阱重重<br>铁桶/撑杆出没 · 标准挑战</span>
+                    <button id="diff-hard" class="diff-btn diff-hard" data-page-node-id="PNjgcvwGPLCRDNC9wC5xhn">
+                        <span class="diff-name" data-page-node-id="FZfs4axXQpAz0ZSGEwhgYB">困难</span>
+                        <span class="diff-en" data-page-node-id="pbMYhQdZGTA2TXJm8ng4Y5">HARD</span>
+                        <span class="diff-desc" data-page-node-id="riIy4CF7fPP4mEfTXYXu6k">问号罐为主 · 陷阱重重<br data-page-node-id="mzeFxrgU4bBhfQl92DoxKb">铁桶/撑杆出没 · 标准挑战</span>
                     </button>
-                    <button id="diff-hell" class="diff-btn diff-hell">
-                        <span class="diff-name">地狱</span>
-                        <span class="diff-en">HELL</span>
-                        <span class="diff-desc">罐满为患 · 僵尸成群<br>血厚 35% · 只为勇者</span>
+                    <button id="diff-hell" class="diff-btn diff-hell" data-page-node-id="nabH8AzBHPD6lBBe9OhAjc">
+                        <span class="diff-name" data-page-node-id="5oOweYUGEdcHziY2iaY8uf">地狱</span>
+                        <span class="diff-en" data-page-node-id="NDqlufYcvJSPIieUXMeBKd">HELL</span>
+                        <span class="diff-desc" data-page-node-id="6sgGKx6GaznFTYqzKg0IfP">罐满为患 · 僵尸成群<br data-page-node-id="gtoTxPW62zAjwtd3SnhikH">血厚 35% · 只为勇者</span>
                     </button>
                 </div>
-                <div class="diff-foot">
-                    <button id="diff-back">返回主菜单</button>
+                <div class="diff-foot" data-page-node-id="tlyS3qe4NkDoGgHFeHgGRc">
+                    <button id="diff-back" data-page-node-id="ZJqF2iq96KPAWKzwgBBsIn">返回主菜单</button>
                 </div>
             </div>
         </div>
 
         <!-- 我是僵尸难度选择（v3.7.0：简单 / 困难 / 地狱 —— 初始阳光递减 + 僵尸解锁递增 + 敌阵强度递增） -->
-        <div id="zdiff-modal" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.78); z-index:2400; align-items:center; justify-content:center; flex-direction:column;">
-            <div class="diff-panel">
-                <div class="diff-title">我是僵尸<span>I, ZOMBIE · 难度选择</span></div>
-                <div class="diff-sub">换个阵营啃脑子 —— 阳光多寡与僵尸兵种随难度而变</div>
-                <div class="diff-row">
-                    <button id="zdiff-easy" class="diff-btn diff-easy">
-                        <span class="diff-name">简单</span>
-                        <span class="diff-en">EASY</span>
-                        <span class="diff-desc">600 阳光 · 基础僵尸<br>敌阵温和 · 轻松开啃</span>
+        <div id="zdiff-modal" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.78); z-index:2400; align-items:center; justify-content:center; flex-direction:column;" data-page-node-id="HLwzty3wxiNwFvW5SlUThr">
+            <div class="diff-panel" data-page-node-id="bPzc0iTJyvqVbnzD8Uc7cR">
+                <div class="diff-title" data-page-node-id="pPz2bF8oRyKvhaCJADMtXg">我是僵尸<span data-page-node-id="TQ4ptwQsJsbfp4u8zJBxJD">I, ZOMBIE · 难度选择</span></div>
+                <div class="diff-sub" data-page-node-id="9gxLSABepbiIfApmSTovHl">换个阵营啃脑子 —— 阳光多寡与僵尸兵种随难度而变</div>
+                <div class="diff-row" data-page-node-id="0oW5FtsfgP71RP5OtwSyuY">
+                    <button id="zdiff-easy" class="diff-btn diff-easy" data-page-node-id="oJZfhxmGks9gcGzPn08Hc4">
+                        <span class="diff-name" data-page-node-id="XFdhBRR2BjEzbZLk2kNWvL">简单</span>
+                        <span class="diff-en" data-page-node-id="YsmbR6BGGTIAJPVzAvvvX4">EASY</span>
+                        <span class="diff-desc" data-page-node-id="qYIBBq5nyOBFhGwbMHRs7g">600 阳光 · 基础僵尸<br data-page-node-id="68jE28HvLSlJft6x4UsomA">敌阵温和 · 轻松开啃</span>
                     </button>
-                    <button id="zdiff-hard" class="diff-btn diff-hard">
-                        <span class="diff-name">困难</span>
-                        <span class="diff-en">HARD</span>
-                        <span class="diff-desc">400 阳光 · 解锁铁桶<br>敌阵加强 · 标准挑战</span>
+                    <button id="zdiff-hard" class="diff-btn diff-hard" data-page-node-id="8q5xEUZjF8fO0rK07n8m2B">
+                        <span class="diff-name" data-page-node-id="Q0TR27pBc0RI7U5dzCkM2P">困难</span>
+                        <span class="diff-en" data-page-node-id="HicjWJKJQxLXVlIqvud9db">HARD</span>
+                        <span class="diff-desc" data-page-node-id="osbCDPa85w2LiMKiY0blAb">400 阳光 · 解锁铁桶<br data-page-node-id="BTHLE4mMdEKrWvu1sHntwP">敌阵加强 · 标准挑战</span>
                     </button>
-                    <button id="zdiff-hell" class="diff-btn diff-hell">
-                        <span class="diff-name">地狱</span>
-                        <span class="diff-en">HELL</span>
-                        <span class="diff-desc">250 阳光 · 全兵种开放<br>敌阵凶悍 · 只为勇者</span>
+                    <button id="zdiff-hell" class="diff-btn diff-hell" data-page-node-id="AAJCKLqt7wyCxkjE1jh4rH">
+                        <span class="diff-name" data-page-node-id="HQ2kvGY9AWmOQOdQWzuSTf">地狱</span>
+                        <span class="diff-en" data-page-node-id="jQDterfpWabzPeRvP8fU4B">HELL</span>
+                        <span class="diff-desc" data-page-node-id="9nUvlnSLUA4CDwlKnlLoq9">250 阳光 · 全兵种开放<br data-page-node-id="RODmqQI2c5bt3D9EkCzd3B">敌阵凶悍 · 只为勇者</span>
                     </button>
                 </div>
-                <div class="diff-foot">
-                    <button id="zdiff-back">返回主菜单</button>
+                <div class="diff-foot" data-page-node-id="4XRfWGLq1OygdRtsRSoJMz">
+                    <button id="zdiff-back" data-page-node-id="fPV8dyWJdbJX6X3DHJ4Bxz">返回主菜单</button>
                 </div>
             </div>
         </div>
@@ -336,16 +336,16 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1789998390"></script>
-    <script src="js/Board.js?v=1789998390"></script>
-    <script src="js/entities/Entity.js?v=1789998390"></script>
-    <script src="js/entities/Plant.js?v=1789998390"></script>
-    <script src="js/entities/Zombie.js?v=1789998390"></script>
-    <script src="js/entities/Projectile.js?v=1789998390"></script>
-    <script src="js/entities/Sun.js?v=1789998390"></script>
-    <script src="js/managers/WaveManager.js?v=1789998390"></script>
-    <script src="js/managers/CollisionManager.js?v=1789998390"></script>
-    <script src="js/managers/EventManager.js?v=1789998390"></script>
-    <script src="js/GameLoop.js?v=1789998390"></script>
+    <script src="js/InputManager.js?v=1789999390"></script>
+    <script src="js/Board.js?v=1789999390"></script>
+    <script src="js/entities/Entity.js?v=1789999390"></script>
+    <script src="js/entities/Plant.js?v=1789999390"></script>
+    <script src="js/entities/Zombie.js?v=1789999390"></script>
+    <script src="js/entities/Projectile.js?v=1789999390"></script>
+    <script src="js/entities/Sun.js?v=1789999390"></script>
+    <script src="js/managers/WaveManager.js?v=1789999390"></script>
+    <script src="js/managers/CollisionManager.js?v=1789999390"></script>
+    <script src="js/managers/EventManager.js?v=1789999390"></script>
+    <script src="js/GameLoop.js?v=1789999390"></script>
 </body>
 </html>
