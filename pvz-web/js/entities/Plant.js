@@ -143,7 +143,7 @@ class Plant extends Entity {
             stat.src = 'assets/images/Plants/TwinSunflower/TwinSunflower1.gif';
         } else if (type === 'cattail') {
             stat.hp = 300;
-            stat.fireRate = 0.5;
+            stat.fireRate = 1.4; // v3.21.0：0.5s 太快（每秒 4 颗刺），放缓到 1.4s 一轮
             stat.fireTimer = 0;
             stat.src = 'assets/images/Plants/Cattail/Cattail.gif';
             stat.yOffset = 0;
@@ -154,26 +154,26 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1789999390';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790086663';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1789999390';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790086663';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1789999390';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790086663';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1789999390';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790086663';
             stat.butterChance = 0.2;
         } else if (type === 'starfruit') {
             // 杨桃（v3.6.0 经典模式可种）：五向星光射击，弹道复用融合版（Projectile 'star'）
@@ -198,7 +198,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1789999390';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790086663';
             stat.yOffset = 0;
         }
 
@@ -305,7 +305,7 @@ class Plant extends Entity {
                 } else if (type === 'fusion_sporemine') {
                     this.element.src = s2.src;
                     this.fusionOverlay.src = s1.src;
-                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 85%, 0 85%)'; // Show the face!
+                    this.fusionOverlay.style.clipPath = 'none'; // v3.21.0：不再裁掉小喷菇下半截，完整身体立在埋着的土豆雷上
                     this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(0px, -30px) scale(0.9)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_spikynut') {
@@ -1187,7 +1187,8 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
         
         if (this.hasTrait('gloomshroom')) {
             this.fireTimer += deltaTime;
-            if (this.fireTimer >= 1.5) {
+            // v3.21.0：僵尸待在 3×3 范围内每 1 秒算一次攻击（原 1.5s 太慢）
+            if (this.fireTimer >= 1.0) {
                 const zombies = this.game.entities.filter(e => 
                     e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized && Math.abs(e.row - this.row) <= 1 && Math.abs(e.x - this.x) <= 150
                 );
@@ -1201,7 +1202,11 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     ];
                     for (let d of dirs) {
                         const len = Math.sqrt(d.vx*d.vx + d.vy*d.vy);
-                        const p = new Projectile(this.game, this.x + 10, this.y - 15, this.row, 'gloom_puff', null, d.vx/len, d.vy/len);
+                        // v3.21.0 关键修复：旧代码只传了单位向量（1px/s）——这就是"喷出的子弹速度太慢"
+                        // 的根源，孢子在 150px 射程内要飞两分多钟，等于永远打不中。改为 300px/s 标准弹速。
+                        const gs = 300;
+                        const p = new Projectile(this.game, this.x + 10, this.y - 15, this.row, 'gloom_puff', null, (d.vx/len)*gs, (d.vy/len)*gs);
+                        p.speed = gs;
                         p.maxDistance = 150;
                         this.game.entities.push(p);
                     }

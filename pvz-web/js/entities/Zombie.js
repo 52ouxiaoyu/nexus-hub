@@ -280,6 +280,16 @@ class Zombie extends Entity {
         this.eatTarget = null;
         this.fightTarget = null;
         if (this.element) this.element.src = this.walkSrc;
+        // v3.21.0：被魅惑后"转体+变粉"——身体水平翻转（面朝右侧行进方向），
+        // 滤镜统一染成粉红色，直到离场/阵亡；巨人保留原 scale(2.5) 基准再翻转
+        const cur = this.element ? (this.element.style.transform || '') : '';
+        if (this.element) {
+            if (cur.indexOf('scale(2.5)') > -1) this.element.style.transform = cur + ' scaleX(-1)';
+            else this.setTransform('scaleX(-1)');
+        }
+        const pink = 'grayscale(1) sepia(1) hue-rotate(290deg) saturate(2.4) brightness(1.08)';
+        if (this.element) this.element.style.filter = pink;
+        if (this.headEl) this.headEl.style.filter = pink;
     }
     
     // 魅惑（友方）僵尸每帧逻辑：向右行进，攻击同排遇到的敌方僵尸；走出右边界离场
@@ -325,29 +335,6 @@ class Zombie extends Entity {
         }
     }
     
-    // v3.19.0：罐中僵尸站定立绘统一出口——用原版单帧站姿 0.gif（不啃不踏步）。
-    // 护甲掉落等会强制换回行走/啃食动画，这里拦一道保持站姿；返回是否已处理。
-    // 例外：读报僵尸掉报纸后无"愤怒站姿"原版图，退回行走动画。
-    _vaseApplyStaticPose() {
-        if (!this._vaseStatic) return false;
-        if (this.type === 'newspaper' && this.hasLostNewspaper) {
-            this.element.src = this.walkSrc;
-            return true;
-        }
-        const dir = {
-            normal:'Zombie', flag:'FlagZombie', conehead:'ConeheadZombie', buckethead:'BucketheadZombie',
-            polevaulting:'PoleVaultingZombie', newspaper:'NewspaperZombie', screendoor:'ScreenDoorZombie',
-            football:'FootballZombie', zomboni:'Zomboni', dancing:'DancingZombie',
-            peahead:'Zombie', nuthead:'Zombie', sunhead:'Zombie', snowpeahead:'Zombie', gargantuar:'Zombie'
-        }[this.type];
-        if (dir) {
-            this.element.src = `assets/images/Zombies/${dir}/0.gif`;
-            return true;
-        }
-        if (this.walkSrc) { this.element.src = this.walkSrc; return true; }
-        return false;
-    }
-
     update(deltaTime) {
         super.update(deltaTime);
         this.element.style.top = `${this.y + this.yOffset}px`;
@@ -377,7 +364,7 @@ class Zombie extends Entity {
             this.type = 'normal';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
-            if (!this._vaseApplyStaticPose()) this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
+            this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
         }
         
         // Handle bucket falling off
@@ -385,7 +372,7 @@ class Zombie extends Entity {
             this.type = 'normal';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
-            if (!this._vaseApplyStaticPose()) this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
+            this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
         }
         
         // 植物头僵尸的头顶植物是纯外观：不提供装甲/不掉落，随僵尸一起行动直到死亡。
@@ -396,7 +383,7 @@ class Zombie extends Entity {
             this.speed = 45; // Gets very angry and fast
             this.walkSrc = 'assets/images/Zombies/NewspaperZombie/HeadWalk0.gif';
             this.attackSrc = 'assets/images/Zombies/NewspaperZombie/HeadAttack0.gif';
-            if (!this._vaseApplyStaticPose()) this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
+            this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
         }
 
         // Handle screendoor falling off
@@ -404,7 +391,7 @@ class Zombie extends Entity {
             this.type = 'normal';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
-            if (!this._vaseApplyStaticPose()) this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
+            this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
         }
 
         // Handle jack-in-the-box explosion
@@ -502,9 +489,6 @@ class Zombie extends Entity {
             }
         }
 
-        // v3.18.0：砸罐子罐中僵尸站定 —— 行走/啃食/跳跨全部短路；
-        // 上方已处理 死亡判定/护甲掉落/黄油定身/魅惑/状态滤镜，站定不影响被击杀
-        if (this._vaseStatic && this.state === 'WALKING') return;
 
         if (this.state === 'WALKING') {
             // 同排附近出现被魅惑的友方僵尸 → 停下与它搏斗（僵尸之间唯一的敌对交互）
@@ -548,13 +532,18 @@ class Zombie extends Entity {
                     if (spike.hasTrait('spikeweed')) {
                         spike.hp = 0;
                         this.hp = 0; // 冰车被地刺扎爆
+                        // v3.21.0 彩蛋：冰车被地刺扎爆 → 全场公告
+                        if (this.game.showAnnouncement) this.game.showAnnouncement('区耀丁真帅', '#ff66cc');
                     } else {
+                        // v3.21.0：对齐原版——钢地刺同样扎爆冰车（钢刺自身扛 3 辆，第 3 辆碾过才毁）
                         // 每辆冰车只计 1 次（贴着钢地刺开的每一帧都满足 <40px）
                         if (spike._lastCrusher !== this) {
                             spike._lastCrusher = this;
                             spike._zomboniRuns = (spike._zomboniRuns || 0) + 1;
                             if (spike._zomboniRuns >= 3) spike.hp = 0;
                         }
+                        this.hp = 0; // 冰车被钢地刺扎爆
+                        if (this.game.showAnnouncement) this.game.showAnnouncement('区耀丁真帅', '#ff66cc');
                     }
                 }
             }
