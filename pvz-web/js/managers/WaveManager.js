@@ -36,7 +36,7 @@ class WaveManager {
         let poleChance = 0, newsChance = 0, screenChance = 0;
         let danceChance = 0, jackChance = 0, zomboniChance = 0, impChance = 0;
         let pogoChance = 0, ladderChance = 0, gargantuarChance = 0;
-        let bossChance = 0, plantheadChance = 0;
+        let bossChance = 0, plantheadChance = 0, jalapenoheadChance = 0;
         
         if (this.timeElapsed > 60) coneChance = Math.min(0.2, (this.timeElapsed - 60) / 300); 
         if (this.timeElapsed > 120) poleChance = Math.min(0.15, (this.timeElapsed - 120) / 400);
@@ -59,6 +59,12 @@ class WaveManager {
         if (this.game.fusionMode && this.timeElapsed > 75) {
             plantheadChance = Math.min(0.24, (this.timeElapsed - 75) / 280);
         }
+
+        // v3.22.0 火爆辣椒植物僵尸（融合进化专属）：后期出场，与冰车同期解锁（540s），
+        // 概率上限压低（0.06）——整排引爆威力太大，只做偶发威胁
+        if (this.game.fusionMode && this.timeElapsed > 540) {
+            jalapenoheadChance = Math.min(0.06, (this.timeElapsed - 540) / 600);
+        }
         
         const r = Math.random();
         let type = 'normal';
@@ -73,6 +79,7 @@ class WaveManager {
         }
         else if (r < (acc += bossChance)) type = 'lgboss';
         else if (r < (acc += gargantuarChance)) type = 'gargantuar';
+        else if (r < (acc += jalapenoheadChance)) type = 'jalapenohead'; // v3.22.0
         else if (r < (acc += zomboniChance)) type = 'zomboni';
         else if (r < (acc += pogoChance)) type = 'pogo';
         else if (r < (acc += ladderChance)) type = 'ladder';

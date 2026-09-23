@@ -38,7 +38,7 @@ class Zombie extends Entity {
             this.walkSrc = 'assets/images/Zombies/FlagZombie/FlagZombie.gif';
             this.attackSrc = 'assets/images/Zombies/FlagZombie/FlagZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
-        } else if (type === 'peahead' || type === 'nuthead' || type === 'sunhead' || type === 'snowpeahead') {
+        } else if (type === 'peahead' || type === 'nuthead' || type === 'sunhead' || type === 'snowpeahead' || type === 'jalapenohead') {
             // === 植物头僵尸（仅融合进化模式刷出，纯外观变体）===
             // 行为与普通僵尸完全一致（hp=200 / speed=20 / 无任何附加能力），
             // 唯一的区别是头顶顶着一棵基础植物（豌豆/坚果/向日葵/寒冰射手），
@@ -47,15 +47,22 @@ class Zombie extends Entity {
                 peahead:     'assets/images/Plants/Peashooter/Peashooter.gif',
                 nuthead:     'assets/images/Plants/WallNut/WallNut.gif',
                 sunhead:     'assets/images/Plants/SunFlower/SunFlower1.gif',
-                snowpeahead: 'assets/images/Plants/SnowPea/SnowPea.gif'
+                snowpeahead: 'assets/images/Plants/SnowPea/SnowPea.gif',
+                jalapenohead: 'assets/images/Plants/Jalapeno/Jalapeno.gif'
             }[type];
-            const headSize = { peahead: 56, nuthead: 64, sunhead: 62, snowpeahead: 58 }[type];
+            const headSize = { peahead: 56, nuthead: 64, sunhead: 62, snowpeahead: 58, jalapenohead: 56 }[type];
             this.hp = 200; this.maxHp = 200;
             this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
             this.createPlantHead(headSrc, headSize); // 头顶一棵基础植物（纯外观）
+            if (type === 'jalapenohead') {
+                // v3.22.0 火爆辣椒植物僵尸（融合进化后期专属）：精锐血量保证走到植物跟前，
+                // 连续吃掉 2 株植物 → 引爆整排（见 _jalapenoRowBoom）
+                this.hp = 600; this.maxHp = 600;
+                this._eatenCount = 0;
+            }
         } else if (type === 'conehead') {
             this.hp = 560; this.maxHp = 560;
             this.element.src = 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif';
@@ -200,6 +207,9 @@ class Zombie extends Entity {
         img.style.width = headSize + 'px';
         img.style.height = headSize + 'px';
         img.style.objectFit = 'contain';
+        // v3.22.0：植物头水平翻转——植物原图是种植朝向（面朝右），僵尸面朝左行进；
+        // 翻转后头与身体朝向契合，看起来是"长在僵尸身上的头"而不是一株完整的植物
+        img.style.transform = 'scaleX(-1)';
         this.headEl = img;
         this.headSize = headSize;
         this.hasPlantHead = true;
@@ -217,6 +227,27 @@ class Zombie extends Entity {
         this.headEl.style.filter = this._statusFilter();
     }
     
+    // v3.22.0：火爆辣椒植物僵尸的绝技——整排引爆（同火爆辣椒：整行火力条 + 全行植物炸毁），
+    // 自身在爆炸中消失（走正常死亡流程：倒地动画/计分）。只炸植物，不伤同排僵尸（都是友军）。
+    _jalapenoRowBoom() {
+        if (this._jalapenoBoomed) return;
+        this._jalapenoBoomed = true;
+        const g = this.game;
+        if (g.audioManager) g.audioManager.play('splat');
+        if (g.showAnnouncement) g.showAnnouncement('💥 火爆辣椒僵尸引爆了整排植物！', '#ff7f27');
+        const b = g.board;
+        const strip = document.createElement('img');
+        strip.src = 'assets/images/Plants/Jalapeno/JalapenoAttack.gif';
+        strip.style.cssText = 'position:absolute;pointer-events:none;z-index:3000;' +
+            'left:' + b.offsetX + 'px;top:' + (this.y - 65) + 'px;' +
+            'width:' + (b.cols * b.cellWidth) + 'px;height:131px;object-fit:fill;';
+        g.container.appendChild(strip);
+        setTimeout(() => strip.remove(), 1000);
+        const plants = g.entities.filter(e => typeof Plant !== 'undefined' && e instanceof Plant && e.row === this.row && !e.isDead);
+        for (const pl of plants) pl.hp = 0;
+        this.hp = 0; // 自爆
+    }
+
     // 死亡时：植物头随僵尸一起翻滚飞落消失（纯视觉，无任何收益/惩罚）
     dropPlantHead() {
         if (!this.headEl) return;
@@ -453,6 +484,10 @@ class Zombie extends Entity {
             if (!this.hypnotized && this.game.score !== undefined) {
                 this.game.score += 10;
                 this.game.updateScore();
+            }
+            // v3.22.0：向日葵头僵尸恢复原版机制——被击杀掉落 100 阳光（魅惑后阵亡属我方，不发）
+            if (this.type === 'sunhead' && !this.hypnotized && this.game.addSun) {
+                this.game.addSun(100);
             }
             setTimeout(() => { this.isDead = true; }, 2000); 
         }
@@ -757,12 +792,21 @@ class Zombie extends Entity {
                         // 其它模式维持原速，不影响玩家用植物防守的手感。
                         const eatMul = this.game.zombieMode ? 3 : 1;
                         this.eatTarget.hp -= currentDamage * eatMul * deltaTime;
+                        // v3.22.0：火爆辣椒植物僵尸——吃掉一株植物计 1 次，连续 2 株 → 整排引爆
+                        if (this.type === 'jalapenohead' && this.eatTarget.hp <= 0) {
+                            this._eatenCount++;
+                            this.eatTarget = null;
+                            this.state = 'WALKING';
+                            if (this.element) this.element.src = this.walkSrc;
+                            if (this._eatenCount >= 2) this._jalapenoRowBoom();
+                        }
                     }
                     
-                    if (this.eatTarget.hasTrait && (this.eatTarget.hasTrait('spikeweed') || this.eatTarget.hasTrait('chomper'))) {
+                    // v3.22.0：eatTarget 可能在上方火爆辣椒计数分支被置空（吃满自爆），加 null 守卫
+                    if (this.eatTarget && this.eatTarget.hasTrait && (this.eatTarget.hasTrait('spikeweed') || this.eatTarget.hasTrait('chomper'))) {
                         this.hp -= 20 * deltaTime; // reflect damage
                     }
-                    if (this.eatTarget.hasTrait && this.eatTarget.hasTrait('snowpea') && !this.isSlowed) {
+                    if (this.eatTarget && this.eatTarget.hasTrait && this.eatTarget.hasTrait('snowpea') && !this.isSlowed) {
                         this.setSlow(10.0);
                     }
                     
