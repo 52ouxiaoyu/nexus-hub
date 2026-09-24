@@ -20,6 +20,22 @@ const BASE_PROTECT_Y = 18;            // 保护区上沿：路径雕刻不得在
 
 const POWERUP_TYPES = { SHIELD: '🛡️', BOMB: '💣', STAR: '⭐', SHOVEL: '🏗️', LIFE: '❤️', TIME: '⏳', MAX_WEAPON: '🚀', BOAT: '🚤', FLY: '🚁', W_MISSILE: '🎯', W_LASER: '⚡', W_EXPLOSIVE: '💥', W_SPREAD: '🔱', W_BOUNCE: '🪀', FAKE_BOMB: '🧨', ULTIMATE: '🔮' };
 
+// ===== v1.4.19 血量 + 护盾能量机制 =====
+// 总抗打击数 = 血量 + 护盾；伤害先打盾、盾破才掉血、血空才死。
+// 盾：玩家脱战自动回充；敌人盾不自动回充（只能捡道具回满）——敌我差异是玩家成长优势。
+const VITALS = {
+    PLAYER_BASE_HP: 10,          // 玩家基础血量上限（旧版 1 = 一炮死）
+    PLAYER_BASE_SHIELD: 10,      // 玩家基础护盾上限
+    PLAYER_MAX_CAP: 30,          // 玩家血/盾上限封顶（道具可慢慢涨，防无限叠）
+    SHIELD_REGEN_DELAY: 180,     // 脱战 3 秒后开始回盾
+    SHIELD_REGEN_RATE: 30,       // 每 0.5 秒回 1 点盾
+    HEAL_RATE: 40,               // 血再生池：每 40 帧回 1 血
+    HEAVY_SHIELD_CAP: 6,         // 重坦盾封顶
+    ELITE_SHIELD_CAP: 8,         // 精英盾封顶
+    BOSS_SHIELD_CAP: 40,         // Boss 盾封顶
+    BOSS_SHIELD_REGEN_RATE: 300, // Boss 盾每 5 秒回 1
+};
+
 // ===== 漫画式反馈文案池（纯数据驱动，想加梗直接往数组里塞即可）=====
 // 抽取方式为"抽签袋"：整个池子洗一遍逐个抽，抽空才重洗 → 一轮内绝不重复
 // 玩家坦克被击毁时的求救台词
@@ -334,6 +350,11 @@ class AudioManager {
             osc.type = 'square'; osc.frequency.setValueAtTime(150, now);
             gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
             osc.start(now); osc.stop(now + 0.1);
+        } else if (type === 'shield') {
+            // v1.4.19：护盾吸收音——高频短促"叮"
+            osc.type = 'sine'; osc.frequency.setValueAtTime(900, now); osc.frequency.exponentialRampToValueAtTime(1400, now + 0.08);
+            gain.gain.setValueAtTime(0.06, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+            osc.start(now); osc.stop(now + 0.12);
         }
     }
 }
@@ -372,6 +393,7 @@ class PowerUp {
     constructor(game, x, y, type) { 
         this.game = game; this.x = x; this.y = y; this.type = type; this.width = 64; this.height = 64; this.timer = 900; this.active = true;
         if (type === POWERUP_TYPES.FLY) this.game.showTip("💡 TIP: 吃到直升机🚁可获得飞行能力，无视地形与子弹，按开火键轰炸！", 600);
+        else if (type === POWERUP_TYPES.SHIELD) this.game.showTip("💡 TIP: 能量护盾🛡️上限+5并瞬间回满！护盾被打完才会掉血，脱战会自动回充！", 600);
         else if (type === POWERUP_TYPES.BOAT) this.game.showTip("💡 TIP: 吃到小艇🚤可在水面上自由移动，利用湖泊躲避不会游泳的敌人！", 600);
         else if (type === POWERUP_TYPES.MAX_WEAPON) this.game.showTip("💡 TIP: 遗产火箭！吃到🚀直接升至满级5级，火力全开！", 600);
         else if (type === POWERUP_TYPES.BOMB) this.game.showTip("💡 TIP: 吃到炸弹💣可以瞬间消灭屏幕上的所有敌人！", 400);
@@ -444,7 +466,20 @@ class PowerUp {
             if (isPlayer) { this.game.enemies.forEach(e => { if (e.isBoss) e.destroy(player, 10); else e.destroy(player, 100); }); }
             else { this.game.players.forEach(p => p.destroy(player, 2)); this.game.showAnnouncement('⚠️ 敌人使用了全屏炸弹!', '#f00'); }
         }
-        else if (this.type === POWERUP_TYPES.SHIELD) player.setShield(360);
+        else if (this.type === POWERUP_TYPES.SHIELD) {
+            // v1.4.19：护盾道具 = 能量盾上限 +5 并瞬间回满 + 2 秒无敌奖励；
+            // 敌人只回满不扩容（首次给 3 点基础盾）——延续 v1.4.15 防膨胀思路
+            if (isPlayer) {
+                player.maxShield = Math.min(VITALS.PLAYER_MAX_CAP, player.maxShield + 5);
+                player.shieldHp = player.maxShield;
+                player.setShield(120);
+                this.game.showFloatingText('护盾扩容 +5!', player.x + player.width / 2, player.y - 14, '#4dd8ff');
+            } else {
+                if (player.maxShield === 0) player.maxShield = 3;
+                player.shieldHp = player.maxShield;
+                this.game.showAnnouncement('⚠️ 敌方坦克展开了能量护盾!', '#f00');
+            }
+        }
         else if (this.type === POWERUP_TYPES.STAR) player.addFireProgress(FIRE_STAR_GAIN);
         else if (this.type === POWERUP_TYPES.SHOVEL) {
             if (isPlayer) this.game.fortifyBase();
@@ -453,6 +488,9 @@ class PowerUp {
         else if (this.type === POWERUP_TYPES.LIFE) {
             if (isPlayer) {
                 player.lives++;
+                // v1.4.19：血再生池——吃 ❤️ 后血量慢慢恢复（每 40 帧 +1），不再瞬间生效
+                player.healPool += 10;
+                this.game.showFloatingText('+10 再生', player.x + player.width / 2, player.y - 14, '#7cff5a');
                 this.game.updateHUD();
             }
             // v1.4.15：敌人捡 LIFE 只回血不涨上限——旧版 maxHealth+5 可无限叠加，
@@ -468,13 +506,15 @@ class PowerUp {
             // 改为「至少提到 5 级，且至多在本级基础上 +2 级」，满血奖励保留。
             // v1.4.15：血量奖励仅限玩家（旧版敌人分支写死 1+9*2=19 血上限+满血，
             // 踩到空投遗产火箭的普通坦克直接 Boss 血量）；敌人只涨火力、回 3 血
-            const hpBonus = isPlayer ? 1 + player.level * 2 : 0;
             player.level = Math.min(9, Math.max(player.level + FIRE_MAX_WEAPON_STEP, FIRE_MAX_WEAPON_FLOOR));
             player.fireProgress = 0;
             player.speed = Math.min(8, 4 + player.level * 0.15);
             if (isPlayer) {
-                player.maxHealth = Math.max(player.maxHealth, hpBonus);
+                // v1.4.19：火箭 = 火力跃升 + 血/盾上限各 +5 并回满（封顶 30）
+                player.maxHealth = Math.min(VITALS.PLAYER_MAX_CAP, player.maxHealth + 5);
                 player.health = player.maxHealth;
+                player.maxShield = Math.min(VITALS.PLAYER_MAX_CAP, player.maxShield + 5);
+                player.shieldHp = player.maxShield;
             } else {
                 player.health = Math.min(player.maxHealth, player.health + 3);
             }
@@ -1281,7 +1321,9 @@ class Bullet {
 }
 
 class Tank {
-    constructor(game, x, y, color) { this.game = game; this.x = x; this.y = y; this.width = 60; this.height = 60; this.color = color; this.direction = 'UP'; this.speed = 4; this.cooldown = 0; this.alive = true; this.shieldTimer = 0; this.level = 0; this.fireProgress = 0; this.score = 0; this.weaponClass = 'NORMAL'; }
+    constructor(game, x, y, color) { this.game = game; this.x = x; this.y = y; this.width = 60; this.height = 60; this.color = color; this.direction = 'UP'; this.speed = 4; this.cooldown = 0; this.alive = true; this.shieldTimer = 0; this.level = 0; this.fireProgress = 0; this.score = 0; this.weaponClass = 'NORMAL';
+        // v1.4.19：护盾能量（shieldHp/maxShield，区别于 shieldTimer 时间无敌）+ 血再生池
+        this.shieldHp = 0; this.maxShield = 0; this.shieldRegenTimer = 0; this.healPool = 0; this.healTimer = 0; }
     setShield(d) { this.shieldTimer = d; }
     // 升一级。返回是否真的升了（满级时返回 false，方便调用方跳过反馈）
     upgrade() { 
@@ -1289,6 +1331,10 @@ class Tank {
         this.level++;
         this.speed = Math.min(8, 4 + this.level * 0.15); 
         if (this instanceof Player) {
+            // v1.4.19：升级伴随生存成长——血/盾上限各 +1（封顶 30）
+            if (this.maxHealth < VITALS.PLAYER_MAX_CAP) this.maxHealth++;
+            this.health = Math.min(this.maxHealth, this.health + 1);
+            if (this.maxShield < VITALS.PLAYER_MAX_CAP) { this.maxShield++; this.shieldHp = Math.min(this.maxShield, this.shieldHp + 1); }
             this.game.showFloatingText(`LEVEL ${this.level}!`, this.x + this.width / 2, this.y - 18, '#7cff5a');
             // 大横幅只在里程碑等级弹，否则每两三杀就刷屏
             if (FIRE_MILESTONES.includes(this.level)) {
@@ -1319,6 +1365,15 @@ class Tank {
     update() { if (this.cooldown > 0) this.cooldown--;
         if (this.overdriveTimer > 0) this.overdriveTimer--; if (this.shieldTimer > 0) this.shieldTimer--; if (this.flyBombCooldown > 0) this.flyBombCooldown--; 
         if (this.flashTimer > 0) this.flashTimer--;
+        // v1.4.19：玩家脱战回盾（受击打断，见 destroy）；血再生池慢慢回血
+        if (this instanceof Player && this.maxShield > 0 && this.shieldHp < this.maxShield) {
+            this.shieldRegenTimer++;
+            if (this.shieldRegenTimer >= VITALS.SHIELD_REGEN_DELAY && this.shieldRegenTimer % VITALS.SHIELD_REGEN_RATE === 0) this.shieldHp++;
+        }
+        if (this.healPool > 0 && this.health < this.maxHealth) {
+            this.healTimer++;
+            if (this.healTimer >= VITALS.HEAL_RATE) { this.healTimer = 0; this.healPool--; this.health = Math.min(this.maxHealth, this.health + 1); }
+        }
     }
     move(dir) {
         this.direction = dir; let nx = this.x; let ny = this.y;
@@ -1417,6 +1472,23 @@ class Tank {
     destroy(killer, damage = 1) {
         if (!this.alive) return;
         if (this.shieldTimer > 0) return; 
+        // v1.4.19：伤害先被护盾能量吸收，溢出才进血池；受击打断盾回充
+        this.shieldRegenTimer = 0;
+        if (this.shieldHp > 0 && damage > 0) {
+            const absorbed = Math.min(this.shieldHp, damage);
+            this.shieldHp -= absorbed;
+            damage -= absorbed;
+            this.flashTimer = 4;
+            audio.play('shield');
+            if (this.shieldHp <= 0) {
+                this.shieldHp = 0;
+                if (this instanceof Player) this.game.showFloatingText('护盾破裂!', this.x + this.width / 2, this.y - 14, '#4dd8ff');
+            }
+            if (damage <= 0) {
+                if (this instanceof Player) this.game.updateHUD();
+                return; // 护盾全部吸收，血池无损
+            }
+        }
         this.health = (this.health || 1) - damage;
         this.flashTimer = 4;
         
@@ -1647,7 +1719,35 @@ class Tank {
             }
         }
         if (this.shieldTimer > 0) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(px + 30, py + 30, 38, 0, Math.PI * 2); ctx.stroke(); }
+        // v1.4.19：能量护盾实体圈（青色虚线，区别于白圈无敌）
+        if (this.shieldHp > 0) { ctx.strokeStyle = 'rgba(77,216,255,0.45)'; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.beginPath(); ctx.arc(px + 30, py + 30, 36, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); }
+        this._drawVitals(ctx);   // v1.4.19 头顶血条/盾条
         if (this.emote) this._drawEmote(ctx);   // 敌方坦克头顶的表情包
+    }
+    // v1.4.19：头顶生命/护盾状态条——玩家常驻；敌人只有带盾或掉过血才显示（保持战场干净）
+    _drawVitals(ctx) {
+        if (this.isBoss) return; // Boss 用自己的大血条 + 盾条
+        const isPlayer = this instanceof Player;
+        const showHp = isPlayer || this.health < this.maxHealth;
+        const showShield = this.maxShield > 0;
+        if (!showHp && !showShield) return;
+        const w = 48; const x = this.x + (this.width - w) / 2; let y = this.y - 15;
+        ctx.save();
+        if (showShield) {
+            ctx.fillStyle = '#223'; ctx.fillRect(x, y, w, 4);
+            ctx.fillStyle = '#4dd8ff';
+            ctx.fillRect(x, y, w * Math.max(0, Math.min(1, this.shieldHp / this.maxShield)), 4);
+            ctx.strokeStyle = '#556'; ctx.lineWidth = 1; ctx.strokeRect(x, y, w, 4);
+            y += 6;
+        }
+        if (showHp) {
+            const r = Math.max(0, Math.min(1, this.health / this.maxHealth));
+            ctx.fillStyle = '#222'; ctx.fillRect(x, y, w, 4);
+            ctx.fillStyle = r > 0.6 ? '#3cff3c' : (r > 0.3 ? '#fa0' : '#f00');
+            ctx.fillRect(x, y, w * r, 4);
+            ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.strokeRect(x, y, w, 4);
+        }
+        ctx.restore();
     }
 
     // 头顶表情包：漫画小气泡 + emoji，跟随坦克移动（世界坐标，lift 用于给 Boss 的标题/血条让位）
@@ -1713,8 +1813,11 @@ class Player extends Tank {
         this.controls = controls;
         this.id = id;
         this.shownTips = new Set();
-        this.health = 1;
-        this.maxHealth = 1;
+        // v1.4.19：玩家不再"一炮死"——基础血 10 + 护盾能量 10
+        this.maxHealth = VITALS.PLAYER_BASE_HP;
+        this.health = this.maxHealth;
+        this.maxShield = VITALS.PLAYER_BASE_SHIELD;
+        this.shieldHp = this.maxShield;
         this.aiActive = false;
         this.lastInputTime = Date.now();
         this.aiDodgeDir = null;
@@ -2140,10 +2243,14 @@ class Enemy extends Tank {
         if (this.variant === 'FAST') { this.speed = (2.5 + Math.min(stage * 0.05, 0.8)) * diffMult; this.health = 1; this.color = '#FF9999'; }
         else if (this.variant === 'HEAVY') { 
             this.speed = (1.0 + Math.min(stage * 0.02, 0.5)) * diffMult; this.health = Math.min(5, 3 + Math.floor(stage / 10)); this.color = '#777777'; // v1.4.15 封顶 5
+            // v1.4.19：重坦带能量护盾（随关卡缓慢成长、封顶 6；不自动回充，捡道具可回满）
+            this.maxShield = Math.min(VITALS.HEAVY_SHIELD_CAP, 2 + Math.floor(stage / 15)); this.shieldHp = this.maxShield;
             if (Math.random() < 0.3) this.weaponClass = 'EXPLOSIVE';
         }
         else if (this.variant === 'ELITE') { 
             this.speed = (1.8 + Math.min(stage * 0.05, 0.8)) * diffMult; this.health = Math.min(7, 3 + Math.floor(stage / 5)); this.level = Math.min(3, 1 + Math.floor(stage / 10)); this.color = '#FF55FF'; // v1.4.15 封顶 7
+            // v1.4.19：精英护盾更强（封顶 8）
+            this.maxShield = Math.min(VITALS.ELITE_SHIELD_CAP, 3 + Math.floor(stage / 15)); this.shieldHp = this.maxShield;
             const wClasses = ['LASER', 'SPREAD', 'BOUNCE'];
             this.weaponClass = wClasses[Math.floor(Math.random() * wClasses.length)];
         }
@@ -2318,6 +2425,9 @@ class Boss extends Enemy {
         const avgPlayerLvl = Math.max(1, ...this.game.players.map(p => p.level || 1));
         this.health = Math.floor((10 + stage * 1.5 + avgPlayerLvl * 1.5) * hpMult); 
         this.maxHealth = this.health;
+        // v1.4.19：Boss 护盾随关卡成长（封顶 40），且会缓慢回充（见 Boss.update）
+        this.maxShield = Math.min(VITALS.BOSS_SHIELD_CAP, 8 + Math.floor(stage / 5));
+        this.shieldHp = this.maxShield;
         this.speed = (1.0 + difficulty * 0.8) * speedMult; 
         this.baseSpeed = this.speed;
         this.isBoss = true;
@@ -2427,6 +2537,11 @@ class Boss extends Enemy {
     update() {
         this.cooldown--;
         this.shieldTimer--;
+        // v1.4.19：Boss 护盾缓慢回充（每 5 秒 +1，受击打断）
+        if (this.maxShield > 0 && this.shieldHp < this.maxShield) {
+            this.shieldRegenTimer++;
+            if (this.shieldRegenTimer >= VITALS.BOSS_SHIELD_REGEN_RATE) { this.shieldRegenTimer = 0; this.shieldHp++; }
+        }
         this._updateEmote();   // Boss 也走同一套表情包（重写了 update，不会自动继承 Enemy 的调用）
         
         if (this.game.enemyFrozenTimer > 0) return;
@@ -2619,11 +2734,21 @@ class Boss extends Enemy {
             this.game.effects.push(new Effect(this.x + this.width/2, this.y + this.height/2, 'EXPLOSION', 1));
             return;
         }
+        // v1.4.19：Boss 也有护盾能量——先吸盾，溢出才进血池；伤害统计记总伤（含盾伤），MVP 不失真
+        const totalDamage = damage;
+        this.shieldRegenTimer = 0;
+        if (this.shieldHp > 0 && damage > 0) {
+            const absorbed = Math.min(this.shieldHp, damage);
+            this.shieldHp -= absorbed;
+            damage -= absorbed;
+            audio.play('shield');
+            if (this.shieldHp <= 0) { this.shieldHp = 0; this.game.showFloatingText('BOSS护盾破裂!', this.x + this.width / 2, this.y - 34, '#4dd8ff'); }
+        }
         this.health -= damage; 
         this.flashTimer = 4;
         
         if (killer instanceof Player) {
-            this.damageTracker[killer.id] = (this.damageTracker[killer.id] || 0) + damage;
+            this.damageTracker[killer.id] = (this.damageTracker[killer.id] || 0) + totalDamage;
         }
         this.game.effects.push(new Effect(this.x + Math.random()*this.width, this.y + Math.random()*this.height, 'EXPLOSION', 2.5));
         audio.play('hit');
@@ -2763,6 +2888,13 @@ class Boss extends Enemy {
         ctx.fillText(this.title, cx, py - 25);
         const barW = w * 0.8; const barH = 8;
         const barX = cx - barW / 2; const barY = py - 18;
+        // v1.4.19：Boss 护盾条（血条上方，青色）
+        if (this.maxShield > 0) {
+            ctx.fillStyle = '#223'; ctx.fillRect(barX, barY - 6, barW, 4);
+            ctx.fillStyle = '#4dd8ff';
+            ctx.fillRect(barX, barY - 6, barW * Math.max(0, Math.min(1, this.shieldHp / this.maxShield)), 4);
+            ctx.strokeStyle = '#556'; ctx.lineWidth = 1; ctx.strokeRect(barX, barY - 6, barW, 4);
+        }
         ctx.fillStyle = '#333'; ctx.fillRect(barX, barY, barW, barH);
         const hpRatio = this.health / this.maxHealth;
         ctx.fillStyle = hpRatio > 0.5 ? '#0a0' : (hpRatio > 0.25 ? '#fa0' : '#f00');
@@ -3295,6 +3427,9 @@ class Game {
 
         document.getElementById('p1-lives').innerText = '❤️x' + this.players[0].lives;
         document.getElementById('p2-lives').innerText = '❤️x' + this.players[1].lives;
+        // v1.4.19：HUD 血量/护盾数值
+        const _vit = (id, p) => { const el = document.getElementById(id); if (el && p) el.innerText = `❤️ ${p.health}/${p.maxHealth}  🛡️ ${Math.ceil(p.shieldHp)}/${p.maxShield}`; };
+        _vit('p1-vitals', this.players[0]); _vit('p2-vitals', this.players[1]);
         
         const livesInfo = document.getElementById('lives-info');
         if (livesInfo) livesInfo.innerText = '';
@@ -3305,13 +3440,14 @@ class Game {
             player.level = Math.floor(player.level / 2);
             player.speed = Math.min(8, 4 + player.level * 0.15);
             player.fireProgress = 0;
-            player.health = 1;
-            player.maxHealth = 1;
             this.showFloatingText('火力减半!', player.x + player.width/2, player.y - 10, '#f00');
-        } else {
-            player.health = 1;
-            player.maxHealth = 1;
         }
+        // v1.4.19：重生回基础血/盾并回满（道具涨的上限随死亡惩罚回落，与"等级减半"同思路）
+        player.maxHealth = VITALS.PLAYER_BASE_HP;
+        player.health = player.maxHealth;
+        player.maxShield = VITALS.PLAYER_BASE_SHIELD;
+        player.shieldHp = player.maxShield;
+        player.healPool = 0;
 
         // 漫画式求生呼救：残骸停留 + 残骸旁冒泡喊话
         const wcx = player.x + player.width / 2;
@@ -3342,8 +3478,12 @@ class Game {
         player.level = 0;
         player.fireProgress = 0;
         player.speed = 4;
-        player.maxHealth = 1;
-        player.health = 1;
+        // v1.4.19：救活回基础血/盾并回满
+        player.maxHealth = VITALS.PLAYER_BASE_HP;
+        player.health = player.maxHealth;
+        player.maxShield = VITALS.PLAYER_BASE_SHIELD;
+        player.shieldHp = player.maxShield;
+        player.healPool = 0;
         player.weaponClass = 'NORMAL';
         player.alive = true;
         player.setShield(180);
