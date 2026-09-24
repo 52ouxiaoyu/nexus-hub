@@ -2820,7 +2820,9 @@ class Game {
         this.canvas.addEventListener('click', () => this.canvas.focus());
         this.loop();
     }
-    shakeScreen(intensity) { this.shakeTimer = intensity; this.shakeIntensity = intensity; }
+    // v1.4.16：屏幕震动已整体移除——用户反馈"打起来整个屏幕震动，眼睛都花了，不需要花里胡哨"。
+    // 所有震动调用（战斗/死亡/Boss/大招等 10+ 处）都汇聚本入口，置空即全关；shakeX/Y 恒为 0，translate 成为无操作。
+    shakeScreen(intensity) { this.shakeTimer = 0; this.shakeIntensity = 0; }
     showAnnouncement(text, color = '#fff') { this.announcements.push({ text, color, timer: 120, y: CANVAS_SIZE / 2 }); }
     showFloatingText(text, x, y, color = '#fff') { this.floatingTexts.push({ text, x, y, color, timer: 60, vy: -2 }); }
 
