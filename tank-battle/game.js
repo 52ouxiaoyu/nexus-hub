@@ -1127,7 +1127,9 @@ class Bullet {
                 if (this.owner instanceof Enemy) {
                     this.game.baseHealth--;
                     if (this.game.baseHealth === 2 || this.game.baseHealth === 1) {
-                        this.game.showAnnouncement('⚠️ 警告！大本营血量告急！ ⚠️', '#f00');
+                        // v1.4.17：告急大字只显示 5 秒（300 帧）自动取消——常驻大字有遮挡嫌疑，
+                        // 之后只靠红色边框闪烁 + 基地旁小示意提示大本营没血了。
+                        this.game.baseLowTextTimer = 300;
                         audio.play('explosion');
                     }
                     if (this.game.baseHealth <= 0) {
@@ -2774,7 +2776,7 @@ class Game {
         this.canvas = document.getElementById('game-canvas'); this.ctx = this.canvas.getContext('2d');
         window._tankGame = this; // 调试/自测句柄
         this.canvas.width = CANVAS_SIZE; this.canvas.height = CANVAS_SIZE; this.input = new InputHandler(); this.map = new GameMap(this);
-        this.players = []; this.enemies = []; this.bullets = []; this.effects = []; this.powerUps = []; this.fortifyTimer = 0; this.spawnTimer = 0; this.enemyFrozenTimer = 0; this.playerFrozenTimer = 0;
+        this.players = []; this.enemies = []; this.bullets = []; this.effects = []; this.powerUps = []; this.fortifyTimer = 0; this.spawnTimer = 0; this.enemyFrozenTimer = 0; this.playerFrozenTimer = 0; this.baseLowTextTimer = 0;
         this.currentStage = 0; this.gameState = 'START'; this.lives = 3;
         this.hitStopTimer = 0;
         this.replayHistory = [];
@@ -3217,7 +3219,7 @@ class Game {
         document.getElementById('start-screen').classList.add('hidden'); document.getElementById('game-over-screen').classList.add('hidden');
         document.getElementById('stage-info').innerText = `关卡 Stage ${this.currentStage + 1}`;
 
-        this.map.reset(this.currentStage); this.bullets = []; this.enemies = []; this.effects = []; this.powerUps = []; this.fortifyTimer = 0; this.enemyFrozenTimer = 0; this.playerFrozenTimer = 0;
+        this.map.reset(this.currentStage); this.bullets = []; this.enemies = []; this.effects = []; this.powerUps = []; this.fortifyTimer = 0; this.enemyFrozenTimer = 0; this.playerFrozenTimer = 0; this.baseLowTextTimer = 0;
         this.stageClearTimer = 0;
         this.spawningEnemies = 0;
         this.currentLevel = this.map.currentLevel;
@@ -3438,6 +3440,7 @@ class Game {
         }
 
         if (this.fortifyTimer > 0) { this.fortifyTimer--; if (this.fortifyTimer === 0) this.unfortifyBase(); }
+        if (this.baseLowTextTimer > 0) this.baseLowTextTimer--; // v1.4.17 告急大字 5 秒倒计时
         
         // Random Airdrop for Rare Items
         if (Math.random() < 0.0001) {
@@ -3643,13 +3646,25 @@ class Game {
             this.battleCries.forEach(c => { try { this._drawBattleCry(this.ctx, c); } catch(e) {} });
             this.ctx.restore();
             if (this.baseHealth > 0 && this.baseHealth <= 2) {
+                // v1.4.17：大本营没血时——
+                // ① 红色边框闪烁（不再全屏泛红，避免遮住战场）；
+                // ② 基地正上方一个小的闪烁示意；
+                // ③ "血量告急"大字只在 baseLowTextTimer（5 秒）内显示，之后永久取消。
                 this.ctx.save();
-                this.ctx.fillStyle = `rgba(255, 0, 0, ${Math.abs(Math.sin(Date.now() / 200)) * 0.3})`;
-                this.ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-                this.ctx.fillStyle = '#f00';
-                this.ctx.font = 'bold 48px Arial';
-                this.ctx.textAlign = 'center';
-                if (Math.floor(Date.now() / 500) % 2 === 0) {
+                const blink = Math.abs(Math.sin(Date.now() / 200));
+                this.ctx.strokeStyle = `rgba(255, 0, 0, ${0.35 + blink * 0.65})`;
+                this.ctx.lineWidth = 10;
+                this.ctx.strokeRect(5, 5, CANVAS_SIZE - 10, CANVAS_SIZE - 10);
+                if (Math.floor(Date.now() / 400) % 2 === 0) {
+                    this.ctx.fillStyle = '#f00';
+                    this.ctx.font = 'bold 16px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('⚠️ 大本营没血了', 13 * TILE_SIZE, 22.6 * TILE_SIZE);
+                }
+                if (this.baseLowTextTimer > 0 && Math.floor(Date.now() / 500) % 2 === 0) {
+                    this.ctx.fillStyle = '#f00';
+                    this.ctx.font = 'bold 48px Arial';
+                    this.ctx.textAlign = 'center';
                     this.ctx.fillText("🚨 大本营血量告急！速回防！ 🚨", CANVAS_SIZE/2, 100);
                 }
                 this.ctx.restore();
