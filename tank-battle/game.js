@@ -1126,9 +1126,10 @@ class Bullet {
             } else if (tile === TILE_TYPES.BASE) {
                 if (this.owner instanceof Enemy) {
                     this.game.baseHealth--;
-                    if (this.game.baseHealth === 2 || this.game.baseHealth === 1) {
-                        // v1.4.17：告急大字只显示 5 秒（300 帧）自动取消——常驻大字有遮挡嫌疑，
-                        // 之后只靠红色边框闪烁 + 基地旁小示意提示大本营没血了。
+                    // v1.4.18：告急阈值随血量上限等比缩放（上限 10% 取整、至少 2）；
+                    // 大字仍只显示 5 秒（v1.4.17），且一局只弹一次，之后靠红框闪烁 + 小示意。
+                    if (this.game.baseHealth <= this.game.baseWarnLevel && !this.game.baseWarnShown) {
+                        this.game.baseWarnShown = true;
                         this.game.baseLowTextTimer = 300;
                         audio.play('explosion');
                     }
@@ -2785,7 +2786,7 @@ class Game {
         this.comboTimer = 0;
         this.wreckages = []; this.paused = false;
         this.highScore = parseInt(localStorage.getItem('tankBattleHighScore') || '0');
-        this.baseHealth = 5; this.maxBaseHealth = 5;
+        this.maxBaseHealth = 5; this.baseHealth = 5; this.baseWarnLevel = 2; this.baseWarnShown = false;
         this.weather = 'NONE'; this.weatherParticles = [];
         this.shakeX = 0; this.shakeY = 0; this.shakeTimer = 0;
         this.announcements = [];
@@ -3226,8 +3227,12 @@ class Game {
         const diffMult = this.difficulty === 'easy' ? 0.7 : (this.difficulty === 'hard' ? 1.3 : 1);
         this.enemiesRemaining = Math.floor(this.currentLevel.totalEnemies * diffMult);
         this.initialEnemies = this.enemiesRemaining;
-        if (this.currentStage === 0) { this.baseHealth = 5; this.maxBaseHealth = 5; }
-        else { this.baseHealth = this.maxBaseHealth; }
+        // v1.4.18：大本营血量随关卡增厚——固定 5 点在几百关就是一炮秒；
+        // 基础 5 点 + 每关 +2（1000 关 ≈ 2005 点），血条按比例显示自动适配。
+        this.maxBaseHealth = 5 + this.currentStage * 2;
+        this.baseHealth = this.maxBaseHealth;
+        this.baseWarnLevel = Math.max(2, Math.ceil(this.maxBaseHealth * 0.1)); // 告急阈值等比缩放
+        this.baseWarnShown = false;
         if (this.players.length === 0) {
             this.players = [
                 new Player(this, TILE_SIZE * 8, TILE_SIZE * 22, COLORS.PLAYER1, { up:'KeyW', down:'KeyS', left:'KeyA', right:'KeyD', shoot:'Space', rescue:'KeyU' }, 1),
@@ -3645,7 +3650,7 @@ class Game {
             this.speechBubbles.forEach(b => { try { this._drawSpeechBubble(this.ctx, b); } catch(e) {} });
             this.battleCries.forEach(c => { try { this._drawBattleCry(this.ctx, c); } catch(e) {} });
             this.ctx.restore();
-            if (this.baseHealth > 0 && this.baseHealth <= 2) {
+            if (this.baseHealth > 0 && this.baseHealth <= (this.baseWarnLevel || 2)) {
                 // v1.4.17：大本营没血时——
                 // ① 红色边框闪烁（不再全屏泛红，避免遮住战场）；
                 // ② 基地正上方一个小的闪烁示意；
