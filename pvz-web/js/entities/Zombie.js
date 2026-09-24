@@ -38,31 +38,51 @@ class Zombie extends Entity {
             this.walkSrc = 'assets/images/Zombies/FlagZombie/FlagZombie.gif';
             this.attackSrc = 'assets/images/Zombies/FlagZombie/FlagZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
-        } else if (type === 'peahead' || type === 'nuthead' || type === 'sunhead' || type === 'snowpeahead' || type === 'jalapenohead') {
+        } else if (type === 'peahead' || type === 'nuthead' || type === 'sunhead' || type === 'snowpeahead' || type === 'jalapenohead' || type === 'machinegunhead' || type === 'tallnuthead') {
             // === 植物头僵尸（仅融合进化模式刷出，纯外观变体）===
             // 行为与普通僵尸完全一致（hp=200 / speed=20 / 无任何附加能力），
             // 唯一的区别是头顶顶着一棵基础植物（豌豆/坚果/向日葵/寒冰射手），
             // 该植物是外观而非融合植物，也不是"装甲"，不提供任何增益。
-            const headSrc = {
-                peahead:     'assets/images/Plants/Peashooter/Peashooter.gif',
-                nuthead:     'assets/images/Plants/WallNut/WallNut.gif',
-                sunhead:     'assets/images/Plants/SunFlower/SunFlower1.gif',
-                snowpeahead: 'assets/images/Plants/SnowPea/SnowPea.gif',
-                jalapenohead: 'assets/images/Plants/Jalapeno/Jalapeno.gif'
+            // v3.22.1：植物头裁剪配置——cw/ch=gif 画布尺寸，keepTop=只保留顶部比例（裁掉茎干底座），
+            // w=显示宽度（头部放大到足以完全遮住僵尸自己的头，僵尸头区约 67×70px）
+            const headCfg = {
+                // v3.23.0：头部缩小到"刚好重叠在僵尸头上、与身体匹配"（僵尸头约 67px 宽）
+                peahead:     { src: 'assets/images/Plants/Peashooter/Peashooter.gif', cw: 71, ch: 71, keepTop: 0.66, w: 84 },
+                nuthead:     { src: 'assets/images/Plants/WallNut/WallNut.gif',       cw: 65, ch: 73, keepTop: 1.0,  w: 60 },
+                sunhead:     { src: 'assets/images/Plants/SunFlower/SunFlower1.gif',  cw: 73, ch: 74, keepTop: 0.68, w: 88 },
+                snowpeahead: { src: 'assets/images/Plants/SnowPea/SnowPea.gif',       cw: 71, ch: 71, keepTop: 0.66, w: 80 },
+                jalapenohead:{ src: 'assets/images/Plants/Jalapeno/Jalapeno.gif',     cw: 68, ch: 89, keepTop: 1.0,  w: 50 },
+                machinegunhead: { src: 'assets/images/Plants/GatlingPea/GatlingPea.gif', cw: 71, ch: 71, keepTop: 0.72, w: 88 },
+                tallnuthead: { src: 'assets/images/Plants/TallNut/TallNut.gif',       cw: 83, ch: 119, keepTop: 0.62, w: 58 }
             }[type];
-            const headSize = { peahead: 56, nuthead: 64, sunhead: 62, snowpeahead: 58, jalapenohead: 56 }[type];
             this.hp = 200; this.maxHp = 200;
             this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
-            this.createPlantHead(headSrc, headSize); // 头顶一棵基础植物（纯外观）
+            this.createPlantHead(headCfg); // 头顶植物头（裁剪+放大，遮住僵尸本头）
             if (type === 'jalapenohead') {
                 // v3.22.0 火爆辣椒植物僵尸（融合进化后期专属）：精锐血量保证走到植物跟前，
                 // 连续吃掉 2 株植物 → 引爆整排（见 _jalapenoRowBoom）
                 this.hp = 600; this.maxHp = 600;
                 this._eatenCount = 0;
+            } else if (type === 'nuthead') {
+                // v3.23.0：坚果头僵尸血量 = 铁桶僵尸（1300）的两倍
+                this.hp = 2600; this.maxHp = 2600;
+            } else if (type === 'tallnuthead') {
+                // v3.23.0：高坚果头僵尸血量 = 坚果头的两倍
+                this.hp = 5200; this.maxHp = 5200;
             }
+        } else if (type === 'mysterybox') {
+            // v3.23.0 盲盒僵尸：本体=普通僵尸（200 血），头顶顶着一只问号罐；
+            // 被打死时开出一只随机僵尸（融合+经典全类型，见 _openMysteryBox）。
+            // 融合模式可刷出；砸罐子模式仅金罐可出。
+            this.hp = 200; this.maxHp = 200;
+            this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this.createPlantHead({ src: 'assets/images/Vase/Vase_Question.png', cw: 90, ch: 100, keepTop: 1.0, w: 46 });
         } else if (type === 'conehead') {
             this.hp = 560; this.maxHp = 560;
             this.element.src = 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif';
@@ -199,34 +219,61 @@ class Zombie extends Entity {
     }
     
     // 植物头僵尸：把一颗基础植物顶在头上（独立 DOM 层，随僵尸同步移动）
-    createPlantHead(src, headSize) {
+    createPlantHead(cfg) {
+        // v3.22.1：植物头=overflow 裁剪容器——整株 gif 顶部对齐放入，容器只露出顶部 keepTop
+        //（豌豆/向日葵只留头部，茎干底座被裁掉）；头部放大到完全遮住僵尸自己的头。
+        const wrap = document.createElement('div');
+        wrap.style.position = 'absolute';
+        wrap.style.pointerEvents = 'none';
+        wrap.style.overflow = 'hidden';
+        wrap.style.width = cfg.w + 'px';
+        wrap.style.height = Math.round(cfg.w * cfg.ch / cfg.cw * cfg.keepTop) + 'px';
         const img = document.createElement('img');
-        img.src = src;
+        img.src = cfg.src;
         img.style.position = 'absolute';
-        img.style.pointerEvents = 'none';
-        img.style.width = headSize + 'px';
-        img.style.height = headSize + 'px';
-        img.style.objectFit = 'contain';
-        // v3.22.0：植物头水平翻转——植物原图是种植朝向（面朝右），僵尸面朝左行进；
-        // 翻转后头与身体朝向契合，看起来是"长在僵尸身上的头"而不是一株完整的植物
+        img.style.left = '0';
+        img.style.top = '0';
+        img.style.width = cfg.w + 'px'; // 整株按 w 等比缩放，底部被容器裁掉
+        // 植物原图是种植朝向（面朝右），僵尸面朝左行进 → 水平翻转契合
         img.style.transform = 'scaleX(-1)';
-        this.headEl = img;
-        this.headSize = headSize;
+        wrap.appendChild(img);
+        this.headEl = wrap;      // 外层容器（定位/滤镜/掉落动画作用于此）
+        this.headImgEl = img;    // 内层整株 gif
+        this.headSize = cfg.w;
         this.hasPlantHead = true;
-        this.game.entityLayer.appendChild(img);
+        this.game.entityLayer.appendChild(wrap);
         this.syncPlantHead();
     }
     
     // 每帧把植物头锁定在僵尸头顶位置（身体图 144px 高、中心在 (x,y+yOffset)，头顶 ≈ -72px）
     syncPlantHead() {
         if (!this.headEl) return;
-        this.headEl.style.left = (this.x - this.headSize / 2) + 'px';
-        this.headEl.style.top = (this.y + this.yOffset - 72 + 6) + 'px'; // 从头顶往下 6px 开始扣住
+        // v3.22.1：头部对位——僵尸头在画布内偏右（头区中心 ≈ 中心右移 15px），且头区
+        // 约画布 24~90 行（y-48..y+18）：右移 10px + 顶部扣在 y-48，头部整体罩住僵尸灰头
+        this.headEl.style.left = (this.x - this.headSize / 2 + 10) + 'px';
+        this.headEl.style.top = (this.y + this.yOffset - 48) + 'px';
         this.headEl.style.zIndex = String(Math.floor(this.y) + 1); // 略高于同一行的身体
         // 被冰冻/黄油定身时头顶植物一起变色（外观联动，与身体同一套状态滤镜）
         this.headEl.style.filter = this._statusFilter();
     }
     
+    // v3.23.0：盲盒开箱——随机开出一只僵尸（经典冒险全类型 + 融合植物头家族），在原地出现
+    _openMysteryBox() {
+        const pool = ['normal', 'conehead', 'buckethead', 'flag', 'polevaulting', 'newspaper',
+            'screendoor', 'football', 'zomboni', 'dancing', 'pogo', 'ladder', 'jackinthebox',
+            'imp', 'gargantuar', 'peahead', 'nuthead', 'sunhead', 'snowpeahead',
+            'jalapenohead', 'machinegunhead', 'tallnuthead'];
+        const type = pool[Math.floor(Math.random() * pool.length)];
+        const z = new Zombie(this.game, this.row, type);
+        z.x = Math.max(60, this.x);
+        this.game.entities.push(z);
+        if (this.game.audioManager && this.game.audioManager.playFx) this.game.audioManager.playFx('box_open');
+        if (this.game.showAnnouncement) {
+            const name = this.game._zombieZhName ? this.game._zombieZhName(type) : type;
+            this.game.showAnnouncement(`🎁 盲盒开出：${name}！`, '#c8a2ff');
+        }
+    }
+
     // v3.22.0：火爆辣椒植物僵尸的绝技——整排引爆（同火爆辣椒：整行火力条 + 全行植物炸毁），
     // 自身在爆炸中消失（走正常死亡流程：倒地动画/计分）。只炸植物，不伤同排僵尸（都是友军）。
     _jalapenoRowBoom() {
@@ -262,7 +309,8 @@ class Zombie extends Entity {
     
     // 减速统一入口（植物头僵尸与普通僵尸一致，均可被减速；友方魅惑僵尸不可被减速）
     setSlow(t = 10) {
-        if (this.isDead || this.hypnotized) return;
+        // v3.23.0：寒冰头僵尸免疫寒冰减速
+        if (this.isDead || this.hypnotized || this.type === 'snowpeahead') return;
         this.isSlowed = true;
         this.slowTimer = t;
     }
@@ -270,7 +318,8 @@ class Zombie extends Entity {
     // ===== v3.10.0 黄油定身（玉米投手）：完全冻结 sec 秒 =====
     // 独立于寒冰减速：减速是"行动力 ×0.3"，黄油是"行动力 = 0"，可叠加（黄油期间蓝+黄取黄）。
     freezeButter(sec = 3) {
-        if (this.isDead || this.hypnotized || this.state === 'DYING') return;
+        // v3.23.0：寒冰头僵尸免疫黄油定身
+        if (this.isDead || this.hypnotized || this.state === 'DYING' || this.type === 'snowpeahead') return;
         // 再次命中黄油 → 刷新持续时间（不叠加时长）
         this.butterTimer = Math.max(this.butterTimer, sec);
         this.isButtered = true;
@@ -303,7 +352,8 @@ class Zombie extends Entity {
     
     // 被魅惑菇策反：调头向右，为玩家而战（PVZ 原版机制：满血转化）
     hypnotize() {
-        if (this.hypnotized) return;
+        // v3.23.0：寒冰头僵尸免疫魅惑
+        if (this.hypnotized || this.type === 'snowpeahead') return;
         this.hypnotized = true;
         this.thaw();              // 清除冰冻状态与蓝色滤镜
         this.hp = this.maxHp;     // 满状态转化
@@ -485,10 +535,12 @@ class Zombie extends Entity {
                 this.game.score += 10;
                 this.game.updateScore();
             }
-            // v3.22.0：向日葵头僵尸恢复原版机制——被击杀掉落 100 阳光（魅惑后阵亡属我方，不发）
+            // v3.23.0：向日葵头僵尸被击杀 → 掉落随机阳光（25~150，25 一档；魅惑后阵亡不发）
             if (this.type === 'sunhead' && !this.hypnotized && this.game.addSun) {
-                this.game.addSun(100);
+                this.game.addSun(25 * (1 + Math.floor(Math.random() * 6)));
             }
+            // v3.23.0：盲盒僵尸被击杀 → 开出一只随机僵尸
+            if (this.type === 'mysterybox' && !this.hypnotized) this._openMysteryBox();
             setTimeout(() => { this.isDead = true; }, 2000); 
         }
         
@@ -526,6 +578,23 @@ class Zombie extends Entity {
 
 
         if (this.state === 'WALKING') {
+            // v3.23.0：豌豆头/机枪头僵尸边走边向植物防线射击（zpea 只打植物，见 CollisionManager）
+            if ((this.type === 'peahead' || this.type === 'machinegunhead') && !this.hypnotized && !this.game.zombieMode) {
+                this._shootTimer = (this._shootTimer === undefined ? 1.2 : this._shootTimer) - deltaTime;
+                if (this._shootTimer <= 0) {
+                    this._shootTimer = this.type === 'machinegunhead' ? 1.4 : 2.0;
+                    const shots = this.type === 'machinegunhead' ? 4 : 1;
+                    for (let i = 0; i < shots; i++) {
+                        setTimeout(() => {
+                            if (this.isDead || this.state !== 'WALKING') return;
+                            const p = new Projectile(this.game, this.x - 20, this.y - 55, this.row, 'zpea');
+                            p.vx = -300; p.vy = 0;
+                            this.game.entities.push(p);
+                            if (this.game.audioManager && this.game.audioManager.playFx) this.game.audioManager.playFx('pea_pop');
+                        }, i * 160);
+                    }
+                }
+            }
             // 同排附近出现被魅惑的友方僵尸 → 停下与它搏斗（僵尸之间唯一的敌对交互）
             const hypnoFoe = this.game.entities.find(e =>
                 e instanceof Zombie && !e.isDead && e.state !== 'DYING' && e.hypnotized &&
@@ -725,7 +794,7 @@ class Zombie extends Entity {
                             : '魅惑成功！这只僵尸现在为你而战', '#ff69b4');
                     }
                     this.hypnotize();
-                } else if (this.eatTarget.type === 'garlic') {
+                } else if (this.eatTarget.type === 'garlic' && this.type !== 'snowpeahead') { // v3.23.0 寒冰头免疫大蒜改行
                     // Bite garlic and switch row!
                     this.eatTarget.hp -= 20; // single bite damage
                     this.game.audioManager.play('chomp'); // disgusted sound ideally
@@ -846,6 +915,8 @@ class Zombie extends Entity {
         // 友方（被魅惑）僵尸免疫我方植物/子弹/爆炸的一切伤害，
         // 只能被敌方僵尸肉搏杀死（FIGHTING 直接扣血）
         if (this.hypnotized) return;
+        // v3.23.0：寒冰头僵尸免疫一次性炸弹（普通子弹与地刺/钢地刺仍可伤害它）
+        if (this.type === 'snowpeahead' && opts && opts.bomb) return;
         // v3.14.0：《我是僵尸》里 橄榄球/铁门/冰车 可以硬扛 3 次一次性炸弹引爆
         //（炸弹照常爆炸、对其它僵尸照常生效），第 4 次才被炸死（opts.bomb 由各爆炸点传入）
         if (opts && opts.bomb && this.game.zombieMode &&

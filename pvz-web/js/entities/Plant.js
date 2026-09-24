@@ -154,26 +154,26 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790086663';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790263030';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790086663';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790263030';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790086663';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790263030';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790086663';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790263030';
             stat.butterChance = 0.2;
         } else if (type === 'starfruit') {
             // 杨桃（v3.6.0 经典模式可种）：五向星光射击，弹道复用融合版（Projectile 'star'）
@@ -198,7 +198,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790086663';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790263030';
             stat.yOffset = 0;
         }
 
@@ -562,7 +562,8 @@ class Plant extends Entity {
                             this.game.board.grid[pos.row][pos.col] = null;
                             let newPlant = new Plant(this.game, fusionResult);
                             this.game.board.addPlant(newPlant, pos.row, pos.col);
-                            this.game.showAnnouncement(`爆炸融合成功：${this.game.getPlantName(fusionResult)}!`, '#ff00ff');
+                            if (this.game.announceFusionOnce) this.game.announceFusionOnce(fusionResult); // v3.23.0 同配方只提示一次
+                            else this.game.showAnnouncement(`爆炸融合成功：${this.game.getPlantName(fusionResult)}!`, '#ff00ff');
                         }
                     } catch (e) {
                         console.error("Fusion error", e);
@@ -580,7 +581,8 @@ class Plant extends Entity {
         if (this.hasTrait('cherrybomb') || this.hasTrait('jalapeno')) {
             if (this.hasExploded) return;
             this.hasExploded = true;
-            this.game.audioManager.play('splat');
+            // v3.23.0：爆炸音效换成原版对应音效（樱桃=樱桃爆、辣椒=火啸）
+            this.game.audioManager.play(this.hasTrait('jalapeno') ? 'jalapeno' : 'cherrybomb');
             this.triggerBombFusion();
             
             const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
@@ -620,7 +622,7 @@ class Plant extends Entity {
             
             setTimeout(() => { this.hp = 0; }, 500);
         } else if (this.hasTrait('iceshroom')) {
-            this.game.audioManager.play('splat');
+            this.game.audioManager.play('frozen'); // v3.23.0：原版冰冻音效
             this.triggerBombFusion();
             const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
             for (let z of zombies) {
@@ -635,7 +637,7 @@ class Plant extends Entity {
             this.game.audioManager.play('plant'); // some sound
                 setTimeout(() => {
                     this.state = 'exploding';
-                    this.game.audioManager.play('splat');
+                    this.game.audioManager.play('doomshroom'); // v3.23.0：原版毁灭菇音效
                     this.triggerBombFusion();
                     this.element.src = 'assets/images/Plants/DoomShroom/Boom.png';
                     this.element.style.zIndex = 3000; // Put boom on top
@@ -1045,7 +1047,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
         } else if (this.hasTrait('iceshroom') && this.autoExplode) {
             this.explodeTimer -= deltaTime;
             if (this.explodeTimer <= 0) {
-                this.game.audioManager.play('splat');
+                this.game.audioManager.play('frozen'); // v3.23.0：原版冰冻音效
                 this.triggerBombFusion();
                 const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                 for (let z of zombies) {
@@ -1072,19 +1074,17 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     this.game.audioManager.play('plant'); // some sound
                     setTimeout(() => {
                         this.state = 'exploding';
-                        this.game.audioManager.play('splat');
+                        this.game.audioManager.play('doomshroom'); // v3.23.0：原版毁灭菇音效
                         this.triggerBombFusion();
                         this.element.src = 'assets/images/Plants/DoomShroom/Boom.png';
                         this.element.style.zIndex = 3000; // Put boom on top
                         this.element.style.transform = 'translate(-50%, -80%)'; // Move boom up a bit
 
-                        // v3.12.0：毁灭菇改为"周围一圈"爆破（3×3，以放置位置为中心），
-                        // 不再是全屏核平；且不再产生陨石坑（爆炸后本体直接消失）
+                        // v3.23.0：毁灭菇=全屏核平（用户：周围一圈是融合体的机制，本体必须全屏）；
+                        // 仍不产生陨石坑（爆炸后本体直接消失）
                         const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                         for (let z of zombies) {
-                            if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 150) {
-                                z.takeDamage(9999, { bomb: true });
-                            }
+                            z.takeDamage(9999, { bomb: true });
                         }
 
                         setTimeout(() => { this.hp = 0; }, 1000); // Boom lasts 1 sec

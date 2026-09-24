@@ -12,7 +12,7 @@ class CollisionManager {
         
         for (let p of projectiles) {
             for (let z of zombies) {
-                if (p.row === z.row && p.type !== 'cattail' && p.type !== 'gloom_puff') {
+                if (p.row === z.row && p.type !== 'cattail' && p.type !== 'gloom_puff' && p.type !== 'zpea') {
                     // 抛射型子弹（西瓜/冰西瓜）走抛物线：只有落到接近本行高度时才判定命中，
                     // 否则它在半空中就会把僵尸"隔空打死"（canHitNow 对普通子弹恒为 true）
                     if (typeof p.canHitNow === 'function' && !p.canHitNow()) continue;
@@ -22,7 +22,8 @@ class CollisionManager {
                                 p.hitZombies.add(z);
                                 // v3.14.0：大喷菇雾气穿门（pierce）—— 铁门/铁桶挡不住，直接打本体
                                 z.takeDamage(p.damage, { pierce: true });
-                                this.game.audioManager.play('splat');
+                                if (this.game.audioManager.playFx) this.game.audioManager.playFx('puff'); // v3.23.0
+                                else this.game.audioManager.play('splat');
                             }
                         } else {
                             p.isDead = true; 
@@ -85,7 +86,16 @@ class CollisionManager {
                                 setTimeout(() => boom.remove(), 800);
                             }
                             
-                            this.game.audioManager.play('splat');
+                            // v3.23.0：命中音效按弹种区分——瓜果碎裂/蔬菜砸中/豌豆噗
+                            const hitFx = (p.type === 'melon' || p.type === 'wintermelon' ||
+                                           p.type === 'cattail_melon' || p.type === 'cattail_wintermelon') ? 'crash'
+                                : (p.type === 'cabbage' || p.type === 'icecabbage' || p.type === 'kernel' ||
+                                   p.type === 'popcorn' || p.type === 'butter' || p.type === 'minicherry') ? 'thud'
+                                : (p.type === 'snowpea') ? 'ice_pop'
+                                : (p.type === 'firepea') ? 'fire_pop'
+                                : 'pea_hit';
+                            if (this.game.audioManager.playFx) this.game.audioManager.playFx(hitFx);
+                            else this.game.audioManager.play('splat');
                             break; 
                         }
                     }
@@ -110,6 +120,19 @@ class CollisionManager {
                         break;
                     }
                 }
+            }
+        }
+
+        // v3.23.0：豌豆头/机枪头僵尸的豌豆（zpea）——命中植物造成伤害（地刺/钢地刺低矮不打）
+        for (let p of projectiles) {
+            if (p.type !== 'zpea' || p.isDead) continue;
+            const hitPlants = this.game.entities.filter(e => e instanceof Plant && !e.isDead && e.row === p.row &&
+                Math.abs(e.x - p.x) < 35 &&
+                !(e.hasTrait && (e.hasTrait('spikeweed') || e.hasTrait('spikerock'))));
+            if (hitPlants.length > 0) {
+                hitPlants[0].hp -= p.damage;
+                if (this.game.audioManager.playFx) this.game.audioManager.playFx('pea_hit');
+                p.isDead = true;
             }
         }
     }
