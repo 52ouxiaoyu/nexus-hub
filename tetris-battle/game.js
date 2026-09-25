@@ -4,7 +4,7 @@
  * 双人对战俄罗斯方块 · 道具攻防系统
  * ============================================================ */
 
-const VERSION = 'v1.1.4';
+const VERSION = 'v1.2.0';
 const COLS = 10, ROWS = 20, CELL = 30;
 const MAX_CHARGE = 10;          // 必杀充能
 const ITEM_SLOTS = 3;           // 道具栏格数
@@ -47,36 +47,103 @@ function rotateMat(m, dir) {
 }
 function emptyBoard() { return Array.from({ length: ROWS }, () => Array(COLS).fill(0)); }
 
-// ---------- 简易音效 ----------
+// ---------- 音效引擎（WebAudio chiptune 合成，无外部素材）----------
+// 架构：masterGain → 压限器 → 输出（多音效叠加不爆音）
+// tone() = 振荡器（可选滑音/双波形叠层/微失谐）+ 包络；noise() = 白噪声+滤波器（打击/嗖嗖）
 const AudioSys = (() => {
-    let ctx = null;
+    let ctx = null, master = null, noiseBuf = null, muted = false;
     function ensure() {
-        if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
-        if (ctx && ctx.state === 'suspended') ctx.resume();
+        if (muted) return null;
+        if (!ctx) {
+            try {
+                ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const comp = ctx.createDynamicsCompressor();
+                comp.threshold.value = -18; comp.knee.value = 20; comp.ratio.value = 6;
+                master = ctx.createGain(); master.gain.value = 0.85;
+                master.connect(comp); comp.connect(ctx.destination);
+                noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+                const d = noiseBuf.getChannelData(0);
+                for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+            } catch (e) { return null; }
+        }
+        if (ctx.state === 'suspended') ctx.resume();
         return ctx;
     }
-    function beep(freq, dur, type, vol, delay) {
+    function tone(o) {
         const c = ensure(); if (!c) return;
-        const t0 = c.currentTime + (delay || 0);
-        const o = c.createOscillator(), g = c.createGain();
-        o.type = type || 'square'; o.frequency.value = freq;
-        g.gain.setValueAtTime(vol || 0.06, t0);
+        const t0 = c.currentTime + (o.delay || 0);
+        const dur = o.dur || 0.08, vol = o.vol || 0.05;
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(vol, t0 + (o.attack || 0.005));
         g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-        o.connect(g); g.connect(c.destination);
-        o.start(t0); o.stop(t0 + dur + 0.02);
+        for (const tp of (o.types || ['square'])) {
+            const osc = c.createOscillator();
+            osc.type = tp;
+            osc.frequency.setValueAtTime(o.freq, t0);
+            if (o.slide) osc.frequency.exponentialRampToValueAtTime(Math.max(20, o.slide), t0 + dur);
+            if (o.detune) osc.detune.value = o.detune;
+            osc.connect(g);
+            osc.start(t0); osc.stop(t0 + dur + 0.05);
+        }
+        g.connect(master);
     }
+    function noise(o) {
+        const c = ensure(); if (!c) return;
+        const t0 = c.currentTime + (o.delay || 0);
+        const dur = o.dur || 0.1, vol = o.vol || 0.05;
+        const src = c.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+        const f = c.createBiquadFilter();
+        f.type = o.filter || 'lowpass';
+        f.frequency.setValueAtTime(o.freq || 800, t0);
+        if (o.fslide) f.frequency.exponentialRampToValueAtTime(Math.max(40, o.fslide), t0 + dur);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(vol, t0 + (o.attack || 0.004));
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        src.connect(f); f.connect(g); g.connect(master);
+        src.start(t0); src.stop(t0 + dur + 0.05);
+    }
+    const seq = (notes, step, opts) =>
+        notes.forEach((f, i) => tone({ ...opts, freq: f, delay: i * step }));
     return {
-        move:   () => beep(190, 0.04, 'square', 0.03),
-        rotate: () => beep(320, 0.05, 'square', 0.04),
-        drop:   () => beep(110, 0.08, 'triangle', 0.08),
-        lock:   () => beep(160, 0.05, 'square', 0.04),
-        clear:  (n) => { for (let i = 0; i < n; i++) beep(440 + i * 130, 0.09, 'square', 0.06, i * 0.06); },
-        item:   () => { beep(660, 0.07, 'sine', 0.07); beep(990, 0.09, 'sine', 0.07, 0.07); },
-        attack: () => { beep(150, 0.16, 'sawtooth', 0.09); beep(100, 0.2, 'sawtooth', 0.08, 0.1); },
-        shield: () => beep(600, 0.12, 'sine', 0.08),
-        ult:    () => { for (let i = 0; i < 5; i++) beep(220 - i * 25, 0.12, 'sawtooth', 0.1, i * 0.07); },
-        win:    () => { [523, 659, 784, 1047].forEach((f, i) => beep(f, 0.15, 'square', 0.07, i * 0.12)); },
-        lose:   () => { [400, 300, 220, 150].forEach((f, i) => beep(f, 0.18, 'sawtooth', 0.07, i * 0.13)); },
+        toggleMute() { muted = !muted; return muted; },
+        isMuted() { return muted; },
+        // —— 基础操作 ——
+        move:   () => tone({ freq: 210, dur: 0.035, vol: 0.022 }),
+        rotate: () => tone({ freq: 300, slide: 470, dur: 0.06, vol: 0.04, types: ['square', 'triangle'] }),
+        soft:   () => tone({ freq: 150, dur: 0.03, vol: 0.014, types: ['sine'] }),
+        drop:   () => { noise({ freq: 500, fslide: 120, dur: 0.12, vol: 0.07 }); tone({ freq: 95, slide: 40, dur: 0.13, vol: 0.09, types: ['sine'] }); },
+        lock:   () => { tone({ freq: 145, dur: 0.05, vol: 0.04 }); noise({ freq: 900, fslide: 300, dur: 0.04, vol: 0.025 }); },
+        // —— 消行：行数越多越华丽；四消专属凯歌；连击追加高音闪光 ——
+        clear: (n, combo) => {
+            if (n >= 4) {
+                seq([523, 659, 784, 1047, 784, 1047, 1319], 0.07, { vol: 0.07, types: ['square', 'sine'] });
+                noise({ freq: 2400, fslide: 500, dur: 0.3, vol: 0.04 });
+            } else {
+                const scales = [[523, 659], [523, 659, 784], [523, 659, 784, 988]];
+                seq(scales[Math.min(n, 3) - 1], 0.055, { vol: 0.055, types: ['square', 'triangle'] });
+            }
+            if (combo >= 2) tone({ freq: 1500 + combo * 120, slide: 2200, dur: 0.09, vol: 0.04, types: ['sine'], delay: 0.12 });
+        },
+        // —— 道具 ——
+        item:       () => { tone({ freq: 880, slide: 1175, dur: 0.08, vol: 0.05, types: ['sine'] }); tone({ freq: 1320, dur: 0.1, vol: 0.045, types: ['sine'], delay: 0.08 }); },
+        ultReady:   () => seq([660, 880, 1320, 1760], 0.07, { vol: 0.06, types: ['sine', 'triangle'] }),
+        itemAtk:    () => { tone({ freq: 220, slide: 70, dur: 0.16, vol: 0.07, types: ['sawtooth'] }); noise({ freq: 1200, fslide: 200, dur: 0.14, vol: 0.05 }); },
+        itemFog:    () => noise({ freq: 300, fslide: 2400, dur: 0.5, vol: 0.05, filter: 'bandpass' }),
+        itemShield: () => { tone({ freq: 620, dur: 0.16, vol: 0.05, types: ['sine'] }); tone({ freq: 930, dur: 0.18, vol: 0.04, types: ['sine'], detune: 8 }); },
+        itemSweep:  () => { noise({ freq: 400, fslide: 3000, dur: 0.22, vol: 0.05, filter: 'bandpass' }); tone({ freq: 400, slide: 900, dur: 0.2, vol: 0.04, types: ['triangle'] }); },
+        itemSlow:   () => tone({ freq: 520, slide: 190, dur: 0.3, vol: 0.05, types: ['sine'] }),
+        // —— 攻防 ——
+        attack:      () => { tone({ freq: 880, dur: 0.09, vol: 0.06, types: ['sawtooth'] }); tone({ freq: 660, dur: 0.11, vol: 0.06, types: ['sawtooth'], delay: 0.11 }); },
+        shieldBlock: () => { tone({ freq: 950, slide: 720, dur: 0.1, vol: 0.06, types: ['triangle'] }); tone({ freq: 1425, dur: 0.12, vol: 0.04, types: ['sine'], detune: -10 }); },
+        garbageLand: () => { noise({ freq: 350, fslide: 60, dur: 0.25, vol: 0.09 }); tone({ freq: 70, slide: 38, dur: 0.22, vol: 0.1, types: ['sine'] }); },
+        ult:         () => { tone({ freq: 420, slide: 55, dur: 0.6, vol: 0.09, types: ['sawtooth'] }); noise({ freq: 2500, fslide: 100, dur: 0.55, vol: 0.07 }); seq([220, 175, 147, 110], 0.1, { vol: 0.06, types: ['square'], dur: 0.12 }); },
+        // —— UI / 结算 ——
+        click: () => tone({ freq: 500, slide: 700, dur: 0.045, vol: 0.035 }),
+        go:    () => seq([440, 880], 0.09, { vol: 0.06, types: ['square', 'triangle'] }),
+        win:   () => seq([392, 523, 659, 784, 659, 784, 1047], 0.11, { vol: 0.065, types: ['square', 'sine'] }),
+        lose:  () => seq([440, 349, 294, 220, 165], 0.14, { vol: 0.06, types: ['sawtooth', 'sine'] }),
     };
 })();
 
@@ -228,7 +295,7 @@ class Player {
         this.combo++;
         const baseScore = [0, 100, 300, 500, 800][n] || 0;
         this.score += baseScore * (1 + (this.combo - 1) * 0.25) | 0;
-        AudioSys.clear(n);
+        AudioSys.clear(n, this.combo);
 
         // ---- 道具获得 ----
         let gained = 0;
@@ -252,7 +319,7 @@ class Player {
     addCharge(n) {
         if (this.charge < MAX_CHARGE) {
             this.charge = Math.min(MAX_CHARGE, this.charge + n);
-            if (this.charge === MAX_CHARGE) AudioSys.item();
+            if (this.charge === MAX_CHARGE) AudioSys.ultReady();
         }
     }
 
@@ -269,32 +336,34 @@ class Player {
         switch (key) {
             case 'garbage':
                 game.log(this, '🧱 垃圾行!');
+                AudioSys.itemAtk();
                 game.sendAttack(this, opp, 2);
                 break;
             case 'haste':
                 game.log(this, '⚡ 对方加速!');
                 opp.effects.hasteUntil = now + 15000;
-                AudioSys.attack();
+                AudioSys.itemAtk();
                 break;
             case 'fog':
                 game.log(this, '🌫️ 迷雾笼罩对方!');
                 opp.effects.fogUntil = now + 8000;
-                AudioSys.attack();
+                AudioSys.itemFog();
                 break;
             case 'shield':
                 this.shields++;
                 game.log(this, '🛡️ 护盾展开');
-                AudioSys.shield();
+                AudioSys.itemShield();
                 break;
             case 'sweep': {
                 game.log(this, '🧹 清除底部一行');
+                AudioSys.itemSweep();
                 this.removeBottomRow();
                 break;
             }
             case 'slow':
                 game.log(this, '🐢 减速护体');
                 this.effects.slowUntil = now + 20000;
-                AudioSys.shield();
+                AudioSys.itemSlow();
                 break;
         }
     }
@@ -338,6 +407,11 @@ class Player {
             this.dropTimer -= interval;
             if (!this.collide(this.cur.m, this.cur.x, this.cur.y + 1)) {
                 this.cur.y++;
+                // 软降滴答音（节流，避免连响）
+                if (this.softDropping && now - (this.lastSoftSnd || 0) > 110) {
+                    this.lastSoftSnd = now;
+                    AudioSys.soft();
+                }
             } else {
                 this.lock();
                 break;
@@ -361,6 +435,7 @@ class Player {
             }
         }
         game.shake = Math.max(game.shake || 0, 8);
+        AudioSys.garbageLand();
     }
     stackHeight() {
         for (let r = 0; r < ROWS; r++)
@@ -508,6 +583,18 @@ const game = {
         this.players = [new Player(0, false), new Player(1, false)];
         this.bindUI();
         this.bindKeys();
+        // 所有按钮统一按键音（静音时自动无声）
+        document.addEventListener('click', e => {
+            if (e.target.closest && e.target.closest('button')) AudioSys.click();
+        });
+        // 音效开关
+        const muteBtn = document.getElementById('mute-btn');
+        if (muteBtn) {
+            muteBtn.onclick = () => {
+                const muted = AudioSys.toggleMute();
+                muteBtn.textContent = muted ? '🔇' : '🔊';
+            };
+        }
         requestAnimationFrame(t => this.loop(t));
     },
 
@@ -623,7 +710,7 @@ const game = {
         document.getElementById('menu').classList.add('hidden');
         document.getElementById('help').classList.add('hidden');
         document.getElementById('result').classList.add('hidden');
-        AudioSys.rotate();
+        AudioSys.go();
     },
     toMenu() {
         this.state = 'menu';
@@ -640,7 +727,7 @@ const game = {
         if (to.shields > 0) {
             to.shields--;
             this.log(to, '🛡️ 抵挡了攻击!');
-            AudioSys.shield();
+            AudioSys.shieldBlock();
             return;
         }
         to.incoming.push({ lines, due: performance.now() + GARBAGE_DELAY });

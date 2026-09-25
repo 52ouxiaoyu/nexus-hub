@@ -27,6 +27,13 @@
         -webkit-user-select: none; user-select: none;
     }
     #stage { position: relative; }
+    #mute-btn {
+        position: absolute; top: 10px; right: 12px; z-index: 20;
+        font-size: 20px; cursor: pointer; opacity: 0.55;
+        transition: opacity .2s ease; line-height: 1;
+        filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
+    }
+    #mute-btn:hover { opacity: 1; }
     canvas { display: block; border-radius: 12px; }
 
     .overlay {
@@ -108,7 +115,8 @@
 <body>
 <div id="stage">
     <canvas id="game" width="1240" height="720"></canvas>
-    <div class="corner-tip">TETRIS BATTLE <span id="badge-tip">v1.1.4</span></div>
+    <div id="mute-btn" title="音效开关">🔊</div>
+    <div class="corner-tip">TETRIS BATTLE <span id="badge-tip">v1.2.0</span></div>
 
     <!-- 主菜单 -->
     <div id="menu" class="overlay">
@@ -127,7 +135,7 @@
             <button class="menu-btn lvl-btn" data-lvl="4" style="border-color:rgba(255,23,68,0.5);">💀 地狱级 · 秒落狂魔</button>
             <button class="menu-btn" id="btn-ai-back" style="width:180px; margin-top:14px;">返回</button>
         </div>
-        <div class="badge" id="badge">v1.1.4</div>
+        <div class="badge" id="badge">v1.2.0</div>
     </div>
 
     <!-- 帮助 -->
