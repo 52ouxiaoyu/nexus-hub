@@ -21,7 +21,7 @@ class Projectile extends Entity {
             fumeshroom: 'puff', cattail: 'pea_pop', cattail_melon: 'whoosh', cattail_wintermelon: 'whoosh',
             melon: 'whoosh', wintermelon: 'whoosh', cabbage: 'whoosh', icecabbage: 'whoosh',
             kernel: 'whoosh', popcorn: 'whoosh', butter: 'whoosh', minicherry: 'whoosh',
-            star: 'star_shoot', zpea: 'pea_pop'
+            star: 'star_shoot', zpea: 'pea_pop', cob: 'whoosh'
         }[type];
         if (launchFx && this.game.audioManager && this.game.audioManager.playFx) this.game.audioManager.playFx(launchFx);
         
@@ -36,8 +36,8 @@ class Projectile extends Entity {
             // 旧素材是从 MelonPult 整株立绘 flood-fill 出的 50×40 残片 —— 右侧被齐边切掉、
             // 右下被瓜篮挖空，这就是玩家看到的"贴图不完整"。
             this.element.src = type === 'melon'
-                ? 'assets/images/Plants/MelonPult/Melon.png?v=1790306590'
-                : 'assets/images/Plants/MelonPult/WinterMelon.png?v=1790306590';
+                ? 'assets/images/Plants/MelonPult/Melon.png?v=1790307878'
+                : 'assets/images/Plants/MelonPult/WinterMelon.png?v=1790307878';
             this.setTransform();   // v3.10.0：裸写 transform 会顶掉 .entity 的居中基准（贴图偏移半个身位）
             // 注意：不能再加 border-radius:50% —— 那会把完整的椭圆瓜体按内切圆再裁一圈
             this.damage = 60;
@@ -47,7 +47,7 @@ class Projectile extends Entity {
             // 子弹取自 TSR 原版 Projectiles 图集（行标签 "Cabbage"）：30×27 绿色卷心菜。
             // 破甲：命中时以 {pierce:true} 结算 → 越过路障/铁桶/报纸/铁门直接打本体，护甲不脱落
             // （见 CollisionManager.update 与 Zombie.takeDamage）。
-            this.element.src = 'assets/images/Plants/CabbagePult/Cabbage.png?v=1790306590';
+            this.element.src = 'assets/images/Plants/CabbagePult/Cabbage.png?v=1790307878';
             // v3.11.0 尺寸校准：原图 30×27 投出来只有"米粒大"，与立绘篮筐里那颗（实测 35×29）
             // 不成比例 → 放大到 34×31 与篮内弹药等大（用 width/height，不碰 transform 以免顶掉居中基准）
             this.element.style.width = '34px';
@@ -64,7 +64,7 @@ class Projectile extends Entity {
             // ===== v3.10.0 玉米投手 =====
             // 子弹取自原版图集（行标签 "Kernel"）：淡黄玉米粒。同样走抛物线 + 破甲。
             // 爆米花（融合：玉米投手+火爆辣椒）：焦色更大颗，命中 3×3 溅射。
-            this.element.src = 'assets/images/Plants/KernelPult/Kernel.png?v=1790306590';
+            this.element.src = 'assets/images/Plants/KernelPult/Kernel.png?v=1790307878';
             // v3.11.0 尺寸校准：原图 16×17 投出来只有"米粒大"；立绘篮筐里那颗实测 19×20，
             // 所以放大到 22×23 —— 略大于篮内单颗，空中飞行时才有存在感（爆米花更大一颗 30×30）。
             // 用 width/height 而不是 transform，避免顶掉 .entity 的 translate(-50%,-50%) 居中基准。
@@ -81,12 +81,27 @@ class Projectile extends Entity {
                 this.damage = 40;
             }
             this.setupLob(targetZombie);
+        } else if (type === 'cob') {
+            // ===== v3.24.0 玉米加农炮的玉米炮弹 =====
+            // 原版 Cob（TSR Projectiles 图集行标签 "Cob"）：161×76 完整玉米炮弹。
+            // 飞向固定坐标点（不锁定僵尸），落地 3×3 范围 1800 炸弹伤害（见 _cobExplode）。
+            // 注意：这里不 setupLob——fireCob() 随后调用 setupLobToPoint(tx,ty) 指定落点。
+            this.element.src = 'assets/images/Plants/CobCannon/Cob.png?v=1790307878';
+            this.element.style.width = '56px';
+            this.element.style.height = '27px';
+            this.element.style.objectFit = 'contain';
+            this.element.style.zIndex = '500';
+            this.damage = 1800;
+            this.radius = 20;
+            this.lobbed = true;
+            this.baseY = y;
+            this.cobBomb = true;
         } else if (type === 'butter') {
             // ===== v3.10.0 玉米投手的黄油（20% 概率）=====
             // 原版图集行标签 "Butter" 的黄油块；命中后定身 3 秒（见 CollisionManager）。
             // v3.11.0：与放大后的玉米粒同一档体积，46×48 → 28×29
             // （用 width/height，不碰 transform，以免破坏 .entity 的 translate(-50%,-50%) 居中基准）。
-            this.element.src = 'assets/images/Plants/KernelPult/Butter.png?v=1790306590';
+            this.element.src = 'assets/images/Plants/KernelPult/Butter.png?v=1790307878';
             this.element.style.width = '28px';
             this.element.style.height = '29px';
             this.element.style.objectFit = 'contain';
@@ -99,12 +114,12 @@ class Projectile extends Entity {
             this.damage = 20;
             this.speed = 400;
         } else if (type === 'cattail_melon') {
-            this.element.src = 'assets/images/Plants/MelonPult/Melon_small.png?v=1790306590';
+            this.element.src = 'assets/images/Plants/MelonPult/Melon_small.png?v=1790307878';
             this.setTransform('scale(0.8)');
             this.damage = 60;
             this.speed = 400;
         } else if (type === 'cattail_wintermelon') {
-            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon_small.png?v=1790306590';
+            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon_small.png?v=1790307878';
             this.setTransform('scale(0.8)');
             this.damage = 60;
             this.speed = 400;
@@ -177,6 +192,46 @@ class Projectile extends Entity {
         this.flightTime = tf;
         this.flightT = 0;
         this.peakHeight = peak;
+    }
+
+    // v3.24.0 玉米加农炮：抛向固定坐标点（可跨行落点）。
+    // 位移方程 y(tf) = y0 + vy0·tf + ½g·tf² 解出 vy0（与 setupLob 的"回原高度"不同，
+    // 这里落点高度任意），g 仍按 8·peak/tf² 定形状。
+    setupLobToPoint(tx, ty) {
+        this.lobbed = true;
+        this.baseY = ty;                       // 落点高度 = 目标点
+        const dx = tx - this.x;
+        const dist = Math.abs(dx);
+        const tf = Math.max(0.8, Math.min(1.6, dist / 400 + 0.5));
+        const peak = 90;
+        const g = 8 * peak / (tf * tf);
+        this.gravity = g;
+        this.vx = dx / tf;
+        this.vy = (ty - this.y - 0.5 * g * tf * tf) / tf;
+        this.flightTime = tf;
+        this.flightT = 0;
+        this.peakHeight = peak;
+    }
+
+    // v3.24.0 玉米加农炮炮弹落地爆炸：3×3 范围 1800 炸弹伤害（同樱桃炸弹量级）
+    _cobExplode() {
+        const g = this.game;
+        const boom = document.createElement('img');
+        boom.src = 'assets/images/Plants/CherryBomb/Boom.gif';
+        boom.style.cssText = 'position:absolute;width:220px;height:220px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);z-index:500;';
+        boom.style.left = this.x + 'px';
+        boom.style.top = this.y + 'px';
+        g.entityLayer.appendChild(boom);
+        setTimeout(() => boom.remove(), 900);
+        // 以落点为中心的 3×3：行距 ≤1 行（100px）且水平 ±150px；炸弹伤害可被"坦克化"结算
+        const zombies = g.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+        for (const z of zombies) {
+            if (Math.abs(z.y - this.y) < 120 && Math.abs(z.x - this.x) < 150) {
+                z.takeDamage(this.damage, { bomb: true });
+            }
+        }
+        if (g.audioManager && g.audioManager.playFx) g.audioManager.playFx('crash');
+        this.isDead = true;
     }
 
     // 是否到了"可以命中"的时机（非抛物线子弹恒为 true）
@@ -256,6 +311,11 @@ class Projectile extends Entity {
             this.y += this.vy * deltaTime;
             // 已经落回（甚至低于）本行高度仍未命中 → 落地消失（原版抛射物落空即消失）
             if (this.vy > 0 && this.y > this.baseY + 8) {
+                if (this.type === 'cob') {
+                    // v3.24.0 玉米加农炮炮弹：落地即爆（3×3、1800、炸弹伤害）
+                    this._cobExplode();
+                    return;
+                }
                 // v3.23.0：瓜果碎裂/蔬菜砸地声
                 const crash = (this.type === 'melon' || this.type === 'wintermelon') ? 'crash' : 'thud';
                 if (this.game.audioManager && this.game.audioManager.playFx) this.game.audioManager.playFx(crash);

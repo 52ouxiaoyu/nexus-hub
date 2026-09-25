@@ -88,6 +88,11 @@ class InputManager {
                 this.dragGhost.style.display = 'none';
                 return; // 僵尸模式下不走植物侧任何逻辑
             }
+            // v3.24.0 玉米加农炮瞄准中：点击任意处取消瞄准（发射用 M 键）
+            if (this.game.aimingCob) {
+                this.game.exitCobAim();
+                return;
+            }
             if (this.game.isGloveActive) {
                 const rect = this.container.getBoundingClientRect();
                 const scale = window.gameScale || 1;
@@ -137,6 +142,11 @@ class InputManager {
                     }
                     // 点击已种下的炸弹可立即引爆（不点也会自动爆炸）
                     const p = this.game.board.grid[gridPos.row][gridPos.col];
+                    // v3.24.0：点击充能完毕的玉米加农炮 → 出现瞄准镜（M 键发射）
+                    if (p && p.type === 'cobcannon' && p.chargeReady && !p.isDead) {
+                        this.game.enterCobAim(p);
+                        return;
+                    }
                     if (p && p.autoExplode && !p.isDead) {
                         p.explodeNow();
                     }
@@ -192,13 +202,24 @@ class InputManager {
             else if (type === 'kernelpult') imgName = 'KernelPult/KernelPult';     // v3.10.0
             else if (type === 'gloomshroom') imgName = 'GloomShroom/GloomShroom';  // v3.16.0 修复拖拽无图（目录名大写 S，默认映射 404）
             else if (type === 'spikerock') imgName = 'Spikerock/Spikerock';        // v3.16.0 补钢地刺拖拽图
+            else if (type === 'plantbox') imgName = '';                            // v3.24.0 植物盲盒：问号罐（见下方特判）
+
+            // v3.24.0 植物盲盒：拖拽图直接用原版问号罐
+            if (type === 'plantbox') {
+                this.dragGhost.style.backgroundImage = "url('assets/images/Vase/Vase_Question.png?v=1790307878')";
+                this.dragGhost.style.width = '60px';
+                this.dragGhost.style.height = '60px';
+                this.dragGhost.style.backgroundSize = 'contain';
+                this.dragGhost.style.backgroundPosition = 'center';
+                return;
+            }
 
             // Melon / Winter Melon / 两个投手 图是 PNG，其他植物是 GIF
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1789999390`
-                : `assets/images/Plants/${imgName}.gif?v=1789999390`;
+                ? `assets/images/Plants/${imgName}.png?v=1790307878`
+                : `assets/images/Plants/${imgName}.gif?v=1790307878`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
 
             // v3.20.0：倭瓜立绘画布 100×226（身体只占底部 68×82），60×60 contain 后

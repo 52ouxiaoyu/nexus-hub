@@ -154,27 +154,37 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790306590';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790307878';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790306590';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790307878';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790306590';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790307878';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790306590';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790307878';
             stat.butterChance = 0.2;
+        } else if (type === 'cobcannon') {
+            // 玉米加农炮（v3.24.0）：PVZ1 原版 Cob Cannon——三株玉米投手合体，占两格。
+            // 平时嘴里没有炮；充能 25s 结束后嘴里出现玉米炮弹；
+            // 点击它出现瞄准镜（跟随鼠标），按 M 键向准星位置发射（见 GameLoop.enterCobAim）。
+            stat.hp = 600;
+            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790307878';
+            stat.yOffset = -10;
+            stat.chargeTime = 25;
+            stat.chargeTimer = 25;
+            stat.chargeReady = false;
         } else if (type === 'starfruit') {
             // 杨桃（v3.6.0 经典模式可种）：五向星光射击，弹道复用融合版（Projectile 'star'）
             stat.hp = 300;
@@ -198,7 +208,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790306590';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790307878';
             stat.yOffset = 0;
         }
 
@@ -420,6 +430,10 @@ class Plant extends Entity {
         // 爆炸"的常驻融合植物不自动引爆，只按普通植物运作。
         this.autoExplode = (type === 'cherrybomb' || type === 'jalapeno' || type === 'iceshroom' || type === 'doomshroom' || type === 'fusion_frostbomb');
         
+        // v3.24.0 玉米加农炮：立绘 200×170，显示宽 150（占两格 160px 内）
+        if (type === 'cobcannon') {
+            this.element.style.width = '150px';
+        }
         // 樱桃射手：每 10 次攻击发射一颗小樱桃炸弹（伤害=原版樱桃炸弹一半=900），
         // 普通子弹为樱桃红色。计数从 0 开始。
         if (type === 'fusion_cherrybomb_peashooter') {
@@ -677,6 +691,33 @@ class Plant extends Entity {
         }, 1000);
     }
 
+    // ===== v3.24.0 玉米加农炮：嘴里炮弹的显示/隐藏 =====
+    _showCobShell(show) {
+        if (show) {
+            if (!this._cobShellEl) {
+                const el = document.createElement('img');
+                el.src = 'assets/images/Plants/CobCannon/Cob.png?v=1790307878';
+                // 裸 img 必须自带 translate(-50%,-50%) 居中基准（与 fusionOverlay 同一教训）
+                el.style.cssText = 'position:absolute;width:46px;height:22px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);';
+                this.game.entityLayer.appendChild(el);
+                this._cobShellEl = el;
+            }
+        } else if (this._cobShellEl) {
+            this._cobShellEl.remove();
+            this._cobShellEl = null;
+        }
+    }
+
+    // ===== v3.24.0 玉米加农炮发射：朝准星位置抛出玉米炮弹，落地 3×3 爆炸 =====
+    fireCob(tx, ty) {
+        this.chargeReady = false;
+        this.chargeTimer = this.chargeTime;
+        this._showCobShell(false);
+        const proj = new Projectile(this.game, this.x + 26, this.y + this.yOffset - 34, this.row, 'cob', null);
+        proj.setupLobToPoint(tx, ty);
+        this.game.entities.push(proj);
+    }
+
     update(deltaTime) {
 
         super.update(deltaTime);
@@ -685,6 +726,24 @@ class Plant extends Entity {
         if (this.fusionOverlay) {
             this.fusionOverlay.style.left = `${this.x}px`;
             this.fusionOverlay.style.top = `${this.y + this.yOffset}px`;
+        }
+        // ===== v3.24.0 玉米加农炮：充能循环 + 嘴里炮弹跟随（不走普通射手逻辑）=====
+        // 注意：死亡（hp<=0）时不提前 return，让流程继续走到下方死亡块清理双格与炮弹 overlay
+        if (this.type === 'cobcannon' && !this.isDead && this.hp > 0) {
+            if (!this.chargeReady) {
+                this.chargeTimer -= deltaTime;
+                if (this.chargeTimer <= 0) {
+                    this.chargeReady = true;
+                    this._showCobShell(true);
+                }
+            }
+            if (this._cobShellEl) {
+                // 炮口在头部右端上部（立绘 200×170 面朝右上，显示宽 150）
+                this._cobShellEl.style.left = (this.x + 26) + 'px';
+                this._cobShellEl.style.top = (this.y + this.yOffset - 34) + 'px';
+                this._cobShellEl.style.zIndex = String(Math.floor(this.y) + 2);
+            }
+            return;
         }
         if (this.shieldEl) {
             // v3.12.0：几何每帧重算（素材加载完成前后壳尺寸会自动贴合宿主）
@@ -755,6 +814,15 @@ class Plant extends Entity {
             
             if (this.game.board.grid[this.row] && this.game.board.grid[this.row][this.col] === this) {
                 this.game.board.grid[this.row][this.col] = null; // Clear from grid
+            }
+            // v3.24.0 玉米加农炮占两格：右格也清；嘴里炮弹 overlay 一并移除
+            if (this._cobCol2 !== undefined && this.game.board.grid[this.row] &&
+                this.game.board.grid[this.row][this._cobCol2] === this) {
+                this.game.board.grid[this.row][this._cobCol2] = null;
+            }
+            if (this._cobShellEl) {
+                this._cobShellEl.remove();
+                this._cobShellEl = null;
             }
             if (this.fusionOverlay && this.fusionOverlay.parentNode) {
                 this.fusionOverlay.parentNode.removeChild(this.fusionOverlay);

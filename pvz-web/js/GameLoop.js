@@ -148,6 +148,31 @@ class Game {
             e.preventDefault(); // 阻止空格滚动页面
             if (!e.repeat) this.toggleGlove(); // 按住不放只触发一次
         });
+
+        // ===== v3.24.0 玉米加农炮：M 键发射（瞄准模式中）=====
+        document.addEventListener('keydown', (e) => {
+            if (e.code !== 'KeyM' || e.repeat) return;
+            if (this.state !== 'PLAYING' || !this.aimingCob) return;
+            const overlayOpen = (id) => {
+                const el = document.getElementById(id);
+                return !!el && el.style.display !== 'none' && el.style.display !== '';
+            };
+            if (overlayOpen('seed-chooser') || overlayOpen('start-menu') || overlayOpen('recipe-modal')) return;
+            e.preventDefault();
+            this.fireCobCannon();
+        });
+
+        // v3.24.0：瞄准模式中准星跟随鼠标（记录草坪坐标系坐标供发射用）
+        document.addEventListener('mousemove', (e) => {
+            if (!this._cobCrosshair) return;
+            const rect = this.container.getBoundingClientRect();
+            const scale = window.gameScale || 1;
+            const mx = (e.clientX - rect.left) / scale;
+            const my = (e.clientY - rect.top) / scale;
+            this._cobCrosshair.style.left = mx + 'px';
+            this._cobCrosshair.style.top = my + 'px';
+            this._cobAimPos = { x: mx, y: my };
+        });
     }
     
     updateScore() {
@@ -851,7 +876,7 @@ class Game {
         const fusionBasePlants = ['sunflower', 'peashooter', 'wallnut', 'cherrybomb', 'squash',
             'jalapeno', 'potatomine', 'chomper', 'tallnut', 'puffshroom',
             'iceshroom', 'doomshroom', 'spikeweed', 'garlic', 'melonpult',
-            'cabbagepult', 'kernelpult'];
+            'cabbagepult', 'kernelpult', 'plantbox'];
         const seedList = this.fusionMode
             ? this.seeds.filter(s => fusionBasePlants.includes(s.type))
             : this.seeds;
@@ -983,42 +1008,44 @@ class Game {
     initUI() {
         // Just define the seeds, don't populate the top bar yet
         this.seeds = [
-            { type: 'sunflower', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/SunFlower.png?v=1790306590' },
-            { type: 'twinsunflower', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/TwinSunflower.png?v=1790306590' },
-            { type: 'sunshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/SunShroom.png?v=1790306590' },
-            { type: 'peashooter', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Peashooter.png?v=1790306590' },
-            { type: 'repeater', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/Repeater.png?v=1790306590' },
-            { type: 'threepeater', cost: 300, cooldown: 7.5, img: 'assets/images/Card/Plants/Threepeater.png?v=1790306590' },
-            { type: 'gatlingpea', cost: 250, cooldown: 50, img: 'assets/images/Card/Plants/GatlingPea.png?v=1790306590' },
-            { type: 'snowpea', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/SnowPea.png?v=1790306590' },
-            { type: 'splitpea', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/SplitPea.png?v=1790306590' },
-            { type: 'torchwood', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/Torchwood.png?v=1790306590' },
-            { type: 'wallnut', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/WallNut.png?v=1790306590' },
-            { type: 'cherrybomb', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/CherryBomb.png?v=1790306590' },            { type: 'squash', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/Squash.png?v=1790306590' },
-            { type: 'jalapeno', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/Jalapeno.png?v=1790306590' },
-            { type: 'potatomine', cost: 25, cooldown: 30, img: 'assets/images/Card/Plants/PotatoMine.png?v=1790306590' },
-            { type: 'chomper', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/Chomper.png?v=1790306590' },
-            { type: 'tallnut', cost: 125, cooldown: 30, img: 'assets/images/Card/Plants/TallNut.png?v=1790306590' },
-            { type: 'puffshroom', cost: 0, cooldown: 7.5, img: 'assets/images/Card/Plants/PuffShroom.png?v=1790306590' },
-            { type: 'fumeshroom', cost: 75, cooldown: 7.5, img: 'assets/images/Card/Plants/FumeShroom.png?v=1790306590' },
-            { type: 'scaredyshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/ScaredyShroom.png?v=1790306590' },
-            { type: 'gloomshroom', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/GloomShroom.png?v=1790306590' },
-            { type: 'spikerock', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikerock.png?v=1790306590' },
-            { type: 'cattail', cost: 225, cooldown: 7.5, img: 'assets/images/Card/Plants/Cattail.png?v=1790306590' },
-            { type: 'melonpult', cost: 300, cooldown: 7.5, img: 'assets/images/Card/Plants/MelonPult.png?v=1790306590' },{ type: 'iceshroom', cost: 75, cooldown: 50, img: 'assets/images/Card/Plants/IceShroom.png?v=1790306590' },
-            { type: 'doomshroom', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/DoomShroom.png?v=1790306590' },
-            { type: 'spikeweed', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikeweed.png?v=1790306590' },
-            { type: 'garlic', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/Garlic.png?v=1790306590' },
+            { type: 'sunflower', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/SunFlower.png?v=1790307878' },
+            { type: 'twinsunflower', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/TwinSunflower.png?v=1790307878' },
+            { type: 'sunshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/SunShroom.png?v=1790307878' },
+            { type: 'peashooter', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Peashooter.png?v=1790307878' },
+            { type: 'repeater', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/Repeater.png?v=1790307878' },
+            { type: 'threepeater', cost: 300, cooldown: 7.5, img: 'assets/images/Card/Plants/Threepeater.png?v=1790307878' },
+            { type: 'gatlingpea', cost: 250, cooldown: 50, img: 'assets/images/Card/Plants/GatlingPea.png?v=1790307878' },
+            { type: 'snowpea', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/SnowPea.png?v=1790307878' },
+            { type: 'splitpea', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/SplitPea.png?v=1790307878' },
+            { type: 'torchwood', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/Torchwood.png?v=1790307878' },
+            { type: 'wallnut', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/WallNut.png?v=1790307878' },
+            { type: 'cherrybomb', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/CherryBomb.png?v=1790307878' },            { type: 'squash', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/Squash.png?v=1790307878' },
+            { type: 'jalapeno', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/Jalapeno.png?v=1790307878' },
+            { type: 'potatomine', cost: 25, cooldown: 30, img: 'assets/images/Card/Plants/PotatoMine.png?v=1790307878' },
+            { type: 'chomper', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/Chomper.png?v=1790307878' },
+            { type: 'tallnut', cost: 125, cooldown: 30, img: 'assets/images/Card/Plants/TallNut.png?v=1790307878' },
+            { type: 'puffshroom', cost: 0, cooldown: 7.5, img: 'assets/images/Card/Plants/PuffShroom.png?v=1790307878' },
+            { type: 'fumeshroom', cost: 75, cooldown: 7.5, img: 'assets/images/Card/Plants/FumeShroom.png?v=1790307878' },
+            { type: 'scaredyshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/ScaredyShroom.png?v=1790307878' },
+            { type: 'gloomshroom', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/GloomShroom.png?v=1790307878' },
+            { type: 'spikerock', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikerock.png?v=1790307878' },
+            { type: 'cattail', cost: 225, cooldown: 7.5, img: 'assets/images/Card/Plants/Cattail.png?v=1790307878' },
+            { type: 'melonpult', cost: 300, cooldown: 7.5, img: 'assets/images/Card/Plants/MelonPult.png?v=1790307878' },{ type: 'iceshroom', cost: 75, cooldown: 50, img: 'assets/images/Card/Plants/IceShroom.png?v=1790307878' },
+            { type: 'doomshroom', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/DoomShroom.png?v=1790307878' },
+            { type: 'spikeweed', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikeweed.png?v=1790307878' },
+            { type: 'garlic', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/Garlic.png?v=1790307878' },
             // ===== v3.6.0 经典模式新增 4 植物（数值取 PVZ1 原版；融合模式选卡仍过滤为 15 基础牌，不受影响）=====
-            { type: 'wintermelon', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/WinterMelon.png?v=1790306590' },
-            { type: 'starfruit', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/Starfruit.png?v=1790306590' },
-            { type: 'hypnoshroom', cost: 75, cooldown: 30, img: 'assets/images/Card/Plants/HypnoShroom.png?v=1790306590' },
-            { type: 'pumpkinhead', cost: 125, cooldown: 30, img: 'assets/images/Card/Plants/PumpkinHead.png?v=1790306590' },
+            { type: 'wintermelon', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/WinterMelon.png?v=1790307878' },
+            { type: 'starfruit', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/Starfruit.png?v=1790307878' },
+            { type: 'hypnoshroom', cost: 75, cooldown: 30, img: 'assets/images/Card/Plants/HypnoShroom.png?v=1790307878' },
+            { type: 'pumpkinhead', cost: 125, cooldown: 30, img: 'assets/images/Card/Plants/PumpkinHead.png?v=1790307878' },
             // ===== v3.10.0 投手两兄弟，v3.11.0 调价（破甲 + 黄油定身很值钱，不再按原版 100 阳光卖）=====
             // 抛射物可破甲：越过路障/铁桶/报纸/铁门直接打僵尸本体，护甲不脱落。
             // 玉米投手另有 20% 概率投出黄油（定身 3 秒）。
-            { type: 'cabbagepult', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/CabbagePult.png?v=1790306590' },
-            { type: 'kernelpult', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/KernelPult.png?v=1790306590' }
+            { type: 'cabbagepult', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/CabbagePult.png?v=1790307878' },
+            { type: 'kernelpult', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/KernelPult.png?v=1790307878' },
+            // ===== v3.24.0 植物盲盒：500 阳光，种下随机开出"经典冒险+融合进化"全植物池中的一株 =====
+            { type: 'plantbox', cost: 500, cooldown: 5, img: 'assets/images/Card/Plants/PlantBox.png?v=1790307878' }
         ];
         // The top bar will be populated in startGame() after selection
     }
@@ -1060,7 +1087,7 @@ class Game {
             { a: 'snowpea', b: 'wallnut', result: '寒冰坚果', img: 'assets/images/Plants/WallNut/WallNut.gif', filter: 'hue-rotate(180deg) saturate(1.5) brightness(1.2)', css: false },
             { a: 'peashooter', b: 'cherrybomb', result: '樱桃射手', img: 'assets/images/Plants/Peashooter/Peashooter.gif', filter: 'hue-rotate(-45deg) saturate(2.0)', css: false },
             { a: 'sunflower', b: 'doomshroom', result: '毁灭向日葵', img: 'assets/images/Plants/SunFlower/SunFlower1.gif', filter: 'grayscale(0.8) brightness(0.6) sepia(1) hue-rotate(240deg) saturate(3)', css: false },
-            { a: 'melonpult', b: 'iceshroom', result: '冰西瓜投手', img: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790306590', css: false },
+            { a: 'melonpult', b: 'iceshroom', result: '冰西瓜投手', img: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790307878', css: false },
             { a: 'repeater', b: 'spikeweed', result: '猫尾草', img: 'assets/images/Plants/Cattail/Cattail.gif', css: false },
             { a: 'fumeshroom', b: 'fumeshroom', result: '忧郁菇', img: 'assets/images/Plants/GloomShroom/GloomShroom.gif', css: false },
             { a: 'spikeweed', b: 'spikeweed', result: '钢地刺', img: 'assets/images/Plants/Spikerock/Spikerock.gif', css: false },
@@ -1070,15 +1097,16 @@ class Game {
             { a: 'splitpea', b: 'sunflower', result: '杨桃', img: 'assets/images/Plants/Starfruit/Starfruit.gif', css: false },
             { a: 'puffshroom', b: 'garlic', result: '魅惑菇', img: 'assets/images/Plants/HypnoShroom/HypnoShroom.gif', css: false },
             { a: 'wallnut', b: 'tallnut', result: '南瓜壳（可套在任意植物上）', img: 'assets/images/Plants/PumpkinHead/PumpkinHead.gif', css: false },
-            { a: 'melonpult', b: 'cattail', result: '西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/MelonPult/MelonPult.png?v=1790306590', overTransform: 'translate(-5px, -30px) scale(0.7)' },
-            { a: 'wintermelon', b: 'cattail', result: '冰西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790306590', overTransform: 'translate(-5px, -30px) scale(0.7)' },
+            { a: 'melonpult', b: 'cattail', result: '西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/MelonPult/MelonPult.png?v=1790307878', overTransform: 'translate(-5px, -30px) scale(0.7)' },
+            { a: 'wintermelon', b: 'cattail', result: '冰西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790307878', overTransform: 'translate(-5px, -30px) scale(0.7)' },
             // ===== v3.10.0 以卷心菜投手 / 玉米投手为基础的新融合 =====
             // v3.11.0：下面两条的 overClip / overTransform 与 Plant.js 内的实机分支**完全同步**
             // （此前图鉴写的是旧的"左上角对齐 + 整块上移"版本，与实机不是同一套，图鉴和游戏里长得不一样）
-            { a: 'cabbagepult', b: 'kernelpult', result: '双料投手（3/4 投卷心菜、1/4 投黄油定身 3 秒）', base: 'assets/images/Plants/KernelPult/KernelPult.png?v=1790306590', over: 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790306590', overClip: 'polygon(0 0, 48% 0, 48% 50%, 0 50%)', overTransform: 'translate(37px, 8px)' },
-            { a: 'cabbagepult', b: 'wallnut', result: '卷心菜堡垒（坚果肉盾 + 继续投掷，4000 耐久）', base: 'assets/images/Plants/WallNut/WallNut.gif', over: 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790306590', overClip: 'polygon(0 0, 46% 0, 46% 46%, 0 46%)', overTransform: 'translate(26px, -4px)' },
-            { a: 'cabbagepult', b: 'iceshroom', result: '寒冰卷心菜（破甲 + 命中减速 10 秒）', img: 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790306590', filter: 'brightness(112%) hue-rotate(120deg) saturate(1.7)', css: false },
-            { a: 'kernelpult', b: 'jalapeno', result: '爆米花投手（破甲 + 命中 3×3 溅射）', img: 'assets/images/Plants/KernelPult/KernelPult.png?v=1790306590', filter: 'hue-rotate(-18deg) saturate(1.9) brightness(1.18)', css: false }
+            { a: 'cabbagepult', b: 'kernelpult', result: '双料投手（3/4 投卷心菜、1/4 投黄油定身 3 秒）', base: 'assets/images/Plants/KernelPult/KernelPult.png?v=1790307878', over: 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790307878', overClip: 'polygon(0 0, 48% 0, 48% 50%, 0 50%)', overTransform: 'translate(37px, 8px)' },
+            { a: 'cabbagepult', b: 'wallnut', result: '卷心菜堡垒（坚果肉盾 + 继续投掷，4000 耐久）', base: 'assets/images/Plants/WallNut/WallNut.gif', over: 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790307878', overClip: 'polygon(0 0, 46% 0, 46% 46%, 0 46%)', overTransform: 'translate(26px, -4px)' },
+            { a: 'cabbagepult', b: 'iceshroom', result: '寒冰卷心菜（破甲 + 命中减速 10 秒）', img: 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790307878', filter: 'brightness(112%) hue-rotate(120deg) saturate(1.7)', css: false },
+            { a: 'kernelpult', b: 'jalapeno', result: '爆米花投手（破甲 + 命中 3×3 溅射）', img: 'assets/images/Plants/KernelPult/KernelPult.png?v=1790307878', filter: 'hue-rotate(-18deg) saturate(1.9) brightness(1.18)', css: false },
+            { a: 'kernelpult', b: 'kernelpult', result: '玉米加农炮（需两株横向相邻 + 第三株融合；占两格，充能后点击开镜、按 M 发射）', img: 'assets/images/Plants/CobCannon/CobCannon.png?v=1790307878', css: false }
         ];
         
         const list = document.getElementById('recipe-list');
@@ -1109,8 +1137,8 @@ class Game {
                     'fumeshroom': 'assets/images/Plants/FumeShroom/FumeShroom.gif',
                     'spikeweed': 'assets/images/Plants/Spikeweed/Spikeweed.gif',
                     'tallnut': 'assets/images/Plants/TallNut/TallNut.gif',
-                    'melonpult': 'assets/images/Plants/MelonPult/MelonPult.png?v=1790306590',
-                    'wintermelon': 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790306590',
+                    'melonpult': 'assets/images/Plants/MelonPult/MelonPult.png?v=1790307878',
+                    'wintermelon': 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790307878',
                     'cattail': 'assets/images/Plants/Cattail/Cattail.gif',
                     'gloomshroom': 'assets/images/Plants/GloomShroom/GloomShroom.gif',
                     'spikerock': 'assets/images/Plants/Spikerock/Spikerock.gif',
@@ -1120,8 +1148,8 @@ class Game {
                     'starfruit': 'assets/images/Plants/Starfruit/Starfruit.gif',
                     'hypnoshroom': 'assets/images/Plants/HypnoShroom/HypnoShroom.gif',
                     'pumpkinhead': 'assets/images/Plants/PumpkinHead/PumpkinHead.gif',
-                    'cabbagepult': 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790306590',
-                    'kernelpult': 'assets/images/Plants/KernelPult/KernelPult.png?v=1790306590'
+                    'cabbagepult': 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790307878',
+                    'kernelpult': 'assets/images/Plants/KernelPult/KernelPult.png?v=1790307878'
                 };
                 return map[t] || '';
             };
@@ -1239,6 +1267,34 @@ class Game {
                 return true;
             }
             
+            // ===== v3.24.0 玉米加农炮：两株横向相邻的玉米投手 + 手套里的第三个玉米投手 =====
+            if (this.gloveSource.type === 'kernelpult' && plant.type === 'kernelpult') {
+                const pair = this._findKernelPair(plant, this.gloveSource);
+                if (pair) {
+                    const third = this.gloveSource;
+                    this.gloveSource.element.style.display = 'block';
+                    if (this.gloveSource.fusionOverlay) this.gloveSource.fusionOverlay.style.display = 'block';
+                    this._mergeCobCannon(pair.a, pair.b, third);
+                    this.isGloveActive = false;
+                    this.isGloveDragging = false;
+                    document.getElementById('glove-bank').style.background = 'rgba(0,0,0,0.5)';
+                    this.container.style.cursor = 'default';
+                    if (this.inputManager) this.inputManager.dragGhost.style.display = 'none';
+                    this.gloveSource = null;
+                    return true;
+                }
+                this.showAnnouncement('玉米加农炮需要 3 株玉米投手：两株横向相邻，再把第三株融合上去', '#ffaa00');
+                this.gloveSource.element.style.display = 'block';
+                if (this.gloveSource.fusionOverlay) this.gloveSource.fusionOverlay.style.display = 'block';
+                this.gloveSource = null;
+                this.isGloveActive = false;
+                this.isGloveDragging = false;
+                document.getElementById('glove-bank').style.background = 'rgba(0,0,0,0.5)';
+                this.container.style.cursor = 'default';
+                if (this.inputManager) this.inputManager.dragGhost.style.display = 'none';
+                return true;
+            }
+
             // 手套融合（普通）：任何两株植物（含炸弹类）都可直接合成。
             // 注：炸弹种下会自动爆炸并在爆炸时融合周围 3×3，因此炸弹主要靠"种下"触发融合。
             // Try to fuse
@@ -1375,7 +1431,8 @@ class Game {
             fusion_pumpkinhead: '南瓜壳', fusion_chomper_wallnut: '大嘴坚果',
             fusion_icecabbage: '寒冰卷心菜', fusion_popcorn: '爆米花投手',
             fusion_cabbagenut: '卷心菜堡垒', fusion_veggiepult: '双料投手',
-            cabbagepult: '卷心菜投手', kernelpult: '玉米投手'
+            cabbagepult: '卷心菜投手', kernelpult: '玉米投手',
+            cobcannon: '玉米加农炮', plantbox: '植物盲盒'
         };
         return names[type] || type;
     }
@@ -1424,6 +1481,105 @@ class Game {
         if (set.has('wallnut') && set.has('tallnut')) return 'fusion_pumpkinhead';    // 南瓜壳：坚果墙+高坚果（手套特殊流程=套壳）
         if (set.has('chomper') && set.has('wallnut')) return 'fusion_chomper_wallnut'; // 大嘴坚果：大嘴花+坚果墙（修复"图鉴有、规则无"）
         return null;
+    }
+
+    // ===== v3.24.0 植物盲盒池 =====
+    // 经典冒险选卡全部植物 + 融合进化全部植物（基础牌 + 所有融合配方产物，含玉米加农炮）
+    _plantBoxPool() {
+        // 基础牌全部都在 seeds（classic）里；融合产物见 fusionOut（cobcannon 也在）
+        const classic = this.seeds.map(s => s.type).filter(t => t !== 'plantbox');
+        const fusionOut = ['repeater', 'threepeater', 'gatlingpea', 'twinsunflower', 'fumeshroom',
+            'snowpea', 'splitpea', 'wintermelon', 'cattail', 'sunshroom', 'gloomshroom',
+            'spikerock', 'scaredyshroom', 'torchwood', 'starfruit', 'hypnoshroom', 'pumpkinhead',
+            'fusion_peaflower', 'fusion_nutshooter', 'fusion_frostbomb', 'fusion_cherrybomb_peashooter',
+            'fusion_doomshroom_sunflower', 'fusion_sporemine', 'fusion_spikynut', 'fusion_snownut',
+            'fusion_spikerock_tallnut', 'fusion_melon_cattail', 'fusion_wintermelon_cattail',
+            'fusion_icecabbage', 'fusion_popcorn', 'fusion_cabbagenut', 'fusion_veggiepult',
+            'fusion_starfruit', 'fusion_hypnoshroom', 'fusion_pumpkinhead', 'fusion_chomper_wallnut',
+            'cobcannon'];
+        return [...new Set([...classic, ...fusionOut])];
+    }
+
+    // ===== v3.24.0 玉米加农炮（PVZ1 原版 Cob Cannon）=====
+    // 配方：两个玉米投手横向相邻摆放，手套再拿起任意第三个玉米投手，
+    // 放到相邻对的其中一株上 → 三株合体为玉米加农炮，占两格（原相邻对的位置）。
+    _findKernelPair(target, exclude) {
+        const b = this.board;
+        for (const dc of [-1, 1]) {
+            const c = target.col + dc;
+            if (c < 0 || c >= b.cols) continue;
+            const nb = b.grid[target.row] ? b.grid[target.row][c] : null;
+            if (nb && nb !== exclude && !nb.isDead && nb.type === 'kernelpult') {
+                return (dc === -1) ? { a: nb, b: target } : { a: target, b: nb };
+            }
+        }
+        return null;
+    }
+
+    _mergeCobCannon(a, b, third) {
+        const bd = this.board;
+        const row = a.row;
+        const colL = Math.min(a.col, b.col);
+        if (colL + 1 >= bd.cols) return;
+        // 三株材料全部下场（清掉它们占用的所有格子——cobcannon 之前可能有别的占格状态）
+        [a, b, third].forEach(p => {
+            p.element.style.display = 'block';
+            p.hp = 0;
+            for (let r = 0; r < bd.rows; r++) {
+                for (let c = 0; c < bd.cols; c++) {
+                    if (bd.grid[r][c] === p) bd.grid[r][c] = null;
+                }
+            }
+        });
+        const cob = new Plant(this, 'cobcannon');
+        cob.row = row;
+        cob.col = colL;
+        cob._cobCol2 = colL + 1;                       // 占两格：主格 colL + 右格 colL+1
+        cob.x = bd.offsetX + colL * bd.cellWidth + bd.cellWidth;   // 两格中点
+        cob.y = bd.offsetY + row * bd.cellHeight + bd.cellHeight / 2;
+        cob.element.style.top = `${cob.y + cob.yOffset}px`;
+        bd.grid[row][colL] = cob;
+        bd.grid[row][colL + 1] = cob;
+        this.entities.push(cob);
+        if (this.audioManager) this.audioManager.play('btn');
+        this.announceFusionOnce('cobcannon');
+    }
+
+    // 点击充能完毕的玉米加农炮 → 进入瞄准模式（准星跟随鼠标，M 键发射，点击任意处取消）
+    enterCobAim(cob) {
+        if (this.aimingCob) return;
+        this.aimingCob = cob;
+        const cross = document.createElement('div');
+        cross.style.cssText = [
+            'position:absolute', 'width:56px', 'height:56px', 'pointer-events:none',
+            'border:3px solid #ff3b30', 'border-radius:50%',
+            'transform:translate(-50%,-50%)', 'z-index:9999',
+            'box-shadow:0 0 10px rgba(255,0,0,.55), inset 0 0 6px rgba(255,0,0,.35)'
+        ].join(';');
+        cross.innerHTML = [
+            '<div style="position:absolute;left:50%;top:-10px;width:2px;height:14px;background:#ff3b30;transform:translateX(-50%)"></div>',
+            '<div style="position:absolute;left:50%;bottom:-10px;width:2px;height:14px;background:#ff3b30;transform:translateX(-50%)"></div>',
+            '<div style="position:absolute;top:50%;left:-10px;height:2px;width:14px;background:#ff3b30;transform:translateY(-50%)"></div>',
+            '<div style="position:absolute;top:50%;right:-10px;height:2px;width:14px;background:#ff3b30;transform:translateY(-50%)"></div>',
+            '<div style="position:absolute;left:50%;top:50%;width:6px;height:6px;background:#ff3b30;border-radius:50%;transform:translate(-50%,-50%)"></div>'
+        ].join('');
+        this.entityLayer.appendChild(cross);
+        this._cobCrosshair = cross;
+        this.showAnnouncement('移动鼠标瞄准，按 M 键发射玉米炮！', '#ff7f27');
+    }
+
+    exitCobAim() {
+        if (this._cobCrosshair && this._cobCrosshair.parentNode) this._cobCrosshair.remove();
+        this._cobCrosshair = null;
+        this.aimingCob = null;
+    }
+
+    fireCobCannon() {
+        const cob = this.aimingCob;
+        const pos = this._cobAimPos;
+        this.exitCobAim();
+        if (!cob || cob.isDead || !cob.chargeReady || !pos) return;
+        cob.fireCob(pos.x, pos.y);
     }
     
     tryPlanting(type, row, col) {
@@ -1502,6 +1658,26 @@ class Game {
             }
         }
         
+        // ===== v3.24.0 植物盲盒（500 阳光）=====
+        // 种下的不是植物本身：扣 500 阳光后从"经典冒险 + 融合进化"全植物池随机开出一株种下。
+        if (type === 'plantbox') {
+            if (this.board.canPlant(row, col)) {
+                const pool = this._plantBoxPool();
+                const got = pool[Math.floor(Math.random() * pool.length)];
+                let plant = new Plant(this, got);
+                if (this.board.addPlant(plant, row, col)) {
+                    this.sunCount -= seed.cost;
+                    this.sunCountElement.innerText = this.sunCount;
+                    this.cooldowns[type] = seed.cooldown;
+                    this.updateUI();
+                    this.audioManager.play('plant');
+                    if (this.audioManager.playFx) this.audioManager.playFx('box_open');
+                    this.showAnnouncement(`🎁 植物盲盒开出：${this.getPlantName(got)}！`, '#c8a2ff');
+                }
+            }
+            return;
+        }
+
         // ===== 南瓜壳（PVZ 原版玩法）=====
         // v3.12.0 双向套装：南瓜壳可套在已有植物上，也可空地独立成株（壳墙），
         // 之后把任意植物种进壳格 = 植物进壳（壳剩余耐久转为护甲）。
@@ -1949,7 +2125,7 @@ class Game {
                           : vType === 'zombie' ? 'Vase_Zombie.png'
                           : 'Vase_Question.png';
             const img = document.createElement('img');
-            img.src = 'assets/images/Vase/' + sprite + '?v=1790306590'; // v= 占位,bump_version 替换为新 cache-buster
+            img.src = 'assets/images/Vase/' + sprite + '?v=1790307878'; // v= 占位,bump_version 替换为新 cache-buster
             img.className = 'entity vase-entity';
             img.style.pointerEvents = 'none';
             if (isGolden) img.style.filter = 'drop-shadow(0 0 7px rgba(255, 210, 60, 0.95))'; // 金罐常驻金光
@@ -2016,7 +2192,7 @@ class Game {
                     v.pumpkinHp = 4000;
                     v.pumpkinMaxHp = 4000;
                     const ov = document.createElement('img');
-                    ov.src = 'assets/images/Plants/PumpkinHead/shield_full.png?v=1790306590'; // v= 占位,bump_version 替换
+                    ov.src = 'assets/images/Plants/PumpkinHead/shield_full.png?v=1790307878'; // v= 占位,bump_version 替换
                     ov.className = 'entity vase-pumpkin';
                     ov.style.pointerEvents = 'none';
                     ov.style.width = '97px';
@@ -2033,7 +2209,7 @@ class Game {
                     v.pumpkinEl = ov;
                     // v3.13.2：背壁层画在罐子身后，壳顶洞口里看到的是南瓜内壁而非草地
                     const back = document.createElement('img');
-                    back.src = 'assets/images/Plants/PumpkinHead/Pumpkin_back.gif?v=1790306590'; // v= 占位,bump_version 替换
+                    back.src = 'assets/images/Plants/PumpkinHead/Pumpkin_back.gif?v=1790307878'; // v= 占位,bump_version 替换
                     back.className = 'entity vase-pumpkin-back';
                     back.style.pointerEvents = 'none';
                     back.style.width = '97px';
