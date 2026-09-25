@@ -89,6 +89,16 @@ class Zombie extends Entity {
             this.walkSrc = 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif';
             this.attackSrc = 'assets/images/Zombies/ConeheadZombie/ConeheadZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+        } else if (type === 'hammerzombie') {
+            // ===== v3.25.0 锤子僵尸（砸罐子模式限定）=====
+            // 血量 = 路障僵尸（560）；手持小木锤，每走过一个罐格就挥锤把罐子砸碎
+            //（smashVase 正常结算：罐里的植物卡/僵尸/阳光照常出来，砸罐子音效同步响起）。
+            this.hp = 560; this.maxHp = 560;
+            this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this._spawnHammer();
         } else if (type === 'buckethead') {
             this.hp = 1300; this.maxHp = 1300;
             this.element.src = 'assets/images/Zombies/BucketheadZombie/BucketheadZombie.gif';
@@ -307,6 +317,42 @@ class Zombie extends Entity {
         h.style.opacity = '0';
         setTimeout(() => { if (h.parentNode) h.parentNode.removeChild(h); }, 550);
     }
+
+    // ===== v3.25.0 锤子僵尸：小木锤挂件 =====
+    _spawnHammer() {
+        if (this._hammerEl) return;
+        const el = document.createElement('img');
+        el.src = 'assets/images/Zombies/HammerZombie/Hammer.png';
+        el.style.cssText = 'position:absolute;pointer-events:none;width:30px;height:34px;' +
+            'transform:translate(-50%,-50%);z-index:' + (Math.floor(this.y) + 2) + ';';
+        this._hammerEl = el;
+        this.game.entityLayer.appendChild(el);
+        this._syncHammer();
+    }
+    _syncHammer() {
+        if (!this._hammerEl) return;
+        // 僵尸面朝左 → 木锤握在身前手上（贴住身体左缘），挥锤绕柄底旋转
+        this._hammerEl.style.left = (this.x - 14) + 'px';
+        this._hammerEl.style.top = (this.y + this.yOffset + 16) + 'px';
+        this._hammerEl.style.zIndex = String(Math.floor(this.y) + 2);
+    }
+    // 挥锤动画：快速下劈再回位（纯视觉）
+    _hammerSwing() {
+        if (!this._hammerEl) return;
+        const el = this._hammerEl;
+        el.style.transformOrigin = '75% 80%';
+        el.style.transition = 'transform 0.1s ease-in';
+        el.style.transform = 'translate(-50%,-50%) rotate(-75deg)';
+        setTimeout(() => {
+            if (!this._hammerEl) return;
+            el.style.transition = 'transform 0.22s ease-out';
+            el.style.transform = 'translate(-50%,-50%) rotate(0deg)';
+        }, 110);
+    }
+    _removeHammer() {
+        if (this._hammerEl && this._hammerEl.parentNode) this._hammerEl.parentNode.removeChild(this._hammerEl);
+        this._hammerEl = null;
+    }
     
     // 减速统一入口（植物头僵尸与普通僵尸一致，均可被减速；友方魅惑僵尸不可被减速）
     setSlow(t = 10) {
@@ -421,6 +467,11 @@ class Zombie extends Entity {
         super.update(deltaTime);
         this.element.style.top = `${this.y + this.yOffset}px`;
         this.syncPlantHead(); // 植物头跟随身体移动
+        // v3.25.0 锤子僵尸：木锤跟随；死亡即收走挂件
+        if (this._hammerEl) {
+            if (this.state === 'DYING' || this.isDead) this._removeHammer();
+            else this._syncHammer();
+        }
         
         // ===== v3.10.0 状态滤镜（黄油 优先于 寒冰）=====
         // 只在"确有状态"时写入 → 没状态时不动 filter，避免抹掉 zomboni/pogo/ladder 的固有色调。
@@ -607,8 +658,21 @@ class Zombie extends Entity {
                 this.element.src = this.attackSrc;
             } else {
             this.x -= currentSpeed * deltaTime;
-            
-            if (this.x < 40) { 
+
+            // v3.25.0 锤子僵尸：走到罐格就挥锤砸碎（砸罐子模式限定，正常触发 smashVase 结算）
+            if (this.type === 'hammerzombie' && this.game.vaseMode && this.game.vases && this.state === 'WALKING') {
+                const bd = this.game.board;
+                const gc = Math.floor((this.x - bd.offsetX) / bd.cellWidth);
+                const v = (gc >= 0 && gc < bd.cols)
+                    ? this.game.vases.find(x => !x.smashed && x.row === this.row && x.col === gc) : null;
+                if (v) {
+                    this._hammerSwing();
+                    if (this.game.audioManager && this.game.audioManager.playFx) this.game.audioManager.playFx('hammer_hit');
+                    this.game.smashVase(this.row, gc);
+                }
+            }
+
+            if (this.x < 40) {
                 // 我是僵尸模式：我方僵尸到达最左端 = 吃掉该行脑子（必须吃光全部 5 行才通关，v3.7.1）
                 // 非僵尸模式保持原逻辑：僵尸进入房子 → 玩家(植物方)失败
                 if (this.game.zombieMode && this.game.zombieEatBrain) {
