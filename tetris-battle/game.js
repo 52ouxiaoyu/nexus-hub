@@ -4,7 +4,7 @@
  * 双人对战俄罗斯方块 · 道具攻防系统
  * ============================================================ */
 
-const VERSION = 'v1.1.3';
+const VERSION = 'v1.1.4';
 const COLS = 10, ROWS = 20, CELL = 30;
 const MAX_CHARGE = 10;          // 必杀充能
 const ITEM_SLOTS = 3;           // 道具栏格数
@@ -128,6 +128,9 @@ class Player {
         const m = PIECES[t].m.map(r => r.slice());
         this.cur = { type: t, m, x: Math.floor((COLS - m.length) / 2), y: -1 };
         this.spawnId++;
+        // 软降只对当前方块生效：新块出生必须重新按一次下键才加速，
+        // 防止按住下键不放导致后续方块接连狂掉失控
+        this.softDropping = false;
         if (this.collide(this.cur.m, this.cur.x, this.cur.y)) {
             this.dead = true;
         }
