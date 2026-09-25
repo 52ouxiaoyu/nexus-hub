@@ -4,7 +4,7 @@
  * 双人对战俄罗斯方块 · 道具攻防系统
  * ============================================================ */
 
-const VERSION = 'v1.1.2';
+const VERSION = 'v1.1.3';
 const COLS = 10, ROWS = 20, CELL = 30;
 const MAX_CHARGE = 10;          // 必杀充能
 const ITEM_SLOTS = 3;           // 道具栏格数
@@ -204,14 +204,22 @@ class Player {
     }
 
     finishClear(now) {
-        const rows = this.pendingClear;
         this.pendingClear = null;
-        if (!rows) return;
-        // 消行（从下往上删）
-        for (const r of rows.sort((a, b) => b - a)) {
-            this.board.splice(r, 1);
-            this.board.unshift(Array(COLS).fill(0));
+        // 重新扫描满行：消行动画的 220ms 内垃圾行落地/清底会推移棋盘，
+        // lock() 时记录的行号已失效，按旧行号删会删错行导致满行残留
+        const rows = [];
+        for (let r = 0; r < ROWS; r++)
+            if (this.board[r].every(v => v)) rows.push(r);
+        if (rows.length === 0) {   // 满行已被清底等方式处理掉
+            this.combo = 0;
+            this.spawn();
+            return;
         }
+        // 消行：一次性过滤所有满行再在顶部补空行
+        // （不能用 splice+unshift 逐行删：unshift 会把未删行号推后一格，多行消除必少删一行）
+        const rowsSet = new Set(rows);
+        this.board = this.board.filter((_, i) => !rowsSet.has(i));
+        while (this.board.length < ROWS) this.board.unshift(Array(COLS).fill(0));
         const n = rows.length;
         this.lines += n;
         this.combo++;
