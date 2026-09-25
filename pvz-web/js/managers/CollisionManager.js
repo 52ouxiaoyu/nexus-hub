@@ -34,7 +34,8 @@ class CollisionManager {
                             const pierce = p.type === 'cabbage' || p.type === 'icecabbage'
                                         || p.type === 'kernel' || p.type === 'popcorn'
                                         || p.type === 'butter'
-                                        || p.type === 'scaredyshroom'; // v3.14.0：胆小菇孢子穿门
+                                        || p.type === 'scaredyshroom' // v3.14.0：胆小菇孢子穿门
+                                        || p.type === 'fume_burst';   // v3.26.0：大喷菇弹幕穿门
                             z.takeDamage(p.damage, pierce ? { pierce: true } : undefined);
                             
                             if (p.type === 'snowpea' || p.type === 'wintermelon' || p.type === 'icecabbage') {
@@ -87,15 +88,17 @@ class CollisionManager {
                             }
                             
                             // v3.23.0：命中音效按弹种区分——瓜果碎裂/蔬菜砸中/豌豆噗
+                            // v3.26.0：fume_burst 30 连发不逐发响（发射口已统一放一次 puff）
                             const hitFx = (p.type === 'melon' || p.type === 'wintermelon' ||
                                            p.type === 'cattail_melon' || p.type === 'cattail_wintermelon') ? 'crash'
                                 : (p.type === 'cabbage' || p.type === 'icecabbage' || p.type === 'kernel' ||
                                    p.type === 'popcorn' || p.type === 'butter' || p.type === 'minicherry') ? 'thud'
                                 : (p.type === 'snowpea') ? 'ice_pop'
                                 : (p.type === 'firepea') ? 'fire_pop'
+                                : (p.type === 'fume_burst') ? null
                                 : 'pea_hit';
-                            if (this.game.audioManager.playFx) this.game.audioManager.playFx(hitFx);
-                            else this.game.audioManager.play('splat');
+                            if (hitFx && this.game.audioManager.playFx) this.game.audioManager.playFx(hitFx);
+                            else if (hitFx) this.game.audioManager.play('splat');
                             break; 
                         }
                     }

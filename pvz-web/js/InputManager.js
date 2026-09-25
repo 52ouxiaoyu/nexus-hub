@@ -202,13 +202,13 @@ class InputManager {
             else if (type === 'kernelpult') imgName = 'KernelPult/KernelPult';     // v3.10.0
             else if (type === 'gloomshroom') imgName = 'GloomShroom/GloomShroom';  // v3.16.0 修复拖拽无图（目录名大写 S，默认映射 404）
             else if (type === 'spikerock') imgName = 'Spikerock/Spikerock';        // v3.16.0 补钢地刺拖拽图
-            else if (type === 'plantbox') imgName = '';                            // v3.24.0 植物盲盒：问号罐（见下方特判）
+            else if (type === 'plantbox') imgName = '';                            // v3.24.0 植物盲盒：礼盒（见下方特判）
 
-            // v3.25.0 植物盲盒：拖拽图改用原版问号罐（砸罐子模式的盲盒图标，替换礼盒）
+            // v3.26.0 植物盲盒：拖拽图改回"盲盒图案"（红丝带礼盒）——用户明确盲盒≠问号罐
             if (type === 'plantbox') {
-                this.dragGhost.style.backgroundImage = "url('assets/images/Vase/Vase_Question.png?v=1790337855')";
+                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1790340453')";
                 this.dragGhost.style.width = '46px';
-                this.dragGhost.style.height = '52px';
+                this.dragGhost.style.height = '64px';
                 this.dragGhost.style.backgroundSize = 'contain';
                 this.dragGhost.style.backgroundPosition = 'center';
                 return;
@@ -218,8 +218,8 @@ class InputManager {
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1790337855`
-                : `assets/images/Plants/${imgName}.gif?v=1790337855`;
+                ? `assets/images/Plants/${imgName}.png?v=1790340453`
+                : `assets/images/Plants/${imgName}.gif?v=1790340453`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
 
             // v3.20.0：倭瓜立绘画布 100×226（身体只占底部 68×82），60×60 contain 后

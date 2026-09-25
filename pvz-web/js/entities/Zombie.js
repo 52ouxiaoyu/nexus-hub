@@ -74,15 +74,16 @@ class Zombie extends Entity {
                 this.hp = 5200; this.maxHp = 5200;
             }
         } else if (type === 'mysterybox') {
-            // v3.23.0 盲盒僵尸：本体=普通僵尸（200 血），头顶顶着一只问号罐；
+            // v3.23.0 盲盒僵尸：本体=普通僵尸（200 血），头顶顶着一只礼盒盲盒；
             // 被打死时开出一只随机僵尸（融合+经典全类型，见 _openMysteryBox）。
             // 融合模式可刷出；砸罐子模式仅金罐可出。
+            // v3.26.0：头顶改回"盲盒图案"（红丝带礼盒）——用户明确盲盒≠问号罐
             this.hp = 200; this.maxHp = 200;
             this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
-            this.createPlantHead({ src: 'assets/images/Vase/Vase_Question.png', cw: 90, ch: 100, keepTop: 1.0, w: 46 });
+            this.createPlantHead({ src: 'assets/images/Plants/PlantBox/GiftBox.png', cw: 129, ch: 179, keepTop: 1.0, w: 42 });
         } else if (type === 'conehead') {
             this.hp = 560; this.maxHp = 560;
             this.element.src = 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif';
@@ -331,9 +332,9 @@ class Zombie extends Entity {
     }
     _syncHammer() {
         if (!this._hammerEl) return;
-        // 僵尸面朝左 → 木锤握在身前手上（贴住身体左缘），挥锤绕柄底旋转
-        this._hammerEl.style.left = (this.x - 14) + 'px';
-        this._hammerEl.style.top = (this.y + this.yOffset + 16) + 'px';
+        // v3.26.0：木锤紧贴僵尸本人（用户反馈：锤子浮在体外）——握点收到身体中线旁
+        this._hammerEl.style.left = (this.x - 6) + 'px';
+        this._hammerEl.style.top = (this.y + this.yOffset + 12) + 'px';
         this._hammerEl.style.zIndex = String(Math.floor(this.y) + 2);
     }
     // 挥锤动画：快速下劈再回位（纯视觉）

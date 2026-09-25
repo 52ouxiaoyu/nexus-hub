@@ -154,33 +154,33 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790337855';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790340453';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790337855';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790340453';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790337855';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790340453';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790337855';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790340453';
             stat.butterChance = 0.2;
         } else if (type === 'cobcannon') {
             // 玉米加农炮（v3.24.0）：PVZ1 原版 Cob Cannon——三株玉米投手合体，占两格。
             // 平时嘴里没有炮；充能 25s 结束后嘴里出现玉米炮弹；
             // 点击它出现瞄准镜（跟随鼠标），按 M 键向准星位置发射（见 GameLoop.enterCobAim）。
             stat.hp = 600;
-            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790337855';
+            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790340453';
             // v3.24.2 立绘 148×85（炮口已用叶壳封住），显示宽 132——两格 160px 内留边，
             // 修"看起来占三格"；+15 补偿缩小后轮子离地
             stat.yOffset = 15;
@@ -210,7 +210,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790337855';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790340453';
             stat.yOffset = 0;
         }
 
@@ -634,9 +634,17 @@ class Plant extends Entity {
                 this.game.container.appendChild(boom);
                 setTimeout(() => boom.remove(), 1000);
             } else {
-                this.element.src = 'assets/images/Plants/Jalapeno/JalapenoAttack.gif';
-                // v3.20.0：去掉 scaleX(3) —— 火力条原尺寸铺满整行，拉 3 倍就是"突然变长"
-                this.element.style.transform = 'translate(-50%, -50%)';
+                // v3.26.0：火爆辣椒火焰铺满整行（原版行为）——不再只是本体周围一小团。
+                // 伤害本来就是整行结算（上面 z.row === this.row），这里补齐视觉。
+                this.element.style.visibility = 'hidden';
+                const b = this.game.board;
+                const strip = document.createElement('img');
+                strip.src = 'assets/images/Plants/Jalapeno/JalapenoAttack.gif';
+                strip.style.cssText = 'position:absolute;pointer-events:none;z-index:3000;' +
+                    'left:' + b.offsetX + 'px;top:' + (this.y - 65) + 'px;' +
+                    'width:' + (b.cols * b.cellWidth) + 'px;height:131px;object-fit:fill;';
+                this.game.container.appendChild(strip);
+                setTimeout(() => strip.remove(), 1000);
             }
             
             setTimeout(() => { this.hp = 0; }, 500);
@@ -649,6 +657,10 @@ class Plant extends Entity {
                 z.takeDamage(20); // slight damage
             }
             this.hp = 0;
+            // v3.26.0：寒冰菇消散后补一声冰晶碎裂（冰冻音是"冻"，碎裂音是"没"）
+            setTimeout(() => {
+                if (this.game.audioManager.playFx) this.game.audioManager.playFx('ice_shatter');
+            }, 300);
         } else if (this.hasTrait('doomshroom')) {
             if (this.state !== 'idle') return; // 已处于膨胀/爆炸/弹坑阶段，忽略重复点击
             this.state = 'swelling';
@@ -662,14 +674,24 @@ class Plant extends Entity {
                     this.element.style.zIndex = 3000; // Put boom on top
                     this.element.style.transform = 'translate(-50%, -80%)'; // Move boom up a bit
 
-                    // v3.20.0：恢复全屏核平（用户："只打周围一圈的不叫毁灭菇"）；
-                    // 仍不产生陨石坑（爆炸后本体直接消失）
+                    // v3.20.0：恢复全屏核平（用户："只打周围一圈的不叫毁灭菇"）
                     const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                     for (let z of zombies) {
                         z.takeDamage(9999, { bomb: true });
                     }
 
-                    setTimeout(() => { this.hp = 0; }, 1000); // Boom lasts 1 sec
+                    // v3.26.0：爆炸后地面留陨石坑 30 秒（用户要求，与我是僵尸陷阱毁灭菇同一套：
+                    // _enemyTrap 免疫死亡 → 30 秒到点 _trapExpire 才真正消失）
+                    setTimeout(() => {
+                        this._enemyTrap = true;
+                        this.type = 'crater';
+                        this.state = 'crater';
+                        this.hp = 1; // 坑期内不判死，靠 _trapExpire 到点清除
+                        this.element.src = 'assets/images/Plants/DoomShroom/crater11.png';
+                        this.element.style.zIndex = 10;
+                        this.element.style.transform = 'translate(-50%, -50%)';
+                        setTimeout(() => { this._trapExpire = true; this.hp = 0; }, 30000);
+                    }, 1000); // Boom lasts 1 sec
                 }, 1000); // Swell lasts 1 sec
         }
     }
@@ -702,7 +724,7 @@ class Plant extends Entity {
             if (!this._cobShellEl) {
                 const el = document.createElement('img');
                 // v3.24.1：装填玉米用原版图鉴里抠出的整根玉米（带根部），从炮口探出
-                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790337855';
+                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790340453';
                 // 裸 img 必须自带 translate(-50%,-50%) 居中基准（与 fusionOverlay 同一教训）
                 // v3.24.2 尺寸随立绘缩放同步：43×48（0.892×）
                 el.style.cssText = 'position:absolute;width:43px;height:48px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);';
@@ -889,8 +911,9 @@ class Plant extends Entity {
                 let hasZombieAhead = this.game.entities.some(e => {
                     if (!(e instanceof Zombie) || e.isDead || e.state === 'DYING') return false;
                     if (e.hypnotized) return false; // 友方僵尸不算威胁
-                    if (this.hasTrait('threepeater')) {
-                        return Math.abs(e.row - this.row) <= 1 && e.x > this.x;
+                    if (this.hasTrait('threepeater') || this.hasTrait('fumeshroom')) {
+                        // v3.26.0：大喷菇弹幕覆盖本行±1，邻行有僵尸也要开火
+                        return Math.abs(e.row - this.row) <= 1 && e.x > this.x && e.x - this.x <= maxRange;
                     } else {
                         return e.row === this.row && e.x > this.x && e.x - this.x <= maxRange;
                     }
@@ -915,7 +938,6 @@ class Plant extends Entity {
                     if (this.hasTrait('snowpea')) projType = 'snowpea';
                     if (this.hasTrait('puffshroom')) projType = 'puffshroom';
                     if (this.hasTrait('scaredyshroom')) projType = 'scaredyshroom';
-                    if (this.hasTrait('fumeshroom')) projType = 'fumeshroom';
                     if (this.hasTrait('melonpult')) projType = 'melon';
                     if (this.hasTrait('wintermelon')) projType = 'wintermelon';
                     if (this.hasTrait('cattail')) {
@@ -954,7 +976,26 @@ class Plant extends Entity {
                         }
                     }
                     
-                    if (this.hasTrait('threepeater') && hasZombieAhead) {
+                    if (this.hasTrait('fumeshroom')) {
+                        // ===== v3.26.0 大喷菇弹幕（用户指定）=====
+                        // 不再喷一团雾：改为"一串小喷菇子弹"——3 排（本行±1）× 每排 10 发，
+                        // 每发伤害 = 小喷菇(20) × 2 = 40，穿铁门（pierce，见 CollisionManager）。
+                        // 80ms 一轮连射形成弹幕流；爆炸/死亡后停止补射。
+                        if (this.game.audioManager && this.game.audioManager.playFx) this.game.audioManager.playFx('puff');
+                        const lanes = [this.row - 1, this.row, this.row + 1]
+                            .filter(r => r >= 0 && r < this.game.board.rows);
+                        for (let i = 0; i < 10; i++) {
+                            setTimeout(() => {
+                                if (this.isDead || this.hp <= 0) return;
+                                for (const r of lanes) {
+                                    const p = new Projectile(this.game,
+                                        this.x + 22, this.y - 15 + (r - this.row) * this.game.board.cellHeight,
+                                        r, 'fume_burst');
+                                    this.game.entities.push(p);
+                                }
+                            }, i * 80);
+                        }
+                    } else if (this.hasTrait('threepeater') && hasZombieAhead) {
                         for (let dRow = -1; dRow <= 1; dRow++) {
                             const tRow = this.row + dRow;
                             if (tRow >= 0 && tRow < this.game.board.rows) {
@@ -1113,11 +1154,19 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     this.game.container.appendChild(boom);
                     setTimeout(() => boom.remove(), 1000);
                 } else {
-                    this.element.src = 'assets/images/Plants/Jalapeno/JalapenoAttack.gif';
-                    // v3.20.0：去掉 scaleX(3) —— 火力条 755×131 原尺寸已铺满整行，拉 3 倍就是"突然变长"
-                    this.element.style.transform = 'translate(-50%, -50%)';
+                    // v3.26.0：火爆辣椒火焰铺满整行（原版行为）——立绘画布塞不进植物框，
+                    // 直塞元素会被缩成"本体周围一小团"，改为整行火力条 overlay
+                    this.element.style.visibility = 'hidden';
+                    const b = this.game.board;
+                    const strip = document.createElement('img');
+                    strip.src = 'assets/images/Plants/Jalapeno/JalapenoAttack.gif';
+                    strip.style.cssText = 'position:absolute;pointer-events:none;z-index:3000;' +
+                        'left:' + b.offsetX + 'px;top:' + (this.y - 65) + 'px;' +
+                        'width:' + (b.cols * b.cellWidth) + 'px;height:131px;object-fit:fill;';
+                    this.game.container.appendChild(strip);
+                    setTimeout(() => strip.remove(), 1000);
                 }
-                
+
                 setTimeout(() => { this.hp = 0; }, 500);
                 }
             }
@@ -1132,6 +1181,10 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     z.takeDamage(20); // slight damage
                 }
                 this.hp = 0;
+                // v3.26.0：寒冰菇消散后补一声冰晶碎裂（与手动引爆路径一致）
+                setTimeout(() => {
+                    if (this.game.audioManager.playFx) this.game.audioManager.playFx('ice_shatter');
+                }, 300);
             }
         } else if (this.hasTrait('doomshroom') && this.autoExplode) {
             if (this.state === 'idle') {
@@ -1157,14 +1210,23 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                         this.element.style.zIndex = 3000; // Put boom on top
                         this.element.style.transform = 'translate(-50%, -80%)'; // Move boom up a bit
 
-                        // v3.23.0：毁灭菇=全屏核平（用户：周围一圈是融合体的机制，本体必须全屏）；
-                        // 仍不产生陨石坑（爆炸后本体直接消失）
+                        // v3.23.0：毁灭菇=全屏核平（用户：周围一圈是融合体的机制，本体必须全屏）
                         const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                         for (let z of zombies) {
                             z.takeDamage(9999, { bomb: true });
                         }
 
-                        setTimeout(() => { this.hp = 0; }, 1000); // Boom lasts 1 sec
+                        // v3.26.0：爆炸后地面留陨石坑 30 秒（与手动引爆路径一致）
+                        setTimeout(() => {
+                            this._enemyTrap = true;
+                            this.type = 'crater';
+                            this.state = 'crater';
+                            this.hp = 1; // 坑期内不判死，靠 _trapExpire 到点清除
+                            this.element.src = 'assets/images/Plants/DoomShroom/crater11.png';
+                            this.element.style.zIndex = 10;
+                            this.element.style.transform = 'translate(-50%, -50%)';
+                            setTimeout(() => { this._trapExpire = true; this.hp = 0; }, 30000);
+                        }, 1000); // Boom lasts 1 sec
                     }, 1000); // Swell lasts 1 sec
                 }
             }
@@ -1389,6 +1451,18 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
             // 大嘴坚果：保留坚果身+大嘴花头的合成外观，攻击/消化时只换嘴部动画不合适，
             // 因此维持静态外观（咬合音效与伤害照常），其余大嘴花植物照常换图。
             const isBigNutChomper = (this.type === 'fusion_chomper_wallnut');
+            // v3.26.0：坚果大嘴花的咀嚼演出——大嘴花头随啃咬/消化摆动（普通大嘴花直接换攻击/消化图）
+            if (isBigNutChomper && this.fusionOverlay) {
+                const headBase = 'translate(-50%, -50%) translate(20px, -25px) scale(0.9)';
+                if (this.state === 'biting') {
+                    this.fusionOverlay.style.transform = headBase + ' rotate(-14deg) scale(1.06)';
+                } else if (this.state === 'chewing') {
+                    const wob = (Math.sin(this.chewTimer * 6) * 9).toFixed(1);
+                    this.fusionOverlay.style.transform = headBase + ' rotate(' + wob + 'deg)';
+                } else {
+                    this.fusionOverlay.style.transform = headBase;
+                }
+            }
             if (this.state === 'idle') {
                 const zombieNear = this.game.entities.find(e => 
                     // v3.20.0：只咬前方一格（80px）—— 旧值 140px≈1.75 格，僵尸还没进嘴就被判咬中
