@@ -47,13 +47,13 @@ class Zombie extends Entity {
             // w=显示宽度（头部放大到足以完全遮住僵尸自己的头，僵尸头区约 67×70px）
             const headCfg = {
                 // v3.23.0：头部缩小到"刚好重叠在僵尸头上、与身体匹配"（僵尸头约 67px 宽）
-                peahead:     { src: 'assets/images/Plants/Peashooter/Peashooter.gif', cw: 71, ch: 71, keepTop: 0.66, w: 84 },
+                peahead:     { src: 'assets/images/Plants/Peashooter/Peashooter.gif', cw: 71, ch: 71, keepTop: 0.70, w: 94 },
                 nuthead:     { src: 'assets/images/Plants/WallNut/WallNut.gif',       cw: 65, ch: 73, keepTop: 1.0,  w: 60 },
-                sunhead:     { src: 'assets/images/Plants/SunFlower/SunFlower1.gif',  cw: 73, ch: 74, keepTop: 0.68, w: 88 },
-                snowpeahead: { src: 'assets/images/Plants/SnowPea/SnowPea.gif',       cw: 71, ch: 71, keepTop: 0.66, w: 80 },
+                sunhead:     { src: 'assets/images/Plants/SunFlower/SunFlower1.gif',  cw: 73, ch: 74, keepTop: 0.72, w: 98 },
+                snowpeahead: { src: 'assets/images/Plants/SnowPea/SnowPea.gif',       cw: 71, ch: 71, keepTop: 0.70, w: 90 },
                 jalapenohead:{ src: 'assets/images/Plants/Jalapeno/Jalapeno.gif',     cw: 68, ch: 89, keepTop: 1.0,  w: 50 },
-                machinegunhead: { src: 'assets/images/Plants/GatlingPea/GatlingPea.gif', cw: 71, ch: 71, keepTop: 0.72, w: 88 },
-                tallnuthead: { src: 'assets/images/Plants/TallNut/TallNut.gif',       cw: 83, ch: 119, keepTop: 0.62, w: 58 }
+                machinegunhead: { src: 'assets/images/Plants/GatlingPea/GatlingPea.gif', cw: 88, ch: 84, keepTop: 0.74, w: 96 },
+                tallnuthead: { src: 'assets/images/Plants/TallNut/TallNut.gif',       cw: 83, ch: 119, keepTop: 1.0, w: 64, topOff: -62 }
             }[type];
             this.hp = 200; this.maxHp = 200;
             this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
@@ -240,6 +240,7 @@ class Zombie extends Entity {
         this.headEl = wrap;      // 外层容器（定位/滤镜/掉落动画作用于此）
         this.headImgEl = img;    // 内层整株 gif
         this.headSize = cfg.w;
+        this.headTopOff = (cfg.topOff !== undefined) ? cfg.topOff : -48; // v3.23.1：高坚果本体占满画布，需单独上移
         this.hasPlantHead = true;
         this.game.entityLayer.appendChild(wrap);
         this.syncPlantHead();
@@ -251,7 +252,7 @@ class Zombie extends Entity {
         // v3.22.1：头部对位——僵尸头在画布内偏右（头区中心 ≈ 中心右移 15px），且头区
         // 约画布 24~90 行（y-48..y+18）：右移 10px + 顶部扣在 y-48，头部整体罩住僵尸灰头
         this.headEl.style.left = (this.x - this.headSize / 2 + 10) + 'px';
-        this.headEl.style.top = (this.y + this.yOffset - 48) + 'px';
+        this.headEl.style.top = (this.y + this.yOffset + this.headTopOff) + 'px';
         this.headEl.style.zIndex = String(Math.floor(this.y) + 1); // 略高于同一行的身体
         // 被冰冻/黄油定身时头顶植物一起变色（外观联动，与身体同一套状态滤镜）
         this.headEl.style.filter = this._statusFilter();
