@@ -138,7 +138,7 @@ ULTIMATES_POOL.push({
         g.showAnnouncement('🩸 狂暴嗜血！', '#f00');
         p.setShield(900);
         p.level = 9;
-        p.speed = 8;
+        p.speed = VITALS.PLAYER_SPEED_CAP; // v1.4.20 移速封顶（旧 8，比子弹还快）
         if (!p.perks) p.perks = [];
         p.perks.push('VAMPIRIC');
     }

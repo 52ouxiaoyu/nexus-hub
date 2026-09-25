@@ -34,6 +34,10 @@ const VITALS = {
     ELITE_SHIELD_CAP: 8,         // 精英盾封顶
     BOSS_SHIELD_CAP: 40,         // Boss 盾封顶
     BOSS_SHIELD_REGEN_RATE: 300, // Boss 盾每 5 秒回 1
+    // v1.4.20 玩家移速：任何等级都必须慢于普通子弹(6)——旧版满级 8 比子弹还快
+    PLAYER_SPEED_BASE: 3.5,      // 基础移速（旧 4）
+    PLAYER_SPEED_GAIN: 0.1,      // 每级移速增益（旧 0.15）
+    PLAYER_SPEED_CAP: 5.5,       // 移速封顶（旧 8）
 };
 
 // ===== 漫画式反馈文案池（纯数据驱动，想加梗直接往数组里塞即可）=====
@@ -508,7 +512,7 @@ class PowerUp {
             // 踩到空投遗产火箭的普通坦克直接 Boss 血量）；敌人只涨火力、回 3 血
             player.level = Math.min(9, Math.max(player.level + FIRE_MAX_WEAPON_STEP, FIRE_MAX_WEAPON_FLOOR));
             player.fireProgress = 0;
-            player.speed = Math.min(8, 4 + player.level * 0.15);
+            player.speed = Math.min(VITALS.PLAYER_SPEED_CAP, VITALS.PLAYER_SPEED_BASE + player.level * VITALS.PLAYER_SPEED_GAIN);
             if (isPlayer) {
                 // v1.4.19：火箭 = 火力跃升 + 血/盾上限各 +5 并回满（封顶 30）
                 player.maxHealth = Math.min(VITALS.PLAYER_MAX_CAP, player.maxHealth + 5);
@@ -1002,10 +1006,10 @@ class Bullet {
             this.size = level >= 3 ? 14 : 8;
             if (level >= 3) this.damage *= 1.5;
         } else if (this.type === 'MISSILE') {
-            this.speed = level >= 5 ? 7 : 5;
+            this.speed = level >= 5 ? 7 : 6; // v1.4.20 低级导弹 5 → 6（玩家移速封顶 5.5，弹必须快于车）
             if (this.owner instanceof Enemy) this.speed *= 0.6; // 40% slower for enemies
         } else if (this.type === 'EXPLOSIVE') {
-            this.speed = 5;
+            this.speed = 6; // v1.4.20 5 → 6（同理，弹必须快于车）
             this.damage *= 2;
             this.size = 12;
         } else if (this.type === 'SPREAD') {
@@ -1321,7 +1325,7 @@ class Bullet {
 }
 
 class Tank {
-    constructor(game, x, y, color) { this.game = game; this.x = x; this.y = y; this.width = 60; this.height = 60; this.color = color; this.direction = 'UP'; this.speed = 4; this.cooldown = 0; this.alive = true; this.shieldTimer = 0; this.level = 0; this.fireProgress = 0; this.score = 0; this.weaponClass = 'NORMAL';
+    constructor(game, x, y, color) { this.game = game; this.x = x; this.y = y; this.width = 60; this.height = 60; this.color = color; this.direction = 'UP'; this.speed = VITALS.PLAYER_SPEED_BASE; this.cooldown = 0; this.alive = true; this.shieldTimer = 0; this.level = 0; this.fireProgress = 0; this.score = 0; this.weaponClass = 'NORMAL';
         // v1.4.19：护盾能量（shieldHp/maxShield，区别于 shieldTimer 时间无敌）+ 血再生池
         this.shieldHp = 0; this.maxShield = 0; this.shieldRegenTimer = 0; this.healPool = 0; this.healTimer = 0; }
     setShield(d) { this.shieldTimer = d; }
@@ -1329,7 +1333,7 @@ class Tank {
     upgrade() { 
         if (this.level >= 9) return false;
         this.level++;
-        this.speed = Math.min(8, 4 + this.level * 0.15); 
+        this.speed = Math.min(VITALS.PLAYER_SPEED_CAP, VITALS.PLAYER_SPEED_BASE + this.level * VITALS.PLAYER_SPEED_GAIN); 
         if (this instanceof Player) {
             // v1.4.19：升级伴随生存成长——血/盾上限各 +1（封顶 30）
             if (this.maxHealth < VITALS.PLAYER_MAX_CAP) this.maxHealth++;
@@ -2796,7 +2800,7 @@ class Boss extends Enemy {
                     if (p) {
                         p.score += share;
                         p.level = Math.max(p.level, 2); 
-                        p.speed = Math.min(8, 4 + p.level * 0.15);
+                        p.speed = Math.min(VITALS.PLAYER_SPEED_CAP, VITALS.PLAYER_SPEED_BASE + p.level * VITALS.PLAYER_SPEED_GAIN);
                         p.setShield(600);
                         
                         const offsetX = p.id === 1 ? -60 : 60;
@@ -2809,7 +2813,7 @@ class Boss extends Enemy {
             } else if (killer instanceof Player) { 
                 killer.score += 20000; 
                 killer.level = Math.max(killer.level, 2); 
-                killer.speed = Math.min(8, 4 + killer.level * 0.15);
+                killer.speed = Math.min(VITALS.PLAYER_SPEED_CAP, VITALS.PLAYER_SPEED_BASE + killer.level * VITALS.PLAYER_SPEED_GAIN);
                 killer.setShield(600);
                 this.game.showFloatingText('+20000', this.x + this.width/2, this.y - 20, '#ff0');
                 this.game.showAnnouncement('BOSS 陨落! BOSS DESTROYED!', '#ff0');
@@ -3438,7 +3442,7 @@ class Game {
     handlePlayerDeath(player) {
         if (player.level > 0) {
             player.level = Math.floor(player.level / 2);
-            player.speed = Math.min(8, 4 + player.level * 0.15);
+            player.speed = Math.min(VITALS.PLAYER_SPEED_CAP, VITALS.PLAYER_SPEED_BASE + player.level * VITALS.PLAYER_SPEED_GAIN);
             player.fireProgress = 0;
             this.showFloatingText('火力减半!', player.x + player.width/2, player.y - 10, '#f00');
         }
@@ -3477,7 +3481,7 @@ class Game {
     revivePlayer(player) {
         player.level = 0;
         player.fireProgress = 0;
-        player.speed = 4;
+        player.speed = VITALS.PLAYER_SPEED_BASE;
         // v1.4.19：救活回基础血/盾并回满
         player.maxHealth = VITALS.PLAYER_BASE_HP;
         player.health = player.maxHealth;
