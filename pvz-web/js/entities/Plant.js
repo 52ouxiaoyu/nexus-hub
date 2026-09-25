@@ -154,34 +154,34 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790307878';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790311586';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790307878';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790311586';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790307878';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790311586';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790307878';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790311586';
             stat.butterChance = 0.2;
         } else if (type === 'cobcannon') {
             // 玉米加农炮（v3.24.0）：PVZ1 原版 Cob Cannon——三株玉米投手合体，占两格。
             // 平时嘴里没有炮；充能 25s 结束后嘴里出现玉米炮弹；
             // 点击它出现瞄准镜（跟随鼠标），按 M 键向准星位置发射（见 GameLoop.enterCobAim）。
             stat.hp = 600;
-            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790307878';
-            stat.yOffset = -10;
+            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790311586';
+            stat.yOffset = 10;   // v3.24.1 立绘 148x85（显示宽150→高86），+10 保持轮子贴地
             stat.chargeTime = 25;
             stat.chargeTimer = 25;
             stat.chargeReady = false;
@@ -208,7 +208,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790307878';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790311586';
             stat.yOffset = 0;
         }
 
@@ -696,9 +696,10 @@ class Plant extends Entity {
         if (show) {
             if (!this._cobShellEl) {
                 const el = document.createElement('img');
-                el.src = 'assets/images/Plants/CobCannon/Cob.png?v=1790307878';
+                // v3.24.1：装填玉米用原版图鉴里抠出的整根玉米（带根部），从炮口探出
+                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790311586';
                 // 裸 img 必须自带 translate(-50%,-50%) 居中基准（与 fusionOverlay 同一教训）
-                el.style.cssText = 'position:absolute;width:46px;height:22px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);';
+                el.style.cssText = 'position:absolute;width:48px;height:54px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);';
                 this.game.entityLayer.appendChild(el);
                 this._cobShellEl = el;
             }
@@ -713,7 +714,7 @@ class Plant extends Entity {
         this.chargeReady = false;
         this.chargeTimer = this.chargeTime;
         this._showCobShell(false);
-        const proj = new Projectile(this.game, this.x + 26, this.y + this.yOffset - 34, this.row, 'cob', null);
+        const proj = new Projectile(this.game, this.x + 45, this.y + this.yOffset - 18, this.row, 'cob', null);
         proj.setupLobToPoint(tx, ty);
         this.game.entities.push(proj);
     }
@@ -738,9 +739,9 @@ class Plant extends Entity {
                 }
             }
             if (this._cobShellEl) {
-                // 炮口在头部右端上部（立绘 200×170 面朝右上，显示宽 150）
-                this._cobShellEl.style.left = (this.x + 26) + 'px';
-                this._cobShellEl.style.top = (this.y + this.yOffset - 34) + 'px';
+                // v3.24.1 炮口在炮管右端（立绘 148×85 原版整株），玉米从炮口探出垂下
+                this._cobShellEl.style.left = (this.x + 50) + 'px';
+                this._cobShellEl.style.top = (this.y + this.yOffset - 14) + 'px';
                 this._cobShellEl.style.zIndex = String(Math.floor(this.y) + 2);
             }
             return;

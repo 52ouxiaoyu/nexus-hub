@@ -206,9 +206,9 @@ class InputManager {
 
             // v3.24.0 植物盲盒：拖拽图直接用原版问号罐
             if (type === 'plantbox') {
-                this.dragGhost.style.backgroundImage = "url('assets/images/Vase/Vase_Question.png?v=1790307878')";
-                this.dragGhost.style.width = '60px';
-                this.dragGhost.style.height = '60px';
+                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1790311586')";
+                this.dragGhost.style.width = '46px';
+                this.dragGhost.style.height = '64px';
                 this.dragGhost.style.backgroundSize = 'contain';
                 this.dragGhost.style.backgroundPosition = 'center';
                 return;
@@ -218,8 +218,8 @@ class InputManager {
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1790307878`
-                : `assets/images/Plants/${imgName}.gif?v=1790307878`;
+                ? `assets/images/Plants/${imgName}.png?v=1790311586`
+                : `assets/images/Plants/${imgName}.gif?v=1790311586`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
 
             // v3.20.0：倭瓜立绘画布 100×226（身体只占底部 68×82），60×60 contain 后
