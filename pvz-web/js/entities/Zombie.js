@@ -1006,9 +1006,9 @@ class Zombie extends Entity {
             this._bombTanked = (this._bombTanked || 0) + 1;
             if (this._bombTanked <= 3) return;
         }
-        // v3.32.0：巨人僵尸被一次性植物一发带走（樱桃/辣椒/毁灭菇/窝瓜/土豆雷/玉米加农炮
-        // 都是一次 ≥1800 的爆炸伤害）——用户定义：任何一次性植物都能一次打死巨人
-        if (this.type === 'gargantuar' && amount >= 1800) {
+        // v3.32.0：巨人僵尸被一次性植物一发带走
+        // v3.32.1：改为显式 oneshot 标记（或 ≥1800 兜底）——寒冰樱桃炸弹半价 900 也必须秒杀巨人
+        if (this.type === 'gargantuar' && ((opts && opts.oneshot) || amount >= 1800)) {
             amount = this.hp;
         }
         // ===== v3.10.0 破甲（仅卷心菜投手 / 玉米投手的投掷物）=====
