@@ -267,14 +267,17 @@ body {
 }
 
 /* v3.33.0 右上角常驻 HUD：难度角标 + 速度按钮脱离顶栏（顶栏整行让给种子物品栏）。
-   不吃 top-bar 的 scale(0.7)，直接钉在画面最右上角；难度角标由 JS 动态插入其最前 */
+   不吃 top-bar 的 scale(0.7)，直接钉在画面最右上角；难度角标由 JS 动态插入本容器。
+   v3.34.0：改竖排 —— Speed 在上、难度角标贴其正下方（用户指定），下方顶栏的
+   阳光/分数/融合图鉴不再被角标盖住 */
 #corner-hud {
     position: absolute;
     top: 6px;
     right: 8px;
     display: flex;
-    align-items: center;
-    gap: 6px;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
     pointer-events: auto;   /* ui-layer 是 pointer-events:none，HUD 自身要能点 */
     z-index: 1200;
 }
@@ -335,28 +338,29 @@ body {
                  0 0 12px rgba(255, 196, 60, 0.55), 0 0 26px rgba(255, 176, 40, 0.3);
 }
 
-/* —— HUD 难度角标（仅 vase 模式, 位于右上角 Speed 按钮右侧） —— */
+/* —— HUD 难度角标（v3.34.0：位于右上角 Speed 按钮正下方，外观尺寸与 Speed 按钮一致，
+   文案去掉"难度"前缀只留 档位名+英文 —— 用户指定） —— */
 .diff-chip {
     flex-shrink: 0;
-    align-self: center;
     display: flex;
     align-items: center;
     gap: 6px;
     font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 900;
     letter-spacing: 2px;
     color: #fff;
-    padding: 3px 12px;
-    border-radius: 12px;
+    padding: 5px 12px;
+    border-radius: 20px;
     border: 2px solid;
     box-shadow: 0 2px 5px rgba(0,0,0,0.4);
-    text-shadow: 1px 1px 1px rgba(0,0,0,0.6);
+    text-shadow: 1px 1px 2px black;
     pointer-events: none;
+    white-space: nowrap;
 }
 .diff-chip .diff-chip-en {
     font-family: monospace;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: bold;
     letter-spacing: 1px;
     opacity: 0.85;
