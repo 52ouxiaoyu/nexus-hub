@@ -154,33 +154,33 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790396240';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790405960';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790396240';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790405960';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790396240';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790405960';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790396240';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790405960';
             stat.butterChance = 0.2;
         } else if (type === 'cobcannon') {
             // 玉米加农炮（v3.24.0）：PVZ1 原版 Cob Cannon——三株玉米投手合体，占两格。
             // 平时嘴里没有炮；充能 25s 结束后嘴里出现玉米炮弹；
             // 点击它出现瞄准镜（跟随鼠标），按 M 键向准星位置发射（见 GameLoop.enterCobAim）。
             stat.hp = 600;
-            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790396240';
+            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790405960';
             // v3.24.2 立绘 148×85（炮口已用叶壳封住），显示宽 132——两格 160px 内留边，
             // 修"看起来占三格"；+15 补偿缩小后轮子离地
             stat.yOffset = 15;
@@ -210,7 +210,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790396240';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790405960';
             stat.yOffset = 0;
         }
 
@@ -325,19 +325,17 @@ class Plant extends Entity {
                     this.element.src = s2.src; // wallnut
                     this.fusionOverlay.src = s1.src; // spikeweed
                     this.fusionOverlay.style.clipPath = 'none'; // show full spikeweed
-                    // Spikeweed needs to be placed at the bottom of the wallnut
-                    // v3.11.0：叠加层改为"以中心对齐"后，这里必须重新标定——
-                    // 旧值 40 是在"左上角对齐"的错误坐标系里试出来的，换算到中心系应为 24px
-                    // （否则刺会整体浮在坚果下方 ~23px，中间露一条缝）。
-                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(0px, 24px)';
+                    // v3.28.0：刺必须"铺在坚果前面的地上"而不是叠在坚果身上——
+                    // 叠在身上看不出僵尸会踩到刺。48px ≈ 坚果脚边（overlay top=y+yOffset，
+                    // 48-15=33px 即坚果底缘之下），配合 v3.27.0 的"叠加层在主体之上"层级
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(0px, 48px)';
                 } else if (type === 'fusion_spikerock_tallnut') {
                     this.yOffset = s2.yOffset; // use tallnut's offset
                     this.element.src = s2.src; // tallnut
                     this.fusionOverlay.src = s1.src; // spikerock
                     this.fusionOverlay.style.clipPath = 'none'; // show full spikerock
-                    // Tallnut is at -20, Spikerock normally at 20.
-                    // v3.11.0：同上，40 → 30（中心系重标定）
-                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(0px, 30px)';
+                    // v3.28.0：同上——钢地刺放到高坚果前方脚边（高坚果更高，58px 才落到脚底）
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(0px, 58px)';
                 } else if (type === 'fusion_snownut') {
                     // Wallnut colored ice blue
                     this.element.src = s2.src; // wallnut
@@ -724,7 +722,7 @@ class Plant extends Entity {
             if (!this._cobShellEl) {
                 const el = document.createElement('img');
                 // v3.24.1：装填玉米用原版图鉴里抠出的整根玉米（带根部），从炮口探出
-                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790396240';
+                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790405960';
                 // 裸 img 必须自带 translate(-50%,-50%) 居中基准（与 fusionOverlay 同一教训）
                 // v3.24.2 尺寸随立绘缩放同步：43×48（0.892×）
                 el.style.cssText = 'position:absolute;width:43px;height:48px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);';
@@ -1077,11 +1075,11 @@ class Plant extends Entity {
         }
         
         if (this.hasTrait('sunshroom')) {
+            // v3.28.0 阳光菇成长机制（重做）：旧版"每 10s 多掉一颗 25 阳光、最多 4 颗"严重超模。
+            // 新版对齐原版——刚种下产"一小粒"阳光(15)，每 20s 长大一阶（阳光视觉随之变大），
+            // 成熟（≥60s）后产量=向日葵(25)、阳光恢复全尺寸。
             this.growthTimer += deltaTime;
-            if (this.growthTimer >= 10.0 && this.sunCountDrop < 4) {
-                this.sunCountDrop++;
-                this.growthTimer = 0;
-            }
+            this.growthStage = Math.min(3, Math.floor(this.growthTimer / 20.0)); // 0/1/2/3
         }
         // 我是僵尸模式：敌方向日葵不产阳光球（我方阳光只来自"啃死向日葵 +200/双子 +500"的奖励，见死亡分支）
         if (!this.game.zombieMode && (this.hasTrait('sunflower') || this.hasTrait('sunshroom') || this.hasTrait('twinsunflower'))) {
@@ -1093,9 +1091,18 @@ class Plant extends Entity {
                 // Hybrid makes small sun
 let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || this.hasTrait('repeater');
                 let sunValue = isHybridSun ? 15 : 25;
+                // v3.28.0 阳光菇成长：未成熟=小粒 15（个头随成长阶变大），成熟=25 全尺寸
+                let sunshroomScale = null;
+                if (this.hasTrait('sunshroom')) {
+                    const stage = this.growthStage || 0;
+                    sunValue = stage >= 3 ? 25 : 15;
+                    sunshroomScale = [0.5, 0.62, 0.78, 1.0][stage];
+                }
                 let sun = new Sun(this.game, this.x, this.y - 20, targetY);
                 sun.value = sunValue;
-                if (isHybridSun) {
+                if (sunshroomScale !== null) {
+                    if (sunshroomScale < 1) sun.setTransform(`scale(${sunshroomScale})`);
+                } else if (isHybridSun) {
                     // v3.9.1：走 setTransform，保留 .entity 的 translate(-50%,-50%) 居中
                     //（原直写 scale(0.6) 会让小阳光右下偏移半个贴图 39×39）
                     sun.setTransform('scale(0.6)');
@@ -1108,14 +1115,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                         if (!this.isDead) this.game.entities.push(new Sun(this.game, this.x + 20, this.y - 20, targetY));
                     }, 500);
                 }
-                
-                if (this.hasTrait('sunshroom') && this.sunCountDrop > 1) {
-                    for (let i = 1; i < this.sunCountDrop; i++) {
-                        setTimeout(() => {
-                            if (!this.isDead) this.game.entities.push(new Sun(this.game, this.x + (Math.random()*40-20), this.y - 20, targetY));
-                        }, i * 300);
-                    }
-                }
+                // v3.28.0：阳光菇旧版"成熟后一次掉多颗"的多倍产阳光机制已删除（成长机制重做见上）
             }
         } else if ((this.hasTrait('cherrybomb') || this.hasTrait('jalapeno')) && this.autoExplode) {
             if (!this.hasExploded) {

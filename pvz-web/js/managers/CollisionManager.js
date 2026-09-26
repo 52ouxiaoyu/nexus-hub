@@ -46,12 +46,15 @@ class CollisionManager {
                                 z.freezeButter(3.0); // 玉米投手 20% 黄油：定身 3 秒
                             }
                             
-                            if (p.type === 'melon' || p.type === 'wintermelon') {
+                            // v3.28.0：西瓜系统一"直击 60 + 溅射 30"——猫尾草西瓜/铁冰西瓜猫尾草
+                            // 旧版没有溅射，玩家反馈"猫尾草西瓜伤害弱一档"，现与普通西瓜完全同一档
+                            if (p.type === 'melon' || p.type === 'wintermelon' ||
+                                p.type === 'cattail_melon' || p.type === 'cattail_wintermelon') {
                                 const allZombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                                 for (let oz of allZombies) {
                                     if (oz !== z && Math.abs(oz.row - z.row) <= 1 && Math.abs(oz.x - z.x) < 150) {
                                         oz.takeDamage(p.damage / 2);
-                                        if (p.type === 'wintermelon') {
+                                        if (p.type === 'wintermelon' || p.type === 'cattail_wintermelon') {
                                             oz.setSlow(10.0);
                                         }
                                     }
@@ -107,11 +110,18 @@ class CollisionManager {
         }
         
         // Torchwood interactions
+        // v3.28.0 关键修复：每个树桩对每颗豌豆只转化一次。
+        // 旧版没有"已转化"标记 → 寒冰豌豆第一帧被解冻成普通豌豆，第二帧还在树桩 ±20px
+        // 范围内又被普通豌豆分支点着成火焰豌豆 —— 玩家看到的"寒冰豌豆穿树桩还是火豌豆"。
+        // 正确规则（原版）：寒冰豌豆过树桩=解冻成普通豌豆；普通豌豆过树桩=点燃；后续树桩照常点燃。
         const plants = this.game.entities.filter(e => e instanceof Plant && !e.isDead);
         for (let p of projectiles) {
             if (p.type === 'peashooter' || p.type === 'snowpea' || p.type === 'backpea') {
                 for (let pl of plants) {
                     if (pl.type === 'torchwood' && pl.row === p.row && Math.abs(pl.x - p.x) < 20) {
+                        if (!p._torchSeen) p._torchSeen = new Set();
+                        if (p._torchSeen.has(pl)) continue; // 这颗豌豆已经过这个树桩
+                        p._torchSeen.add(pl);
                         if (p.type === 'snowpea') {
                             p.type = 'peashooter'; // Thaws
                             p.element.src = 'assets/images/Plants/PB00.gif';

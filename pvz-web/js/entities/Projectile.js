@@ -29,15 +29,18 @@ class Projectile extends Entity {
             this.element.src = 'assets/images/Plants/PB-10.gif';
         } else if (type === 'scaredyshroom') {
             this.element.src = 'assets/images/Plants/ShroomBullet.gif';
-            this.damage = 40;
+            // v3.28.0：经典模式胆小菇伤害对齐普通豌豆(20)；我是僵尸模式敌阵仍用 40（平衡不动）
+            this.damage = this.game.zombieMode ? 40 : 20;
         } else if (type === 'melon' || type === 'wintermelon') {
             // 西瓜/冰西瓜子弹：使用原版 Projectiles 图集里的"整颗西瓜"完整图案
             // （54×46、透明底、硬边；普通版绿皮黑纹，冰瓜版同造型蓝色）。
             // 旧素材是从 MelonPult 整株立绘 flood-fill 出的 50×40 残片 —— 右侧被齐边切掉、
             // 右下被瓜篮挖空，这就是玩家看到的"贴图不完整"。
+            // v3.28.0 伤害定档（恒定不再改动）：西瓜系全部统一 直击 60 + 溅射 30
+            //（溅射见 CollisionManager；猫尾草西瓜/铁冰西瓜猫尾草与普通西瓜完全同一档）
             this.element.src = type === 'melon'
-                ? 'assets/images/Plants/MelonPult/Melon.png?v=1790396240'
-                : 'assets/images/Plants/MelonPult/WinterMelon.png?v=1790396240';
+                ? 'assets/images/Plants/MelonPult/Melon.png?v=1790405960'
+                : 'assets/images/Plants/MelonPult/WinterMelon.png?v=1790405960';
             this.setTransform();   // v3.10.0：裸写 transform 会顶掉 .entity 的居中基准（贴图偏移半个身位）
             // 注意：不能再加 border-radius:50% —— 那会把完整的椭圆瓜体按内切圆再裁一圈
             this.damage = 60;
@@ -47,7 +50,7 @@ class Projectile extends Entity {
             // 子弹取自 TSR 原版 Projectiles 图集（行标签 "Cabbage"）：30×27 绿色卷心菜。
             // 破甲：命中时以 {pierce:true} 结算 → 越过路障/铁桶/报纸/铁门直接打本体，护甲不脱落
             // （见 CollisionManager.update 与 Zombie.takeDamage）。
-            this.element.src = 'assets/images/Plants/CabbagePult/Cabbage.png?v=1790396240';
+            this.element.src = 'assets/images/Plants/CabbagePult/Cabbage.png?v=1790405960';
             // v3.11.0 尺寸校准：原图 30×27 投出来只有"米粒大"，与立绘篮筐里那颗（实测 35×29）
             // 不成比例 → 放大到 34×31 与篮内弹药等大（用 width/height，不碰 transform 以免顶掉居中基准）
             this.element.style.width = '34px';
@@ -64,7 +67,7 @@ class Projectile extends Entity {
             // ===== v3.10.0 玉米投手 =====
             // 子弹取自原版图集（行标签 "Kernel"）：淡黄玉米粒。同样走抛物线 + 破甲。
             // 爆米花（融合：玉米投手+火爆辣椒）：焦色更大颗，命中 3×3 溅射。
-            this.element.src = 'assets/images/Plants/KernelPult/Kernel.png?v=1790396240';
+            this.element.src = 'assets/images/Plants/KernelPult/Kernel.png?v=1790405960';
             // v3.11.0 尺寸校准：原图 16×17 投出来只有"米粒大"；立绘篮筐里那颗实测 19×20，
             // 所以放大到 22×23 —— 略大于篮内单颗，空中飞行时才有存在感（爆米花更大一颗 30×30）。
             // 用 width/height 而不是 transform，避免顶掉 .entity 的 translate(-50%,-50%) 居中基准。
@@ -86,7 +89,7 @@ class Projectile extends Entity {
             // 原版 Cob（TSR Projectiles 图集行标签 "Cob"）：161×76 完整玉米炮弹。
             // 飞向固定坐标点（不锁定僵尸），落地 3×3 范围 1800 炸弹伤害（见 _cobExplode）。
             // 注意：这里不 setupLob——fireCob() 随后调用 setupLobToPoint(tx,ty) 指定落点。
-            this.element.src = 'assets/images/Plants/CobCannon/Cob.png?v=1790396240';
+            this.element.src = 'assets/images/Plants/CobCannon/Cob.png?v=1790405960';
             this.element.style.width = '56px';
             this.element.style.height = '27px';
             this.element.style.objectFit = 'contain';
@@ -101,7 +104,7 @@ class Projectile extends Entity {
             // 原版图集行标签 "Butter" 的黄油块；命中后定身 3 秒（见 CollisionManager）。
             // v3.11.0：与放大后的玉米粒同一档体积，46×48 → 28×29
             // （用 width/height，不碰 transform，以免破坏 .entity 的 translate(-50%,-50%) 居中基准）。
-            this.element.src = 'assets/images/Plants/KernelPult/Butter.png?v=1790396240';
+            this.element.src = 'assets/images/Plants/KernelPult/Butter.png?v=1790405960';
             this.element.style.width = '28px';
             this.element.style.height = '29px';
             this.element.style.objectFit = 'contain';
@@ -114,14 +117,17 @@ class Projectile extends Entity {
             this.damage = 20;
             this.speed = 400;
         } else if (type === 'cattail_melon') {
-            this.element.src = 'assets/images/Plants/MelonPult/Melon_small.png?v=1790396240';
-            this.setTransform('scale(0.8)');
-            this.damage = 60;
+            // v3.28.0：猫尾草西瓜的瓜弹改用与普通西瓜投手**完全同一张**整瓜贴图（54×46 原尺寸）——
+            // 旧版用 Melon_small + scale(0.8)，玩家反馈"猫尾草西瓜的瓜看起来小一圈"
+            this.element.src = 'assets/images/Plants/MelonPult/Melon.png?v=1790405960';
+            this.setTransform();
+            this.damage = 60;   // v3.28.0：与普通西瓜同档（直击60+溅射30），速度保留猫尾草的 400
             this.speed = 400;
         } else if (type === 'cattail_wintermelon') {
-            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon_small.png?v=1790396240';
-            this.setTransform('scale(0.8)');
-            this.damage = 60;
+            // v3.28.0：铁冰西瓜猫尾草同理——冰瓜弹与普通冰西瓜同尺寸同贴图
+            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon.png?v=1790405960';
+            this.setTransform();
+            this.damage = 60;   // v3.28.0：同档
             this.speed = 400;
         } else if (type === 'puffshroom' || type === 'gloom_puff') {
             this.element.src = 'assets/images/Plants/ShroomBullet.gif';

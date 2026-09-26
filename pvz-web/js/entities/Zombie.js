@@ -683,6 +683,11 @@ class Zombie extends Entity {
                 }
             }
             
+            // v3.28.0：大型僵尸（冰车/巨人/Boss）改"头碰到植物就开始咬/压"——
+            // 旧版用统一的 ±40px 中心距，大体型贴图宽，要等大半个身子压到植物上才触发，
+            // 观感是"身体都碾过去了才回头咬一口"。大型僵尸检测半径 85px 且只认前方目标，
+            // 车头/头前端一碰植物就立即结算。
+            const bigZ = (this.type === 'zomboni' || this.type === 'gargantuar' || this.type === 'lgboss');
             const plant = this.game.entities.find(e => 
                 e instanceof Plant && 
                 // v3.14.0：地刺/钢地刺都不可啃 —— 所有僵尸直接从上面走过
@@ -690,15 +695,16 @@ class Zombie extends Entity {
                 // 这类带坚果躯体的融合株照常被啃食（坚果当盾承伤），脚下地刺在 update 里照常扎人
                 (e.type !== 'spikeweed' && e.type !== 'spikerock') &&
                 e.row === this.row && 
-                Math.abs(e.x - this.x) < 40 &&
+                (bigZ ? (e.x <= this.x + 10 && this.x - e.x < 85) : Math.abs(e.x - this.x) < 40) &&
                 !e.isDead && e.type !== 'crater'
             );
             
             // v3.14.0：冰车碾地刺 —— 碰地刺同归于尽（冰车被扎爆）；钢地刺可扛 3 辆冰车，
             // 第 3 辆碾过才毁；其余僵尸对两种地刺照旧直接走过（不可啃、撑杆跳也不跳）
             if (this.type === 'zomboni') {
+                // v3.28.0：冰车同样"车头碰到就结算"（扎爆判定与啃食判定同半径）
                 const spike = this.game.entities.find(e => e instanceof Plant && !e.isDead &&
-                    e.row === this.row && Math.abs(e.x - this.x) < 40 &&
+                    e.row === this.row && e.x <= this.x + 10 && this.x - e.x < 85 &&
                     e.hasTrait && (e.hasTrait('spikeweed') || e.hasTrait('spikerock')));
                 if (spike) {
                     if (spike.hasTrait('spikeweed')) {
@@ -865,7 +871,9 @@ class Zombie extends Entity {
                 } else if (this.eatTarget.type === 'garlic' && this.type !== 'snowpeahead') { // v3.23.0 寒冰头免疫大蒜改行
                     // Bite garlic and switch row!
                     this.eatTarget.hp -= 20; // single bite damage
-                    this.game.audioManager.play('chomp'); // disgusted sound ideally
+                    // v3.28.0：咬大蒜 = 被辣到干呕（专属"呕吐"合成音，替换原 chomp）
+                    if (this.game.audioManager.playFx) this.game.audioManager.playFx('vomit');
+                    else this.game.audioManager.play('chomp');
                     
                     // Show text bubble!
                     const textBubble = document.createElement('div');
