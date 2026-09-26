@@ -1,4 +1,18 @@
 class Zombie extends Entity {
+    // v3.30.0：植物头裁剪配置提为静态表 —— 场上 createPlantHead 与砸罐子罐内
+    // 合成预览（身体+头顶植物）共用同一份裁剪参数，避免两处拷贝漂移
+    static PLANT_HEAD_CFG = {
+        // cw/ch=gif 画布尺寸，keepTop=只保留顶部比例（裁掉茎干底座），
+        // w=显示宽度（头部放大到足以完全遮住僵尸自己的头，僵尸头区约 67×70px），topOff=头顶锚点偏移
+        peahead:     { src: 'assets/images/Plants/Peashooter/Peashooter.gif', cw: 71, ch: 71, keepTop: 0.70, w: 94 },
+        nuthead:     { src: 'assets/images/Plants/WallNut/WallNut.gif',       cw: 65, ch: 73, keepTop: 1.0,  w: 60 },
+        sunhead:     { src: 'assets/images/Plants/SunFlower/SunFlower1.gif',  cw: 73, ch: 74, keepTop: 0.72, w: 98 },
+        snowpeahead: { src: 'assets/images/Plants/SnowPea/SnowPea.gif',       cw: 71, ch: 71, keepTop: 0.70, w: 90 },
+        jalapenohead:{ src: 'assets/images/Plants/Jalapeno/Jalapeno.gif',     cw: 68, ch: 89, keepTop: 1.0,  w: 50 },
+        machinegunhead: { src: 'assets/images/Plants/GatlingPea/GatlingPea.gif', cw: 88, ch: 84, keepTop: 0.74, w: 96 },
+        tallnuthead: { src: 'assets/images/Plants/TallNut/TallNut.gif',       cw: 83, ch: 119, keepTop: 1.0, w: 64, topOff: -62 },
+        mysterybox:  { src: 'assets/images/Plants/PlantBox/GiftBox.png',      cw: 129, ch: 179, keepTop: 1.0, w: 42 }
+    };
     constructor(game, row, type = 'normal') {
         const x = 950;
         const y = game.board.offsetY + row * game.board.cellHeight + game.board.cellHeight / 2 - 20;
@@ -45,16 +59,7 @@ class Zombie extends Entity {
             // 该植物是外观而非融合植物，也不是"装甲"，不提供任何增益。
             // v3.22.1：植物头裁剪配置——cw/ch=gif 画布尺寸，keepTop=只保留顶部比例（裁掉茎干底座），
             // w=显示宽度（头部放大到足以完全遮住僵尸自己的头，僵尸头区约 67×70px）
-            const headCfg = {
-                // v3.23.0：头部缩小到"刚好重叠在僵尸头上、与身体匹配"（僵尸头约 67px 宽）
-                peahead:     { src: 'assets/images/Plants/Peashooter/Peashooter.gif', cw: 71, ch: 71, keepTop: 0.70, w: 94 },
-                nuthead:     { src: 'assets/images/Plants/WallNut/WallNut.gif',       cw: 65, ch: 73, keepTop: 1.0,  w: 60 },
-                sunhead:     { src: 'assets/images/Plants/SunFlower/SunFlower1.gif',  cw: 73, ch: 74, keepTop: 0.72, w: 98 },
-                snowpeahead: { src: 'assets/images/Plants/SnowPea/SnowPea.gif',       cw: 71, ch: 71, keepTop: 0.70, w: 90 },
-                jalapenohead:{ src: 'assets/images/Plants/Jalapeno/Jalapeno.gif',     cw: 68, ch: 89, keepTop: 1.0,  w: 50 },
-                machinegunhead: { src: 'assets/images/Plants/GatlingPea/GatlingPea.gif', cw: 88, ch: 84, keepTop: 0.74, w: 96 },
-                tallnuthead: { src: 'assets/images/Plants/TallNut/TallNut.gif',       cw: 83, ch: 119, keepTop: 1.0, w: 64, topOff: -62 }
-            }[type];
+            const headCfg = Zombie.PLANT_HEAD_CFG[type];
             this.hp = 200; this.maxHp = 200;
             this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
@@ -83,7 +88,7 @@ class Zombie extends Entity {
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
-            this.createPlantHead({ src: 'assets/images/Plants/PlantBox/GiftBox.png', cw: 129, ch: 179, keepTop: 1.0, w: 42 });
+            this.createPlantHead(Zombie.PLANT_HEAD_CFG.mysterybox); // v3.30.0 配置入静态表
         } else if (type === 'conehead') {
             this.hp = 560; this.maxHp = 560;
             this.element.src = 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif';
