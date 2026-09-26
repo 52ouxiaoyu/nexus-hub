@@ -11,7 +11,9 @@ class Zombie extends Entity {
         jalapenohead:{ src: 'assets/images/Plants/Jalapeno/Jalapeno.gif',     cw: 68, ch: 89, keepTop: 1.0,  w: 50 },
         machinegunhead: { src: 'assets/images/Plants/GatlingPea/GatlingPea.gif', cw: 88, ch: 84, keepTop: 0.74, w: 96 },
         tallnuthead: { src: 'assets/images/Plants/TallNut/TallNut.gif',       cw: 83, ch: 119, keepTop: 1.0, w: 64, topOff: -62 },
-        mysterybox:  { src: 'assets/images/Plants/PlantBox/GiftBox.png',      cw: 129, ch: 179, keepTop: 1.0, w: 42 }
+        // v3.35.0：礼盒重画为宽幅构图(192x140，四角完整)，显示宽度同步放宽——
+        // 旧图 129x179 竖高构图被压到 42px 宽，又瘪又缺角（用户反馈）
+        mysterybox:  { src: 'assets/images/Plants/PlantBox/GiftBox.png',      cw: 192, ch: 140, keepTop: 1.0, w: 88 }
     };
     constructor(game, row, type = 'normal') {
         const x = 950;
@@ -842,7 +844,11 @@ class Zombie extends Entity {
                     this.state = 'WALKING';
                     this.element.src = this.walkSrc;
                 }
-            } else if (this.eatTarget && !this.eatTarget.isDead) {
+            } else if (this.eatTarget && !this.eatTarget.isDead &&
+                       // v3.35.0：目标被手套拎起（元素隐藏）或搬走（换行/坐标挪走）→ 立即停止啃咬改回行走，
+                       // 不再对着空气啃到"啃完"才动身（用户反馈：南瓜套被搬到另一边僵尸还在啃）
+                       this.eatTarget.element && this.eatTarget.element.style.display !== 'none' &&
+                       this.eatTarget.row === this.row && Math.abs(this.eatTarget.x - this.x) < 95) {
                 // v3.12.0：先吃南瓜壳——壳还有耐久时只消耗壳，宿主的"被吃效果"
                 // （魅惑策反/大蒜改行等）必须等真正啃到本尊才触发
                 if (this.eatTarget.shield && this.eatTarget.shield.hp > 0) {

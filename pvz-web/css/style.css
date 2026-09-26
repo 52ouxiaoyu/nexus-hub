@@ -369,6 +369,17 @@ body {
 .diff-chip.diff-hard { background: rgba(150, 74, 22, 0.92); border-color: #f2c185; }
 .diff-chip.diff-hell { background: rgba(104, 26, 52, 0.95); border-color: #ff9a9a; }
 
+/* v3.35.0 我是僵尸顶栏恢复原样：角标随 v3.33.0 被误挪去右上角，现回顶栏并还原旧版小尺寸外观
+   （v3.34.0 放大版外观只保留给右上角 corner-hud 的砸罐子角标） */
+#top-bar .diff-chip {
+    align-self: center;
+    font-size: 15px;
+    padding: 3px 12px;
+    border-radius: 12px;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.6);
+}
+#top-bar .diff-chip .diff-chip-en { font-size: 10px; }
+
 /* —— 难度选择弹窗 —— */
 .diff-panel {
     background: linear-gradient(180deg, #8a5a2b 0%, #6b4220 100%);
