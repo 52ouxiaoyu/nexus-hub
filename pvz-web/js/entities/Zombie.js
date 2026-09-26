@@ -192,7 +192,8 @@ class Zombie extends Entity {
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
             this.yOffset = -80;
-            this.element.style.transform = 'scale(2.5)';
+            // v3.32.0：体型 2.5 → 2（约两个普通僵尸高）——用户反馈 2.5 倍时实体判定位置太模糊
+            this.element.style.transform = 'scale(2)';
             this.element.style.transformOrigin = 'bottom center';
             this.element.style.filter = 'brightness(0.8) contrast(1.2)';
         } else if (type === 'imp') {
@@ -1004,6 +1005,11 @@ class Zombie extends Entity {
             (this.type === 'football' || this.type === 'screendoor' || this.type === 'zomboni')) {
             this._bombTanked = (this._bombTanked || 0) + 1;
             if (this._bombTanked <= 3) return;
+        }
+        // v3.32.0：巨人僵尸被一次性植物一发带走（樱桃/辣椒/毁灭菇/窝瓜/土豆雷/玉米加农炮
+        // 都是一次 ≥1800 的爆炸伤害）——用户定义：任何一次性植物都能一次打死巨人
+        if (this.type === 'gargantuar' && amount >= 1800) {
+            amount = this.hp;
         }
         // ===== v3.10.0 破甲（仅卷心菜投手 / 玉米投手的投掷物）=====
         // opts.pierce=true 表示"越过护甲直接打本体"：
