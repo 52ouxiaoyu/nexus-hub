@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1790421430">
+    <link rel="stylesheet" href="css/style.css?v=1790423320">
 </head>
 <body>
     <div id="game-container">
@@ -38,6 +38,10 @@
                     </div>
                     <div id="score-bank">分数 <span id="score-count">0</span></div>
                 </div>
+            </div>
+            <!-- v3.33.0 右上角常驻 HUD：难度角标(砸罐子/我是僵尸) + 速度按钮 脱离顶栏，
+                 顶栏整行宽度让给种子物品栏（难度角标由 JS 动态插入本容器） -->
+            <div id="corner-hud">
                 <button id="btn-speed">Speed: 1x</button>
             </div>
         <!-- Recipe Modal -->
@@ -336,16 +340,16 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1790421430"></script>
-    <script src="js/Board.js?v=1790421430"></script>
-    <script src="js/entities/Entity.js?v=1790421430"></script>
-    <script src="js/entities/Plant.js?v=1790421430"></script>
-    <script src="js/entities/Zombie.js?v=1790421430"></script>
-    <script src="js/entities/Projectile.js?v=1790421430"></script>
-    <script src="js/entities/Sun.js?v=1790421430"></script>
-    <script src="js/managers/WaveManager.js?v=1790421430"></script>
-    <script src="js/managers/CollisionManager.js?v=1790421430"></script>
-    <script src="js/managers/EventManager.js?v=1790421430"></script>
-    <script src="js/GameLoop.js?v=1790421430"></script>
+    <script src="js/InputManager.js?v=1790423320"></script>
+    <script src="js/Board.js?v=1790423320"></script>
+    <script src="js/entities/Entity.js?v=1790423320"></script>
+    <script src="js/entities/Plant.js?v=1790423320"></script>
+    <script src="js/entities/Zombie.js?v=1790423320"></script>
+    <script src="js/entities/Projectile.js?v=1790423320"></script>
+    <script src="js/entities/Sun.js?v=1790423320"></script>
+    <script src="js/managers/WaveManager.js?v=1790423320"></script>
+    <script src="js/managers/CollisionManager.js?v=1790423320"></script>
+    <script src="js/managers/EventManager.js?v=1790423320"></script>
+    <script src="js/GameLoop.js?v=1790423320"></script>
 </body>
 </html>

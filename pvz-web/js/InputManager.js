@@ -165,6 +165,9 @@ class InputManager {
         if (type === 'shovel') {
             this.dragGhost.style.backgroundImage = "url('assets/images/interface/Shovel/0.gif')";
         } else {
+            // v3.33.0：清掉上一株融合体的 stage 子元素/滤镜，防止跨拖拽泄漏
+            this.dragGhost.innerHTML = '';
+            this.dragGhost.style.filter = '';
             // Mapping for special cases
             let imgName = type.charAt(0).toUpperCase() + type.slice(1);
             if (type === 'sunflower') imgName = 'SunFlower/SunFlower1';
@@ -205,24 +208,21 @@ class InputManager {
             else if (type === 'plantbox') imgName = '';                            // v3.24.0 植物盲盒：礼盒（见下方特判）
 
             // v3.32.2：融合株拖拽图 = 场上主体立绘（探针读素材；默认映射 Fusion_* 目录 404 无图）
+            // v3.33.0：升级为完整融合形态（主体+叠加层+配色滤镜）——爆米花投手不再拖成"普通玉米投手"
             if (type.startsWith && type.startsWith('fusion_')) {
                 const probe = new Plant(this.game, type);
-                const src = probe.element.getAttribute('src');
+                const hasArt = !!probe.element.getAttribute('src');
                 if (probe.element.parentNode) probe.element.parentNode.removeChild(probe.element);
                 if (probe.fusionOverlay && probe.fusionOverlay.parentNode) probe.fusionOverlay.parentNode.removeChild(probe.fusionOverlay);
-                if (src) {
-                    this.dragGhost.style.backgroundImage = `url('${src}')`;
-                    this.dragGhost.style.width = '60px';
-                    this.dragGhost.style.height = '60px';
-                    this.dragGhost.style.backgroundSize = 'contain';
-                    this.dragGhost.style.backgroundPosition = 'center';
+                if (hasArt) {
+                    this.game._applyFusionDragGhost(probe);
                     return;
                 }
             }
 
             // v3.26.0 植物盲盒：拖拽图改回"盲盒图案"（红丝带礼盒）——用户明确盲盒≠问号罐
             if (type === 'plantbox') {
-                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1790421430')";
+                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1790423320')";
                 this.dragGhost.style.width = '46px';
                 this.dragGhost.style.height = '64px';
                 this.dragGhost.style.backgroundSize = 'contain';
@@ -234,8 +234,8 @@ class InputManager {
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1790421430`
-                : `assets/images/Plants/${imgName}.gif?v=1790421430`;
+                ? `assets/images/Plants/${imgName}.png?v=1790423320`
+                : `assets/images/Plants/${imgName}.gif?v=1790423320`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
 
             // v3.20.0：倭瓜立绘画布 100×226（身体只占底部 68×82），60×60 contain 后

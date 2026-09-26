@@ -266,6 +266,20 @@ body {
     text-shadow: 1px 1px 2px black;
 }
 
+/* v3.33.0 右上角常驻 HUD：难度角标 + 速度按钮脱离顶栏（顶栏整行让给种子物品栏）。
+   不吃 top-bar 的 scale(0.7)，直接钉在画面最右上角；难度角标由 JS 动态插入其最前 */
+#corner-hud {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    pointer-events: auto;   /* ui-layer 是 pointer-events:none，HUD 自身要能点 */
+    z-index: 1200;
+}
+#corner-hud .diff-chip { flex-shrink: 0; }
+
 .tool-card {
     width: 50px;
     height: 50px;
