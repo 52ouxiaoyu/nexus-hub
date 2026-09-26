@@ -686,7 +686,9 @@ class Zombie extends Entity {
             const plant = this.game.entities.find(e => 
                 e instanceof Plant && 
                 // v3.14.0：地刺/钢地刺都不可啃 —— 所有僵尸直接从上面走过
-                (!e.hasTrait || (!e.hasTrait('spikeweed') && !e.hasTrait('spikerock'))) &&
+                // v3.27.0：只有"纯地面刺"（本体无实体）才整株豁免；地刺坚果/高坚果钢地刺
+                // 这类带坚果躯体的融合株照常被啃食（坚果当盾承伤），脚下地刺在 update 里照常扎人
+                (e.type !== 'spikeweed' && e.type !== 'spikerock') &&
                 e.row === this.row && 
                 Math.abs(e.x - this.x) < 40 &&
                 !e.isDead && e.type !== 'crater'
