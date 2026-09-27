@@ -267,7 +267,6 @@ function buildTable() {
     const cushMat = new THREE.MeshStandardMaterial({ color: 0x1f5b39, roughness: 0.9, side: THREE.DoubleSide });
     const cw = 0.055;          // 库边宽度（鼻线 → 木边）
     const ch = 0.042;          // 库边高度
-    const gc = CFG.cornerGap;  // 角袋：鼻尖自桌角内收
     const sg = CFG.sideGap;    // 中袋：半 mouth
 
     // 多边形挤出成棱柱：shape 用 (x, -z)，挤出后 rotateX(-90°) 回到 xz 平面、底面落在 y=0
@@ -290,6 +289,7 @@ function buildTable() {
     const dxs = Math.sqrt(rS * rS - (cw - eS) * (cw - eS));
     const wB = T + cw;              // 库边背线
     const cln = T + eC - dxc;       // 角袋洞圆在短边背线上的截距（相对 ±T）
+
     // 洞心：角袋沿对角外移、中袋向库边外移（只依赖象限，两种模式通用）
     function holeC(p) {
         const sx = Math.sign(p.x) || 1, sz = Math.sign(p.z);
@@ -297,8 +297,26 @@ function buildTable() {
                         : { x: 0, z: sz * (T + eS) };
     }
 
-    // 库边 6 段：端面 = 鼻尖 → 背线交点（该点在洞圆上），jaw 斜面自然汇入洞口、无直角。
-    // 端面向袋口侧多延伸 2.5mm：盖住与黑色喉部四边形的共享边抗锯齿裂缝
+    // 库边 6 段（v2.1.1）。角袋端面 = 沿洞圆的圆弧：绿色 jaw 包着黑洞转圆口（用户要求"出口成圆形"）；
+    // 圆弧相对直弦向台面侧外凸 → 天然压住黑色喉部四边形的直弦边，无 AA 裂缝。
+    // 中袋端面仍为直斜面，向洞心延伸 2.5mm 盖缝。
+    const TAU = Math.PI * 2;
+    const normA = a => ((a % TAU) + TAU) % TAU;
+    // 洞圆弧采样：pFrom → pTo，取经过 midAng（洞心指向台面内的方向）的那条弧；含终点不含起点
+    function arcPts(C, r, pFrom, pTo, midAng, n) {
+        const a0 = Math.atan2(pFrom[1] - C.z, pFrom[0] - C.x);
+        const a1 = Math.atan2(pTo[1] - C.z, pTo[0] - C.x);
+        const dCcw = normA(a1 - a0), mMid = normA(midAng - a0);
+        const ccw = mMid <= dCcw;
+        const d = ccw ? dCcw : TAU - dCcw;
+        const pts = [];
+        for (let i = 1; i < n; i++) {
+            const a = a0 + (ccw ? 1 : -1) * d * i / n;
+            pts.push([C.x + Math.cos(a) * r, C.z + Math.sin(a) * r]);
+        }
+        pts.push(pTo);
+        return pts;
+    }
     function jawPts(P, Q, C, amt) {
         amt = amt || 0.0025;
         const dx = Q[0] - P[0], dz = Q[1] - P[1], l = Math.hypot(dx, dz);
@@ -307,19 +325,41 @@ function buildTable() {
         if (px * mx + pz * mz < 0) { px = -px; pz = -pz; }   // 法线取指向洞心一侧
         return [[P[0] + px * amt, P[1] + pz * amt], [Q[0] + px * amt, Q[1] + pz * amt]];
     }
+    // 角袋嘴：绿 jaw 沿洞圆包 ~308°，只留朝台面的圆形开口（用户要求"出口成圆形"）。
+    // 嘴半角 26° → 嘴宽 2·rC·sin26° ≈ 8.3cm；嘴尖过鼻线 ~1.6cm（真实球台 jaw 微微盖住台呢）
+    const MOUTH_HALF = 26 * Math.PI / 180;
+    function mouthAngles(sx, sz) {
+        const diag = Math.atan2(-sz, -sx);                  // 洞心指向台面的对角方向
+        const a1 = diag - MOUTH_HALF, a2 = diag + MOUTH_HALF;
+        const midLong = sx > 0 ? Math.PI : 0;
+        const midShort = sz > 0 ? -Math.PI / 2 : Math.PI / 2;
+        const dAng = (a, b) => { const d = Math.abs(normA(a) - normA(b)); return Math.min(d, TAU - d); };
+        const aLong = dAng(a1, midLong) <= dAng(a2, midLong) ? a1 : a2;
+        return { aLong, aShort: aLong === a1 ? a2 : a1 };
+    }
+    const tipAt = (Cc, a) => [Cc.x + rC * Math.cos(a), Cc.z + rC * Math.sin(a)];
+    // 长边库边 ×4：中袋端(直) → 角袋端 jaw 弧包到嘴缘 → 钩回鼻线
     for (const sz of [-1, 1]) for (const sx of [-1, 1]) {
         const Cc = { x: sx * (L + eC), z: sz * (T + eC) };
         const Cs = { x: 0, z: sz * (T + eS) };
-        const [nc, bc] = jawPts([sx * (L - gc), sz * T], [sx * (L + eC - dxc), sz * wB], Cc);
+        const backC = [sx * (L + eC - dxc), sz * wB];   // 角袋端背线交点（洞圆上）
+        const { aLong } = mouthAngles(sx, sz);
+        const tipL = tipAt(Cc, aLong);
+        const cornerJaw = arcPts(Cc, rC, backC, tipL, sx > 0 ? Math.PI : 0, 14);
         const [ns, bs] = jawPts([sx * sg, sz * T], [sx * dxs, sz * wB], Cs);
-        prism([bs, bc, nc, ns], ch, cushMat);
+        prism([bs, backC, ...cornerJaw, [tipL[0], sz * T], ns], ch, cushMat);
     }
+    // 短边库边 ×2：两端 jaw 弧包到嘴缘 + 钩回鼻线，中间沿鼻线直行
     for (const sx of [-1, 1]) {
         const CcT = { x: sx * (L + eC), z: T + eC };
         const CcB = { x: sx * (L + eC), z: -(T + eC) };
-        const [nT, bT] = jawPts([sx * L, T - gc], [sx * (L + cw), cln], CcT);
-        const [nB, bB] = jawPts([sx * L, -(T - gc)], [sx * (L + cw), -cln], CcB);
-        prism([bT, bB, nB, nT], ch, cushMat);
+        const bT = [sx * (L + cw), cln], bB = [sx * (L + cw), -cln];
+        const tipT = tipAt(CcT, mouthAngles(sx, 1).aShort);
+        const tipB = tipAt(CcB, mouthAngles(sx, -1).aShort);
+        prism([...arcPts(CcT, rC, bT, tipT, -Math.PI / 2, 14),
+               [sx * L, tipT[1]],
+               [sx * L, tipB[1]],
+               ...arcPts(CcB, rC, tipB, bB, Math.PI / 2, 14)], ch, cushMat);
     }
 
     // ---- 木边外框：外轮廓八角形（45° 斜切角），内边界沿背线行走、6 个洞口绕洞圆外弧 ----
@@ -331,20 +371,9 @@ function buildTable() {
     const ox = L + cw + railW, oz = T + cw + railW;
     const bev = 0.10;                                // 外角斜切量
 
-    const TAU = Math.PI * 2;
-    const normA = a => ((a % TAU) + TAU) % TAU;
-    // 圆弧采样追加到 hp（不含起点；取经过 midAng 的那条弧，终点显式追加）
+    // 圆弧采样追加到 hp（复用库边段的 arcPts；取经过 midAng 的那条弧，终点显式追加）
     function arcInto(hp, cx, cz, r, pFrom, pTo, midAng, n) {
-        const a0 = Math.atan2(pFrom[1] - cz, pFrom[0] - cx);
-        const a1 = Math.atan2(pTo[1] - cz, pTo[0] - cx);
-        const dCcw = normA(a1 - a0), mMid = normA(midAng - a0);
-        const ccw = mMid <= dCcw;
-        const d = ccw ? dCcw : TAU - dCcw;
-        for (let i = 1; i < n; i++) {
-            const a = a0 + (ccw ? 1 : -1) * d * i / n;
-            hp.push([cx + Math.cos(a) * r, cz + Math.sin(a) * r]);
-        }
-        hp.push(pTo);
+        hp.push(...arcPts({ x: cx, z: cz }, r, pFrom, pTo, midAng, n));
     }
 
     // 内边界行走（闭合一圈）：短边线/长边线直线段由 Shape 自动连接，
@@ -383,7 +412,11 @@ function buildTable() {
         scene.add(disc);
         // 2) 喉部四边形：两鼻尖 → 两背线交点（边缘与库边 jaw 端面共线，无缝无直角）
         const quad = p.corner
-            ? [[sx*(L-gc), sz*T], [sx*(L+eC-dxc), sz*wB], [sx*(L+cw), sz*cln], [sx*L, sz*(T-gc)]]
+            ? (function () {
+                const Cc2 = holeC(p);
+                const mg = mouthAngles(sx, sz);
+                return [tipAt(Cc2, mg.aLong), [sx*(L+eC-dxc), sz*wB], [sx*(L+cw), sz*cln], tipAt(Cc2, mg.aShort)];
+              })()
             : [[-sg, sz*T], [-dxs, sz*wB], [dxs, sz*wB], [sg, sz*T]];
         const qgeo = new THREE.ShapeGeometry(new THREE.Shape(quad.map(pt => new THREE.Vector2(pt[0], -pt[1]))));
         qgeo.rotateX(-Math.PI / 2);
