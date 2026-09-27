@@ -549,7 +549,7 @@ class Zombie extends Entity {
                 // Kill plants in 3x3 area
                 const plants = this.game.entities.filter(e => e instanceof Plant && !e.isDead);
                 for (let p of plants) {
-                    if (Math.abs(p.row - this.row) <= 1 && Math.abs(p.x - this.x) < 150) {
+                    if (Math.abs(p.row - this.row) <= 1 && Math.abs(p.x - this.x) < 120) {
                         p.hp = 0;
                     }
                 }

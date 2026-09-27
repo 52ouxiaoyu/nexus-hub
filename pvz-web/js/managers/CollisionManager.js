@@ -52,7 +52,7 @@ class CollisionManager {
                                 p.type === 'cattail_melon' || p.type === 'cattail_wintermelon') {
                                 const allZombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                                 for (let oz of allZombies) {
-                                    if (oz !== z && Math.abs(oz.row - z.row) <= 1 && Math.abs(oz.x - z.x) < 150) {
+                                    if (oz !== z && Math.abs(oz.row - z.row) <= 1 && Math.abs(oz.x - z.x) < 120) {
                                         oz.takeDamage(p.damage / 2);
                                         if (p.type === 'wintermelon' || p.type === 'cattail_wintermelon') {
                                             oz.setSlow(10.0);
@@ -65,7 +65,7 @@ class CollisionManager {
                             if (p.type === 'popcorn') {
                                 const allZombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                                 for (let oz of allZombies) {
-                                    if (oz !== z && Math.abs(oz.row - z.row) <= 1 && Math.abs(oz.x - z.x) < 150) {
+                                    if (oz !== z && Math.abs(oz.row - z.row) <= 1 && Math.abs(oz.x - z.x) < 120) {
                                         oz.takeDamage(p.damage / 2, { pierce: true });
                                     }
                                 }
@@ -76,7 +76,7 @@ class CollisionManager {
                             if (p.type === 'minicherry') {
                                 const allZombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                                 for (let oz of allZombies) {
-                                    if (oz !== z && Math.abs(oz.row - z.row) <= 1 && Math.abs(oz.x - z.x) < 150) {
+                                    if (oz !== z && Math.abs(oz.row - z.row) <= 1 && Math.abs(oz.x - z.x) < 120) {
                                         oz.takeDamage(p.damage);
                                     }
                                 }
