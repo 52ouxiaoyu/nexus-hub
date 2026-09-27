@@ -154,33 +154,33 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790426098';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790488562';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790426098';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790488562';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790426098';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790488562';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790426098';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790488562';
             stat.butterChance = 0.2;
         } else if (type === 'cobcannon') {
             // 玉米加农炮（v3.24.0）：PVZ1 原版 Cob Cannon——三株玉米投手合体，占两格。
             // 平时嘴里没有炮；充能 25s 结束后嘴里出现玉米炮弹；
             // 点击它出现瞄准镜（跟随鼠标），按 M 键向准星位置发射（见 GameLoop.enterCobAim）。
             stat.hp = 600;
-            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790426098';
+            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790488562';
             // v3.24.2 立绘 148×85（炮口已用叶壳封住），显示宽 132——两格 160px 内留边，
             // 修"看起来占三格"；+15 补偿缩小后轮子离地
             stat.yOffset = 15;
@@ -210,7 +210,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790426098';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790488562';
             stat.yOffset = 0;
         }
 
@@ -357,6 +357,11 @@ class Plant extends Entity {
                 } else if (type === 'fusion_starfruit') {
                     // 杨桃：使用原版杨桃整株立绘
                     this.element.src = 'assets/images/Plants/Starfruit/Starfruit.gif';
+                    this.yOffset = -10;
+                } else if (type === 'fusion_snowpea_starfruit') {
+                    // v3.36.0 冰杨桃（寒冰射手+杨桃）：杨桃整株立绘 + 冰蓝滤镜（同寒冰卷心菜配色）
+                    this.element.src = 'assets/images/Plants/Starfruit/Starfruit.gif';
+                    this.element.style.filter = 'brightness(1.1) hue-rotate(160deg) saturate(1.6)';
                     this.yOffset = -10;
                     this.fusionOverlay.style.display = 'none';
                 } else if (type === 'fusion_hypnoshroom') {
@@ -725,7 +730,7 @@ class Plant extends Entity {
             if (!this._cobShellEl) {
                 const el = document.createElement('img');
                 // v3.24.1：装填玉米用原版图鉴里抠出的整根玉米（带根部），从炮口探出
-                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790426098';
+                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790488562';
                 // 裸 img 必须自带 translate(-50%,-50%) 居中基准（与 fusionOverlay 同一教训）
                 // v3.24.2 尺寸随立绘缩放同步：43×48（0.892×）
                 el.style.cssText = 'position:absolute;width:43px;height:48px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);';
@@ -902,7 +907,7 @@ class Plant extends Entity {
             if (this.hasTrait('potatomine') && !this.isArmed) skipShooting = true;
             // 魅惑菇是被动植物（不走射击逻辑）；杨桃走专属五星分支（见下方 type 特判）
             if (this.type === 'fusion_hypnoshroom' || this.type === 'hypnoshroom') skipShooting = true;
-            if (this.type === 'fusion_starfruit' || this.type === 'starfruit') skipShooting = true;
+            if (this.type === 'fusion_starfruit' || this.type === 'starfruit' || this.type === 'fusion_snowpea_starfruit') skipShooting = true;
             
             if (!skipShooting) {
                 this.fireTimer += deltaTime;
@@ -978,23 +983,30 @@ class Plant extends Entity {
                     }
                     
                     if (this.hasTrait('fumeshroom')) {
-                        // ===== v3.26.0 大喷菇弹幕（用户指定）=====
-                        // 不再喷一团雾：改为"一串小喷菇子弹"——3 排（本行±1）× 每排 10 发，
-                        // 每发伤害 = 小喷菇(20) × 2 = 40，穿铁门（pierce，见 CollisionManager）。
-                        // 80ms 一轮连射形成弹幕流；爆炸/死亡后停止补射。
+                        // ===== v3.36.0 大喷菇弹幕改版（用户澄清"三行"含义）=====
+                        // 三排弹流都从菇的同一张嘴发射（同一行出弹），起飞后扇形散开
+                        // 飞向本行±1，到目标排后拉平平飞——不再三行各自凭空出弹。
+                        // 同时降密降伤：每轮 3 连射 × 3 排 = 9 发（旧版 30 发），
+                        // 每发 6 伤 → 每轮总伤 54 ≈ 小喷菇(20/1.5s) 的 2.7 倍（用户指定 2~3 倍）。
+                        // 120ms 连射间隔；爆炸/死亡后停止补射。
                         if (this.game.audioManager && this.game.audioManager.playFx) this.game.audioManager.playFx('puff');
                         const lanes = [this.row - 1, this.row, this.row + 1]
                             .filter(r => r >= 0 && r < this.game.board.rows);
-                        for (let i = 0; i < 10; i++) {
+                        const mouthY = this.y - 15;
+                        const ch = this.game.board.cellHeight;
+                        for (let i = 0; i < 3; i++) {
                             setTimeout(() => {
                                 if (this.isDead || this.hp <= 0) return;
                                 for (const r of lanes) {
+                                    const d = r - this.row;
+                                    const targetY = mouthY + d * ch;
                                     const p = new Projectile(this.game,
-                                        this.x + 22, this.y - 15 + (r - this.row) * this.game.board.cellHeight,
-                                        r, 'fume_burst');
+                                        this.x + 22, mouthY, r, 'fume_burst', null,
+                                        420, (targetY - mouthY) / 0.3); // 0.3s 内扇出到目标排
+                                    if (d !== 0) p._fumeTargetY = targetY; // 到排拉平（见 Projectile.update）
                                     this.game.entities.push(p);
                                 }
-                            }, i * 80);
+                            }, i * 120);
                         }
                     } else if (this.hasTrait('threepeater') && hasZombieAhead) {
                         for (let dRow = -1; dRow <= 1; dRow++) {
@@ -1046,7 +1058,7 @@ class Plant extends Entity {
         
         // 杨桃（融合版/经典版通用）：PVZ 原版五向星光射击（独立分支，避免触发三线/后射逻辑）。
         // v3.20.0：五颗星星对应立绘 5 个角 —— 前二斜 ↗↘ / 正上 ↑ / 正下 ↓ / 正后 ←；穿透、可跨行命中（命中逻辑在 Projectile 'star' 类型里）。星星伤害=胆小菇（40）。
-        if (this.type === 'fusion_starfruit' || this.type === 'starfruit') {
+        if (this.type === 'fusion_starfruit' || this.type === 'starfruit' || this.type === 'fusion_snowpea_starfruit') {
             this.fireTimer += deltaTime;
             if (this.fireTimer >= this.fireRate) {
                 // 只要前方（含斜向可及范围）有敌方僵尸就齐射五颗
@@ -1060,6 +1072,9 @@ class Plant extends Entity {
                     // v3.25.0：杨桃专属"五星齐射"音（旧版借用保龄球撞击声）
                     if (this.game.audioManager.playFx) this.game.audioManager.playFx('star_volley');
                     else this.game.audioManager.play('splat');
+                    // v3.36.0：冰杨桃发射寒冰豌豆（命中减速，见 CollisionManager snowpea 分支），
+                    // 普通杨桃发射星星
+                    const projType = (this.type === 'fusion_snowpea_starfruit') ? 'snowpea' : 'star';
                     const starSpeed = 350;
                     const dirs = [
                         [-1, 0],              // ←（后方，对应立绘左角）
@@ -1069,8 +1084,9 @@ class Plant extends Entity {
                         [0, 1]                // ↓
                     ];
                     for (const d of dirs) {
-                        const p = new Projectile(this.game, this.x + 15, this.y - 15, this.row, 'star', null, d[0] * starSpeed, d[1] * starSpeed);
+                        const p = new Projectile(this.game, this.x + 15, this.y - 15, this.row, projType, null, d[0] * starSpeed, d[1] * starSpeed);
                         p.speed = starSpeed;
+                        if (projType === 'snowpea') p.maxDistance = 9999; // 斜向飞行不受直线射程限制，飞出草坪边界自动清理
                         this.game.entities.push(p);
                     }
                 }

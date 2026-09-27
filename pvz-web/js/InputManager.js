@@ -157,6 +157,12 @@ class InputManager {
     
     updateDragGhost(x, y, type) {
         this.dragGhost.style.display = 'block';
+        // v3.36.0：清幽灵残留提前到所有分支之前 —— 上一株南瓜壳等植物的 stage 内容
+        // 会一直留在 dragGhost 里，再拿铲子时"铲子上顶着个南瓜壳"（用户反馈）。
+        // 旧版只在植物分支里清，铲子分支直接设背景图导致叠加。
+        this.dragGhost.innerHTML = '';
+        this.dragGhost.style.filter = '';
+        this.dragGhost.style.backgroundImage = 'none';
         const rect = this.container.getBoundingClientRect();
         const scale = window.gameScale || 1;
         this.dragGhost.style.left = ((x - rect.left) / scale) + 'px';
@@ -223,7 +229,7 @@ class InputManager {
             // v3.26.0 植物盲盒：拖拽图改回"盲盒图案"（红丝带礼盒）——用户明确盲盒≠问号罐
             // v3.35.0：礼盒重画为宽幅构图，拖拽幽灵同步改宽尺寸
             if (type === 'plantbox') {
-                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1790426098')";
+                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1790488562')";
                 this.dragGhost.style.width = '68px';
                 this.dragGhost.style.height = '50px';
                 this.dragGhost.style.backgroundSize = 'contain';
@@ -235,8 +241,8 @@ class InputManager {
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1790426098`
-                : `assets/images/Plants/${imgName}.gif?v=1790426098`;
+                ? `assets/images/Plants/${imgName}.png?v=1790488562`
+                : `assets/images/Plants/${imgName}.gif?v=1790488562`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
 
             // v3.20.0：倭瓜立绘画布 100×226（身体只占底部 68×82），60×60 contain 后
