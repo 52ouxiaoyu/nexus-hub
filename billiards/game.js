@@ -608,10 +608,33 @@ function setLine(line, x1, z1, x2, z2, y) {
 // 玩家辅助线强度随难度：0 简单=长方向线 / 1 普通=现状短指向 / 2 困难=无方向线
 // （双人对战统一普通辅助，两边公平）
 const GUIDE_ASSIST = {
-    objLen: [0.45, 0.08, 0],   // 目标球方向线
+    objLen: [9, 0.08, 0],      // 目标球方向线：简单档延伸到第一处库边（长度封顶由射线决定）
     defLen: [0.09, 0.09, 0],   // 母球分离方向线（困难档一并去掉，只留击中部位虚影圈）
 };
 function assistLevel() { return vsAI ? aiLevel : 1; }
+
+// 从 (x0,z0) 沿 (dx,dz) 到第一处库边的距离（袋口区视为通行，直接穿过去）
+function rayWallT(x0, z0, dx, dz) {
+    const L = CFG.W / 2 - CFG.R, T = CFG.H / 2 - CFG.R;
+    let tWall = Infinity;
+    function tryWall(t, hitX, hitZ) {
+        if (t > 0.001 && t < tWall) {
+            const ax = Math.abs(hitX), az = Math.abs(hitZ);
+            const nearCornerX = ax > CFG.W / 2 - CFG.cornerGap;
+            const nearSideX = ax < CFG.sideGap;
+            const nearCornerZ = az > CFG.H / 2 - CFG.cornerGap;
+            let gap = false;
+            if (Math.abs(hitZ) > T - 1e-6) gap = nearCornerX || nearSideX;      // 长边墙
+            if (Math.abs(hitX) > L - 1e-6) gap = gap || nearCornerZ;           // 短边墙
+            if (!gap) tWall = t;
+        }
+    }
+    if (dx > 1e-9) tryWall((L - x0) / dx, L, z0 + (L - x0) / dx * dz);
+    if (dx < -1e-9) tryWall((-L - x0) / dx, -L, z0 + (-L - x0) / dx * dz);
+    if (dz > 1e-9) tryWall((T - z0) / dz, x0 + (T - z0) / dz * dx, T);
+    if (dz < -1e-9) tryWall((-T - z0) / dz, x0 + (-T - z0) / dz * dx, -T);
+    return isFinite(tWall) ? tWall : 3;
+}
 
 function updateGuide() {
     const ud = guideGroup.userData;
@@ -642,26 +665,7 @@ function updateGuide() {
     }
 
     // 最近的库边（袋口处视为通行）
-    let tWall = Infinity;
-    const L = CFG.W / 2 - CFG.R, T = CFG.H / 2 - CFG.R;
-    function tryWall(t, hitX, hitZ) {
-        if (t > 0.001 && t < tWall) {
-            const ax = Math.abs(hitX), az = Math.abs(hitZ);
-            const nearCornerX = ax > CFG.W / 2 - CFG.cornerGap;
-            const nearSideX = ax < CFG.sideGap;
-            const nearCornerZ = az > CFG.H / 2 - CFG.cornerGap;
-            // 判断该命中点是否在袋口区
-            let gap = false;
-            if (Math.abs(hitZ) > T - 1e-6) gap = nearCornerX || nearSideX;      // 长边墙
-            if (Math.abs(hitX) > L - 1e-6) gap = gap || nearCornerZ;           // 短边墙
-            if (!gap) tWall = t;
-        }
-    }
-    if (d.x > 1e-9) tryWall((L - cue.x) / d.x, L, cue.z + (L - cue.x) / d.x * d.z);
-    if (d.x < -1e-9) tryWall((-L - cue.x) / d.x, -L, cue.z + (-L - cue.x) / d.x * d.z);
-    if (d.z > 1e-9) tryWall((T - cue.z) / d.z, cue.x + (T - cue.z) / d.z * d.x, T);
-    if (d.z < -1e-9) tryWall((-T - cue.z) / d.z, cue.x + (-T - cue.z) / d.z * d.x, -T);
-    if (!isFinite(tWall)) tWall = 3;
+    let tWall = rayWallT(cue.x, cue.z, d.x, d.z);
 
     if (hitBall && tBall < tWall) {
         const gx = cue.x + d.x * tBall, gz = cue.z + d.z * tBall;
@@ -673,7 +677,8 @@ function updateGuide() {
         const nl = Math.hypot(nx, nz) || 1;
         nx /= nl; nz /= nl;
         if (objLen > 0) {
-            setLine(ud.objLine, hitBall.x, hitBall.z, hitBall.x + nx * objLen, hitBall.z + nz * objLen, y);
+            const ext = objLen > 1 ? rayWallT(hitBall.x, hitBall.z, nx, nz) : objLen;   // 简单档：一直画到库边
+            setLine(ud.objLine, hitBall.x, hitBall.z, hitBall.x + nx * ext, hitBall.z + nz * ext, y);
             ud.objLine.visible = true;
         } else ud.objLine.visible = false;
         // 母球分离方向（切线）
