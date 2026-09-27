@@ -582,7 +582,7 @@ function buildGuide() {
         return l;
     }
     guideGroup.userData.aimLine = makeLine(mat);
-    guideGroup.userData.objLine = makeLine(matObj, 48);   // 简单档要多段折线（折射路线）
+    guideGroup.userData.objLine = makeLine(matObj, 256);  // 简单档真实模拟轨迹（最多 250 点）
     guideGroup.userData.defLine = makeLine(matDef);
 
     // 母球虚影圈
@@ -692,6 +692,10 @@ function predictPath(x0, z0, dx, dz, selfNum, maxBounces) {
     return pts;
 }
 
+// 简单档轨迹模拟缓存：同一杆（方向/力度/旋转/母球位/杆序）不重复模拟
+let guideSimCache = { key: '', path: null };
+let shotSeq = 0;
+
 function updateGuide() {
     const ud = guideGroup.userData;
     const assist = assistLevel();
@@ -733,13 +737,25 @@ function updateGuide() {
         const nl = Math.hypot(nx, nz) || 1;
         nx /= nl; nz /= nl;
         if (objLen > 0) {
+            let show = true;
             if (objLen > 1) {
-                // 简单档：完整行进路线（库边折射 / 进袋终止 / 被球阻挡终止）
-                setPolyline(ud.objLine, predictPath(hitBall.x, hitBall.z, nx, nz, hitBall.num, 3), y);
+                // 简单档：真实物理模拟轨迹（同 discrete 步长/碰撞/库边/袋口，构造性精确）
+                const pw = state === 'charge' ? power : (power > 0.05 ? power : 0.6);
+                const pq = Math.round(clamp(pw, 0.05, 1) * 25) / 25;   // 力度量化 0.04 控制重算频率
+                const key = Math.atan2(d.z, d.x).toFixed(3) + '|' + pq.toFixed(2) + '|' +
+                            spin.x.toFixed(1) + '|' + spin.y.toFixed(1) + '|' + shotSeq + '|' +
+                            cue.x.toFixed(2) + ',' + cue.z.toFixed(2);
+                if (guideSimCache.key !== key) {
+                    const sim = simulateTrajectory(d.x, d.z, pq, spin.y, spin.x);
+                    guideSimCache.key = key;
+                    guideSimCache.path = (sim.first !== null && sim.path.length >= 2) ? sim.path : null;
+                }
+                show = !!guideSimCache.path;
+                if (show) setPolyline(ud.objLine, guideSimCache.path, y);
             } else {
                 setLine(ud.objLine, hitBall.x, hitBall.z, hitBall.x + nx * objLen, hitBall.z + nz * objLen, y);
             }
-            ud.objLine.visible = true;
+            ud.objLine.visible = show;
         } else ud.objLine.visible = false;
         // 母球分离方向（切线）
         const dot = d.x * nx + d.z * nz;
@@ -941,6 +957,7 @@ function potBall(b, p) {
 
 // ---------------- 出杆 ----------------
 function shoot(powerFrac) {
+    shotSeq++;
     const cue = cueBall();
     const v = CFG.minPower + powerFrac * (CFG.maxPower - CFG.minPower);
     shotDirStore = { x: aimDir.x, z: aimDir.z };
@@ -1286,6 +1303,50 @@ function simulateShot(dirX, dirZ, powerFrac, vertSpin = 0) {
         SFX.ballHit = sBH; SFX.cushion = sCU; SFX.pocket = sPO;
     }
     return res;
+}
+
+// 简单档辅助线专用：用与真实出杆完全相同的 physStep（同碰撞/库边/袋口/摩擦/旋转）
+// 把这一杆真的跑一遍，返回目标球（首次被母球接触的球）的真实轨迹。
+// 玩家出杆没有随机噪声，方向确定 → 模拟轨迹 = 真实轨迹（构造性精确，无几何近似误差）。
+function simulateTrajectory(dirX, dirZ, powerFrac, vertSpin = 0, sideSpin = 0) {
+    const savedBalls = balls, savedShot = shot, savedDir = shotDirStore;
+    const sBH = SFX.ballHit, sCU = SFX.cushion, sPO = SFX.pocket;
+    SFX.ballHit = () => {}; SFX.cushion = () => {}; SFX.pocket = () => {};
+    balls = balls.map(b => ({
+        num: b.num, type: b.type, x: b.x, z: b.z, vx: 0, vz: 0,
+        potted: b.potted, vertSpin: 0, sideSpin: 0, fall: 0, pocket: null, mesh: null,
+    }));
+    shot = { first: null, potted: [], cushionAfter: false, preGroupCleared: false };
+    shotDirStore = { x: dirX, z: dirZ };
+    const c = balls[0];
+    const v = CFG.minPower + powerFrac * (CFG.maxPower - CFG.minPower);
+    c.vx = dirX * v; c.vz = dirZ * v; c.vertSpin = vertSpin; c.sideSpin = sideSpin;
+    let first = null, path = [];
+    try {
+        let tb = null, lastX = 0, lastZ = 0;
+        for (let i = 0; i < 3600; i++) {
+            if (!physStep(CFG.dt)) break;
+            if (tb === null) {
+                if (shot.first === null) { if (c.potted) break; continue; }
+                first = shot.first;
+                tb = balls.find(b => b.num === first);
+                lastX = tb.x; lastZ = tb.z;
+                path.push([lastX, lastZ]);
+            }
+            if (tb.potted) { path.push([tb.x, tb.z]); break; }         // 进袋：终点在袋喉
+            if (Math.hypot(tb.x - lastX, tb.z - lastZ) >= 0.06) {
+                lastX = tb.x; lastZ = tb.z;
+                if (path.length < 250) path.push([lastX, lastZ]);
+            }
+            if (tb.vx === 0 && tb.vz === 0) break;                     // 摩擦停下
+        }
+        if (tb !== null) path.push([tb.x, tb.z]);                      // 末点必录
+        if (path.length > 250) path = path.slice(0, 250);
+    } finally {
+        balls = savedBalls; shot = savedShot; shotDirStore = savedDir;
+        SFX.ballHit = sBH; SFX.cushion = sCU; SFX.pocket = sPO;
+    }
+    return { first, path };
 }
 
 function segBlockedIn(arr, x1, z1, x2, z2, rad, ignore) {
@@ -2014,6 +2075,7 @@ window.POOL = {
     get scene() { return scene; },
     // 测试用：辅助线
     updateGuide,
+    simulateTrajectory,
     get guideGroup() { return guideGroup; },
     // 调试：相机对象（验证默认机位用）
     get camera() { return camera; },
