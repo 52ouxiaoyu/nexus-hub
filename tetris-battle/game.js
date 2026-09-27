@@ -4,7 +4,7 @@
  * 双人对战俄罗斯方块 · 道具攻防系统
  * ============================================================ */
 
-const VERSION = 'v1.4.0';
+const VERSION = 'v1.5.0';
 const COLS = 10, ROWS = 20, CELL = 30;
 const MAX_CHARGE = 10;          // 必杀充能
 const ITEM_SLOTS = 3;           // 道具栏格数
@@ -136,8 +136,22 @@ const AudioSys = (() => {
     const seq = (notes, step, opts) =>
         notes.forEach((f, i) => tone({ ...opts, freq: f, delay: i * step }));
     return {
-        toggleMute() { muted = !muted; return muted; },
+        toggleMute() {
+            muted = !muted;
+            if (muted && 'speechSynthesis' in window) { try { speechSynthesis.cancel(); } catch (e) {} }
+            return muted;
+        },
         isMuted() { return muted; },
+        // 🗣️ 语音报幕：读出道具名（跟随静音开关）
+        speak(text) {
+            if (muted || !('speechSynthesis' in window)) return;
+            try {
+                speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(text);
+                u.lang = 'zh-CN'; u.rate = 1.15; u.pitch = 1.05; u.volume = 0.9;
+                speechSynthesis.speak(u);
+            } catch (e) {}
+        },
         // —— 基础操作 ——
         move:   () => tone({ freq: 210, dur: 0.035, vol: 0.022 }),
         rotate: () => tone({ freq: 300, slide: 470, dur: 0.06, vol: 0.04, types: ['square', 'triangle'] }),
@@ -403,6 +417,13 @@ class Player {
     applyItem(key) {
         const opp = game.players[1 - this.idx];
         const now = performance.now();
+        // 🎬 中央公告 + 语音报幕 + 进攻道具飞行动画
+        const info = ITEMS[key];
+        if (info) {
+            game.announce(info.icon + ' ' + info.name, info.atk ? '#ff5252' : '#69f0ae');
+            AudioSys.speak(info.name);
+            if (info.atk) game.throwItem(this.idx, info.icon, '#ff5252');
+        }
         switch (key) {
             case 'garbage':
                 game.log(this, '🧱 垃圾行!');
@@ -578,6 +599,9 @@ class Player {
         const now = performance.now();
         game.log(this, '💥 末日洪水!!');
         AudioSys.ult();
+        game.announce('💥 末日洪水!!', '#ff1744');
+        AudioSys.speak('末日洪水');
+        game.throwItem(this.idx, '🌊', '#ff1744');
         game.shake = 14;
         game.sendAttack(this, opp, 6);
         opp.effects.fogUntil = now + 10000;
@@ -791,10 +815,16 @@ const game = {
     lastTime: 0,
     shake: 0,
     logs: [],                // { text, until, color }
+    announcements: [],       // 🎬 中央漫画公告 { text, color, t0 }
+    projectiles: [],         // 🎬 飞行道具 { icon, color, x0,y0,x1,y1, t0, dur }
 
     init() {
         this.canvas = document.getElementById('game');
         this.ctx = this.canvas.getContext('2d');
+        // 🔍 界面整体放大：物理分辨率 = 逻辑坐标 × SCALE，CSS 自适应窗口铺满
+        this.SCALE = 1.4;
+        this.canvas.width = Math.round(1240 * this.SCALE);
+        this.canvas.height = Math.round(720 * this.SCALE);
         this.players = [new Player(0, false), new Player(1, false)];
         this.bindUI();
         this.bindKeys();
@@ -921,6 +951,7 @@ const game = {
         this.startTime = performance.now();
         this.lastTime = this.startTime;
         this.logs = []; this.shake = 0;
+        this.announcements = []; this.projectiles = [];
         this.state = 'playing';
         document.getElementById('menu').classList.add('hidden');
         document.getElementById('help').classList.add('hidden');
@@ -936,6 +967,23 @@ const game = {
     log(p, text) {
         this.logs.push({ text, until: performance.now() + 2200, color: p.idx === 0 ? '#00e5ff' : '#ff4081' });
         if (this.logs.length > 5) this.logs.shift();
+    },
+
+    // 🎬 中央漫画公告：道具图标+名称弹入显示 1.6 秒（位于双棋盘正中间间隙，不遮挡棋盘）
+    announce(text, color) {
+        this.announcements.push({ text, color, t0: performance.now() });
+        if (this.announcements.length > 2) this.announcements.shift();
+    },
+
+    // 🎬 进攻道具投掷动画：图标沿弧线从使用者棋盘飞向对方棋盘
+    throwItem(fromIdx, icon, color) {
+        const bxOf = i => (i === 0 ? 170 : 760);
+        this.projectiles.push({
+            icon, color,
+            x0: bxOf(fromIdx) + 150, y0: 110,
+            x1: bxOf(1 - fromIdx) + 150, y1: 380,
+            t0: performance.now(), dur: 620,
+        });
     },
 
     sendAttack(from, to, lines) {
@@ -1014,6 +1062,8 @@ const game = {
         const ctx = this.ctx;
         ctx.save();
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        // 🔍 逻辑坐标 1240x720 → 物理分辨率放大渲染（文字/格子更清晰更大）
+        ctx.scale(this.SCALE || 1, this.SCALE || 1);
         // 背景
         const bg = ctx.createLinearGradient(0, 0, 0, 720);
         bg.addColorStop(0, '#0a0c18'); bg.addColorStop(1, '#07080f');
@@ -1036,6 +1086,8 @@ const game = {
         }
         this.drawCenter(now, t);
         this.drawLogs();
+        this.drawProjectiles(t);
+        this.drawAnnounce(t);
         ctx.restore();
     },
 
@@ -1284,6 +1336,90 @@ const game = {
             ctx.font = 'bold 15px sans-serif';
             ctx.fillText(`${p.combo} COMBO!`, ix, ey + 70);
         }
+    },
+
+    // 🎬 飞行道具：图标沿贝塞尔弧线飞向对方棋盘，带彩色拖尾
+    drawProjectiles(t) {
+        const ctx = this.ctx;
+        const now = performance.now();
+        this.projectiles = this.projectiles.filter(pr => now - pr.t0 < pr.dur + 150);
+        for (const pr of this.projectiles) {
+            const k = Math.min(1, (now - pr.t0) / pr.dur);
+            const cx = (pr.x0 + pr.x1) / 2, cy = Math.min(pr.y0, pr.y1) - 130;
+            const pos = kk => {
+                const u = 1 - kk;
+                return [u * u * pr.x0 + 2 * u * kk * cx + kk * kk * pr.x1,
+                        u * u * pr.y0 + 2 * u * kk * cy + kk * kk * pr.y1];
+            };
+            // 拖尾
+            for (let i = 4; i >= 1; i--) {
+                const kk = Math.max(0, k - i * 0.05);
+                const [tx, ty] = pos(kk);
+                ctx.globalAlpha = 0.32 - i * 0.06;
+                ctx.fillStyle = pr.color;
+                ctx.beginPath(); ctx.arc(tx, ty, 10 - i * 1.6, 0, Math.PI * 2); ctx.fill();
+            }
+            // 道具图标（带光晕）
+            const [x, y] = pos(k);
+            ctx.globalAlpha = 1;
+            ctx.save();
+            ctx.shadowColor = pr.color; ctx.shadowBlur = 16;
+            ctx.font = '34px sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            // 落地前轻微放大，冲击感
+            const s = k > 0.85 ? 1 + (k - 0.85) * 1.6 : 1;
+            ctx.translate(x, y); ctx.scale(s, s);
+            ctx.fillText(pr.icon, 0, 0);
+            ctx.restore();
+            // 命中冲击环
+            if (k >= 1) {
+                const ik = (now - pr.t0 - pr.dur) / 150;
+                if (ik < 1) {
+                    ctx.globalAlpha = 1 - ik;
+                    ctx.strokeStyle = pr.color; ctx.lineWidth = 3;
+                    ctx.beginPath(); ctx.arc(pr.x1, pr.y1, 12 + ik * 30, 0, Math.PI * 2); ctx.stroke();
+                }
+            }
+        }
+        ctx.globalAlpha = 1;
+        ctx.textBaseline = 'alphabetic';
+    },
+
+    // 🎬 中央漫画公告：最新道具大字弹入显示（双棋盘正中间间隙，绝不遮挡棋盘）
+    drawAnnounce(t) {
+        const ctx = this.ctx;
+        const now = performance.now();
+        this.announcements = this.announcements.filter(a => now - a.t0 < 1600);
+        if (!this.announcements.length) return;
+        const cx = 620;
+        const list = this.announcements.slice(-2);
+        list.forEach((a, i) => {
+            const isTop = i === list.length - 1;
+            const age = now - a.t0;
+            const pop = age < 140 ? age / 140 : 1;                     // 弹入
+            const alpha = age > 1150 ? Math.max(0, 1 - (age - 1150) / 450) : 1;  // 淡出
+            const scale = (isTop ? 1 : 0.62) * (0.55 + 0.45 * pop);
+            const y = 400 + (i - (list.length - 1)) * 46;
+            ctx.save();
+            ctx.globalAlpha = alpha * (isTop ? 1 : 0.5);
+            ctx.translate(cx, y);
+            ctx.scale(scale, scale);
+            ctx.font = 'bold 34px "PingFang SC", "Microsoft YaHei", sans-serif';
+            ctx.textAlign = 'center';
+            const w = ctx.measureText(a.text).width + 44;
+            // 漫画底板
+            ctx.fillStyle = 'rgba(8,10,20,0.85)';
+            ctx.strokeStyle = a.color; ctx.lineWidth = 3;
+            ctx.beginPath();
+            if (ctx.roundRect) ctx.roundRect(-w / 2, -27, w, 50, 14);
+            else ctx.rect(-w / 2, -27, w, 50);
+            ctx.fill(); ctx.stroke();
+            // 大字（带光晕）
+            ctx.fillStyle = a.color;
+            ctx.shadowColor = a.color; ctx.shadowBlur = 14;
+            ctx.fillText(a.text, 0, 9);
+            ctx.restore();
+        });
     },
 
     drawCenter(now, t) {
