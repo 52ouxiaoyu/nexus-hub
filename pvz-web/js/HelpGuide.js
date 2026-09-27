@@ -184,14 +184,16 @@
     .hg-group-tag.hg-orange { background: linear-gradient(180deg,#cf8a3c 0%,#a5651f 100%); border-color: #7c4a12; text-shadow: 1px 1px 0 #6b3d0d; }
     .hg-group-tag.hg-red { background: linear-gradient(180deg,#b05656 0%,#8a3232 100%); border-color: #6b2222; text-shadow: 1px 1px 0 #5a1a1a; }
     .hg-group-line { flex: 1; height: 2px; background: linear-gradient(90deg, #c9ab72, rgba(201,171,114,0)); border-radius: 2px; }
-    .hg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+    .hg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
     .hg-tile { display: flex; flex-direction: column; align-items: center; padding: 7px 4px 5px;
         background: rgba(255,255,255,.5); border: 1px solid #d8c290; border-radius: 10px; cursor: default; }
     .hg-tile:hover { background: #fff; border-color: #b3945c; }
-    .hg-art { position: relative; width: 86px; height: 86px; display: flex; align-items: flex-end; justify-content: center; }
-    .hg-card { width: 66px; height: 79px; background-size: 100% 200%; background-position: top; background-repeat: no-repeat;
+    .hg-art { position: relative; width: 100px; height: 86px; display: flex; align-items: flex-end; justify-content: center; }
+    .hg-art-sm { height: 66px; }
+    /* 卡面彩色段原始比例 = 100×60（5:3，与游戏内 .seed-card 65×39 一致），禁止拉伸 */
+    .hg-card { width: 96px; height: 58px; background-size: 100% 200%; background-position: top; background-repeat: no-repeat;
         border-radius: 7px; border: 1px solid rgba(90,60,20,.4); box-shadow: 0 2px 4px rgba(60,40,10,.25); }
-    .hg-card-ov { position: absolute; right: 4px; bottom: 4px; width: 40px; aspect-ratio: 5/3; pointer-events: none;
+    .hg-card-ov { position: absolute; right: 1px; bottom: 1px; width: 58px; aspect-ratio: 5/3; pointer-events: none;
         background-size: 100% 200%; background-position: top; background-repeat: no-repeat;
         border-radius: 4px; border: 1px solid rgba(90,60,20,.45); }
     .hg-zbody { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); image-rendering: auto; }
@@ -220,7 +222,7 @@
             art += '<div class="hg-card-ov" style="background-image:' + cardUrl(p.q) + '"></div>';
         }
         return '<div class="hg-tile" title="' + (p.t || '') + '">' +
-            '<div class="hg-art">' + art + '</div>' +
+            '<div class="hg-art hg-art-sm">' + art + '</div>' +
             '<div class="hg-tname">' + p.n + '</div>' +
             '<div class="hg-tsub">' + (fusion ? '融合获得' : '☀ ' + p.c) + '</div>' +
             '</div>';
