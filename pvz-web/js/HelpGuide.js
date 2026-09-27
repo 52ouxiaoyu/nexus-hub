@@ -1,147 +1,142 @@
-// v3.38.0 主菜单「操作与道具说明」—— 三大板块：玩法说明 / 植物图鉴 / 僵尸图鉴
-// 植物与僵尸均按厉害程度（战略价值/综合强度）降序排列；数值取自游戏实装（Plant.js / Zombie.js / GameLoop.js）。
+// v3.39.0 主菜单「操作与道具说明」—— 图片网格版：
+//   玩法说明（精简文字） / 植物图鉴（经典+融合 两组卡面网格，无长描述） /
+//   僵尸图鉴（按模式分组：经典冒险 / 砸罐子 / 我是僵尸·敌阵 / 有趣的配饰，全部带图）
+// 详细数值收进悬停 tooltip（title），页面只留名字与关键徽标。
 (function () {
-    // ================= 玩法说明数据 =================
+    const V = '?v=' + Date.now();
+    const CARD = 'assets/images/Card/Plants/';
+    const ZB = 'assets/images/Zombies/';
+    const PL = 'assets/images/Plants/';
+
+    // ================= 玩法说明（精简） =================
     const MODES = [
-        {
-            title: '通用操作（所有模式通用）',
-            icon: '☀️',
-            items: [
-                '收集阳光：点击天上掉落或植物产出的阳光，积攒资源。',
-                '种植：点击顶部卡片 → 点击草坪格子种下（阳光不足或冷却中卡片会变灰）。',
-                '铲子：点击右上角铲子再点植物，可以铲掉它腾出格子（不退阳光）。',
-                '波次：消灭整波僵尸撑过关卡；旗帜与「一大波僵尸正在接近」提示大波来袭。',
-                '失败条件：僵尸走进左侧房子（或吃光脑子目标失败）。',
-                '速度按钮：右上角 Speed 可切换游戏倍速。',
-            ],
-        },
-        {
-            title: '经典冒险',
-            icon: '🌻',
-            items: [
-                '原汁原味的塔防：5 行 9 列白昼草地，波次攻防。',
-                '开局先选卡（最多 10 张），经济植物（向日葵）先行，攻击植物殿后。',
-                '卡片有阳光价格与冷却时间，冷却转圈结束后才能再次使用。',
-            ],
-        },
-        {
-            title: '融合进化',
-            icon: '🧤',
-            items: [
-                '核心玩法：点击手套（🧤）进入拖拽状态，把一株植物拖到另一株上即可融合。',
-                '选卡栏只有 15 种基础植物，高级形态全靠配方合成（30+ 条秘方）。',
-                '游戏内点「融合配方大全」可查看全部配方；本说明的植物图鉴也标注了融合来源。',
-                '炸弹类植物（樱桃/毁灭菇等）爆炸时，还会把 3×3 内与它有配方的植物直接融合掉。',
-            ],
-        },
-        {
-            title: '砸罐子',
-            icon: '🏺',
-            items: [
-                '点罐子敲开：绿罐出植物（稳赚）、红罐出僵尸（小心）、问号罐出随机惊喜。',
-                '开出的植物会自动种在该格；僵尸罐出的敌人立刻行动。',
-                '敲开全部罐子且清空场上僵尸即获胜；难度分简单 / 困难 / 地狱（罐更多、僵尸更凶）。',
-                '地刺、钢地刺在本模式照常生效；锤子僵尸会替你（或敌人）敲罐子。',
-            ],
-        },
-        {
-            title: '《我是僵尸》',
-            icon: '🧟',
-            items: [
-                '阵营反转：你指挥僵尸大军，目标是吃掉关卡里的脑子。',
-                '顶部僵尸卡带花阳光买僵尸 → 点击草坪某一行释放。',
-                '简单 600 阳光 / 困难 400 / 地狱 250；难度越高解锁的兵种越强。',
-                '敌阵是植物防线：豌豆头等植物会反击，坚果挡路需铁门/撑杆/冰车破阵。',
-                '阳光 < 50 且场上无僵尸存活即判负；吃掉全部脑子获胜。',
-            ],
-        },
+        { icon: '☀️', title: '通用操作', items: [
+            '点击收集阳光 → 选卡片 → 点格子种植；铲子可移除植物。',
+            '撑过所有波次即胜利；僵尸走进房子（或脑子被吃光）即失败。',
+            '右上角 Speed 可切换游戏倍速。' ] },
+        { icon: '🌻', title: '经典冒险', items: [
+            '开局选最多 10 张卡：向日葵攒阳光，攻击/防御植物守住 5 条草坪。',
+            '卡片有阳光价与冷却，冷却转圈结束后才能再次使用。' ] },
+        { icon: '🧤', title: '融合进化', items: [
+            '点手套进入拖拽状态，把一株植物拖到另一株上即融合（选卡栏 15 种，其余全靠配方）。',
+            '炸弹爆炸会把 3×3 内有配方的植物直接融合；游戏内可点「融合配方大全」查全部秘方。' ] },
+        { icon: '🏺', title: '砸罐子', items: [
+            '点击罐子敲开：绿罐出植物、红罐出僵尸、问号罐随机；敲完全部罐子并清场即胜。',
+            '难度分简单 / 困难 / 地狱；路灯花要花 75 阳光在种子栏购买，能照亮罐中内容。' ] },
+        { icon: '🧟', title: '《我是僵尸》', items: [
+            '阵营反转：花阳光买僵尸放到草坪上，吃掉全部脑子即胜。',
+            '阳光 < 50 且场上无僵尸存活即判负；小心植物头僵尸的反击防线。' ] },
     ];
 
-    // ================= 植物图鉴（按厉害程度降序） =================
-    // c=阳光 cd=冷却(秒) hp=耐久 s=核心性能 d=说明 src=来源
-    const PLANTS = [
-        { n: '玉米加农炮', c: '融合', cd: '充能25s', hp: 600, s: '手动瞄准 1800 / 3×3', d: '玉米投手×2+第三株融合。占两格，充能后点击开镜、按 M 向准星发射，全游戏最强单发。', src: '融合' },
-        { n: '毁灭菇', c: 125, cd: 50, hp: 300, s: '全屏 9999 秒杀', d: '引爆后湮灭全场僵尸，原地留陨石坑 30 秒不可种植。战略级清场。', src: '经典' },
-        { n: '寒冰炸弹', c: '融合', cd: 50, hp: 300, s: '900 / 3×3 + 减速', d: '寒冰射手+樱桃炸弹。爆炸伤害减半但附带全范围减速 10 秒。', src: '融合' },
-        { n: '樱桃炸弹', c: 150, cd: 50, hp: 300, s: '1800 / 3×3', d: '种下 1 秒后引爆，标准 3×3 秒杀。清密集波次首选。', src: '经典' },
-        { n: '火爆辣椒', c: 125, cd: 50, hp: 300, s: '1800 / 整行', d: '火焰铺满一整行，行内僵尸全部秒杀。', src: '经典' },
-        { n: '冰西瓜投手', c: 200, cd: 7.5, hp: 300, s: '60+溅射30 / 1.0s + 减速', d: '西瓜投手+寒冰菇。抛射破阵核心：直击 60、溅射 30、命中减速 10 秒。', src: '经典/融合' },
-        { n: '西瓜投手', c: 300, cd: 7.5, hp: 300, s: '60+溅射30 / 1.0s', d: '抛物线重炮，溅射波及相邻格僵尸，后期输出主力。', src: '经典' },
-        { n: '忧郁菇', c: 150, cd: 7.5, hp: 300, s: '3×3 每 1s 八发×80', d: '大喷菇×2。孢子向四面八方喷发，近身360°无死角绞肉机，破甲穿门。', src: '融合' },
-        { n: '机枪射手', c: 250, cd: 50, hp: 300, s: '4 连发×20 / 1.5s', d: '双发豌豆×2。单行持续输出翻倍，配合火炬树桩收益极高。', src: '融合' },
-        { n: '冰西瓜猫尾草', c: '融合', cd: 7.5, hp: 300, s: '全场追踪 60+30 + 减速', d: '冰西瓜投手+猫尾草。全场任意僵尸自动追踪的冰瓜炮台。', src: '融合' },
-        { n: '西瓜猫尾草', c: '融合', cd: 7.5, hp: 300, s: '全场追踪 60+30', d: '西瓜投手+猫尾草。全屏锁定，无视位置逐个点名。', src: '融合' },
-        { n: '猫尾草', c: 225, cd: 7.5, hp: 300, s: '全场追踪 20 / 1.4s', d: '双发豌豆+地刺。子弹自动追踪全场僵尸，不会浪费弹道。', src: '融合' },
-        { n: '三线射手', c: 300, cd: 7.5, hp: 300, s: '3 行齐射×20 / 1.5s', d: '双发豌豆+豌豆射手。同时覆盖上中下三行。', src: '经典' },
-        { n: '寒冰射手', c: 175, cd: 7.5, hp: 300, s: '20 / 1.5s + 减速', d: '豌豆射手+寒冰菇。命中减速 10 秒，控制型输出。', src: '融合' },
-        { n: '杨桃', c: 125, cd: 7.5, hp: 300, s: '5 向×40 / 1.5s', d: '裂荚射手+向日葵。五向星光齐射且可穿透多目标，十字路口之王。', src: '融合' },
-        { n: '冰杨桃', c: '融合', cd: 7.5, hp: 300, s: '5 向×40 + 减速', d: '寒冰射手+杨桃。冰晶五向齐射，命中附带减速。', src: '融合' },
-        { n: '大喷菇', c: 75, cd: 7.5, hp: 300, s: '单行弹幕 9×6 / 1.5s', d: '小喷菇×2。沿本行喷出密集孢子束（总伤 54），雾气无视铁门。', src: '融合' },
-        { n: '卷心菜投手', c: 150, cd: 7.5, hp: 300, s: '40 / 1.4s 破甲', d: '抛射攻击无视路障/铁桶/铁门直接打本体，护甲不脱落。', src: '经典' },
-        { n: '爆米花投手', c: '融合', cd: 7.5, hp: 300, s: '40 破甲 + 3×3 溅射', d: '玉米投手+火爆辣椒。命中后焦香溅射波及周围一圈。', src: '融合' },
-        { n: '寒冰卷心菜', c: '融合', cd: 7.5, hp: 300, s: '40 破甲 + 减速', d: '卷心菜投手+寒冰菇。破甲之外再附赠减速。', src: '融合' },
-        { n: '玉米投手', c: 175, cd: 7.5, hp: 300, s: '20 / 黄油定身3s（20%）', d: '20% 概率改投黄油（40 伤 + 定身 3 秒），投掷物全部破甲。', src: '经典' },
-        { n: '双料投手', c: '融合', cd: 7.5, hp: 300, s: '卷心菜 3/4 + 黄油 1/4', d: '卷心菜投手+玉米投手。两种弹药交替，控制输出兼备。', src: '融合' },
-        { n: '火炬树桩', c: 175, cd: 7.5, hp: 300, s: '豌豆穿过点燃 ×2', d: '坚果+火爆辣椒。豌豆经过变火豌豆（40 伤），配合机枪射手质变。', src: '融合' },
-        { n: '樱桃射手', c: '融合', cd: 7.5, hp: 300, s: '20/发 · 第 10 发小樱桃 900', d: '豌豆射手+樱桃炸弹。每第 10 发射出迷你樱桃，3×3 爆炸 900。', src: '融合' },
-        { n: '双向豌豆', c: 125, cd: 7.5, hp: 300, s: '前 20 / 后 40', d: '豌豆射手+窝瓜。照顾身后漏网僵尸。', src: '经典' },
-        { n: '双发豌豆', c: 200, cd: 7.5, hp: 300, s: '2×20 / 1.5s', d: '豌豆射手×2。基础输出翻倍，也是多条融合线的原料。', src: '融合' },
-        { n: '豌豆射手', c: 100, cd: 7.5, hp: 300, s: '20 / 1.5s', d: '最基础的攻击植物，一切豌豆系的起点。', src: '经典' },
-        { n: '胆小菇', c: 25, cd: 7.5, hp: 300, s: '20 / 1.5s（会缩头）', d: '小喷菇+豌豆射手。僵尸靠近会害怕缩头暂停射击，便宜但怂。', src: '融合' },
-        { n: '小喷菇', c: 0, cd: 7.5, hp: 300, s: '20 / 1.5s', d: '完全免费！零成本前排过渡，后期可随意铲掉换位。', src: '经典' },
-        { n: '大嘴花', c: 150, cd: 7.5, hp: 300, s: '整只吞噬 · 咀嚼 40s', d: '一口吞掉脚下僵尸（巨人除外），咀嚼期间无法再咬。', src: '经典' },
-        { n: '大嘴坚果', c: '融合', cd: 7.5, hp: 4000, s: '吞噬 + 坚果肉盾', d: '坚果墙+大嘴花。既能扛又能吞的全能前排。', src: '融合' },
-        { n: '土豆地雷', c: 25, cd: 30, hp: 300, s: '1800 单体 · 武装 15s', d: '种下需 15 秒武装，僵尸踩上即被炸上天。超高性价比。', src: '经典' },
-        { n: '孢子地雷', c: '融合', cd: 30, hp: 300, s: '地雷 + 孢子系特性', d: '小喷菇+土豆地雷的融合变种，同样廉价控场。', src: '融合' },
-        { n: '窝瓜', c: 50, cd: 30, hp: 300, s: '压扁 1800 单体', d: '僵尸贴近即跃起压扁（连巨人都能压），即种即用。', src: '经典' },
-        { n: '钢地刺', c: 125, cd: 7.5, hp: 1200, s: '120 / 0.75s', d: '地刺×2。伤害三倍且更耐久，冰车碾上会被扎爆。', src: '融合' },
-        { n: '地刺', c: 100, cd: 7.5, hp: 300, s: '40 / 0.75s', d: '贴地不会被啃，持续扎伤路过的僵尸，克制冰车。', src: '经典' },
-        { n: '高坚果', c: 125, cd: 30, hp: 8000, s: '肉盾 · 不可跨越', d: '坚果墙的两倍血量，撑杆跳和跳跳僵尸无法越过。', src: '经典' },
-        { n: '钢刺高坚果', c: '融合', cd: 30, hp: 8000, s: '8000 耐久 + 扎脚', d: '钢地刺+高坚果。最强墙壁，脚下还带刺。', src: '融合' },
-        { n: '寒冰坚果', c: '融合', cd: 30, hp: 4000, s: '肉盾 + 冰霜护体', d: '寒冰射手+坚果墙。冰蓝护体，啃食者行动迟缓。', src: '融合' },
-        { n: '地刺坚果', c: '融合', cd: 30, hp: 4000, s: '肉盾 + 扎脚', d: '地刺+坚果墙。啃它等于啃刺。', src: '融合' },
-        { n: '坚果射手', c: '融合', cd: 7.5, hp: 4000, s: '肉盾 + 射击', d: '豌豆射手+坚果墙。能扛能打的二合一前排。', src: '融合' },
-        { n: '南瓜壳（融合）', c: 125, cd: 30, hp: 12000, s: '套在任意植物外的超厚壳', d: '坚果墙+高坚果。给已有植物再套一层 12000 耐久的外壳。', src: '融合' },
-        { n: '南瓜头', c: 125, cd: 30, hp: 4000, s: '套壳护住里层植物', d: '可种在已有植物上叠加护甲，壳破里层无伤。', src: '经典' },
-        { n: '坚果墙', c: 50, cd: 30, hp: 4000, s: '基础肉盾', d: '不攻击纯挡路，一切防线的时间买断者。', src: '经典' },
-        { n: '坚果向日葵', c: '融合', cd: 7.5, hp: 4000, s: '肉盾 + 产能', d: '向日葵+坚果墙。坚果外圈的太阳花田，能扛的发电机。', src: '融合' },
-        { n: '毁灭向日葵', c: '融合', cd: 7.5, hp: 300, s: '产能 · 阵亡大爆炸', d: '向日葵+毁灭菇。平时正常产阳光，被啃死时原地 1800 大爆炸。', src: '融合' },
-        { n: '双子向日葵', c: 150, cd: 50, hp: 300, s: '2×25 / 24s', d: '向日葵×2。经济翻倍，中后期经济升级首选。', src: '融合' },
-        { n: '向日葵', c: 50, cd: 7.5, hp: 300, s: '25 / 24s', d: '每 24 秒产 25 阳光，开局必种的经济引擎。', src: '经典' },
-        { n: '阳光菇', c: 25, cd: 7.5, hp: 300, s: '15 → 成长后 25 / 24s', d: '小喷菇+向日葵。便宜的早期经济，随时间长大增产。', src: '融合' },
-        { n: '寒冰菇', c: 75, cd: 50, hp: 300, s: '全屏冻结减速 10s', d: '引爆后全场僵尸冻住并减速，应急控制王。', src: '经典' },
-        { n: '魅惑菇', c: 75, cd: 30, hp: 300, s: '啃食者被策反', d: '僵尸啃食后倒戈为你而战，满状态转化。', src: '融合' },
-        { n: '大蒜', c: 50, cd: 7.5, hp: 400, s: '逐行驱赶', d: '僵尸咬一口就嫌弃地换行，用来引导僵尸走位。', src: '经典' },
-        { n: '植物盲盒', c: 500, cd: 5, hp: 300, s: '随机开出全植物池一株', d: '500 阳光赌一株随机植物（经典+融合全池），欧皇的玩具。', src: '经典' },
+    // ================= 植物图鉴 =================
+    // 经典 = 经典选卡栏可直接选择（按厉害程度排序）；融合 = 只能通过融合获得
+    // g=卡面素材名 c=阳光 t=tooltip
+    const CLASSIC = [
+        { n: '毁灭菇', g: 'DoomShroom', c: 125, t: '全屏 9999 秒杀；原地留陨石坑 30 秒' },
+        { n: '樱桃炸弹', g: 'CherryBomb', c: 150, t: '1800 伤害 / 3×3，种下 1 秒后引爆' },
+        { n: '火爆辣椒', g: 'Jalapeno', c: 125, t: '1800 伤害烧光一整行' },
+        { n: '冰西瓜投手', g: 'WinterMelon', c: 200, t: '直击 60+溅射 30，命中减速 10 秒' },
+        { n: '西瓜投手', g: 'MelonPult', c: 300, t: '抛射 60+溅射 30，无视铁门' },
+        { n: '猫尾草', g: 'Cattail', c: 225, t: '全场自动追踪，20 伤 / 1.4s' },
+        { n: '机枪射手', g: 'GatlingPea', c: 250, t: '4 连发×20 / 1.5s，单行持续输出' },
+        { n: '三线射手', g: 'Threepeater', c: 300, t: '同时射上中下三行，每发 20' },
+        { n: '寒冰菇', g: 'IceShroom', c: 75, t: '全屏冻结 + 减速 10 秒' },
+        { n: '忧郁菇', g: 'GloomShroom', c: 150, t: '3×3 每 1s 八发×80，穿甲穿门近身绞肉机' },
+        { n: '卷心菜投手', g: 'CabbagePult', c: 150, t: '抛射 40 破甲，护甲打不掉' },
+        { n: '玉米投手', g: 'KernelPult', c: 175, t: '20 伤，20% 投黄油定身 3 秒' },
+        { n: '火炬树桩', g: 'Torchwood', c: 175, t: '豌豆穿过点燃，伤害翻倍' },
+        { n: '杨桃', g: 'Starfruit', c: 125, t: '五向×40 且可穿透' },
+        { n: '双向豌豆', g: 'SplitPea', c: 125, t: '向前 20 / 向后 40' },
+        { n: '双发豌豆', g: 'Repeater', c: 200, t: '每轮 2×20' },
+        { n: '寒冰射手', g: 'SnowPea', c: 175, t: '20 伤 + 减速 10 秒' },
+        { n: '豌豆射手', g: 'Peashooter', c: 100, t: '20 伤 / 1.5s，最基础的输出' },
+        { n: '魅惑菇', g: 'HypnoShroom', c: 75, t: '啃食者被策反为你而战' },
+        { n: '大蒜', g: 'Garlic', c: 50, t: '咬一口就换行，引导走位' },
+        { n: '胆小菇', g: 'ScaredyShroom', c: 25, t: '20 伤，僵尸靠近会缩头暂停' },
+        { n: '大嘴花', g: 'Chomper', c: 150, t: '整只吞噬（巨人除外），咀嚼 40 秒' },
+        { n: '土豆地雷', g: 'PotatoMine', c: 25, t: '武装 15 秒，踩上即 1800 单体' },
+        { n: '窝瓜', g: 'Squash', c: 50, t: '跃起压扁 1800，即种即用' },
+        { n: '钢地刺', g: 'Spikerock', c: 125, t: '120 / 0.75s，不会被啃，扎爆冰车' },
+        { n: '地刺', g: 'Spikeweed', c: 100, t: '40 / 0.75s，贴地不可被啃' },
+        { n: '高坚果', g: 'TallNut', c: 125, t: '8000 耐久，撑杆/跳跳无法越过' },
+        { n: '南瓜头', g: 'PumpkinHead', c: 125, t: '套在植物外的 4000 耐久护壳' },
+        { n: '坚果墙', g: 'WallNut', c: 50, t: '4000 耐久纯肉盾' },
+        { n: '双子向日葵', g: 'TwinSunflower', c: 150, t: '2×25 / 24s，经济翻倍' },
+        { n: '向日葵', g: 'SunFlower', c: 50, t: '25 / 24s，开局必种' },
+        { n: '阳光菇', g: 'SunShroom', c: 25, t: '15 起步，长大后 25 / 24s' },
+        { n: '路灯花', g: 'Plantern', c: 75, t: '砸罐子限定：照亮周围罐子的内容' },
+        { n: '大喷菇', g: 'FumeShroom', c: 75, t: '单行穿透孢子 4 发×20，无视铁门' },
+        { n: '小喷菇', g: 'PuffShroom', c: 0, t: '完全免费的前排过渡' },
+        { n: '植物盲盒', g: 'PlantBox', c: 500, t: '随机开出全植物池一株' },
+    ];
+    // 融合专属：p=主体卡面 q=副体卡面（右下角叠放，与游戏内融合卡面同规则）
+    const FUSION = [
+        { n: '玉米加农炮', g: 'CobCannon', t: '三株玉米投手合体，占两格；充能 25s 后手动瞄准 1800 / 3×3，全游戏最强单发' },
+        { n: '寒冰炸弹', p: 'CherryBomb', q: 'SnowPea', t: '寒冰射手+樱桃炸弹：900 / 3×3 且全场减速' },
+        { n: '冰西瓜猫尾草', p: 'Cattail', q: 'WinterMelon', t: '冰西瓜投手+猫尾草：全场追踪 60+30 + 减速' },
+        { n: '西瓜猫尾草', p: 'Cattail', q: 'MelonPult', t: '西瓜投手+猫尾草：全场追踪 60+30' },
+        { n: '樱桃射手', p: 'CherryBomb', q: 'Peashooter', t: '豌豆射手+樱桃炸弹：每第 10 发射出小樱桃，900 / 3×3' },
+        { n: '冰杨桃', p: 'SnowPea', q: 'Starfruit', t: '寒冰射手+杨桃：五向冰晶 + 减速' },
+        { n: '爆米花投手', p: 'KernelPult', q: 'Jalapeno', t: '玉米投手+火爆辣椒：40 破甲 + 3×3 焦香溅射' },
+        { n: '双料投手', p: 'KernelPult', q: 'CabbagePult', t: '玉米投手+卷心菜投手：两种弹药交替' },
+        { n: '寒冰卷心菜', p: 'CabbagePult', q: 'IceShroom', t: '卷心菜投手+寒冰菇：40 破甲 + 减速' },
+        { n: '坚果射手', p: 'WallNut', q: 'Peashooter', t: '坚果墙+豌豆射手：能扛能打' },
+        { n: '卷心菜堡垒', p: 'WallNut', q: 'CabbagePult', t: '坚果墙+卷心菜投手：肉盾+破甲投掷' },
+        { n: '大嘴坚果', p: 'WallNut', q: 'Chomper', t: '坚果墙+大嘴花：4000 血又能吞' },
+        { n: '钢刺高坚果', p: 'TallNut', q: 'Spikerock', t: '高坚果+钢地刺：8000 血 + 脚下带刺' },
+        { n: '寒冰坚果', p: 'WallNut', q: 'SnowPea', t: '坚果墙+寒冰射手：啃它的人被冻慢' },
+        { n: '地刺坚果', p: 'WallNut', q: 'Spikeweed', t: '坚果墙+地刺：啃它等于啃刺' },
+        { n: '南瓜壳', p: 'WallNut', q: 'TallNut', t: '坚果墙+高坚果：套在任意植物外的 12000 超厚壳' },
+        { n: '坚果向日葵', p: 'SunFlower', q: 'WallNut', t: '向日葵+坚果墙：能扛的发电机' },
+        { n: '毁灭向日葵', p: 'SunFlower', q: 'DoomShroom', t: '向日葵+毁灭菇：正常产阳光，被啃死时原地 1800 大爆炸' },
+        { n: '豌豆向日葵', p: 'SunFlower', q: 'Peashooter', t: '向日葵+豌豆射手：产阳光还打人' },
+        { n: '孢子地雷', p: 'PotatoMine', q: 'PuffShroom', t: '土豆地雷+小喷菇：廉价控场地雷' },
     ];
 
-    // ================= 僵尸图鉴（按厉害程度降序） =================
-    const ZOMBIES = [
-        { n: '巨尸 Boss（LG BOSS）', hp: 5000, s: '关底 Boss', d: '最庞大的敌人，血量与压迫感都是 Boss 级。', src: 'Boss' },
-        { n: '巨人僵尸', hp: 4000, s: '锤飞植物 · 过半血扔小鬼', d: '一锤砸扁植物，血量过半后掷出小鬼僵尸偷袭后方。', src: '经典' },
-        { n: '高坚果头僵尸', hp: 5200, s: '植物头 · 最肉', d: '头顶高坚果的植物头僵尸，全游戏最厚血量之一。', src: '我是僵尸敌阵' },
-        { n: '坚果头僵尸', hp: 2600, s: '植物头 · 移动肉盾', d: '头顶坚果墙，普通输出打起来非常费劲。', src: '我是僵尸敌阵' },
-        { n: '橄榄球僵尸', hp: 1600, s: '高速冲锋', d: '速度 40 的重装骑兵，防线上最怕的突脸怪。', src: '经典/我是僵尸' },
-        { n: '冰车僵尸', hp: 1300, s: '碾压植物 · 留冰道', d: '无视植物直接碾碎，身后留冰道；被地刺扎爆是它的唯一克星。', src: '经典/我是僵尸' },
-        { n: '铁桶僵尸', hp: 1300, s: '铁桶护甲', d: '铁桶提供高额护甲，桶被打掉后与普通僵尸无异。', src: '经典/我是僵尸' },
-        { n: '铁门僵尸', hp: 1300, s: '铁门挡直射', d: '铁门挡住正面直线弹道；投手类/大喷菇/土豆雷的破甲攻击可以无视它。', src: '经典/我是僵尸' },
-        { n: '锤子僵尸', hp: 560, s: '挥锤敲罐', d: '砸罐子模式特有，会主动锤开沿途的罐子。', src: '砸罐子' },
-        { n: '撑杆僵尸', hp: 500, s: '高速 · 跳过第一株植物', d: '起跳越过遇到的第一株植物，落地后恢复普通速度。', src: '经典/我是僵尸' },
-        { n: '舞王僵尸', hp: 500, s: '每 10s 召唤伴舞', d: '定期召唤一排伴舞僵尸，人数优势型敌人。', src: '经典/我是僵尸' },
-        { n: '手提箱僵尸', hp: 500, s: '自爆 3×3', d: '抱着手提箱前进，到点自爆炸毁 3×3 内植物（同归于尽式）。', src: '砸罐子' },
-        { n: '梯子僵尸', hp: 500, s: '架梯翻越防御', d: '速度快，架起梯子翻过坚果墙类防御。', src: '砸罐子' },
-        { n: '跳跳僵尸', hp: 340, s: '弹跳前进', d: '踩着弹簧跳过植物，需要高坚果或突然袭击才能拦住。', src: '砸罐子' },
-        { n: '火爆辣椒头僵尸', hp: 600, s: '植物头', d: '头顶火爆辣椒的植物头僵尸，自带火气。', src: '我是僵尸敌阵' },
-        { n: '读报僵尸', hp: 300, s: '报纸破后狂暴加速', d: '报纸有独立护甲（150），打碎后暴怒加速冲向植物。', src: '经典/我是僵尸' },
-        { n: '路障僵尸', hp: 560, s: '路障护甲', d: '比普通僵尸多一顶路障（护甲 360），基础加强版。', src: '经典/我是僵尸' },
-        { n: '豌豆头僵尸', hp: 200, s: '会射豌豆反击', d: '头顶豌豆射手，边走边向植物开火。', src: '我是僵尸敌阵' },
-        { n: '机枪头僵尸', hp: 200, s: '4 连发射击', d: '头顶机枪射手的进化版植物头，火力翻倍。', src: '我是僵尸敌阵' },
-        { n: '向日葵头僵尸', hp: 200, s: '死亡掉阳光', d: '被打死后头顶的向日葵会掉落一撮阳光（25~150）。', src: '我是僵尸敌阵' },
-        { n: '礼盒僵尸', hp: 200, s: '死后开礼盒', d: '扛着神秘礼盒，死后打开盒子掉出惊喜。', src: '我是僵尸敌阵' },
-        { n: '旗帜僵尸', hp: 200, s: '大波先导', d: '举旗领军，「一大波僵尸」的首个登场者，与普通僵尸同强度。', src: '经典' },
-        { n: '伴舞僵尸', hp: 200, s: '舞王的伴舞', d: '舞王召唤的随从，普通强度但成群出现。', src: '经典' },
-        { n: '普通僵尸', hp: 200, s: '基础单位', d: '最普通的僵尸，啃食植物缓慢前进。', src: '全部模式' },
-        { n: '小鬼僵尸', hp: 100, s: '极快 · 脆弱', d: '又小又快的迷你僵尸，巨人抛投的常客，一碰就碎。', src: '经典' },
+    // ================= 僵尸图鉴（按模式分组，组内按厉害程度排序） =================
+    // img=贴图 h=显示高度 head=头顶植物（与游戏内 createPlantHead 同款裁剪） acc=配饰 hp/ t=tooltip
+    const Z_GROUPS = [
+        { title: '经典冒险', list: [
+            { n: '巨尸 Boss', img: ZB + 'LGBOSS/1.gif', h: 84, hp: 5000, t: '关底 Boss，血量与压迫感都是 Boss 级' },
+            { n: '巨人僵尸', img: ZB + 'Zombie/Zombie.gif', h: 104, dark: true, hp: 4000, t: '2 倍体型重锤砸扁植物，过半血掷出小鬼' },
+            { n: '冰车僵尸', img: ZB + 'Zomboni/1.gif', h: 66, hp: 1300, t: '碾压植物不留啃痕并留冰道，只有地刺能扎爆它' },
+            { n: '橄榄球僵尸', img: ZB + 'FootballZombie/FootballZombie.gif', h: 70, acc: '🏈', hp: 1600, t: '速度 40 的重装骑兵，头盔 1400 护甲' },
+            { n: '铁桶僵尸', img: ZB + 'BucketheadZombie/BucketheadZombie.gif', h: 70, acc: '🪣', hp: 1300, t: '铁桶 1100 护甲，桶掉后与普通僵尸无异' },
+            { n: '铁门僵尸', img: ZB + 'ScreenDoorZombie/ScreenDoorZombie.gif', h: 70, acc: '🚪', hp: 1300, t: '铁门挡正面直射；投手/孢子类破甲攻击无视它' },
+            { n: '舞王僵尸', img: ZB + 'DancingZombie/DancingZombie.gif', h: 72, hp: 500, t: '每 10 秒召唤一排伴舞' },
+            { n: '伴舞僵尸', img: ZB + 'BackupDancer/BackupDancer.gif', h: 70, hp: 200, t: '舞王召唤的随从，成群出现' },
+            { n: '撑杆僵尸', img: ZB + 'PoleVaultingZombie/PoleVaultingZombie.gif', h: 74, hp: 500, t: '高速冲来，跳过遇到的第一株植物' },
+            { n: '读报僵尸', img: ZB + 'NewspaperZombie/HeadWalk1.gif', h: 70, acc: '📰', hp: 300, t: '报纸 150 护甲，打碎后狂暴加速' },
+            { n: '路障僵尸', img: ZB + 'ConeheadZombie/ConeheadZombie.gif', h: 70, acc: '🚧', hp: 560, t: '路障 360 护甲，基础加强版' },
+            { n: '旗帜僵尸', img: ZB + 'FlagZombie/FlagZombie.gif', h: 70, hp: 200, t: '「一大波僵尸」的先导，举旗领军' },
+            { n: '普通僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, hp: 200, t: '最普通的僵尸，啃食植物缓慢前进' },
+            { n: '小鬼僵尸', img: ZB + 'Imp/Zombie.gif', h: 42, hp: 100, t: '又小又快，巨人抛投的常客，一碰就碎' },
+        ]},
+        { title: '砸罐子', list: [
+            { n: '锤子僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, hammer: true, hp: 560, t: '手持木锤，一路替你（或敌人）锤碎沿途罐子' },
+            { n: '小丑盒僵尸', img: ZB + 'JackinTheBoxZombie/Walk.gif', h: 70, hp: 500, t: '抱着玩偶盒前进，随时开盒自爆，炸毁 3×3 内植物' },
+            { n: '铁梯僵尸', img: ZB + 'ScreenDoorZombie/ScreenDoorZombie.gif', h: 70, acc: '🪜', hp: 500, t: '速度快，架梯翻过坚果墙类防御' },
+            { n: '跳跳僵尸', img: ZB + 'PoleVaultingZombie/PoleVaultingZombieJump.gif', h: 62, hp: 340, t: '踩弹簧连续跳过植物，需高坚果才能拦住' },
+        ]},
+        { title: '我是僵尸 · 敌阵', list: [
+            { n: '高坚果头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'TallNut/TallNut.gif', cw: 83, ch: 119, keepTop: 1.0, w: 58 }, hp: 5200, t: '头顶高坚果，全游戏最厚血量之一' },
+            { n: '坚果头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'WallNut/WallNut.gif', cw: 65, ch: 73, keepTop: 1.0, w: 54 }, hp: 2600, t: '头顶坚果墙，普通输出打不动' },
+            { n: '机枪头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'GatlingPea/GatlingPea.gif', cw: 88, ch: 84, keepTop: 0.74, w: 78 }, hp: 200, t: '头顶机枪射手，边走边 4 连发反击' },
+            { n: '寒冰头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'SnowPea/SnowPea.gif', cw: 71, ch: 71, keepTop: 0.70, w: 74 }, hp: 200, t: '头顶寒冰射手，冰弹减速你的僵尸' },
+            { n: '火爆辣椒头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'Jalapeno/Jalapeno.gif', cw: 68, ch: 89, keepTop: 1.0, w: 46 }, hp: 600, t: '连吃 2 株植物后引爆整行' },
+            { n: '豌豆头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'Peashooter/Peashooter.gif', cw: 71, ch: 71, keepTop: 0.70, w: 76 }, hp: 200, t: '头顶豌豆射手，边走边向植物开火' },
+            { n: '向日葵头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'SunFlower/SunFlower1.gif', cw: 73, ch: 74, keepTop: 0.72, w: 78 }, hp: 200, t: '被打死后头顶向日葵掉落一撮阳光' },
+            { n: '盲盒僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, gift: true, hp: 200, t: '扛着神秘礼盒，死后打开随机放出一僵尸' },
+        ]},
+        { title: '有趣的配饰', list: [
+            { n: '木锤', img: ZB + 'HammerZombie/Hammer.png', ih: 54, t: '锤子僵尸的配饰，一锤一个罐子' },
+            { n: '神秘礼盒', img: PL + 'PlantBox/GiftBox.png', ih: 54, t: '盲盒僵尸的行李，开出随机僵尸' },
+            { n: '植物罐', img: 'assets/images/Vase/Vase_Plant.png', ih: 58, t: '绿罐，稳赚的植物' },
+            { n: '僵尸罐', img: 'assets/images/Vase/Vase_Zombie.png', ih: 58, t: '红罐，小心里面有僵尸' },
+            { n: '问号罐', img: 'assets/images/Vase/Vase_Question.png', ih: 58, t: '随机惊喜：阳光、植物或僵尸' },
+            { n: '金罐', img: 'assets/images/Vase/Vase_Gold.png', ih: 58, t: '地狱限定：必出强力植物或强化僵尸' },
+            { n: '冰道', img: ZB + 'Zomboni/ice.png', ih: 40, t: '冰车碾过留下的冰面，其他僵尸会踩着滑行加速' },
+        ]},
     ];
 
     // ================= UI =================
@@ -163,7 +158,7 @@
     #btn-help-guide .hg-ico { font-size: 19px; }
     #help-modal { position: absolute; inset: 0; z-index: 2600; display: none;
         align-items: center; justify-content: center; background: rgba(0,0,0,.8); }
-    #help-panel { width: 860px; max-width: 94vw; max-height: 88vh; display: flex; flex-direction: column;
+    #help-panel { width: 920px; max-width: 96vw; max-height: 90vh; display: flex; flex-direction: column;
         background: linear-gradient(180deg, #fdf3d0 0%, #f3e2ab 78%, #e6cf8c 100%);
         border: 6px solid #6b4a22; border-radius: 18px;
         box-shadow: inset 0 0 0 2px #caa95f, inset 0 0 24px rgba(120,80,20,.18), 0 14px 34px rgba(0,0,0,.5);
@@ -176,26 +171,38 @@
         font-weight: 900; letter-spacing: 2px; color: #6d5626; background: rgba(255,255,255,.4);
         border: 2px solid #b3945c; border-bottom: none; border-radius: 12px 12px 0 0; cursor: pointer; }
     .hg-tab.active { color: #3f6e1f; background: #fbf6e4; box-shadow: 0 -3px 8px rgba(0,0,0,.08); }
-    #help-body { flex: 1; overflow-y: auto; padding: 14px 22px 18px; background: #fbf6e4; border-top: 2px solid #b3945c; }
-    .hg-section-title { font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif; font-size: 20px; font-weight: 900;
-        color: #4a3414; margin: 10px 0 6px; letter-spacing: 2px; }
+    #help-body { flex: 1; overflow-y: auto; padding: 12px 22px 18px; background: #fbf6e4; border-top: 2px solid #b3945c; }
     .hg-mode { background: rgba(255,255,255,.55); border: 1px solid #d8c290; border-radius: 12px;
-        padding: 10px 14px; margin-bottom: 10px; }
-    .hg-mode h4 { margin: 0 0 6px; font-size: 17px; color: #3f6e1f; letter-spacing: 1px; }
+        padding: 9px 14px; margin-bottom: 9px; }
+    .hg-mode h4 { margin: 0 0 5px; font-size: 17px; color: #3f6e1f; letter-spacing: 1px; }
     .hg-mode ul { margin: 0; padding-left: 20px; }
-    .hg-mode li { font-size: 13.5px; line-height: 1.75; color: #5a4a28; }
-    .hg-tip { font-size: 12.5px; color: #8a6d3b; margin: 4px 0 14px; }
-    .hg-row { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-bottom: 1px dashed #d8c290; }
-    .hg-row:nth-child(odd) { background: rgba(255,255,255,.4); }
-    .hg-rank { min-width: 30px; text-align: center; font-family: Impact, 'Arial Black', sans-serif;
-        font-size: 17px; color: #a14b18; }
-    .hg-name { min-width: 108px; font-weight: 700; font-size: 14px; color: #4a3414; }
-    .hg-badges { display: flex; flex-wrap: wrap; gap: 4px; min-width: 168px; max-width: 190px; }
-    .hg-badge { font-size: 11px; color: #5a4a28; background: rgba(179,148,92,.22);
-        border: 1px solid #c9ab72; border-radius: 8px; padding: 1px 7px; white-space: nowrap; }
-    .hg-desc { flex: 1; font-size: 12.5px; line-height: 1.55; color: #5a4a28; }
-    .hg-src { font-size: 10.5px; color: #7a5c22; background: rgba(255,255,255,.5); border: 1px solid #d8c290;
-        border-radius: 8px; padding: 1px 6px; white-space: nowrap; }
+    .hg-mode li { font-size: 13.5px; line-height: 1.7; color: #5a4a28; }
+    .hg-group { display: flex; align-items: center; gap: 12px; margin: 14px 0 8px; }
+    .hg-group-tag { font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif; font-size: 20px; font-weight: 900;
+        letter-spacing: 3px; color: #fff8e2; background: linear-gradient(180deg,#7fa050 0%,#5d7c34 100%);
+        border: 2px solid #46611f; border-radius: 10px; padding: 4px 22px; text-shadow: 1px 1px 0 #33501a; }
+    .hg-group-tag.hg-orange { background: linear-gradient(180deg,#cf8a3c 0%,#a5651f 100%); border-color: #7c4a12; text-shadow: 1px 1px 0 #6b3d0d; }
+    .hg-group-tag.hg-red { background: linear-gradient(180deg,#b05656 0%,#8a3232 100%); border-color: #6b2222; text-shadow: 1px 1px 0 #5a1a1a; }
+    .hg-group-line { flex: 1; height: 2px; background: linear-gradient(90deg, #c9ab72, rgba(201,171,114,0)); border-radius: 2px; }
+    .hg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+    .hg-tile { display: flex; flex-direction: column; align-items: center; padding: 7px 4px 5px;
+        background: rgba(255,255,255,.5); border: 1px solid #d8c290; border-radius: 10px; cursor: default; }
+    .hg-tile:hover { background: #fff; border-color: #b3945c; }
+    .hg-art { position: relative; width: 86px; height: 86px; display: flex; align-items: flex-end; justify-content: center; }
+    .hg-card { width: 66px; height: 79px; background-size: 100% 200%; background-position: top; background-repeat: no-repeat;
+        border-radius: 7px; border: 1px solid rgba(90,60,20,.4); box-shadow: 0 2px 4px rgba(60,40,10,.25); }
+    .hg-card-ov { position: absolute; right: 4px; bottom: 4px; width: 40px; aspect-ratio: 5/3; pointer-events: none;
+        background-size: 100% 200%; background-position: top; background-repeat: no-repeat;
+        border-radius: 4px; border: 1px solid rgba(90,60,20,.45); }
+    .hg-zbody { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); image-rendering: auto; }
+    .hg-zhead { position: absolute; overflow: hidden; pointer-events: none; }
+    .hg-zhead img { position: absolute; left: 0; top: 0; transform: scaleX(-1); }
+    .hg-zacc { position: absolute; top: 2px; right: 4px; font-size: 17px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.3)); }
+    .hg-zhammer { position: absolute; bottom: 6px; right: 2px; width: 34px; transform: rotate(-24deg); }
+    .hg-zgift { position: absolute; bottom: 8px; right: 0px; width: 34px; }
+    .hg-tname { margin-top: 4px; font-size: 12.5px; font-weight: 700; color: #4a3414; text-align: center; line-height: 1.25; }
+    .hg-tsub { font-size: 11px; color: #8a6d3b; margin-top: 1px; }
+    .hg-tip { font-size: 12px; color: #8a6d3b; margin: 10px 0 2px; text-align: center; }
     .hg-foot { padding: 10px; text-align: center; }
     #help-close { padding: 8px 44px; font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif; font-size: 18px;
         font-weight: 900; letter-spacing: 3px; color: #f7e9c0; cursor: pointer;
@@ -204,13 +211,49 @@
     #help-close:hover { filter: brightness(1.12); }
     `;
 
-    function buildRow(z, i, fields) {
-        return '<div class="hg-row">' +
-            '<div class="hg-rank">' + (i + 1) + '</div>' +
-            '<div class="hg-name">' + z.n + '</div>' +
-            '<div class="hg-badges">' + fields.map(f => '<span class="hg-badge">' + f + '</span>').join('') + '</div>' +
-            '<div class="hg-desc">' + z.d + '</div>' +
-            '<span class="hg-src">' + z.src + '</span>' +
+    const cardUrl = g => `url('${CARD}${g}.png${V}')`;
+
+    // 植物瓦片：经典 = 单卡面；融合 = 主体卡面 + 副体卡面右下角叠放（与游戏内融合卡面同规则）
+    function plantTile(p, fusion) {
+        let art = '<div class="hg-card" style="background-image:' + cardUrl(p.g || p.p) + '"></div>';
+        if (fusion && p.q) {
+            art += '<div class="hg-card-ov" style="background-image:' + cardUrl(p.q) + '"></div>';
+        }
+        return '<div class="hg-tile" title="' + (p.t || '') + '">' +
+            '<div class="hg-art">' + art + '</div>' +
+            '<div class="hg-tname">' + p.n + '</div>' +
+            '<div class="hg-tsub">' + (fusion ? '融合获得' : '☀ ' + p.c) + '</div>' +
+            '</div>';
+    }
+
+    // 僵尸瓦片：gif 本体 + （可选）头顶植物 / 锤子 / 礼盒 / 配饰徽章
+    function zombieTile(z) {
+        const h = z.h || 70;
+        let art = '<img class="hg-zbody" src="' + z.img + V + '" style="height:' + h + 'px;' +
+            (z.dark ? 'filter:brightness(.72) contrast(1.25);' : '') + '">';
+        if (z.head) {
+            const c = z.head;
+            const w = c.w * (h / 70);            // 头随本体缩放
+            const boxH = Math.round(w * c.ch / c.cw * c.keepTop);
+            art += '<div class="hg-zhead" style="width:' + Math.round(w) + 'px;height:' + boxH + 'px;' +
+                'left:calc(50% - ' + Math.round(w / 2 - 6) + 'px);top:' + Math.max(0, 60 - boxH) + 'px;">' +
+                '<img src="' + c.src + V + '" style="width:' + Math.round(w) + 'px;">' +
+                '</div>';
+        }
+        if (z.hammer) art += '<img class="hg-zhammer" src="' + ZB + 'HammerZombie/Hammer.png' + V + '">';
+        if (z.gift) art += '<img class="hg-zgift" src="' + PL + 'PlantBox/GiftBox.png' + V + '">';
+        if (z.acc) art += '<span class="hg-zacc">' + z.acc + '</span>';
+        return '<div class="hg-tile" title="' + (z.hp ? '血量 ' + z.hp + ' · ' : '') + (z.t || '') + '">' +
+            '<div class="hg-art">' + art + '</div>' +
+            '<div class="hg-tname">' + z.n + '</div>' +
+            '</div>';
+    }
+
+    // 配饰瓦片：道具图直接展示
+    function propTile(z) {
+        return '<div class="hg-tile" title="' + (z.t || '') + '">' +
+            '<div class="hg-art"><img src="' + z.img + V + '" style="max-height:' + (z.ih || 56) + 'px;max-width:80px;"></div>' +
+            '<div class="hg-tname">' + z.n + '</div>' +
             '</div>';
     }
 
@@ -219,19 +262,28 @@
             '<div class="hg-mode"><h4>' + m.icon + ' ' + m.title + '</h4><ul>' +
             m.items.map(it => '<li>' + it + '</li>').join('') + '</ul></div>'
         ).join('') +
-        '<div class="hg-tip">※ 图鉴数据为当前版本实装数值；融合植物可在「融合配方大全」查看配方。</div>';
+        '<div class="hg-tip">※ 悬停植物 / 僵尸图片可查看详细数值（伤害 / 血量 / 特性）。</div>';
     }
 
     function renderPlants() {
-        return '<div class="hg-section-title">植物图鉴 · 按厉害程度排序</div>' +
-            PLANTS.map((p, i) => buildRow(p, i, [
-                '阳光 ' + p.c, '冷却 ' + p.cd, '耐久 ' + p.hp, p.s
-            ])).join('');
+        return groupBar('经 典', '') +
+            '<div class="hg-grid">' + CLASSIC.map(p => plantTile(p, false)).join('') + '</div>' +
+            groupBar('融 合', 'hg-orange') +
+            '<div class="hg-grid">' + FUSION.map(p => plantTile(p, true)).join('') + '</div>' +
+            '<div class="hg-tip">※ 经典 = 选卡栏直接可选 · 融合 = 手套融合获得（配方见游戏内「融合配方大全」）</div>';
     }
 
     function renderZombies() {
-        return '<div class="hg-section-title">僵尸图鉴 · 按厉害程度排序</div>' +
-            ZOMBIES.map((z, i) => buildRow(z, i, ['血量 ' + z.hp, z.s])).join('');
+        return Z_GROUPS.map((g, i) => {
+            const tagCls = i === 1 ? 'hg-orange' : (i >= 2 ? 'hg-red' : '');
+            return groupBar(g.title, tagCls) +
+                '<div class="hg-grid">' + g.list.map(z => zombieTile(z)).join('') + '</div>';
+        }).join('');
+    }
+
+    function groupBar(text, cls) {
+        return '<div class="hg-group"><span class="hg-group-tag ' + cls + '">' + text + '</span>' +
+            '<span class="hg-group-line"></span></div>';
     }
 
     function init() {
@@ -256,8 +308,8 @@
                     '<div class="hg-title">操作与道具说明</div>' +
                     '<div class="hg-tabs">' +
                         '<div class="hg-tab active" data-tab="modes">玩法说明</div>' +
-                        '<div class="hg-tab" data-tab="plants">植物图鉴（' + PLANTS.length + '）</div>' +
-                        '<div class="hg-tab" data-tab="zombies">僵尸图鉴（' + ZOMBIES.length + '）</div>' +
+                        '<div class="hg-tab" data-tab="plants">植物图鉴（' + (CLASSIC.length + FUSION.length) + '）</div>' +
+                        '<div class="hg-tab" data-tab="zombies">僵尸图鉴</div>' +
                     '</div>' +
                 '</div>' +
                 '<div id="help-body"></div>' +
