@@ -59,7 +59,7 @@ function chargePowerAt(now) {
 let spin = { x: 0, y: 0 };
 let shotDirStore = { x: 1, z: 0 };
 let customNames = ['', ''];   // 菜单里填的玩家昵称
-let camMode = 0;         // 0 三维 1 俯视 2 母球后
+let camMode = 1;         // 默认俯视（上帝视角，最常用）· 0 三维 1 俯视 2 环桌走位
 let viewToggleTime = 0;
 
 function cueBall() { return balls[0]; }
@@ -1935,6 +1935,8 @@ window.POOL = {
     // 测试用：辅助线
     updateGuide,
     get guideGroup() { return guideGroup; },
+    // 调试：相机对象（验证默认机位用）
+    get camera() { return camera; },
 };
 
 })();
