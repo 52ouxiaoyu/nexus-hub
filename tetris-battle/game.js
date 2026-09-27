@@ -4,7 +4,7 @@
  * 双人对战俄罗斯方块 · 道具攻防系统
  * ============================================================ */
 
-const VERSION = 'v1.2.0';
+const VERSION = 'v1.3.0';
 const COLS = 10, ROWS = 20, CELL = 30;
 const MAX_CHARGE = 10;          // 必杀充能
 const ITEM_SLOTS = 3;           // 道具栏格数
@@ -22,19 +22,37 @@ const PIECES = {
     T: { color: '#aa00ff', m: [[0,1,0],[1,1,1],[0,0,0]] },
     Z: { color: '#ff1744', m: [[1,1,0],[0,1,1],[0,0,0]] },
 };
-const TYPES = Object.keys(PIECES);
+const TYPES = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];
 const GARBAGE_COLOR = '#787f8f';
 
-// ---------- 道具定义 ----------
+// ---------- 道具定义（w = 抽签权重）----------
 const ITEMS = {
-    garbage: { name: '垃圾行',   icon: '🧱', atk: true,  desc: '对方 +2 行垃圾' },
-    haste:   { name: '加速诅咒', icon: '⚡', atk: true,  desc: '对方加速 15 秒' },
-    fog:     { name: '迷雾',     icon: '🌫️', atk: true,  desc: '遮蔽对方 8 秒' },
-    shield:  { name: '护盾',     icon: '🛡️', atk: false, desc: '抵挡一次垃圾攻击' },
-    sweep:   { name: '清底',     icon: '🧹', atk: false, desc: '清除自己最底一行' },
-    slow:    { name: '减速',     icon: '🐢', atk: false, desc: '自己减速 20 秒' },
+    garbage: { name: '垃圾行',   icon: '🧱', atk: true,  w: 12, desc: '对方 +2 行垃圾' },
+    haste:   { name: '加速诅咒', icon: '⚡', atk: true,  w: 8,  desc: '对方加速 15 秒' },
+    fog:     { name: '迷雾',     icon: '🌫️', atk: true,  w: 8,  desc: '遮蔽对方 8 秒' },
+    shield:  { name: '护盾',     icon: '🛡️', atk: false, w: 12, desc: '抵挡一次垃圾攻击' },
+    sweep:   { name: '清底',     icon: '🧹', atk: false, w: 10, desc: '清除自己最底一行' },
+    slow:    { name: '减速',     icon: '🐢', atk: false, w: 8,  desc: '自己减速 20 秒' },
+    swap:    { name: '换盘',     icon: '⚖️', atk: true,  w: 4,  desc: '与对方交换整个棋盘！' },
+    gale:    { name: '疾风',     icon: '🌪️', atk: true,  w: 6,  desc: '把对方的方块吹得东倒西歪 6 秒' },
+    confuse: { name: '混乱',     icon: '🔀', atk: true,  w: 5,  desc: '对方左右操作互换 8 秒' },
+    cleanse: { name: '洁净',     icon: '🧽', atk: false, w: 7,  desc: '清掉自己棋盘上所有垃圾行' },
+    freeze:  { name: '时停',     icon: '⏱️', atk: false, w: 5,  desc: '自己的方块停止下落 6 秒' },
+    diamond: { name: '碎钻块',   icon: '💎', atk: false, w: 7,  desc: '下一块变成 1×1 小块，专填洞' },
 };
 const ITEM_KEYS = Object.keys(ITEMS);
+
+// 1×1 碎钻块（💎）：不进 7-bag，仅由道具产生
+PIECES.DIA = { color: '#00e676', m: [[1]] };
+
+// 按权重抽一个道具
+function pickWeightedItem() {
+    let total = 0;
+    for (const k of ITEM_KEYS) total += ITEMS[k].w;
+    let r = Math.random() * total;
+    for (const k of ITEM_KEYS) { r -= ITEMS[k].w; if (r < 0) return k; }
+    return ITEM_KEYS[0];
+}
 
 // ---------- 工具 ----------
 function rotateMat(m, dir) {
@@ -168,7 +186,8 @@ class Player {
         this.charge = 0;
         this.shields = 0;
         this.incoming = [];        // { lines, due }
-        this.effects = { hasteUntil: 0, slowUntil: 0, fogUntil: 0 };
+        this.effects = { hasteUntil: 0, slowUntil: 0, fogUntil: 0, windUntil: 0, confuseUntil: 0, freezeUntil: 0 };
+        this.diamondNext = false;  // 💎 下一块变 1×1 碎钻块
         this.combo = 0;
         this.score = 0;
         this.lines = 0;
@@ -190,10 +209,19 @@ class Player {
         return this.bag.pop();
     }
     spawn() {
-        const t = this.next || this.drawFromBag();
-        this.next = this.drawFromBag();
-        const m = PIECES[t].m.map(r => r.slice());
-        this.cur = { type: t, m, x: Math.floor((COLS - m.length) / 2), y: -1 };
+        const now = performance.now();
+        if (this.diamondNext) {
+            // 💎 碎钻块：1×1，不消耗 7-bag 顺序
+            this.diamondNext = false;
+            this.cur = { type: 'DIA', m: [[1]], x: Math.floor((COLS - 1) / 2), y: -1 };
+        } else {
+            const t = this.next || this.drawFromBag();
+            this.next = this.drawFromBag();
+            const m = PIECES[t].m.map(r => r.slice());
+            this.cur = { type: t, m, x: Math.floor((COLS - m.length) / 2), y: -1 };
+            // 🌪️ 疾风：新块出生被吹偏 1~3 格
+            if (this.effects.windUntil > now) this.applyWind(this.cur, 1 + Math.floor(Math.random() * 3));
+        }
         this.spawnId++;
         // 软降只对当前方块生效：新块出生必须重新按一次下键才加速，
         // 防止按住下键不放导致后续方块接连狂掉失控
@@ -217,10 +245,21 @@ class Player {
     // ----- 操作 -----
     move(dx) {
         if (!this.cur || this.dead) return false;
+        // 🔀 混乱：左右互换（键盘、DAS、AI 全部统一中招）
+        if (this.effects.confuseUntil > performance.now()) dx = -dx;
         if (!this.collide(this.cur.m, this.cur.x + dx, this.cur.y)) {
             this.cur.x += dx; AudioSys.move(); return true;
         }
         return false;
+    }
+    // 🌪️ 疾风：把方块安全地吹偏 cells 格（撞到东西就停，绝不吹进墙里）
+    applyWind(piece, cells) {
+        if (!piece) return;
+        const dir = Math.random() < 0.5 ? -1 : 1;
+        for (let i = 0; i < cells; i++) {
+            if (!this.collide(piece.m, piece.x + dir, piece.y)) piece.x += dir;
+            else break;
+        }
     }
     rotate() {
         if (!this.cur || this.dead) return;
@@ -310,7 +349,7 @@ class Player {
     grantItem() {
         const slot = this.items.indexOf(null);
         if (slot >= 0) {
-            this.items[slot] = ITEM_KEYS[Math.floor(Math.random() * ITEM_KEYS.length)];
+            this.items[slot] = pickWeightedItem();
             AudioSys.item();
         } else {
             this.addCharge(1);
@@ -365,6 +404,60 @@ class Player {
                 this.effects.slowUntil = now + 20000;
                 AudioSys.itemSlow();
                 break;
+            case 'swap': {
+                // ⚖️ 换盘：双方整个棋盘互换（垃圾堆也一起送过去）
+                game.log(this, '⚖️ 天平互换!! 棋盘交换!');
+                AudioSys.ult();
+                const [b1, b2] = [this.board, opp.board];
+                this.board = b2; opp.board = b1;
+                for (const pl of [this, opp]) {
+                    if (pl.cur) {
+                        while (pl.collide(pl.cur.m, pl.cur.x, pl.cur.y)) {
+                            pl.cur.y--;
+                            if (pl.cur.y < -4) { pl.dead = true; break; }
+                        }
+                    }
+                }
+                break;
+            }
+            case 'gale': {
+                // 🌪️ 疾风：立刻吹偏对方当前块，且 6 秒内新块出生继续被吹
+                game.log(this, '🌪️ 狂风吹向对方!');
+                AudioSys.itemFog();
+                opp.applyWind(opp.cur, 2 + Math.floor(Math.random() * 3));
+                opp.effects.windUntil = now + 6000;
+                break;
+            }
+            case 'confuse':
+                // 🔀 混乱：对方左右操作互换 8 秒
+                game.log(this, '🔀 对方操作混乱!');
+                AudioSys.itemAtk();
+                opp.effects.confuseUntil = now + 8000;
+                break;
+            case 'cleanse': {
+                // 🧽 洁净：只清除纯垃圾行（每个格子都是灰色），普通方块保留
+                game.log(this, '🧽 洁净术! 垃圾行全部消失');
+                AudioSys.itemSweep();
+                this.board = this.board.filter(row =>
+                    !row.some(v => v === GARBAGE_COLOR) || row.some(v => v && v !== GARBAGE_COLOR));
+                while (this.board.length < ROWS) this.board.unshift(Array(COLS).fill(0));
+                if (this.cur) {
+                    while (this.collide(this.cur.m, this.cur.x, this.cur.y)) this.cur.y--;
+                }
+                break;
+            }
+            case 'freeze':
+                // ⏱️ 时停：自己的方块停止下落 6 秒（仍可移动旋转）
+                game.log(this, '⏱️ 时间静止!');
+                AudioSys.itemSlow();
+                this.effects.freezeUntil = now + 6000;
+                break;
+            case 'diamond':
+                // 💎 碎钻块：下一块变 1×1
+                game.log(this, '💎 下一块是碎钻块!');
+                AudioSys.item();
+                this.diamondNext = true;
+                break;
         }
     }
     removeBottomRow() {
@@ -401,6 +494,8 @@ class Player {
             this.finishClear(now);
         }
         if (!this.cur) return; // 消行动画中
+        // ⏱️ 时停：重力暂停（仍可移动/旋转，dropTimer 清零防解冻瞬间连掉）
+        if (this.effects.freezeUntil > now) { this.dropTimer = 0; return; }
         this.dropTimer += dt * (this.softDropping ? 20 : 1);
         const interval = this.getDropInterval(now);
         while (this.dropTimer >= interval) {
@@ -522,6 +617,15 @@ const AI = {
                 if (it === 'shield' && incoming > 0) { p.useSlot(i); break; }
                 if (it === 'sweep' && p.stackHeight() >= 13) { p.useSlot(i); break; }
                 if (it === 'slow' && p.stackHeight() >= 14) { p.useSlot(i); break; }
+                // 新道具的 AI 判断
+                if (it === 'swap' && (p.stackHeight() - opp.stackHeight()) >= 5) { p.useSlot(i); break; }  // 明显劣势才赌换盘
+                if (it === 'cleanse') {
+                    const gr = p.board.filter(r => r.some(v => v === GARBAGE_COLOR) && r.every(v => !v || v === GARBAGE_COLOR)).length;
+                    if (gr >= 2) { p.useSlot(i); break; }
+                }
+                if (it === 'freeze' && p.stackHeight() >= 15) { p.useSlot(i); break; }
+                if (it === 'diamond' && p.stackHeight() >= 10) { p.useSlot(i); break; }
+                if (it === 'swap') continue;   // 优势时不乱换盘
                 if (ITEMS[it].atk && Math.random() < cfg.itemChance) { p.useSlot(i); break; }
             }
             if (p.charge >= MAX_CHARGE) p.fireUltimate();
@@ -1000,6 +1104,26 @@ const game = {
         if (p.effects.slowUntil > now) {
             ctx.fillStyle = '#69f0ae';
             ctx.fillText('🐢', fx, ey + 20);
+            fx += 24;
+        }
+        if (p.effects.windUntil > now) {
+            ctx.fillStyle = '#b388ff';
+            ctx.fillText('🌪️', fx, ey + 20);
+            fx += 24;
+        }
+        if (p.effects.confuseUntil > now) {
+            ctx.fillStyle = '#ff4081';
+            ctx.fillText('🔀', fx, ey + 20);
+            fx += 24;
+        }
+        if (p.effects.freezeUntil > now) {
+            ctx.fillStyle = '#80d8ff';
+            ctx.fillText('⏱️', fx, ey + 20);
+            fx += 24;
+        }
+        if (p.diamondNext) {
+            ctx.fillStyle = '#00e676';
+            ctx.fillText('💎', fx, ey + 20);
             fx += 24;
         }
 
