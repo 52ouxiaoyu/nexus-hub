@@ -116,7 +116,7 @@
 <div id="stage">
     <canvas id="game" width="1240" height="720"></canvas>
     <div id="mute-btn" title="音效开关">🔊</div>
-    <div class="corner-tip">TETRIS BATTLE <span id="badge-tip">v1.3.0</span></div>
+    <div class="corner-tip">TETRIS BATTLE <span id="badge-tip">v1.4.0</span></div>
 
     <!-- 主菜单 -->
     <div id="menu" class="overlay">
@@ -135,7 +135,7 @@
             <button class="menu-btn lvl-btn" data-lvl="4" style="border-color:rgba(255,23,68,0.5);">💀 地狱级 · 秒落狂魔</button>
             <button class="menu-btn" id="btn-ai-back" style="width:180px; margin-top:14px;">返回</button>
         </div>
-        <div class="badge" id="badge">v1.3.0</div>
+        <div class="badge" id="badge">v1.4.0</div>
     </div>
 
     <!-- 帮助 -->
@@ -158,22 +158,35 @@
                 <tr><td>使用道具 1 / 2 / 3</td><td><kbd>小键盘1</kbd><kbd>小键盘2</kbd><kbd>小键盘3</kbd>（备用 <kbd>,</kbd><kbd>.</kbd><kbd>/</kbd>）</td></tr>
                 <tr><td>发动必杀</td><td><kbd>小键盘+</kbd> 或 <kbd>右Ctrl</kbd>（充能满 10 时）</td></tr>
             </table>
-            <h3>道具系统</h3>
-            <div class="item-line"><span class="ic">🧱</span><b>垃圾行</b><span class="tag-a">攻</span>向对方底部加 2 行带洞垃圾</div>
+            <h3>道具系统 —— 质量档位制</h3>
+            <div class="item-line" style="color:#9aa0b5"><b>收集机制</b>：一次消 <b>2 行</b>获得 1 个<span style="color:#9aa0b5">低质量</span>道具 · 消 <b>3 行</b>获得 1 个<span style="color:#40c4ff">中质量</span>道具 · 消 <b>4 行</b>（Tetris!）获得 1 个<span style="color:#ffd600">高质量</span>道具 + 1 充能</div>
+            <h3 style="color:#9aa0b5">⚪ 低质量（消 2 行）</h3>
+            <div class="item-line"><span class="ic">🧱</span><b>垃圾行</b><span class="tag-a">攻</span>向对方底部加 2 行带洞垃圾（预警 1.5 秒）</div>
             <div class="item-line"><span class="ic">⚡</span><b>加速诅咒</b><span class="tag-a">攻</span>对方下落速度翻倍 15 秒</div>
-            <div class="item-line"><span class="ic">🌫️</span><b>迷雾</b><span class="tag-a">攻</span>遮蔽对方棋盘视野 8 秒</div>
+            <div class="item-line"><span class="ic">💤</span><b>方块诅咒</b><span class="tag-a">攻</span>对方下一块被固定成正方形 O</div>
             <div class="item-line"><span class="ic">🛡️</span><b>护盾</b><span class="tag-d">防</span>自动抵挡下一次垃圾行攻击（可叠加）</div>
             <div class="item-line"><span class="ic">🧹</span><b>清底</b><span class="tag-d">防</span>立即清除自己最底下一行</div>
             <div class="item-line"><span class="ic">🐢</span><b>减速</b><span class="tag-d">防</span>自己下落速度放慢 20 秒</div>
-            <div class="item-line"><span class="ic">⚖️</span><b>换盘</b><span class="tag-a">攻</span>和对方交换整个棋盘！绝境翻盘神器，垃圾堆也一起送过去</div>
+            <div class="item-line"><span class="ic">💎</span><b>碎钻块</b><span class="tag-d">防</span>下一块变成 1×1 小方块，专门用来填洞</div>
+            <div class="item-line"><span class="ic">🔄</span><b>换块</b><span class="tag-d">防</span>弃掉当前方块，换成下一块</div>
+            <div class="item-line"><span class="ic">🏃</span><b>疾跑</b><span class="tag-d">防</span>自己加速 10 秒，期间消行得分×2（高风险高回报）</div>
+            <h3 style="color:#40c4ff">🔵 中质量（消 3 行）</h3>
+            <div class="item-line"><span class="ic">🌫️</span><b>迷雾</b><span class="tag-a">攻</span>遮蔽对方棋盘视野 8 秒</div>
             <div class="item-line"><span class="ic">🌪️</span><b>疾风</b><span class="tag-a">攻</span>把对方的方块吹得东倒西歪，持续 6 秒</div>
             <div class="item-line"><span class="ic">🔀</span><b>混乱</b><span class="tag-a">攻</span>对方左右操作互换 8 秒，越慌越乱</div>
+            <div class="item-line"><span class="ic">🤡</span><b>垃圾块诅咒</b><span class="tag-a">攻</span>对方接下来 3 块全是难用的 S/Z</div>
             <div class="item-line"><span class="ic">🧽</span><b>洁净</b><span class="tag-d">防</span>精确清除自己棋盘上所有垃圾行（普通方块保留）</div>
             <div class="item-line"><span class="ic">⏱️</span><b>时停</b><span class="tag-d">防</span>自己的方块停止下落 6 秒，可从容调整（仍可移动旋转）</div>
-            <div class="item-line"><span class="ic">💎</span><b>碎钻块</b><span class="tag-d">防</span>下一块变成 1×1 小方块，专门用来填洞</div>
+            <div class="item-line"><span class="ic">🪞</span><b>反弹</b><span class="tag-d">防</span>下一次针对自己的攻击原样弹回攻击者</div>
+            <h3 style="color:#ffd600">🟡 高质量（消 4 行 Tetris!）</h3>
+            <div class="item-line"><span class="ic">⚖️</span><b>换盘</b><span class="tag-a">攻</span>和对方交换整个棋盘！绝境翻盘神器，垃圾堆也一起送过去</div>
+            <div class="item-line"><span class="ic">🎯</span><b>饱和轰炸</b><span class="tag-a">攻</span>对方 +4 行垃圾（预警 1.5 秒，护盾只能挡一次）</div>
+            <div class="item-line"><span class="ic">🗡️</span><b>打劫</b><span class="tag-a">攻</span>偷走对方道具栏一个道具占为己有；对方没道具就抢 3 点必杀充能</div>
+            <div class="item-line"><span class="ic">🌈</span><b>万用长条</b><span class="tag-d">防</span>下一块变成 I 长条，补天神器</div>
+            <div class="item-line"><span class="ic">🏥</span><b>大恢复</b><span class="tag-d">防</span>清除自己最底 3 行</div>
             <h3>规则要点</h3>
             <table>
-                <tr><td>道具获得</td><td>一次消 2 行得 1 个道具，消 3 行得 2 个，消 4 行（Tetris!）得 3 个道具 + 1 充能</td></tr>
+                <tr><td>道具收集</td><td>消 2 行得 1 个低质量道具，消 3 行得 1 个中质量，消 4 行（Tetris!）得 1 个高质量 + 1 充能（道具栏描边颜色 = 质量档位：灰/蓝/金）</td></tr>
                 <tr><td>连击奖励</td><td>连续消行（Combo）每层 +1 必杀充能</td></tr>
                 <tr><td>必杀 · 末日洪水</td><td>道具栏（3 格）塞满后再获得的道具转为充能；攒满 10 点可发动：6 行垃圾 + 迷雾 + 加速同时砸向对方，基本一击必杀！</td></tr>
                 <tr><td>垃圾预警</td><td>对方进攻会在中间栏显示箭头预警，1.5 秒后落地，抓紧时间消行或开盾！</td></tr>

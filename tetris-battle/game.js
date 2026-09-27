@@ -4,7 +4,7 @@
  * 双人对战俄罗斯方块 · 道具攻防系统
  * ============================================================ */
 
-const VERSION = 'v1.3.0';
+const VERSION = 'v1.4.0';
 const COLS = 10, ROWS = 20, CELL = 30;
 const MAX_CHARGE = 10;          // 必杀充能
 const ITEM_SLOTS = 3;           // 道具栏格数
@@ -25,33 +25,44 @@ const PIECES = {
 const TYPES = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];
 const GARBAGE_COLOR = '#787f8f';
 
-// ---------- 道具定义（w = 抽签权重）----------
+// ---------- 道具定义（tier: low=消2行 / mid=消3行 / high=消4行）----------
 const ITEMS = {
-    garbage: { name: '垃圾行',   icon: '🧱', atk: true,  w: 12, desc: '对方 +2 行垃圾' },
-    haste:   { name: '加速诅咒', icon: '⚡', atk: true,  w: 8,  desc: '对方加速 15 秒' },
-    fog:     { name: '迷雾',     icon: '🌫️', atk: true,  w: 8,  desc: '遮蔽对方 8 秒' },
-    shield:  { name: '护盾',     icon: '🛡️', atk: false, w: 12, desc: '抵挡一次垃圾攻击' },
-    sweep:   { name: '清底',     icon: '🧹', atk: false, w: 10, desc: '清除自己最底一行' },
-    slow:    { name: '减速',     icon: '🐢', atk: false, w: 8,  desc: '自己减速 20 秒' },
-    swap:    { name: '换盘',     icon: '⚖️', atk: true,  w: 4,  desc: '与对方交换整个棋盘！' },
-    gale:    { name: '疾风',     icon: '🌪️', atk: true,  w: 6,  desc: '把对方的方块吹得东倒西歪 6 秒' },
-    confuse: { name: '混乱',     icon: '🔀', atk: true,  w: 5,  desc: '对方左右操作互换 8 秒' },
-    cleanse: { name: '洁净',     icon: '🧽', atk: false, w: 7,  desc: '清掉自己棋盘上所有垃圾行' },
-    freeze:  { name: '时停',     icon: '⏱️', atk: false, w: 5,  desc: '自己的方块停止下落 6 秒' },
-    diamond: { name: '碎钻块',   icon: '💎', atk: false, w: 7,  desc: '下一块变成 1×1 小块，专填洞' },
+    // —— 低质量 ——
+    garbage:  { name: '垃圾行',   icon: '🧱', atk: true,  tier: 'low',  desc: '对方 +2 行垃圾' },
+    haste:    { name: '加速诅咒', icon: '⚡', atk: true,  tier: 'low',  desc: '对方加速 15 秒' },
+    sweep:    { name: '清底',     icon: '🧹', atk: false, tier: 'low',  desc: '清除自己最底一行' },
+    slow:     { name: '减速',     icon: '🐢', atk: false, tier: 'low',  desc: '自己减速 20 秒' },
+    shield:   { name: '护盾',     icon: '🛡️', atk: false, tier: 'low',  desc: '抵挡一次垃圾攻击' },
+    diamond:  { name: '碎钻块',   icon: '💎', atk: false, tier: 'low',  desc: '下一块变成 1×1 小块，专填洞' },
+    heavy:    { name: '方块诅咒', icon: '💤', atk: true,  tier: 'low',  desc: '对方下一块变成正方形 O' },
+    rush:     { name: '疾跑',     icon: '🏃', atk: false, tier: 'low',  desc: '自己加速 10 秒，期间消行得分×2' },
+    swapPiece:{ name: '换块',     icon: '🔄', atk: false, tier: 'low',  desc: '弃掉当前方块，换成下一块' },
+    // —— 中质量 ——
+    fog:      { name: '迷雾',     icon: '🌫️', atk: true,  tier: 'mid',  desc: '遮蔽对方 8 秒' },
+    gale:     { name: '疾风',     icon: '🌪️', atk: true,  tier: 'mid',  desc: '把对方的方块吹得东倒西歪 6 秒' },
+    confuse:  { name: '混乱',     icon: '🔀', atk: true,  tier: 'mid',  desc: '对方左右操作互换 8 秒' },
+    cleanse:  { name: '洁净',     icon: '🧽', atk: false, tier: 'mid',  desc: '清掉自己棋盘上所有垃圾行' },
+    freeze:   { name: '时停',     icon: '⏱️', atk: false, tier: 'mid',  desc: '自己的方块停止下落 6 秒' },
+    curse:    { name: '垃圾块诅咒', icon: '🤡', atk: true, tier: 'mid',  desc: '对方接下来 3 块全是难用的 S/Z' },
+    mirror:   { name: '反弹',     icon: '🪞', atk: false, tier: 'mid',  desc: '下一次攻击原样弹回攻击者' },
+    // —— 高质量 ——
+    swap:     { name: '换盘',     icon: '⚖️', atk: true,  tier: 'high', desc: '与对方交换整个棋盘！' },
+    snipe:    { name: '饱和轰炸', icon: '🎯', atk: true,  tier: 'high', desc: '对方 +4 行垃圾（预警 1.5 秒）' },
+    steal:    { name: '打劫',     icon: '🗡️', atk: true,  tier: 'high', desc: '偷走对方一个道具；没有就偷 3 点充能' },
+    rainbow:  { name: '万用长条', icon: '🌈', atk: false, tier: 'high', desc: '下一块变成 I 长条' },
+    medic:    { name: '大恢复',   icon: '🏥', atk: false, tier: 'high', desc: '清除自己最底 3 行' },
 };
 const ITEM_KEYS = Object.keys(ITEMS);
+const TIER_STYLE = { low: '#9aa0b5', mid: '#40c4ff', high: '#ffd600' };
+const TIER_NAME  = { low: '低', mid: '中', high: '高' };
 
 // 1×1 碎钻块（💎）：不进 7-bag，仅由道具产生
 PIECES.DIA = { color: '#00e676', m: [[1]] };
 
-// 按权重抽一个道具
-function pickWeightedItem() {
-    let total = 0;
-    for (const k of ITEM_KEYS) total += ITEMS[k].w;
-    let r = Math.random() * total;
-    for (const k of ITEM_KEYS) { r -= ITEMS[k].w; if (r < 0) return k; }
-    return ITEM_KEYS[0];
+// 按质量档抽一个道具（档内等概率）
+function pickItem(tier) {
+    const pool = ITEM_KEYS.filter(k => ITEMS[k].tier === tier);
+    return pool[Math.floor(Math.random() * pool.length)];
 }
 
 // ---------- 工具 ----------
@@ -186,8 +197,10 @@ class Player {
         this.charge = 0;
         this.shields = 0;
         this.incoming = [];        // { lines, due }
-        this.effects = { hasteUntil: 0, slowUntil: 0, fogUntil: 0, windUntil: 0, confuseUntil: 0, freezeUntil: 0 };
+        this.effects = { hasteUntil: 0, slowUntil: 0, fogUntil: 0, windUntil: 0, confuseUntil: 0, freezeUntil: 0, rushUntil: 0 };
         this.diamondNext = false;  // 💎 下一块变 1×1 碎钻块
+        this.forceQueue = [];      // 被诅咒/指定的方块队列（heavy/curse/rainbow）
+        this.mirror = 0;           // 🪞 反弹次数
         this.combo = 0;
         this.score = 0;
         this.lines = 0;
@@ -215,8 +228,14 @@ class Player {
             this.diamondNext = false;
             this.cur = { type: 'DIA', m: [[1]], x: Math.floor((COLS - 1) / 2), y: -1 };
         } else {
-            const t = this.next || this.drawFromBag();
-            this.next = this.drawFromBag();
+            let t;
+            if (this.forceQueue.length > 0) {
+                // 💤🤡🌈 被诅咒/指定的方块（next 预览保持原样，强制块插队）
+                t = this.forceQueue.shift();
+            } else {
+                t = this.next || this.drawFromBag();
+                this.next = this.drawFromBag();
+            }
             const m = PIECES[t].m.map(r => r.slice());
             this.cur = { type: t, m, x: Math.floor((COLS - m.length) / 2), y: -1 };
             // 🌪️ 疾风：新块出生被吹偏 1~3 格
@@ -260,6 +279,17 @@ class Player {
             if (!this.collide(piece.m, piece.x + dir, piece.y)) piece.x += dir;
             else break;
         }
+    }
+    // 🔄 换块：弃掉当前方块，换成 next 预览里的那块
+    swapPiece() {
+        if (!this.cur || this.dead || !this.next) return;
+        const t = this.next;
+        this.next = this.drawFromBag();
+        const m = PIECES[t].m.map(r => r.slice());
+        this.cur = { type: t, m, x: Math.floor((COLS - m.length) / 2), y: Math.max(-1, this.cur.y) };
+        this.spawnId++;
+        this.softDropping = false;
+        AudioSys.rotate();
     }
     rotate() {
         if (!this.cur || this.dead) return;
@@ -333,23 +363,24 @@ class Player {
         this.lines += n;
         this.combo++;
         const baseScore = [0, 100, 300, 500, 800][n] || 0;
-        this.score += baseScore * (1 + (this.combo - 1) * 0.25) | 0;
+        let gained = baseScore * (1 + (this.combo - 1) * 0.25);
+        // 🏃 疾跑：消行得分×2
+        if (this.effects.rushUntil > now) gained *= 2;
+        this.score += gained | 0;
         AudioSys.clear(n, this.combo);
 
-        // ---- 道具获得 ----
-        let gained = 0;
-        if (n >= 2) gained = n - 1;            // 2行=1个 3行=2个 4行=3个
+        // ---- 道具收集（档位制）：消 2 行=低质量 1 个 / 3 行=中质量 1 个 / 4 行=高质量 1 个 ----
+        if (n >= 2) this.grantItem(['low', 'mid', 'high'][Math.min(n, 4) - 2]);
         if (n === 4) this.addCharge(1);
         if (this.combo >= 2) this.addCharge(1); // 连击充能
-        for (let i = 0; i < gained; i++) this.grantItem();
 
         this.spawn();
     }
 
-    grantItem() {
+    grantItem(tier) {
         const slot = this.items.indexOf(null);
         if (slot >= 0) {
-            this.items[slot] = pickWeightedItem();
+            this.items[slot] = pickItem(tier);
             AudioSys.item();
         } else {
             this.addCharge(1);
@@ -458,6 +489,80 @@ class Player {
                 AudioSys.item();
                 this.diamondNext = true;
                 break;
+            case 'heavy':
+                // 💤 方块诅咒：对方下一块变成 O
+                game.log(this, '💤 对方下一块被固定!');
+                AudioSys.itemAtk();
+                opp.forceQueue.push('O');
+                break;
+            case 'curse': {
+                // 🤡 垃圾块诅咒：对方接下来 3 块全是 S/Z
+                game.log(this, '🤡 对方接下来 3 块全是垃圾块!');
+                AudioSys.itemAtk();
+                const junk = ['S', 'Z'];
+                for (let i = 0; i < 3; i++) opp.forceQueue.push(junk[Math.floor(Math.random() * 2)]);
+                break;
+            }
+            case 'rush':
+                // 🏃 疾跑：自己加速 10 秒，期间消行得分×2
+                game.log(this, '🏃 疾跑! 高速高分成!');
+                AudioSys.go();
+                this.effects.rushUntil = now + 10000;
+                break;
+            case 'mirror':
+                // 🪞 反弹：下一次针对我的攻击原样弹回
+                game.log(this, '🪞 反弹镜面展开!');
+                AudioSys.itemShield();
+                this.mirror++;
+                break;
+            case 'swapPiece':
+                // 🔄 换块
+                game.log(this, '🔄 换一块!');
+                this.swapPiece();
+                break;
+            case 'snipe':
+                // 🎯 饱和轰炸：4 行垃圾（带 1.5 秒预警，护盾可挡）
+                game.log(this, '🎯 饱和轰炸!');
+                AudioSys.itemAtk();
+                game.sendAttack(this, opp, 4);
+                break;
+            case 'steal': {
+                // 🗡️ 打劫：偷对方一个道具；没有就偷 3 点充能
+                const full = opp.items.map((k, i) => k ? i : -1).filter(i => i >= 0);
+                if (full.length > 0) {
+                    const idx = full[Math.floor(Math.random() * full.length)];
+                    const taken = opp.items[idx];
+                    opp.items[idx] = null;
+                    const mySlot = this.items.indexOf(null);
+                    if (mySlot >= 0) this.items[mySlot] = taken;
+                    else { this.items[0] = taken; }  // 满了就顶掉第一格
+                    game.log(this, '🗡️ 抢走了对方的 ' + ITEMS[taken].name + '!');
+                } else {
+                    const c = Math.min(opp.charge, 3);
+                    opp.charge -= c;
+                    this.addCharge(c);
+                    game.log(this, '🗡️ 对方身无分文，抢走 ' + c + ' 点充能!');
+                }
+                AudioSys.itemAtk();
+                break;
+            }
+            case 'rainbow':
+                // 🌈 万用长条：下一块变成 I
+                game.log(this, '🌈 下一块是万用长条!');
+                AudioSys.item();
+                this.forceQueue.push('I');
+                break;
+            case 'medic': {
+                // 🏥 大恢复：清除自己最底 3 行
+                game.log(this, '🏥 大恢复! 底部 3 行清除');
+                AudioSys.itemSweep();
+                this.board.splice(ROWS - 3, 3);
+                for (let i = 0; i < 3; i++) this.board.unshift(Array(COLS).fill(0));
+                if (this.cur) {
+                    while (this.collide(this.cur.m, this.cur.x, this.cur.y)) this.cur.y--;
+                }
+                break;
+            }
         }
     }
     removeBottomRow() {
@@ -484,6 +589,7 @@ class Player {
         const elapsed = now - game.startTime;
         let base = Math.max(320, 800 - Math.floor(elapsed / 10000) * 60); // 每 10 秒加快
         if (this.effects.hasteUntil > now) base *= 0.5;
+        if (this.effects.rushUntil > now) base *= 0.65;
         if (this.effects.slowUntil > now) base = Math.min(1200, base * 1.8);
         return base;
     }
@@ -625,6 +731,11 @@ const AI = {
                 }
                 if (it === 'freeze' && p.stackHeight() >= 15) { p.useSlot(i); break; }
                 if (it === 'diamond' && p.stackHeight() >= 10) { p.useSlot(i); break; }
+                if (it === 'rainbow' && p.stackHeight() >= 10) { p.useSlot(i); break; }
+                if (it === 'medic' && p.stackHeight() >= 16) { p.useSlot(i); break; }
+                if (it === 'mirror' && incoming > 0 && p.shields === 0) { p.useSlot(i); break; }  // 没盾才用镜子
+                if (it === 'rush' && p.stackHeight() <= 6) { p.useSlot(i); break; }               // 局面安全才博高分
+                if (it === 'swapPiece' && p.stackHeight() >= 12) { p.useSlot(i); break; }
                 if (it === 'swap') continue;   // 优势时不乱换盘
                 if (ITEMS[it].atk && Math.random() < cfg.itemChance) { p.useSlot(i); break; }
             }
@@ -828,6 +939,20 @@ const game = {
     },
 
     sendAttack(from, to, lines) {
+        // 🪞 反弹：下一次攻击原样弹回攻击者（双方都有镜子则相互抵消一次）
+        if (to.mirror > 0) {
+            to.mirror--;
+            this.log(to, '🪞 攻击被弹回去了!');
+            AudioSys.shieldBlock();
+            if (from.mirror > 0) {
+                from.mirror--;
+                this.log(from, '🪞 弹回来的攻击也被弹了!');
+                return;
+            }
+            from.incoming.push({ lines, due: performance.now() + GARBAGE_DELAY });
+            AudioSys.attack();
+            return;
+        }
         if (to.shields > 0) {
             to.shields--;
             this.log(to, '🛡️ 抵挡了攻击!');
@@ -1048,17 +1173,25 @@ const game = {
         const keyHints = p.idx === 0 ? ['F', 'G', 'H'] : ['小1', '小2', '小3'];
         for (let i = 0; i < ITEM_SLOTS; i++) {
             const y = sy + i * 52;
-            ctx.fillStyle = p.items[i] ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.03)';
+            const it = p.items[i];
+            ctx.fillStyle = it ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.03)';
             ctx.fillRect(ix, y, 120, 44);
-            ctx.strokeStyle = p.items[i] ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.08)';
+            // 档位描边：低=灰 / 中=蓝 / 高=金
+            ctx.strokeStyle = it ? TIER_STYLE[ITEMS[it].tier] : 'rgba(255,255,255,0.08)';
+            ctx.lineWidth = it ? 2 : 1;
             ctx.strokeRect(ix, y, 120, 44);
-            if (p.items[i]) {
+            ctx.lineWidth = 1;
+            if (it) {
                 ctx.font = '22px sans-serif';
-                ctx.fillText(ITEMS[p.items[i]].icon, ix + 10, y + 30);
+                ctx.fillText(ITEMS[it].icon, ix + 10, y + 30);
                 ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif';
-                ctx.fillText(ITEMS[p.items[i]].name, ix + 42, y + 19);
+                ctx.fillText(ITEMS[it].name, ix + 42, y + 19);
                 ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '10px sans-serif';
-                ctx.fillText(ITEMS[p.items[i]].desc, ix + 42, y + 34);
+                ctx.fillText(ITEMS[it].desc, ix + 42, y + 34);
+                // 档位角标
+                ctx.fillStyle = TIER_STYLE[ITEMS[it].tier];
+                ctx.font = 'bold 9px sans-serif';
+                ctx.fillText(TIER_NAME[ITEMS[it].tier], ix + 6, y + 11);
             }
             ctx.fillStyle = 'rgba(255,255,255,0.4)';
             ctx.font = '10px sans-serif';
@@ -1119,6 +1252,21 @@ const game = {
         if (p.effects.freezeUntil > now) {
             ctx.fillStyle = '#80d8ff';
             ctx.fillText('⏱️', fx, ey + 20);
+            fx += 24;
+        }
+        if (p.effects.rushUntil > now) {
+            ctx.fillStyle = '#ffd600';
+            ctx.fillText('🏃', fx, ey + 20);
+            fx += 24;
+        }
+        if (p.mirror > 0) {
+            ctx.fillStyle = '#e0e0e0';
+            ctx.fillText('🪞', fx, ey + 20);
+            fx += 24;
+        }
+        if (p.forceQueue.length > 0) {
+            ctx.fillStyle = '#ff9100';
+            ctx.fillText('📌', fx, ey + 20);
             fx += 24;
         }
         if (p.diamondNext) {
