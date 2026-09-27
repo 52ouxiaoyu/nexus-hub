@@ -154,33 +154,33 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790494743';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790495452';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790494743';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790495452';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790494743';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790495452';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790494743';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790495452';
             stat.butterChance = 0.2;
         } else if (type === 'cobcannon') {
             // 玉米加农炮（v3.24.0）：PVZ1 原版 Cob Cannon——三株玉米投手合体，占两格。
             // 平时嘴里没有炮；充能 25s 结束后嘴里出现玉米炮弹；
             // 点击它出现瞄准镜（跟随鼠标），按 M 键向准星位置发射（见 GameLoop.enterCobAim）。
             stat.hp = 600;
-            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790494743';
+            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790495452';
             // v3.24.2 立绘 148×85（炮口已用叶壳封住），显示宽 132——两格 160px 内留边，
             // 修"看起来占三格"；+15 补偿缩小后轮子离地
             stat.yOffset = 15;
@@ -210,7 +210,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790494743';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790495452';
             stat.yOffset = 0;
         }
 
@@ -457,12 +457,8 @@ class Plant extends Entity {
         if (type === 'fusion_cherrybomb_peashooter') {
             this.cherryVolley = 0;
         }
-        // 毁灭向日葵：毁灭菇的主动贡献——每 12 秒释放一次"毁灭新星"（暗影爆破 5×5，
-        // 伤害弱于原版毁灭菇），平时照常产阳光。
-        if (type === 'fusion_doomshroom_sunflower') {
-            this.doomNovaTimer = 0;
-            this.doomNovaInterval = 12.0;
-        }
+        // v3.37.3：毁灭向日葵移除"毁灭新星"周期自爆（用户：毁灭菇爆炸时只需要在
+        // 爆炸的地方炸一次，不需要连续几排连续炸）——现在只产阳光 + 阵亡时保留大爆炸
         // 大嘴坚果：坚果的防御 + 大嘴花的啃咬（状态合并时 state 被保留为坚果侧，需显式初始化）
         if (type === 'fusion_chomper_wallnut') {
             this.state = 'idle';
@@ -689,6 +685,7 @@ class Plant extends Entity {
                     this.element.src = 'assets/images/Plants/DoomShroom/Boom.png';
                     this.element.style.zIndex = 3000; // Put boom on top
                     this.element.style.transform = 'translate(-50%, -80%)'; // Move boom up a bit
+                    this.element.style.width = '150px'; // v3.37.3 单朵云显示宽（原 2833px 全景拼图会铺满全场）
 
                     // v3.20.0：恢复全屏核平（用户："只打周围一圈的不叫毁灭菇"）
                     const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
@@ -706,6 +703,7 @@ class Plant extends Entity {
                         this.element.src = 'assets/images/Plants/DoomShroom/crater11.png';
                         this.element.style.zIndex = 10;
                         this.element.style.transform = 'translate(-50%, -50%)';
+                        this.element.style.width = ''; // v3.37.3 还原自然宽
                         setTimeout(() => { this._trapExpire = true; this.hp = 0; }, 30000);
                     }, 1000); // Boom lasts 1 sec
                 }, 1000); // Swell lasts 1 sec
@@ -722,6 +720,7 @@ class Plant extends Entity {
         this.element.src = 'assets/images/Plants/DoomShroom/Boom.png';
         this.element.style.zIndex = 3000;
         this.element.style.transform = 'translate(-50%, -80%)';
+        this.element.style.width = '150px'; // v3.37.3 单朵云显示宽
         const all = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
         for (let z of all) z.takeDamage(9999, { bomb: true });
         setTimeout(() => {
@@ -730,6 +729,7 @@ class Plant extends Entity {
             this.element.src = 'assets/images/Plants/DoomShroom/crater11.png';
             this.element.style.zIndex = 10;
             this.element.style.transform = 'translate(-50%, -50%)';
+            this.element.style.width = ''; // v3.37.3 还原自然宽
             setTimeout(() => { this._trapExpire = true; this.hp = 0; }, 30000);
         }, 1000);
     }
@@ -740,7 +740,7 @@ class Plant extends Entity {
             if (!this._cobShellEl) {
                 const el = document.createElement('img');
                 // v3.24.1：装填玉米用原版图鉴里抠出的整根玉米（带根部），从炮口探出
-                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790494743';
+                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790495452';
                 // 裸 img 必须自带 translate(-50%,-50%) 居中基准（与 fusionOverlay 同一教训）
                 // v3.24.2 尺寸随立绘缩放同步：43×48（0.892×）
                 el.style.cssText = 'position:absolute;width:43px;height:48px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);';
@@ -1239,6 +1239,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                         this.element.src = 'assets/images/Plants/DoomShroom/Boom.png';
                         this.element.style.zIndex = 3000; // Put boom on top
                         this.element.style.transform = 'translate(-50%, -80%)'; // Move boom up a bit
+                    this.element.style.width = '150px'; // v3.37.3 单朵云显示宽（原 2833px 全景拼图会铺满全场）
 
                         // v3.23.0：毁灭菇=全屏核平（用户：周围一圈是融合体的机制，本体必须全屏）
                         const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
@@ -1255,6 +1256,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                             this.element.src = 'assets/images/Plants/DoomShroom/crater11.png';
                             this.element.style.zIndex = 10;
                             this.element.style.transform = 'translate(-50%, -50%)';
+                            this.element.style.width = ''; // v3.37.3 还原自然宽
                             setTimeout(() => { this._trapExpire = true; this.hp = 0; }, 30000);
                         }, 1000); // Boom lasts 1 sec
                     }, 1000); // Swell lasts 1 sec
@@ -1262,36 +1264,9 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
             }
         }
         
-        // 毁灭向日葵特色：毁灭菇的主动贡献——每 12 秒释放一次"毁灭新星"，
-        // 以自身为中心 5×5 暗影爆破（400 伤害，弱于原版毁灭菇的全屏），
-        // 平时照常产阳光；被啃死后仍保留原本的大爆炸。
-        if (this.type === 'fusion_doomshroom_sunflower') {
-            this.doomNovaTimer += deltaTime;
-            if (this.doomNovaTimer >= this.doomNovaInterval) {
-                this.doomNovaTimer = 0;
-                const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
-                let hit = false;
-                for (let z of zombies) {
-                    // Zombie 无 col 属性，用 x 距离判定（80px/格，差<200 ≈ 中心±2格=5×5）
-                    if (Math.abs(z.row - this.row) <= 2 && Math.abs(z.x - this.x) < 200) {
-                        z.takeDamage(400);
-                        hit = true;
-                    }
-                }
-                if (hit) {
-                    this.game.audioManager.play('splat');
-                    let boom = document.createElement('img');
-                    boom.src = 'assets/images/Plants/CherryBomb/Boom.gif';
-                    boom.style.filter = 'hue-rotate(270deg) invert(1)';
-                    boom.style.position = 'absolute';
-                    boom.style.left = (this.element.offsetLeft - 80) + 'px';
-                    boom.style.top = (this.element.offsetTop - 80) + 'px';
-                    boom.style.zIndex = '100';
-                    this.game.container.appendChild(boom);
-                    setTimeout(() => boom.remove(), 800);
-                }
-            }
-        }
+        // v3.37.3：毁灭向日葵的"毁灭新星"（每 12 秒周期性紫色爆炸）已移除——
+        // 用户：毁灭菇爆炸时只需要在爆炸的地方炸一次，不需要连续几排连续炸。
+        // （此前毁灭菇爆炸融合在几排内生成的多株毁灭向日葵会轮番放新星，形成连环爆炸）
         
         if (this.type === 'pumpkinhead') {
             // v3.13.3：南瓜套从始至终只有一个形态（用户明确要求：不会反、不会发生形态变化，
