@@ -74,7 +74,7 @@
     // 融合专属：p=主体卡面 q=副体卡面（右下角叠放，与游戏内融合卡面同规则）
     const FUSION = [
         { n: '玉米加农炮', g: 'CobCannon', t: '三株玉米投手合体，占两格；充能 25s 后手动瞄准 1800 / 3×3，全游戏最强单发' },
-        { n: '寒冰炸弹', p: 'CherryBomb', q: 'SnowPea', t: '寒冰射手+樱桃炸弹：900 / 3×3 且全场减速' },
+        { n: '寒冰炸弹', p: 'CherryBomb', q: 'SnowPea', t: '寒冰射手+樱桃炸弹：2400 秒杀铁桶级 / 3×3 且全场冻结减速 10 秒' },
         { n: '冰西瓜猫尾草', p: 'Cattail', q: 'WinterMelon', t: '冰西瓜投手+猫尾草：全场追踪 60+30 + 减速' },
         { n: '西瓜猫尾草', p: 'Cattail', q: 'MelonPult', t: '西瓜投手+猫尾草：全场追踪 60+30' },
         { n: '樱桃射手', p: 'CherryBomb', q: 'Peashooter', t: '豌豆射手+樱桃炸弹：每第 10 发射出小樱桃，900 / 3×3' },
@@ -211,24 +211,26 @@
         background: linear-gradient(180deg, #7a5a33 0%, #5d4223 100%);
         border: 3px solid #3a2812; border-radius: 10px; text-shadow: 1px 1px 0 #2a1c0c; }
     #help-close:hover { filter: brightness(1.12); }
-    /* ===== v3.40.0 点击详情卡 ===== */
-    #hg-detail { position: absolute; inset: 0; z-index: 8; display: none; flex-direction: column;
-        align-items: center; justify-content: center; padding: 20px; text-align: center;
-        background: linear-gradient(180deg, #fdf3d0 0%, #f3e2ab 78%, #e6cf8c 100%); }
-    .hg-d-art { position: relative; width: 280px; height: 180px; display: flex; align-items: flex-end; justify-content: center; }
-    .hg-d-card { width: 180px; height: 108px; background-size: 100% 200%; background-position: top; background-repeat: no-repeat;
-        border-radius: 10px; border: 2px solid rgba(90,60,20,.4); box-shadow: 0 4px 10px rgba(60,40,10,.28); }
-    .hg-d-card-ov { position: absolute; right: 24px; bottom: 4px; width: 104px; aspect-ratio: 5/3; pointer-events: none;
+    /* ===== v3.40.0 点击详情卡 —— v3.42.0 中等化：不再全屏铺满，改为居中紧凑卡片 ===== */
+    #hg-detail { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+        z-index: 8; display: none; flex-direction: column; align-items: center; justify-content: flex-start;
+        width: min(500px, 86%); max-height: 90%; overflow-y: auto; padding: 16px 18px 14px; text-align: center;
+        background: linear-gradient(180deg, #fdf3d0 0%, #f3e2ab 78%, #e6cf8c 100%);
+        border: 3px solid #8a6a3a; border-radius: 14px; box-shadow: 0 10px 30px rgba(40,24,4,.5); }
+    .hg-d-art { position: relative; width: 210px; height: 122px; display: flex; align-items: flex-end; justify-content: center; }
+    .hg-d-card { width: 138px; height: 83px; background-size: 100% 200%; background-position: top; background-repeat: no-repeat;
+        border-radius: 8px; border: 2px solid rgba(90,60,20,.4); box-shadow: 0 4px 10px rgba(60,40,10,.28); }
+    .hg-d-card-ov { position: absolute; right: 18px; bottom: 3px; width: 78px; aspect-ratio: 5/3; pointer-events: none;
         background-size: 100% 200%; background-position: top; background-repeat: no-repeat;
-        border-radius: 6px; border: 1.5px solid rgba(90,60,20,.45); }
-    .hg-d-name { font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif; font-size: 27px; font-weight: 900;
-        letter-spacing: 2px; color: #4a3414; margin-top: 6px; }
-    .hg-d-badges { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 12px 0 4px; max-width: 660px; }
-    .hg-badge { display: inline-flex; align-items: center; padding: 5px 14px; font-size: 13.5px; font-weight: 700;
+        border-radius: 5px; border: 1.5px solid rgba(90,60,20,.45); }
+    .hg-d-name { font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif; font-size: 21px; font-weight: 900;
+        letter-spacing: 2px; color: #4a3414; margin-top: 4px; }
+    .hg-d-badges { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 8px 0 2px; }
+    .hg-badge { display: inline-flex; align-items: center; padding: 4px 10px; font-size: 12.5px; font-weight: 700;
         color: #4a3414; background: rgba(255,255,255,.75); border: 1.5px solid #b3945c; border-radius: 999px; }
-    .hg-d-desc { font-size: 15px; color: #5a4a28; max-width: 620px; line-height: 1.9; margin: 8px 0 4px; }
-    #hg-d-back { margin-top: 16px; padding: 8px 40px; font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif;
-        font-size: 17px; font-weight: 900; letter-spacing: 3px; color: #f7e9c0; cursor: pointer;
+    .hg-d-desc { font-size: 13.5px; color: #5a4a28; line-height: 1.7; margin: 6px 0 2px; }
+    #hg-d-back { margin-top: 10px; padding: 6px 30px; font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif;
+        font-size: 15px; font-weight: 900; letter-spacing: 3px; color: #f7e9c0; cursor: pointer;
         background: linear-gradient(180deg, #7a5a33 0%, #5d4223 100%);
         border: 3px solid #3a2812; border-radius: 10px; text-shadow: 1px 1px 0 #2a1c0c; }
     #hg-d-back:hover { filter: brightness(1.12); }
@@ -281,8 +283,8 @@
         let bs = '';
         if (z.hp) bs += badge('❤️ 血量 ' + z.hp);
         bs += badge('🧟 ' + groupTitle);
-        const big = Math.min(160, Math.max(70, Math.round((z.h || 70) * 1.7)));
-        const artH = big + 50;
+        const big = Math.min(115, Math.max(64, Math.round((z.h || 70) * 1.4)));
+        const artH = big + 34;
         return '<div class="hg-d-art" style="height:' + artH + 'px;">' + zombieArt(z, big / (z.h || 70)) + '</div>' +
             '<div class="hg-d-name">' + z.n + '</div>' +
             '<div class="hg-d-badges">' + bs + '</div>' +
@@ -290,9 +292,9 @@
     }
 
     function propDetail(z) {
-        const big = Math.min(150, Math.max(70, (z.ih || 56) * 1.8));
-        return '<div class="hg-d-art" style="height:' + (big + 40) + 'px;">' +
-            '<img src="' + z.img + V + '" style="max-height:' + big + 'px;max-width:200px;object-fit:contain;"></div>' +
+        const big = Math.min(105, Math.max(60, (z.ih || 56) * 1.6));
+        return '<div class="hg-d-art" style="height:' + (big + 30) + 'px;">' +
+            '<img src="' + z.img + V + '" style="max-height:' + big + 'px;max-width:180px;object-fit:contain;"></div>' +
             '<div class="hg-d-name">' + z.n + '</div>' +
             '<div class="hg-d-badges">' + badge('🏷️ 道具配饰') + '</div>' +
             '<div class="hg-d-desc">' + (z.t || '') + '</div>';
