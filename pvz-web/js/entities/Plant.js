@@ -154,33 +154,33 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790494153';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790494743';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790494153';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790494743';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790494153';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790494743';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790494153';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790494743';
             stat.butterChance = 0.2;
         } else if (type === 'cobcannon') {
             // 玉米加农炮（v3.24.0）：PVZ1 原版 Cob Cannon——三株玉米投手合体，占两格。
             // 平时嘴里没有炮；充能 25s 结束后嘴里出现玉米炮弹；
             // 点击它出现瞄准镜（跟随鼠标），按 M 键向准星位置发射（见 GameLoop.enterCobAim）。
             stat.hp = 600;
-            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790494153';
+            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790494743';
             // v3.24.2 立绘 148×85（炮口已用叶壳封住），显示宽 132——两格 160px 内留边，
             // 修"看起来占三格"；+15 补偿缩小后轮子离地
             stat.yOffset = 15;
@@ -210,7 +210,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790494153';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790494743';
             stat.yOffset = 0;
         }
 
@@ -356,8 +356,11 @@ class Plant extends Entity {
                     this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(-5px, -30px) scale(0.7)'; // put on top of cattail head
                 } else if (type === 'fusion_starfruit') {
                     // 杨桃：使用原版杨桃整株立绘
+                    // v3.37.2 修复：隐藏副体（向日葵）叠加层——此前通用路径把向日葵
+                    // 居中盖在杨桃身上，玩家看到"星星果身上多了个向日葵"
                     this.element.src = 'assets/images/Plants/Starfruit/Starfruit.gif';
                     this.yOffset = -10;
+                    this.fusionOverlay.style.display = 'none';
                 } else if (type === 'fusion_sunflower_wallnut') {
                     // v3.37.0 用户设计：向日葵放大垫底，花瓣探出坚果外圈形成一圈"向日葵边框"
                     // （旧通用路径里向日葵被坚果完全遮住，看不出融合了什么）
@@ -737,7 +740,7 @@ class Plant extends Entity {
             if (!this._cobShellEl) {
                 const el = document.createElement('img');
                 // v3.24.1：装填玉米用原版图鉴里抠出的整根玉米（带根部），从炮口探出
-                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790494153';
+                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790494743';
                 // 裸 img 必须自带 translate(-50%,-50%) 居中基准（与 fusionOverlay 同一教训）
                 // v3.24.2 尺寸随立绘缩放同步：43×48（0.892×）
                 el.style.cssText = 'position:absolute;width:43px;height:48px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);';
