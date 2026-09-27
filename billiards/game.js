@@ -605,8 +605,19 @@ function setLine(line, x1, z1, x2, z2, y) {
     p.needsUpdate = true;
 }
 
+// 玩家辅助线强度随难度：0 简单=长方向线 / 1 普通=现状短指向 / 2 困难=无方向线
+// （双人对战统一普通辅助，两边公平）
+const GUIDE_ASSIST = {
+    objLen: [0.45, 0.08, 0],   // 目标球方向线
+    defLen: [0.09, 0.09, 0],   // 母球分离方向线（困难档一并去掉，只留击中部位虚影圈）
+};
+function assistLevel() { return vsAI ? aiLevel : 1; }
+
 function updateGuide() {
     const ud = guideGroup.userData;
+    const assist = assistLevel();
+    const objLen = GUIDE_ASSIST.objLen[assist];
+    const defLen = GUIDE_ASSIST.defLen[assist];
     if ((state !== 'aim' && state !== 'charge') || cueBall().potted) {
         guideGroup.visible = false;
         return;
@@ -661,15 +672,17 @@ function updateGuide() {
         let nx = hitBall.x - gx, nz = hitBall.z - gz;
         const nl = Math.hypot(nx, nz) || 1;
         nx /= nl; nz /= nl;
-        setLine(ud.objLine, hitBall.x, hitBall.z, hitBall.x + nx * 0.08, hitBall.z + nz * 0.08, y);
-        ud.objLine.visible = true;
+        if (objLen > 0) {
+            setLine(ud.objLine, hitBall.x, hitBall.z, hitBall.x + nx * objLen, hitBall.z + nz * objLen, y);
+            ud.objLine.visible = true;
+        } else ud.objLine.visible = false;
         // 母球分离方向（切线）
         const dot = d.x * nx + d.z * nz;
         let tx = d.x - dot * nx, tz = d.z - dot * nz;
         const tl = Math.hypot(tx, tz);
-        if (tl > 0.15) {
+        if (tl > 0.15 && defLen > 0) {
             tx /= tl; tz /= tl;
-            setLine(ud.defLine, gx, gz, gx + tx * 0.09, gz + tz * 0.09, y);
+            setLine(ud.defLine, gx, gz, gx + tx * defLen, gz + tz * defLen, y);
             ud.defLine.visible = true;
         } else ud.defLine.visible = false;
     } else {
