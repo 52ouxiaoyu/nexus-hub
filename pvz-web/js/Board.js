@@ -34,7 +34,9 @@ class Board {
     
     canPlant(row, col) {
         if (row < 0 || row >= this.rows || col < 0 || col >= this.cols) return false;
-        return this.grid[row][col] === null;
+        if (this.grid[row][col] !== null) return false;
+        if (this.game.isIced && this.game.isIced(row, col)) return false; // v3.40.0：冰道禁种
+        return true;
     }
     
     addPlant(plant, row, col) {

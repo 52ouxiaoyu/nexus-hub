@@ -695,6 +695,15 @@ class Zombie extends Entity {
             // 旧版用统一的 ±40px 中心距，大体型贴图宽，要等大半个身子压到植物上才触发，
             // 观感是"身体都碾过去了才回头咬一口"。大型僵尸检测半径 85px 且只认前方目标，
             // 车头/头前端一碰植物就立即结算。
+            // v3.40.0：冰车驶过留下冰道——每跨入一个新列就给该格铺冰
+            if (this.type === 'zomboni' && !this.isDead && this.hp > 0) {
+                const iceCol = Math.floor((this.x - this.game.board.offsetX) / this.game.board.cellWidth);
+                if (iceCol !== this._lastIceCol) {
+                    this._lastIceCol = iceCol;
+                    if (iceCol >= 0 && iceCol < this.game.board.cols) this.game.layIce(this.row, iceCol);
+                }
+            }
+
             const bigZ = (this.type === 'zomboni' || this.type === 'gargantuar' || this.type === 'lgboss');
             const plant = this.game.entities.find(e => 
                 e instanceof Plant && 
