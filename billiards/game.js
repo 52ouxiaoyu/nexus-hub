@@ -27,18 +27,56 @@ const BALL_COLORS = {
     6: '#12703c', 7: '#7a2318', 8: '#1b1b1b',
     9: '#f5b70a', 10: '#0f4db0', 11: '#d31820', 12: '#5b2a8e', 13: '#e8700f',
     14: '#12703c', 15: '#7a2318',
+    // 斯诺克彩球（16=黄2 … 21=黑7）
+    16: '#f5b70a', 17: '#12703c', 18: '#7a4a21', 19: '#0f4db0', 20: '#e87a9a', 21: '#1b1b1b',
 };
 
+// ---------------- 斯诺克 ----------------
+// 球号映射：0=母球 · 1~15=红球（各 1 分）· 16~21=彩球（黄2 绿3 棕4 蓝5 粉6 黑7）
+const SNK_COLOURS = [
+    { num: 16, val: 2, name: '黄球', color: '#f5b70a' },
+    { num: 17, val: 3, name: '绿球', color: '#12703c' },
+    { num: 18, val: 4, name: '棕球', color: '#7a4a21' },
+    { num: 19, val: 5, name: '蓝球', color: '#0f4db0' },
+    { num: 20, val: 6, name: '粉球', color: '#e87a9a' },
+    { num: 21, val: 7, name: '黑球', color: '#1b1b1b' },
+];
+// 台面点位按真实斯诺克台比例缩放（台长 3569mm：置球区线 29"≈0.2065L，D 半径 11.5"≈0.0818L，
+// 黑球点距顶库 12.75"≈0.0908L，粉球点=中心与顶库中点）
+const SNK = (() => {
+    const baulkX = -CFG.W / 2 + CFG.W * 0.2065;
+    const dRad = CFG.W * 0.0818;
+    return {
+        baulkX, dRad,
+        spot: {
+            16: { x: baulkX, z: dRad },                       // 黄
+            17: { x: baulkX, z: -dRad },                      // 绿
+            18: { x: baulkX, z: 0 },                          // 棕（置球区线中点）
+            19: { x: 0, z: 0 },                               // 蓝（台面中心）
+            20: { x: CFG.W / 4, z: 0 },                       // 粉
+            21: { x: CFG.W / 2 - CFG.W * 0.0908, z: 0 },      // 黑
+        },
+    };
+})();
+function snIsRed(n) { return n >= 1 && n <= 15; }
+function snIsColour(n) { return n >= 16 && n <= 21; }
+function snVal(n) { return snIsColour(n) ? SNK_COLOURS[n - 16].val : 1; }
+
 const POCKETS = [];
-(function () {
+// 斯诺克袋口明显更小（角袋 mouth ≈8.6cm、中袋 ≈10cm，相对美式约 0.75 / 0.78），
+// 进球难度显著更高——这是斯诺克手感的核心
+function rebuildPockets() {
+    const sk = gameMode === 'snooker';
+    const cs = sk ? 0.75 : 1, ss = sk ? 0.78 : 1;
+    POCKETS.length = 0;
     const L = CFG.W / 2, T = CFG.H / 2;
     for (const sx of [-1, 1]) for (const sz of [-1, 1])
-        POCKETS.push({ x: sx * (L + 0.015), z: sz * (T + 0.015), r: CFG.cornerCapture, corner: true });
+        POCKETS.push({ x: sx * (L + 0.015), z: sz * (T + 0.015), r: CFG.cornerCapture * cs, corner: true });
     for (const sz of [-1, 1])
-        // 中袋：洞口大小不变，捕获圆心外移（上袋上移/下袋下移）——捕获圈不再朝桌内伸出，
-        // 贴库滚过不再自动进袋，正对直打照常进袋，薄擦会在袋角弹开
-        POCKETS.push({ x: 0, z: sz * (T + 0.07), r: CFG.sideCapture, corner: false });
-})();
+        // 中袋：捕获圆心外移（上袋上移/下袋下移）——捕获圈不朝桌内伸出，
+        // 贴库滚过不自动进袋，正对直打照常进袋，薄擦在袋角弹开
+        POCKETS.push({ x: 0, z: sz * (T + 0.07), r: CFG.sideCapture * ss, corner: false });
+}
 
 // ---------------- 全局状态 ----------------
 let balls = [];          // 所有球（0 = 母球）
@@ -47,6 +85,8 @@ let players = [];
 let current = 0;
 let vsAI = true, aiLevel = 1;
 let openTable = true, isBreak = true;
+let gameMode = 'pool8';     // pool8 = 中式八球 · snooker = 斯诺克
+let snooker = null;         // 斯诺克状态：{ scores:[0,0], onColour:打进红球后下一杆打彩球 }
 let shot = null;         // 本杆事件记录
 let aimDir = { x: 1, z: 0 };
 let power = 0, chargeStart = 0;
@@ -454,6 +494,10 @@ function buildTable() {
 // ---------------- 球 ----------------
 function ballType(num) {
     if (num === 0) return 'cue';
+    if (gameMode === 'snooker') {
+        if (snIsRed(num)) return 'red';
+        return 'colour';
+    }
     if (num === 8) return 'eight';
     return num < 8 ? 'solid' : 'stripe';
 }
@@ -463,7 +507,8 @@ function makeBallTexture(num) {
     c.width = 256; c.height = 128;
     const g = c.getContext('2d');
     const type = ballType(num);
-    const col = BALL_COLORS[num];
+    // 斯诺克红球统一纯红（num 1~15 会撞上 8 球颜色表，必须在这里覆盖）
+    const col = type === 'red' ? '#d31820' : BALL_COLORS[num];
     if (type === 'stripe') {
         g.fillStyle = '#f4f0e4'; g.fillRect(0, 0, 256, 128);
         g.fillStyle = col; g.fillRect(0, 128 * 0.28, 256, 128 * 0.44);
@@ -471,14 +516,15 @@ function makeBallTexture(num) {
         g.fillStyle = type === 'cue' ? '#f8f4e9' : col;
         g.fillRect(0, 0, 256, 128);
     }
-    if (num > 0) {
+    if (num > 0 && type !== 'red') {   // 斯诺克红球无号码（还原真实）；彩球标分值
+        const label = gameMode === 'snooker' ? String(snVal(num)) : String(num);
         for (const cx of [64, 192]) {
             g.fillStyle = '#f4f0e4';
             g.beginPath(); g.arc(cx, 64, 18, 0, 7); g.fill();
             g.fillStyle = '#141414';
             g.font = 'bold 21px Arial';
             g.textAlign = 'center'; g.textBaseline = 'middle';
-            g.fillText(String(num), cx, 66);
+            g.fillText(label, cx, 66);
         }
     }
     const tex = new THREE.CanvasTexture(c);
@@ -536,6 +582,8 @@ function rackBalls() {
     for (const b of balls) scene.remove(b.mesh);
     balls = [];
 
+    if (gameMode === 'snooker') return rackSnooker();
+
     balls.push(createBall(0, -CFG.W / 4, 0));   // 母球在开球点
 
     const R = CFG.R, dx = R * 2 * 0.872, dz = R * 2 + 0.0004;
@@ -563,6 +611,56 @@ function rackBalls() {
         else num = stripes[ti++];
         balls.push(createBall(num, s.x, s.z));
     }
+}
+
+// 斯诺克摆球：15 红三角（顶点贴粉球点后方）+ 六彩定点 + 母球开在 D 区
+function rackSnooker() {
+    const R = CFG.R;
+    balls.push(createBall(0, SNK.baulkX - 0.06, 0));   // 母球在 D 区内
+
+    const dx = R * 2 * 0.872, dz = R * 2 + 0.0004;
+    const apexX = SNK.spot[20].x + 2 * R + 0.002;      // 红球顶点贴着粉球点后方
+    let red = 1;
+    for (let row = 0; row < 5; row++)
+        for (let j = 0; j <= row; j++)
+            balls.push(createBall(red++, apexX + row * dx, (j - row / 2) * dz));
+
+    for (const c of SNK_COLOURS)
+        balls.push(createBall(c.num, SNK.spot[c.num].x, SNK.spot[c.num].z));
+}
+
+// 斯诺克台面标识：置球区线 + D 弧 + 六个置球点（只在斯诺克模式显示）
+let snookerDecal = null;
+function buildSnookerDecal() {
+    const c = document.createElement('canvas');
+    c.width = 1024; c.height = 512;
+    const g = c.getContext('2d');
+    const W = CFG.W, H = CFG.H;
+    const toPx = (x, z) => [(x + W / 2) / W * 1024, (z + H / 2) / H * 512];
+    g.strokeStyle = 'rgba(255,255,255,0.4)';
+    g.lineWidth = 3;
+    const bx = toPx(SNK.baulkX, 0)[0];
+    g.beginPath(); g.moveTo(bx, 0); g.lineTo(bx, 512); g.stroke();          // 置球区线
+    const [cx, cy] = toPx(SNK.baulkX, 0);
+    g.beginPath();
+    g.arc(cx, cy, SNK.dRad / W * 1024, Math.PI / 2, Math.PI * 1.5, false);  // D 弧（凸向左）
+    g.stroke();
+    g.fillStyle = 'rgba(255,255,255,0.5)';
+    for (const cn of [16, 17, 18, 19, 20, 21]) {
+        const [sx, sy] = toPx(SNK.spot[cn].x, SNK.spot[cn].z);
+        g.beginPath(); g.arc(sx, sy, 3.5, 0, 7); g.fill();
+    }
+    const tex = new THREE.CanvasTexture(c);
+    if (THREE.sRGBEncoding !== undefined) tex.encoding = THREE.sRGBEncoding;
+    const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(CFG.W, CFG.H),
+        new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.9, depthWrite: false })
+    );
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.y = 0.0012;
+    mesh.visible = false;
+    scene.add(mesh);
+    snookerDecal = mesh;
 }
 
 // ---------------- 瞄准辅助线 ----------------
@@ -983,7 +1081,163 @@ function groupRemaining(group) {
 }
 
 // ---------------- 规则结算 ----------------
+// ---------------- 斯诺克规则 ----------------
+// 当前目标：红球阶段 / 红球打进后的任选彩球 / 红球清完后的顺序彩球
+function snookerTargets() {
+    const redsLeft = balls.filter(b => !b.potted && snIsRed(b.num)).length;
+    if (redsLeft > 0 || snooker.onColour)
+        return snooker.onColour ? { category: 'colour', val: 4 } : { category: 'red', val: 1 };
+    for (const c of SNK_COLOURS) {
+        const b = balls.find(x => x.num === c.num);
+        if (b && !b.potted) return { category: 'colourN', num: c.num, val: c.val };
+    }
+    return { category: 'colourN', num: 21, val: 7 };
+}
+
+function placeBallAt(b, x, z) {
+    b.x = x; b.z = z; b.vx = 0; b.vz = 0;
+    b.mesh.visible = true;
+    b.mesh.scale.set(1, 1, 1);
+    b.mesh.position.set(x, CFG.R, z);
+}
+
+function spotFree(x, z) {
+    for (const o of balls) {
+        if (o.potted) continue;
+        if (Math.hypot(o.x - x, o.z - z) < 2 * CFG.R * 1.02) return false;
+    }
+    return true;
+}
+
+// 彩球重摆：自己的点 → 分值最高的可用点 → 沿黑球方向挪自己的点（官方规则简化版）
+function spotBall(b) {
+    const spots = [b.num, ...[...SNK_COLOURS].sort((a, c) => c.val - a.val).map(c => c.num)];
+    for (const n of spots) {
+        const s = SNK.spot[n];
+        if (spotFree(s.x, s.z)) { placeBallAt(b, s.x, s.z); return; }
+    }
+    const s = SNK.spot[b.num];
+    for (let d = 0.01; d < CFG.W; d += 0.01)
+        if (spotFree(s.x + d, s.z)) { placeBallAt(b, s.x + d, s.z); return; }
+    placeBallAt(b, s.x, s.z);
+}
+
+function respotSnookerColours(nums) {
+    for (const n of nums) {
+        if (!snIsColour(n)) continue;
+        const b = balls.find(x => x.num === n);
+        if (!b || !b.potted) continue;
+        b.potted = false; b.fall = -1;
+        spotBall(b);
+    }
+}
+
+// 母球落袋 → 对方在 D 区内自由摆球
+function restoreCueD() {
+    const cue = cueBall();
+    cue.potted = false; cue.fall = -1;
+    const pts = [[SNK.baulkX - 0.02, 0]];
+    for (let a = -80; a <= 80; a += 10) {
+        const r = a * Math.PI / 180;
+        pts.push([SNK.baulkX - SNK.dRad * Math.cos(r), SNK.dRad * Math.sin(r)]);
+    }
+    for (const [x, z] of pts)
+        if (validCuePos(x, z)) { placeBallAt(cue, x, z); return; }
+    placeBallAt(cue, SNK.baulkX - 0.02, 0);
+}
+
+function resolveSnookerShot() {
+    const O = players[1 - current];
+    const cuePotted = cueBall().potted;
+    const potted = shot.potted.filter(n => n !== 0);
+    isBreak = false;
+
+    const on = snookerTargets();
+    let foul = null, pen = 4;
+    const bump = v => { pen = Math.max(pen, v); };
+    if (on.category === 'colourN') bump(on.val);
+
+    if (cuePotted) foul = '母球落袋';
+    if (!foul && shot.first === null) foul = '空杆未触球';
+    if (!foul && shot.first !== null) {
+        const legal = on.category === 'red' ? snIsRed(shot.first)
+                    : on.category === 'colour' ? snIsColour(shot.first)
+                    : shot.first === on.num;
+        if (!legal) { foul = '首触非目标球'; bump(snVal(shot.first)); }
+    }
+    for (const n of potted) {
+        const ok = on.category === 'red' ? snIsRed(n)
+                 : on.category === 'colour' ? snIsColour(n)
+                 : n === on.num;
+        if (!ok) { if (!foul) foul = '打进非目标球'; bump(snVal(n)); }
+    }
+    if (!foul && potted.length === 0 && !cuePotted && !shot.cushionAfter) foul = '触球后无球碰库';
+
+    if (foul) {
+        snooker.scores[1 - current] += pen;
+        respotSnookerColours(potted);          // 犯规打进的红保持落袋、彩球全部重摆
+        if (cuePotted) restoreCueD();
+        snooker.onColour = false;
+        switchPlayer(true);
+        showMsg('犯规：' + foul + ' · ' + players[current].name + ' +' + pen + ' 分' + (cuePotted ? ' · D 区自由球' : ''), 4200);
+        if (cuePotted) startBallInHand();
+        else { state = 'aim'; setHint(aimHint()); }
+        setRules(); refreshHUD(); maybeRunAI();
+        return;
+    }
+
+    // 合法击球计分
+    let gained = 0;
+    const reds = potted.filter(snIsRed);
+    const cols = potted.filter(snIsColour);
+    if (on.category === 'red') {
+        gained = reds.length;                  // 一杆可进多颗红，每颗 1 分
+        snooker.onColour = reds.length > 0;
+    } else if (on.category === 'colour') {
+        gained = cols.reduce((s, n) => s + snVal(n), 0);
+        respotSnookerColours(cols);            // 彩球阶段前打进就重摆
+        snooker.onColour = false;
+    } else {
+        gained = on.val;                       // 顺序阶段：进袋不重摆
+    }
+    snooker.scores[current] += gained;
+
+    // 终局：顺序阶段打进黑球
+    if (on.category === 'colourN' && on.num === 21) {
+        const [s0, s1] = snooker.scores;
+        if (s0 === s1) {
+            const b = balls.find(x => x.num === 21);
+            b.potted = false; b.fall = -1;
+            spotBall(b);                       // 平分：重摆黑球决胜
+            showMsg('平分！重摆黑球决胜', 3200);
+        } else {
+            gameOver(s0 > s1 ? 0 : 1, '终局比分 ' + players[0].name + ' ' + s0 + ' : ' + s1 + ' ' + players[1].name);
+            return;
+        }
+    }
+
+    if (potted.length === 0) {
+        snooker.onColour = false;
+        switchPlayer(true);
+        showMsg('未进球 → 轮到 ' + players[current].name, 2600);
+    } else if (snooker.onColour) {
+        showMsg('红球入袋 +' + gained + ' · 下一杆任选彩球（打进后重摆回点）', 3400);
+    } else if (on.category === 'colour') {
+        showMsg('彩球 +' + gained + '（已重摆）· 继续打红球', 3000);
+    } else if (on.category === 'colourN') {
+        showMsg(SNK_COLOURS[on.num - 16].name + ' +' + gained + ' · 继续', 2600);
+    } else {
+        showMsg('好球！继续击打', 1800);
+    }
+    state = 'aim';
+    setHint(aimHint());
+    setRules();
+    refreshHUD();
+    maybeRunAI();
+}
+
 function resolveShot() {
+    if (gameMode === 'snooker') { resolveSnookerShot(); return; }
     const wasBreak = isBreak;
     const P = players[current], O = players[1 - current];
     let foul = false;
@@ -1085,6 +1339,12 @@ function resolveShot() {
 
 function isLegalFirstContact(num) {
     if (num === 0) return false;
+    if (gameMode === 'snooker') {
+        const on = snookerTargets();
+        if (on.category === 'red') return snIsRed(num);
+        if (on.category === 'colour') return snIsColour(num);
+        return num === on.num;
+    }
     if (openTable) {
         if (isBreak) return true;        // 开球：首触任意合法
         return num !== 8;                // 开台后：首触不能是 8
@@ -1103,7 +1363,15 @@ function switchPlayer(quiet) {
 // 底部提示：把"台面开放 / 该打黑 8"这类关键状态直接写在瞄准提示里，
 // 免得玩家打完球不知道自己的花色为什么还没定
 function aimHint() {
-    if (state === 'ballinhand') return '自由球：移动鼠标选择位置，点击台面放置母球';
+    if (state === 'ballinhand') return gameMode === 'snooker'
+        ? '自由球：点击 D 区（弧线内）放置母球'
+        : '自由球：移动鼠标选择位置，点击台面放置母球';
+    if (gameMode === 'snooker') {
+        const on = snookerTargets();
+        if (on.category === 'red') return '目标：红球（1 分）· 进球后下一杆任选彩球';
+        if (on.category === 'colour') return '目标：任选彩球（黄2 绿3 棕4 蓝5 粉6 黑7）· 进袋重摆后再打红球';
+        return '红球清完：按 黄→绿→棕→蓝→粉→黑 顺序清彩球（不再重摆）';
+    }
     const P = players[current];
     if (openTable) return '台面开放（花色未定）：可先打任意球（黑 8 除外）· 下一杆合法进球即定花色';
     if (P.group && groupRemaining(P.group) === 0) return '已清台：瞄准黑 8 收尾（打进即胜，母球落袋判负）';
@@ -1111,6 +1379,12 @@ function aimHint() {
 }
 
 function legalTargetBalls() {
+    if (gameMode === 'snooker') {
+        const on = snookerTargets();
+        if (on.category === 'red') return balls.filter(b => !b.potted && snIsRed(b.num));
+        if (on.category === 'colour') return balls.filter(b => !b.potted && snIsColour(b.num));
+        return balls.filter(b => !b.potted && b.num === on.num);
+    }
     const g = players[current].group;
     if (openTable) {
         if (isBreak) return balls.filter(b => !b.potted && b.num !== 0);   // 开球含 8
@@ -1131,7 +1405,28 @@ function miniBallHTML(n) {
 }
 
 // 三行说明：该打哪颗 / 怎样算合法 / 怎样算犯规（与 resolveShot 的判罚严格一致）
+function snookerRuleHint() {
+    const on = snookerTargets();
+    if (on.category === 'red') return {
+        target: '<b>红球</b>（还剩 ' + balls.filter(b => !b.potted && snIsRed(b.num)).length + ' 颗 · 每颗 1 分）',
+        legal: '母球先碰红球并打进 → 得 1 分，下一杆任选一颗彩球打',
+        foul: '母球落袋 / 先碰彩球 / 打进彩球或空杆 → 对方 +4 分（按涉及球最高分值罚）',
+    };
+    if (on.category === 'colour') return {
+        target: '<b>任选彩球</b>：黄2 · 绿3 · 棕4 · 蓝5 · 粉6 · 黑7',
+        legal: '先碰任意彩球并打进 → 得该球分值，彩球重摆回点，然后继续打红球',
+        foul: '母球落袋 / 先碰或打进红球 / 空杆 → 对方 +4 分起',
+    };
+    const c = SNK_COLOURS[on.num - 16];
+    return {
+        target: '红球清完！按顺序：<b>' + c.name + '</b>（' + on.val + ' 分 · 进袋不再重摆）',
+        legal: '母球先碰这颗彩球并打进 → 得分，继续打下一颗彩球',
+        foul: '母球落袋 / 碰错球 / 打进别的球 → 对方 +4 分起（按涉及球最高分值罚）',
+    };
+}
+
 function ruleHint() {
+    if (gameMode === 'snooker') return snookerRuleHint();
     const P = players[current];
 
     // ① 开球
@@ -1179,7 +1474,9 @@ function setRules() {
 // ---------------- 自由球 ----------------
 function startBallInHand() {
     state = 'ballinhand';
-    setHint('自由球：移动鼠标选择位置，点击台面放置母球');
+    setHint(gameMode === 'snooker'
+        ? '自由球：点击 D 区（弧线内）放置母球'
+        : '自由球：移动鼠标选择位置，点击台面放置母球');
     setRules();
     ghostCue.visible = true;
 }
@@ -1187,6 +1484,11 @@ function startBallInHand() {
 function validCuePos(x, z) {
     const R = CFG.R;
     if (Math.abs(x) > CFG.W / 2 - R || Math.abs(z) > CFG.H / 2 - R) return false;
+    if (gameMode === 'snooker') {
+        // 斯诺克自由球只能放在 D 区半圆内（置球区线之后）
+        if (x > SNK.baulkX + 0.001) return false;
+        if (Math.hypot(x - SNK.baulkX, z) > SNK.dRad - R * 0.5) return false;
+    }
     for (const p of POCKETS) {
         if (Math.hypot(x - p.x, z - p.z) < p.r + R * 0.5) return false;
     }
@@ -1483,8 +1785,8 @@ function aiChooseShot() {
     }
     cands.sort((a, b) => b.geo - a.geo);
 
-    // ---- 简单难度：保持一步几何决策（原有手感） ----
-    if (aiLevel === 0) {
+    // ---- 简单难度 / 斯诺克：一步几何决策（scoreSim 是 8 球花色专用，斯诺克不适用） ----
+    if (aiLevel === 0 || gameMode === 'snooker') {
         const best = cands.find(c => c.cosCut >= cutMin);
         if (best) {
             const v = clamp(1.5 + best.dist * 2.3 / Math.max(best.cosCut, 0.32), 1.7, 7.4);
@@ -1596,6 +1898,30 @@ function aiPlaceCue() {
 
 // ---------------- HUD ----------------
 function refreshHUD() {
+    if (gameMode === 'snooker') {
+        const redsLeft = balls.filter(b => !b.potted && snIsRed(b.num)).length;
+        const seq = redsLeft === 0 && !snooker.onColour;
+        for (let i = 0; i < 2; i++) {
+            const P = players[i];
+            $('pp' + (i + 1) + '-name').textContent = P.name;
+            const gEl = $('pp' + (i + 1) + '-group');
+            const wrap = $('pp' + (i + 1) + '-balls');
+            $('pp' + (i + 1)).classList.toggle('active', i === current && state !== 'over');
+            gEl.classList.remove('open');
+            gEl.textContent = '得分 ' + snooker.scores[i];
+            let html = '';
+            if (!seq) html += '<span class="mini-ball" style="background:#d31820;color:#fff">红' + redsLeft + '</span>';
+            html += SNK_COLOURS.map(c => {
+                const b = balls.find(x => x.num === c.num);
+                const down = seq && b && b.potted;
+                return `<span class="mini-ball ${down ? 'down' : ''}" style="background:${c.color === '#1b1b1b' ? '#1b1b1b;color:#fff' : c.color}">${c.val}</span>`;
+            }).join('');
+            wrap.innerHTML = html;
+        }
+        $('turn-label').textContent = state === 'over' ? '对局结束'
+            : '轮到 ' + players[current].name + (aiActive() && players[current].isAI ? ' (思考中…)' : '');
+        return;
+    }
     for (let i = 0; i < 2; i++) {
         const P = players[i];
         $('pp' + (i + 1) + '-name').textContent = P.name;
@@ -1947,9 +2273,13 @@ function animate(now) {
 }
 
 // ---------------- 流程控制 ----------------
-function startGame(_vsAI, level) {
+function startGame(_vsAI, level, mode) {
     vsAI = _vsAI;
     aiLevel = level;
+    gameMode = mode || 'pool8';
+    snooker = gameMode === 'snooker' ? { scores: [0, 0], onColour: false } : null;
+    rebuildPockets();
+    if (snookerDecal) snookerDecal.visible = gameMode === 'snooker';
     players = [
         { name: customNames[0].trim() || '玩家 1', group: null, isAI: false },
         vsAI ? { name: '电脑', group: null, isAI: true }
@@ -1972,12 +2302,25 @@ function startGame(_vsAI, level) {
     $('overlay-end').classList.add('hidden');
     setHint(aimHint());
     setRules();
-    showMsg('开球！' + players[0].name + ' 先手 · 台面开放，任意球可先打（黑 8 除外）', 3200);
+    showMsg(gameMode === 'snooker'
+        ? '斯诺克开球！' + players[0].name + ' 先手 · 先打红球（1 分），红彩交替积累分数'
+        : '开球！' + players[0].name + ' 先手 · 台面开放，任意球可先打（黑 8 除外）', 3200);
     refreshHUD();
 }
 
 function initMenu() {
     let mode = 'ai';
+    let gameType = 'pool8';
+    document.querySelectorAll('.game-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.game-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            gameType = btn.dataset.game;
+            $('menu-sub').textContent = gameType === 'snooker'
+                ? '斯诺克规则 · 15 红 6 彩 · Three.js 实时渲染'
+                : '八球规则 · Three.js 实时渲染';
+        });
+    });
     $('btn-mode-ai').addEventListener('click', () => {
         mode = 'ai';
         $('btn-mode-ai').classList.add('selected');
@@ -2015,9 +2358,9 @@ function initMenu() {
         const parsed = parseInt(document.querySelector('.diff-btn.selected').dataset.diff, 10);
         const level = Number.isNaN(parsed) ? 1 : parsed;
         customNames = [$('name-p1').value, $('name-p2').value];
-        startGame(mode === 'ai', level);
+        startGame(mode === 'ai', level, gameType);
     });
-    $('btn-again').addEventListener('click', () => startGame(vsAI, aiLevel));
+    $('btn-again').addEventListener('click', () => startGame(vsAI, aiLevel, gameMode));
     $('btn-menu').addEventListener('click', () => {
         state = 'menu';
         $('overlay-end').classList.add('hidden');
@@ -2032,6 +2375,7 @@ function main() {
         return;
     }
     initThree();
+    buildSnookerDecal();
     initInput();
     initMenu();
     updateSpinWidget();
@@ -2051,6 +2395,8 @@ window.POOL = {
     set openTable(v) { openTable = v; },
     get isBreak() { return isBreak; },
     set isBreak(v) { isBreak = v; },
+    get gameMode() { return gameMode; },
+    get snooker() { return snooker; },
     get power() { return power; },
     chargePowerAt, maybeRunAI, aiChooseShot, simulateShot, scoreSim,
     startGame, shoot, aimDir, setRules, ruleHint,
