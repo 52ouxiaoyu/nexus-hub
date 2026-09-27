@@ -572,15 +572,17 @@ function buildGuide() {
     const matObj = new THREE.LineBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.9 });
     const matDef = new THREE.LineBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.5 });
 
-    function makeLine(m) {
+    function makeLine(m, n) {
+        n = n || 2;
         const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+        geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+        geo.setDrawRange(0, 2);
         const l = new THREE.Line(geo, m);
         guideGroup.add(l);
         return l;
     }
     guideGroup.userData.aimLine = makeLine(mat);
-    guideGroup.userData.objLine = makeLine(matObj);
+    guideGroup.userData.objLine = makeLine(matObj, 48);   // 简单档要多段折线（折射路线）
     guideGroup.userData.defLine = makeLine(matDef);
 
     // 母球虚影圈
@@ -602,6 +604,16 @@ function setLine(line, x1, z1, x2, z2, y) {
     const p = line.geometry.attributes.position;
     p.setXYZ(0, x1, y, z1);
     p.setXYZ(1, x2, y, z2);
+    line.geometry.setDrawRange(0, 2);
+    p.needsUpdate = true;
+}
+
+// 多段折线（预测路线用）
+function setPolyline(line, pts, y) {
+    const p = line.geometry.attributes.position;
+    const n = Math.min(pts.length, p.count);
+    for (let i = 0; i < n; i++) p.setXYZ(i, pts[i][0], y, pts[i][1]);
+    line.geometry.setDrawRange(0, n);
     p.needsUpdate = true;
 }
 
@@ -613,27 +625,71 @@ const GUIDE_ASSIST = {
 };
 function assistLevel() { return vsAI ? aiLevel : 1; }
 
-// 从 (x0,z0) 沿 (dx,dz) 到第一处库边的距离（袋口区视为通行，直接穿过去）
+// 从 (x0,z0) 沿 (dx,dz) 到第一处库边：返回 {t, axis}（axis='x' 撞短边墙 / 'z' 撞长边墙）
+// 袋口区视为通行，直接穿过去（随后由进袋判定终止路线）
 function rayWallT(x0, z0, dx, dz) {
     const L = CFG.W / 2 - CFG.R, T = CFG.H / 2 - CFG.R;
-    let tWall = Infinity;
-    function tryWall(t, hitX, hitZ) {
+    let tWall = Infinity, axis = null;
+    function tryWall(t, hitX, hitZ, ax) {
         if (t > 0.001 && t < tWall) {
-            const ax = Math.abs(hitX), az = Math.abs(hitZ);
-            const nearCornerX = ax > CFG.W / 2 - CFG.cornerGap;
-            const nearSideX = ax < CFG.sideGap;
+            const axx = Math.abs(hitX), az = Math.abs(hitZ);
+            const nearCornerX = axx > CFG.W / 2 - CFG.cornerGap;
+            const nearSideX = axx < CFG.sideGap;
             const nearCornerZ = az > CFG.H / 2 - CFG.cornerGap;
             let gap = false;
             if (Math.abs(hitZ) > T - 1e-6) gap = nearCornerX || nearSideX;      // 长边墙
             if (Math.abs(hitX) > L - 1e-6) gap = gap || nearCornerZ;           // 短边墙
-            if (!gap) tWall = t;
+            if (!gap) { tWall = t; axis = ax; }
         }
     }
-    if (dx > 1e-9) tryWall((L - x0) / dx, L, z0 + (L - x0) / dx * dz);
-    if (dx < -1e-9) tryWall((-L - x0) / dx, -L, z0 + (-L - x0) / dx * dz);
-    if (dz > 1e-9) tryWall((T - z0) / dz, x0 + (T - z0) / dz * dx, T);
-    if (dz < -1e-9) tryWall((-T - z0) / dz, x0 + (-T - z0) / dz * dx, -T);
-    return isFinite(tWall) ? tWall : 3;
+    if (dx > 1e-9) tryWall((L - x0) / dx, L, z0 + (L - x0) / dx * dz, 'x');
+    if (dx < -1e-9) tryWall((-L - x0) / dx, -L, z0 + (-L - x0) / dx * dz, 'x');
+    if (dz > 1e-9) tryWall((T - z0) / dz, x0 + (T - z0) / dz * dx, T, 'z');
+    if (dz < -1e-9) tryWall((-T - z0) / dz, x0 + (-T - z0) / dz * dx, -T, 'z');
+    return { t: isFinite(tWall) ? tWall : 3, axis };
+}
+
+// 简单档：预测目标球完整行进路线（库边折射 + 进袋终止 + 被球阻挡终止）
+function predictPath(x0, z0, dx, dz, selfNum, maxBounces) {
+    const pts = [[x0, z0]];
+    let x = x0, z = z0, total = 0;
+    for (let seg = 0; seg <= maxBounces; seg++) {
+        // 前方被其他球阻挡（走廊 2R；忽略母球——它自己也在动，位置不可信）
+        let tBall = Infinity;
+        for (const b of balls) {
+            if (b.potted || b.num === selfNum || b.num === 0) continue;
+            const ex = b.x - x, ez = b.z - z;
+            const proj = ex * dx + ez * dz;
+            if (proj <= 0) continue;
+            const perp2 = ex * ex + ez * ez - proj * proj;
+            const rr = 4 * CFG.R * CFG.R;
+            if (perp2 > rr) continue;
+            const t = proj - Math.sqrt(rr - perp2);
+            if (t > 0.001 && t < tBall) tBall = t;
+        }
+        // 进袋：路线进入捕获圈即终止于袋口
+        let tPocket = Infinity;
+        for (const p of POCKETS) {
+            const ex = p.x - x, ez = p.z - z;
+            const proj = ex * dx + ez * dz;
+            if (proj <= 0) continue;
+            const perp2 = ex * ex + ez * ez - proj * proj;
+            if (perp2 < p.r * p.r) {
+                const t = proj - Math.sqrt(p.r * p.r - perp2);
+                if (t > 0.001 && t < tPocket) tPocket = t;
+            }
+        }
+        const w = rayWallT(x, z, dx, dz);
+        const tMin = Math.min(tBall, tPocket, w.t);
+        if (!isFinite(tMin)) break;
+        x += dx * tMin; z += dz * tMin;
+        total += tMin;
+        pts.push([x, z]);
+        if (tBall <= tMin || tPocket <= tMin) break;   // 被球挡 / 进袋 → 路线到此为止
+        if (w.axis === 'x') dx = -dx; else dz = -dz;   // 库边镜面折射
+        if (total > 6) break;                          // 保险丝
+    }
+    return pts;
 }
 
 function updateGuide() {
@@ -665,7 +721,7 @@ function updateGuide() {
     }
 
     // 最近的库边（袋口处视为通行）
-    let tWall = rayWallT(cue.x, cue.z, d.x, d.z);
+    let tWall = rayWallT(cue.x, cue.z, d.x, d.z).t;
 
     if (hitBall && tBall < tWall) {
         const gx = cue.x + d.x * tBall, gz = cue.z + d.z * tBall;
@@ -677,8 +733,12 @@ function updateGuide() {
         const nl = Math.hypot(nx, nz) || 1;
         nx /= nl; nz /= nl;
         if (objLen > 0) {
-            const ext = objLen > 1 ? rayWallT(hitBall.x, hitBall.z, nx, nz) : objLen;   // 简单档：一直画到库边
-            setLine(ud.objLine, hitBall.x, hitBall.z, hitBall.x + nx * ext, hitBall.z + nz * ext, y);
+            if (objLen > 1) {
+                // 简单档：完整行进路线（库边折射 / 进袋终止 / 被球阻挡终止）
+                setPolyline(ud.objLine, predictPath(hitBall.x, hitBall.z, nx, nz, hitBall.num, 3), y);
+            } else {
+                setLine(ud.objLine, hitBall.x, hitBall.z, hitBall.x + nx * objLen, hitBall.z + nz * objLen, y);
+            }
             ud.objLine.visible = true;
         } else ud.objLine.visible = false;
         // 母球分离方向（切线）
