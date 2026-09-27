@@ -1890,7 +1890,9 @@ function initMenu() {
     });
     $('btn-start').addEventListener('click', () => {
         SFX.unlock();
-        const level = parseInt(document.querySelector('.diff-btn.selected').dataset.diff, 10) || 1;
+        // 注意：data-diff="0"（简单）解析出 0 是合法值，不能写 "|| 1"（0 为 falsy 会被顶成普通档）
+        const parsed = parseInt(document.querySelector('.diff-btn.selected').dataset.diff, 10);
+        const level = Number.isNaN(parsed) ? 1 : parsed;
         customNames = [$('name-p1').value, $('name-p2').value];
         startGame(mode === 'ai', level);
     });
