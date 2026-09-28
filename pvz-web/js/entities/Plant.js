@@ -154,33 +154,33 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790586222';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790603141';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790586222';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790603141';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790586222';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790603141';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790586222';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790603141';
             stat.butterChance = 0.2;
         } else if (type === 'cobcannon') {
             // 玉米加农炮（v3.24.0）：PVZ1 原版 Cob Cannon——三株玉米投手合体，占两格。
             // 平时嘴里没有炮；充能 25s 结束后嘴里出现玉米炮弹；
             // 点击它出现瞄准镜（跟随鼠标），按 M 键向准星位置发射（见 GameLoop.enterCobAim）。
             stat.hp = 600;
-            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790586222';
+            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790603141';
             // v3.24.2 立绘 148×85（炮口已用叶壳封住），显示宽 132——两格 160px 内留边，
             // 修"看起来占三格"；+15 补偿缩小后轮子离地
             stat.yOffset = 15;
@@ -210,7 +210,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790586222';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790603141';
             stat.yOffset = 0;
         }
 
@@ -237,6 +237,18 @@ class Plant extends Entity {
             else if (type === 'fusion_popcorn') { p1 = 'kernelpult'; p2 = 'jalapeno'; }          // 爆米花投手：玉米投手+火爆辣椒
             else if (type === 'fusion_cabbagenut') { p1 = 'cabbagepult'; p2 = 'wallnut'; }       // 卷心菜堡垒：卷心菜投手+坚果墙
             else if (type === 'fusion_veggiepult') { p1 = 'cabbagepult'; p2 = 'kernelpult'; }    // 双料投手：卷心菜投手+玉米投手
+            // ===== v3.45.0 十一条新融合（用户批准名单）=====
+            else if (type === 'fusion_gatlingsnow') { p1 = 'gatlingpea'; p2 = 'snowpea'; }      // 冰机枪射手：机枪+寒冰射手
+            else if (type === 'fusion_snow_cattail') { p1 = 'cattail'; p2 = 'snowpea'; }        // 冰猫尾草：猫尾草+寒冰射手
+            else if (type === 'fusion_gloomsnow') { p1 = 'gloomshroom'; p2 = 'iceshroom'; }     // 冰忧郁菇：忧郁菇+寒冰菇
+            else if (type === 'fusion_starfruit10') { p1 = 'starfruit'; p2 = 'starfruit'; }     // 十芒杨桃：杨桃×2
+            else if (type === 'fusion_firemine') { p1 = 'potatomine'; p2 = 'jalapeno'; }        // 烈焰地雷：土豆地雷+火爆辣椒
+            else if (type === 'fusion_boomsquash') { p1 = 'squash'; p2 = 'cherrybomb'; }        // 爆炸弹跳：窝瓜+樱桃炸弹
+            else if (type === 'fusion_icekernel') { p1 = 'kernelpult'; p2 = 'snowpea'; }        // 冰玉米投手：玉米投手+寒冰射手
+            else if (type === 'fusion_firespikeweed') { p1 = 'spikeweed'; p2 = 'torchwood'; }   // 火焰地刺：地刺+火炬树桩
+            else if (type === 'fusion_firerepeater') { p1 = 'repeater'; p2 = 'torchwood'; }     // 火焰双发：双发射手+火炬树桩
+            else if (type === 'fusion_quadsun') { p1 = 'twinsunflower'; p2 = 'twinsunflower'; } // 四头向日葵：双子×2
+            else if (type === 'fusion_firetallnut') { p1 = 'jalapeno'; p2 = 'tallnut'; }        // 辣椒高坚果：高坚果+火爆辣椒（坚果+辣椒=火炬已占用）
             else {
                 const parts = type.split('_');
                 p1 = parts[1];
@@ -421,6 +433,47 @@ class Plant extends Entity {
                     this.fusionOverlay.style.clipPath = 'polygon(0 0, 48% 0, 48% 50%, 0 50%)';
                     this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(37px, 8px)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
+                }
+                // ===== v3.45.0 新融合外观（与"冰西瓜=西瓜转蓝"同一套最小改动思路：原版立绘+滤镜）=====
+                else if (type === 'fusion_gatlingsnow') {
+                    this.element.style.filter = 'brightness(1.15) hue-rotate(180deg) saturate(1.5)';
+                    this.fusionOverlay.style.display = 'none';
+                } else if (type === 'fusion_snow_cattail') {
+                    this.element.style.filter = 'brightness(1.2) hue-rotate(160deg) saturate(1.8)';
+                    this.fusionOverlay.style.display = 'none';
+                } else if (type === 'fusion_gloomsnow') {
+                    this.element.style.filter = 'brightness(1.15) hue-rotate(160deg) saturate(1.7)';
+                    this.fusionOverlay.style.display = 'none';
+                } else if (type === 'fusion_starfruit10') {
+                    // 十芒杨桃：杨桃立绘镀金（杨桃×2=十向齐射）
+                    this.element.src = 'assets/images/Plants/Starfruit/Starfruit.gif';
+                    this.element.style.filter = 'saturate(1.6) brightness(1.2) hue-rotate(15deg)';
+                    this.yOffset = -10;
+                    this.fusionOverlay.style.display = 'none';
+                } else if (type === 'fusion_firemine') {
+                    this.element.style.filter = 'hue-rotate(-30deg) saturate(2.2) brightness(1.15)';
+                    this.fusionOverlay.style.display = 'none';
+                } else if (type === 'fusion_boomsquash') {
+                    this.element.style.filter = 'hue-rotate(-35deg) saturate(1.9)';
+                    this.fusionOverlay.style.display = 'none';
+                } else if (type === 'fusion_icekernel') {
+                    this.element.style.filter = 'brightness(1.15) hue-rotate(160deg) saturate(1.8)';
+                    this.fusionOverlay.style.display = 'none';
+                } else if (type === 'fusion_firespikeweed') {
+                    this.element.style.filter = 'sepia(1) saturate(3) hue-rotate(-25deg) brightness(1.15)';
+                    this.fusionOverlay.style.display = 'none';
+                } else if (type === 'fusion_firerepeater') {
+                    this.element.style.filter = 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.12)';
+                    this.fusionOverlay.style.display = 'none';
+                } else if (type === 'fusion_quadsun') {
+                    this.element.style.filter = 'saturate(1.35) brightness(1.12)';
+                    this.setTransform('scale(1.15)');
+                    this.fusionOverlay.style.display = 'none';
+                } else if (type === 'fusion_firetallnut') {
+                    this.yOffset = s2.yOffset;      // 宿主是高坚果
+                    this.element.src = s2.src;      // tallnut 本体
+                    this.element.style.filter = 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.1)';
+                    this.fusionOverlay.style.display = 'none';
                 }
                 
                 this.game.entityLayer.appendChild(this.fusionOverlay);
@@ -743,7 +796,7 @@ class Plant extends Entity {
             if (!this._cobShellEl) {
                 const el = document.createElement('img');
                 // v3.24.1：装填玉米用原版图鉴里抠出的整根玉米（带根部），从炮口探出
-                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790586222';
+                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790603141';
                 // 裸 img 必须自带 translate(-50%,-50%) 居中基准（与 fusionOverlay 同一教训）
                 // v3.24.2 尺寸随立绘缩放同步：43×48（0.892×）
                 el.style.cssText = 'position:absolute;width:43px;height:48px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);';
@@ -920,7 +973,7 @@ class Plant extends Entity {
             if (this.hasTrait('potatomine') && !this.isArmed) skipShooting = true;
             // 魅惑菇是被动植物（不走射击逻辑）；杨桃走专属五星分支（见下方 type 特判）
             if (this.type === 'fusion_hypnoshroom' || this.type === 'hypnoshroom') skipShooting = true;
-            if (this.type === 'fusion_starfruit' || this.type === 'starfruit' || this.type === 'fusion_snowpea_starfruit') skipShooting = true;
+            if (this.type === 'fusion_starfruit' || this.type === 'starfruit' || this.type === 'fusion_snowpea_starfruit' || this.type === 'fusion_starfruit10') skipShooting = true;
             
             if (!skipShooting) {
                 this.fireTimer += deltaTime;
@@ -962,6 +1015,7 @@ class Plant extends Entity {
                     if (this.hasTrait('cattail')) {
                          if (this.hasTrait('wintermelon')) projType = 'cattail_wintermelon';
                          else if (this.hasTrait('melonpult')) projType = 'cattail_melon';
+                         else if (this.type === 'fusion_snow_cattail') projType = 'cattail_snow'; // v3.45.0 冰猫尾
                          else projType = 'cattail';
                     }
                     
@@ -982,6 +1036,9 @@ class Plant extends Entity {
                     // 两个投手系融合的专属弹种
                     if (this.type === 'fusion_icecabbage') projType = 'icecabbage';
                     if (this.type === 'fusion_popcorn') projType = 'popcorn';
+                    // ===== v3.45.0 =====
+                    if (this.type === 'fusion_firerepeater') projType = 'firepea';   // 火焰双发：2 连发火焰豌豆 40×2
+                    if (this.type === 'fusion_icekernel' && projType === 'kernel') projType = 'icekernel'; // 冰玉米：减速（黄油定身概率保留）
                     
                     // 樱桃射手特色：普通子弹为樱桃色豌豆，每第 10 次攻击发射小樱桃炸弹
                     // （伤害=原版樱桃炸弹 1800 的一半=900，命中后 3×3 爆炸）
@@ -1063,7 +1120,7 @@ class Plant extends Entity {
         
         // 杨桃（融合版/经典版通用）：PVZ 原版五向星光射击（独立分支，避免触发三线/后射逻辑）。
         // v3.20.0：五颗星星对应立绘 5 个角 —— 前二斜 ↗↘ / 正上 ↑ / 正下 ↓ / 正后 ←；穿透、可跨行命中（命中逻辑在 Projectile 'star' 类型里）。星星伤害=胆小菇（40）。
-        if (this.type === 'fusion_starfruit' || this.type === 'starfruit' || this.type === 'fusion_snowpea_starfruit') {
+        if (this.type === 'fusion_starfruit' || this.type === 'starfruit' || this.type === 'fusion_snowpea_starfruit' || this.type === 'fusion_starfruit10') {
             this.fireTimer += deltaTime;
             if (this.fireTimer >= this.fireRate) {
                 // 只要前方（含斜向可及范围）有敌方僵尸就齐射五颗
@@ -1081,7 +1138,12 @@ class Plant extends Entity {
                     // 普通杨桃发射星星
                     const projType = (this.type === 'fusion_snowpea_starfruit') ? 'snowpea' : 'star';
                     const starSpeed = 350;
-                    const dirs = [
+                    // v3.45.0 十芒杨桃（杨桃×2）：十方向 36° 均布齐射；普通杨桃保持五星
+                    const dirs = (this.type === 'fusion_starfruit10') ? [
+                        [1, 0], [-1, 0], [0, -1], [0, 1],
+                        [0.809, -0.588], [0.809, 0.588], [-0.809, -0.588], [-0.809, 0.588],
+                        [0.309, -0.951], [0.309, 0.951]
+                    ] : [
                         [-1, 0],              // ←（后方，对应立绘左角）
                         [0.7071, -0.7071],    // ↗
                         [0.7071, 0.7071],     // ↘
@@ -1138,6 +1200,15 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     setTimeout(() => {
                         if (!this.isDead) this.game.entities.push(new Sun(this.game, this.x + 20, this.y - 20, targetY));
                     }, 500);
+                }
+                if (this.type === 'fusion_quadsun') {
+                    // v3.45.0 四头向日葵（双子×2）：再补 2 颗 —— 每轮 4 颗共 100 阳光
+                    setTimeout(() => {
+                        if (!this.isDead) {
+                            this.game.entities.push(new Sun(this.game, this.x - 20, this.y - 20, targetY));
+                            this.game.entities.push(new Sun(this.game, this.x + 6, this.y - 34, targetY));
+                        }
+                    }, 900);
                 }
                 // v3.28.0：阳光菇旧版"成熟后一次掉多颗"的多倍产阳光机制已删除（成长机制重做见上）
             }
@@ -1328,10 +1399,24 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     if (this.game.audioManager.playFx) this.game.audioManager.playFx('spike_hit');
                     else this.game.audioManager.play('splat');
                     for (let z of zombies) {
-                        const dmg = this.hasTrait('spikerock') ? 120 : 40; // v3.14.0：钢地刺=3×地刺
+                        const dmg = this.hasTrait('spikerock') ? 120 : (this.type === 'fusion_firespikeweed' ? 80 : 40); // v3.14.0：钢地刺=3×地刺；v3.45.0 火焰地刺=2×地刺（灼烧）
                         z.takeDamage(dmg); 
                     }
                 }
+            }
+        }
+        
+        // v3.45.0 辣椒高坚果（高坚果+火爆辣椒）：啃它的僵尸被烫——
+        // 咬合范围内每秒 40 灼烧（与地刺同频率的贴身 tick）
+        if (this.type === 'fusion_firetallnut') {
+            this.burnTick = (this.burnTick || 0) + deltaTime;
+            if (this.burnTick >= 1.0) {
+                this.burnTick = 0;
+                const zs = this.game.entities.filter(e =>
+                    e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized &&
+                    e.row === this.row && Math.abs(e.x - this.x) < 50
+                );
+                for (const z of zs) z.takeDamage(40);
             }
         }
         
@@ -1357,7 +1442,8 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                         // v3.21.0 关键修复：旧代码只传了单位向量（1px/s）——这就是"喷出的子弹速度太慢"
                         // 的根源，孢子在 150px 射程内要飞两分多钟，等于永远打不中。改为 300px/s 标准弹速。
                         const gs = 300;
-                        const p = new Projectile(this.game, this.x + 10, this.y - 15, this.row, 'gloom_puff', null, (d.vx/len)*gs, (d.vy/len)*gs);
+                        const gtype = (this.type === 'fusion_gloomsnow') ? 'gloom_snow' : 'gloom_puff'; // v3.45.0 冰忧郁菇：冰雾带减速
+                        const p = new Projectile(this.game, this.x + 10, this.y - 15, this.row, gtype, null, (d.vx/len)*gs, (d.vy/len)*gs);
                         p.speed = gs;
                         p.maxDistance = 120;
                         this.game.entities.push(p);
@@ -1398,11 +1484,28 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     this.game.audioManager.play('splat');
                     
                     // Deal damage
-                    const zombies = this.game.entities.filter(e => 
-                        e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 60 && !e.isDead && e.state !== 'DYING'
-                    );
-                    for (let z of zombies) {
-                        z.takeDamage(1800, { oneshot: true }); // 窝瓜压扁：一次性植物秒杀巨人
+                    if (this.type === 'fusion_boomsquash') {
+                        // v3.45.0 爆炸弹跳（窝瓜+樱桃炸弹）：压扁落点直接引爆 3×3（与樱桃炸弹同量级）
+                        const zombies = this.game.entities.filter(e =>
+                            e instanceof Zombie && !e.isDead && e.state !== 'DYING' &&
+                            Math.abs(e.row - this.row) <= 1 && Math.abs(e.x - this.x) < 120
+                        );
+                        for (let z of zombies) {
+                            z.takeDamage(1800, { bomb: true, oneshot: true });
+                        }
+                        const boom = document.createElement('img');
+                        boom.src = 'assets/images/Plants/CherryBomb/Boom.gif';
+                        boom.style.cssText = 'position:absolute;pointer-events:none;z-index:3000;' +
+                            'left:' + (this.x - 130) + 'px;top:' + (this.y - 120) + 'px;width:260px;height:240px;object-fit:contain;';
+                        this.game.container.appendChild(boom);
+                        setTimeout(() => boom.remove(), 1000);
+                    } else {
+                        const zombies = this.game.entities.filter(e => 
+                            e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 60 && !e.isDead && e.state !== 'DYING'
+                        );
+                        for (let z of zombies) {
+                            z.takeDamage(1800, { oneshot: true }); // 窝瓜压扁：一次性植物秒杀巨人
+                        }
                     }
 
                     setTimeout(() => { this.hp = 0; }, 500);
@@ -1426,12 +1529,30 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     this.hasExploded = true; // Prevent multiple triggers
                     this.game.audioManager.play('splat'); // Needs potatomine sound
                     
-                    // Damage all zombies in a small radius
-                    const zombies = this.game.entities.filter(e => 
-                        e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 60 && !e.isDead && e.state !== 'DYING'
-                    );
-                    for (let z of zombies) {
-                        z.takeDamage(1800, { bomb: true, oneshot: true }); // 土豆雷：炸弹类一次性
+                    if (this.type === 'fusion_firemine') {
+                        // v3.45.0 烈焰地雷（土豆地雷+火爆辣椒）：布好后触发整行烈焰（与火爆辣椒同款全行结算）
+                        const zombies = this.game.entities.filter(e =>
+                            e instanceof Zombie && e.row === this.row && !e.isDead && e.state !== 'DYING'
+                        );
+                        for (let z of zombies) {
+                            z.takeDamage(1800, { bomb: true, oneshot: true });
+                        }
+                        const b = this.game.board;
+                        const strip = document.createElement('img');
+                        strip.src = 'assets/images/Plants/Jalapeno/JalapenoAttack.gif';
+                        strip.style.cssText = 'position:absolute;pointer-events:none;z-index:3000;' +
+                            'left:' + b.offsetX + 'px;top:' + (this.y - 65) + 'px;' +
+                            'width:' + (b.cols * b.cellWidth) + 'px;height:131px;object-fit:fill;';
+                        this.game.container.appendChild(strip);
+                        setTimeout(() => strip.remove(), 1000);
+                    } else {
+                        // Damage all zombies in a small radius
+                        const zombies = this.game.entities.filter(e => 
+                            e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 60 && !e.isDead && e.state !== 'DYING'
+                        );
+                        for (let z of zombies) {
+                            z.takeDamage(1800, { bomb: true, oneshot: true }); // 土豆雷：炸弹类一次性
+                        }
                     }
 
                     // v3.20.0：去掉"踢破"的 SPUDOW 爆破图（用户不需要）—— 炸完直接留土豆泥残渣

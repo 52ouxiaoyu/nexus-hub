@@ -12,7 +12,7 @@ class CollisionManager {
         
         for (let p of projectiles) {
             for (let z of zombies) {
-                if (p.row === z.row && p.type !== 'cattail' && p.type !== 'gloom_puff' && p.type !== 'zpea') {
+                if (p.row === z.row && p.type !== 'cattail' && p.type !== 'cattail_snow' && p.type !== 'gloom_puff' && p.type !== 'gloom_snow' && p.type !== 'zpea') {
                     // 抛射型子弹（西瓜/冰西瓜）走抛物线：只有落到接近本行高度时才判定命中，
                     // 否则它在半空中就会把僵尸"隔空打死"（canHitNow 对普通子弹恒为 true）
                     if (typeof p.canHitNow === 'function' && !p.canHitNow()) continue;
@@ -32,13 +32,13 @@ class CollisionManager {
                             // → 路障帽/铁桶/报纸/铁门永不脱落（详见 Zombie.takeDamage / armorHp）。
                             // 该规则只给这三个投掷物开（其它植物仍是普通伤害）。
                             const pierce = p.type === 'cabbage' || p.type === 'icecabbage'
-                                        || p.type === 'kernel' || p.type === 'popcorn'
+                                        || p.type === 'kernel' || p.type === 'popcorn' || p.type === 'icekernel'
                                         || p.type === 'butter'
                                         || p.type === 'scaredyshroom' // v3.14.0：胆小菇孢子穿门
                                         || p.type === 'fume_burst';   // v3.26.0：大喷菇弹幕穿门
                             z.takeDamage(p.damage, pierce ? { pierce: true } : undefined);
                             
-                            if (p.type === 'snowpea' || p.type === 'wintermelon' || p.type === 'icecabbage') {
+                            if (p.type === 'snowpea' || p.type === 'wintermelon' || p.type === 'icecabbage' || p.type === 'icekernel') {
                                 z.setSlow(10.0);
                             } else if (p.type === 'firepea') {
                                 z.thaw(); // Fire thaws out zombies
@@ -95,7 +95,7 @@ class CollisionManager {
                             const hitFx = (p.type === 'melon' || p.type === 'wintermelon' ||
                                            p.type === 'cattail_melon' || p.type === 'cattail_wintermelon') ? 'crash'
                                 : (p.type === 'cabbage' || p.type === 'icecabbage' || p.type === 'kernel' ||
-                                   p.type === 'popcorn' || p.type === 'butter' || p.type === 'minicherry') ? 'thud'
+                                   p.type === 'popcorn' || p.type === 'icekernel' || p.type === 'butter' || p.type === 'minicherry') ? 'thud'
                                 : (p.type === 'snowpea') ? 'ice_pop'
                                 : (p.type === 'firepea') ? 'fire_pop'
                                 : (p.type === 'fume_burst') ? null
