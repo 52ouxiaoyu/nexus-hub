@@ -349,17 +349,26 @@ function buildTable() {
         const [ns, bs] = jawPts([sx * sg, sz * T], [sx * dxs, sz * wB], Cs);
         prism([bs, backC, ...cornerJaw, [tipL[0], sz * T], ns], ch, cushMat);
     }
-    // 短边库边 ×2：两端 jaw 弧包到嘴缘 + 钩回鼻线，中间沿鼻线直行
+    // 短边库边 ×2：主体 + 两端嘴尖小片（v2.7.0 拆分修复自相交）。
+    // 旧版把「弧包 + 钩回鼻线」塞进一个多边形：jaw 弧从背线（鼻线外侧）走到越过鼻线的嘴尖，
+    // 必然横穿沿库边长轴的鼻线段（交点 x=±L）→ 多边形自相交 → earcut 剖分崩坏
+    // （顶面缺块，台呢透出形成"凸起"条带）。拆成 3 个简单多边形后轮廓与设计一致。
+    const zCross = Math.sqrt(rC * rC - eC * eC);   // jaw 弧与鼻线交点相对洞心的 |Δz|
     for (const sx of [-1, 1]) {
         const CcT = { x: sx * (L + eC), z: T + eC };
         const CcB = { x: sx * (L + eC), z: -(T + eC) };
         const bT = [sx * (L + cw), cln], bB = [sx * (L + cw), -cln];
+        const cT = [sx * L, T + eC - zCross], cB = [sx * L, -(T + eC - zCross)];
         const tipT = tipAt(CcT, mouthAngles(sx, 1).aShort);
         const tipB = tipAt(CcB, mouthAngles(sx, -1).aShort);
-        prism([...arcPts(CcT, rC, bT, tipT, -Math.PI / 2, 14),
-               [sx * L, tipT[1]],
-               [sx * L, tipB[1]],
-               ...arcPts(CcB, rC, tipB, bB, Math.PI / 2, 14)], ch, cushMat);
+        // 主体：背线起点 + 两端 jaw 弧（止于弧∩鼻线交点）+ 鼻线直行 + 背线闭合
+        prism([bT, ...arcPts(CcT, rC, bT, cT, -Math.PI / 2, 14), cB,
+               ...arcPts(CcB, rC, cB, bB, Math.PI / 2, 14)], ch, cushMat);
+        // 嘴尖小片 ×2：鼻线交点 → 弧到嘴尖 → 钩回鼻线（mid 取弦中点方向，保证走短弧）
+        for (const [C, c, tip] of [[CcT, cT, tipT], [CcB, cB, tipB]]) {
+            const mid = Math.atan2((c[1] + tip[1]) / 2 - C.z, (c[0] + tip[0]) / 2 - C.x);
+            prism([c, ...arcPts(C, rC, c, tip, mid, 6), tip, [sx * L, tip[1]]], ch, cushMat);
+        }
     }
 
     // ---- 木边外框：外轮廓八角形（45° 斜切角），内边界沿背线行走、6 个洞口绕洞圆外弧 ----
@@ -380,6 +389,7 @@ function buildTable() {
     // 6 个洞口处绕洞圆的"木框侧"外弧（角袋经过外侧对角、中袋经过正外方）
     const hp = [];
     hp.push([-(L + cw), cln]);   // 起点 = 角(−,+) 弧终点
+    hp.push([-(L + cw), -cln]);  // 左侧背线直线段（arcInto 不含 pFrom，此段须显式补上，否则洞边界斜切整个左背线）
     arcInto(hp, -(L+eC), -(T+eC), rC, [-(L+cw), -cln], [-(L+eC-dxc), -wB], Math.PI * 1.25, 20);
     arcInto(hp, 0, -(T+eS), rS, [-dxs, -wB], [dxs, -wB], -Math.PI / 2, 16);
     arcInto(hp, (L+eC), -(T+eC), rC, [(L+eC-dxc), -wB], [(L+cw), -cln], Math.PI * 1.75, 20);
