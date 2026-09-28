@@ -1107,18 +1107,32 @@ function respotSnookerColours(nums) {
     }
 }
 
-// 母球落袋 → 对方在 D 区内自由摆球
+// 母球落袋 → 对方在 D 区内自由摆球。
+// 真实规则：D 区内任意位置，不得与任何球重叠（正规游戏都是"手动放置+非法位置禁放"，
+// 人工摆放走 tryPlaceCue 已校验）。自动预放必须同样绝不重叠：
+// 旧版候选稀疏（首选点离棕球点仅 2cm 必被挡）且兜底无校验硬摆 → 母球与棕球叠在一起
 function restoreCueD() {
     const cue = cueBall();
     cue.potted = false; cue.fall = -1;
-    const pts = [[SNK.baulkX - 0.02, 0]];
-    for (let a = -80; a <= 80; a += 10) {
-        const r = a * Math.PI / 180;
-        pts.push([SNK.baulkX - SNK.dRad * Math.cos(r), SNK.dRad * Math.sin(r)]);
-    }
+    const pts = [[SNK.baulkX - 0.06, 0], [SNK.baulkX - 0.1, 0]];   // 经典首选：D 区中部
+    for (let r = 0.04; r <= SNK.dRad; r += 0.02)                   // 半径环由内到外扫满 D 半圆
+        for (let a = -85; a <= 85; a += 5) {
+            const t = a * Math.PI / 180;
+            pts.push([SNK.baulkX - r * Math.cos(t), r * Math.sin(t)]);
+        }
     for (const [x, z] of pts)
         if (validCuePos(x, z)) { placeBallAt(cue, x, z); return; }
-    placeBallAt(cue, SNK.baulkX - 0.02, 0);
+    // D 区被挤满的理论兜底（实际到不了）：取周围间隙最大的点，仍然不与任何球重叠
+    let best = pts[0], bestClear = -Infinity;
+    for (const [x, z] of pts) {
+        let clear = Infinity;
+        for (const b of balls) {
+            if (b.num === 0 || b.potted) continue;
+            clear = Math.min(clear, Math.hypot(b.x - x, b.z - z));
+        }
+        if (clear > bestClear) { bestClear = clear; best = [x, z]; }
+    }
+    placeBallAt(cue, best[0], best[1]);
 }
 
 // 平分决胜（官方规则）：重摆黑球（若在袋）→ 抽签决定先手 → 母球手中球（D 区）
