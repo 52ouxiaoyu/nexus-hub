@@ -802,19 +802,24 @@ function updateGuide() {
         if (objLen > 0) {
             let show = true;
             if (objLen > 1) {
-                // 简单档：真实物理模拟轨迹（同 discrete 步长/碰撞/库边/袋口，构造性精确）
-                const pw = state === 'charge' ? power : (power > 0.05 ? power : 0.6);
-                const pq = Math.round(clamp(pw, 0.05, 1) * 25) / 25;   // 力度量化 0.04 控制重算频率
-                const key = Math.atan2(d.z, d.x).toFixed(3) + '|' + pq.toFixed(2) + '|' +
-                            spin.x.toFixed(1) + '|' + spin.y.toFixed(1) + '|' + shotSeq + '|' +
-                            cue.x.toFixed(2) + ',' + cue.z.toFixed(2);
-                if (guideSimCache.key !== key) {
-                    const sim = simulateTrajectory(d.x, d.z, pq, spin.y, spin.x);
-                    guideSimCache.key = key;
-                    guideSimCache.path = (sim.first !== null && sim.path.length >= 2) ? sim.path : null;
+                if (state === 'charge') {
+                    // 蓄力中隐藏依赖力度的长轨迹线：力度是三角波往返，跟着"当前力度"重算
+                    // 会让整条线甩来甩去（误导）。瞄准线/虚影圈/分离线与力度无关，保留。
+                    show = false;
+                } else {
+                    // 预览统一用固定参考力度：稳定可预期，不受上一杆残留 power 影响
+                    const pq = 0.6;
+                    const key = Math.atan2(d.z, d.x).toFixed(3) + '|' + pq.toFixed(2) + '|' +
+                                spin.x.toFixed(1) + '|' + spin.y.toFixed(1) + '|' + shotSeq + '|' +
+                                cue.x.toFixed(2) + ',' + cue.z.toFixed(2);
+                    if (guideSimCache.key !== key) {
+                        const sim = simulateTrajectory(d.x, d.z, pq, spin.y, spin.x);
+                        guideSimCache.key = key;
+                        guideSimCache.path = (sim.first !== null && sim.path.length >= 2) ? sim.path : null;
+                    }
+                    show = !!guideSimCache.path;
+                    if (show) setPolyline(ud.objLine, guideSimCache.path, y);
                 }
-                show = !!guideSimCache.path;
-                if (show) setPolyline(ud.objLine, guideSimCache.path, y);
             } else {
                 setLine(ud.objLine, hitBall.x, hitBall.z, hitBall.x + nx * objLen, hitBall.z + nz * objLen, y);
             }
@@ -1994,7 +1999,8 @@ function initInput() {
             ghostCue.material.color.setHex(validCuePos(gx, gz) ? 0xffffff : 0xff5f56);
             return;
         }
-        updateAimFromPointer(e);
+        // 蓄力中锁定瞄准：按住鼠标蓄力时手会微抖，此时继续跟随指针会把瞄准带歪
+        if (state === 'aim') updateAimFromPointer(e);
     });
 
     el.addEventListener('pointerdown', (e) => {
