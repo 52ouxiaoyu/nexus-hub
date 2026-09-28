@@ -1037,6 +1037,11 @@ function shoot(powerFrac) {
     if (players[current].group) {
         shot.preGroupCleared = groupRemaining(players[current].group) === 0;
     }
+    if (gameMode === 'snooker' && snooker) {
+        // 出杆瞬间锁定"当前目标"：结算必须以此判定。若等到结算时再算 snookerTargets()，
+        // 打进黄球后目标会漂移成绿球（打进最后一颗红会漂移成清彩阶段）→ 合法进球被误判犯规
+        shot.snOn = snookerTargets();
+    }
     state = 'shooting';
     strikeAnim = 1;
     SFX.cueHit(v);
@@ -1122,7 +1127,8 @@ function resolveSnookerShot() {
     const potted = shot.potted.filter(n => n !== 0);
     isBreak = false;
 
-    const on = snookerTargets();
+    // 用出杆时锁定的目标判定（打进目标球后 snookerTargets() 会漂移到下一颗）
+    const on = shot.snOn || snookerTargets();
     let foul = null, pen = 4;
     const bump = v => { pen = Math.max(pen, v); };
     if (on.category === 'colourN') bump(on.val);
