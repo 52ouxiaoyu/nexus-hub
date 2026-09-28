@@ -1340,7 +1340,8 @@ function switchPlayer(quiet) {
 // 免得玩家打完球不知道自己的花色为什么还没定
 function aimHint() {
     if (state === 'ballinhand') return gameMode === 'snooker'
-        ? '自由球：点击 D 区（弧线内）放置母球'
+        ? (isBreak ? '开球：点击 D 区（弧线内）放置母球 · 注意避开黄/绿/棕的线路' 
+                   : '自由球：点击 D 区（弧线内）放置母球')
         : '自由球：移动鼠标选择位置，点击台面放置母球';
     if (gameMode === 'snooker') {
         const on = snookerTargets();
@@ -2271,10 +2272,17 @@ function startGame(_vsAI, level, mode) {
     AI.clear();
     rackBalls();
     aimDir = { x: 1, z: 0 };
-    state = 'aim';
+    if (gameMode === 'snooker') {
+        // 真实规则：开球母球"手持"，D 区半圆内任意摆放。
+        // （旧版写死在棕球正后方，直打红球堆的线路被棕球挡死，先碰棕球即犯规）
+        state = 'ballinhand';
+        ghostCue.visible = true;
+    } else {
+        state = 'aim';
+        ghostCue.visible = false;
+    }
     power = 0;
     hidePower();
-    ghostCue.visible = false;
     $('overlay').classList.add('hidden');
     $('overlay-end').classList.add('hidden');
     setHint(aimHint());
