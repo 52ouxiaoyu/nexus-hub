@@ -4,12 +4,12 @@ class Zombie extends Entity {
     static PLANT_HEAD_CFG = {
         // cw/ch=gif 画布尺寸，keepTop=只保留顶部比例（裁掉茎干底座），
         // w=显示宽度（头部放大到足以完全遮住僵尸自己的头，僵尸头区约 67×70px），topOff=头顶锚点偏移
-        peahead:     { src: 'assets/images/Plants/Peashooter/Peashooter.gif', cw: 71, ch: 71, keepTop: 0.70, w: 94 },
+        peahead:     { src: 'assets/images/Plants/Peashooter/Peashooter.gif', cw: 71, ch: 71, keepTop: 0.51, w: 94 }, // v3.43.0 0.70→0.51：茎干底座全部裁掉
         nuthead:     { src: 'assets/images/Plants/WallNut/WallNut.gif',       cw: 65, ch: 73, keepTop: 1.0,  w: 60 },
-        sunhead:     { src: 'assets/images/Plants/SunFlower/SunFlower1.gif',  cw: 73, ch: 74, keepTop: 0.72, w: 98 },
-        snowpeahead: { src: 'assets/images/Plants/SnowPea/SnowPea.gif',       cw: 71, ch: 71, keepTop: 0.70, w: 90 },
+        sunhead:     { src: 'assets/images/Plants/SunFlower/SunFlower1.gif',  cw: 73, ch: 74, keepTop: 0.58, w: 98 }, // v3.43.0 0.72→0.58：茎叶全部裁掉
+        snowpeahead: { src: 'assets/images/Plants/SnowPea/SnowPea.gif',       cw: 71, ch: 71, keepTop: 0.52, w: 90 }, // v3.43.0 0.70→0.52：茎干底座全部裁掉
         jalapenohead:{ src: 'assets/images/Plants/Jalapeno/Jalapeno.gif',     cw: 68, ch: 89, keepTop: 1.0,  w: 50 },
-        machinegunhead: { src: 'assets/images/Plants/GatlingPea/GatlingPea.gif', cw: 88, ch: 84, keepTop: 0.74, w: 96 },
+        machinegunhead: { src: 'assets/images/Plants/GatlingPea/GatlingPea.gif', cw: 88, ch: 84, keepTop: 0.51, w: 96 }, // v3.43.0 0.74→0.51：茎干底座全部裁掉
         tallnuthead: { src: 'assets/images/Plants/TallNut/TallNut.gif',       cw: 83, ch: 119, keepTop: 1.0, w: 64, topOff: -62 },
         // v3.35.0：礼盒重画为宽幅构图(192x140，四角完整)，显示宽度同步放宽——
         // 旧图 129x179 竖高构图被压到 42px 宽，又瘪又缺角（用户反馈）

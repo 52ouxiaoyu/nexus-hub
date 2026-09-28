@@ -3,6 +3,9 @@
 //   僵尸图鉴（按模式分组：经典冒险 / 砸罐子 / 我是僵尸·敌阵 / 有趣的配饰，全部带图）
 // v3.40.0：点击任意图片弹出详情卡（阳光/冷却/耐久/血量/特性）；删除僵尸右上角 emoji 角标；
 //           修正冰车/小鬼/高坚果头僵尸的体型比例；配饰组移除神秘礼盒、冰道文案对齐实装。
+// v3.43.0：跳跳/撑杆僵尸名称对调；植物头贴片去茎（keepTop 收紧）+ 坚果/高坚果头改"头顶小贴片"露出本体；
+//           锤子/礼盒改到手部；小鬼放大到普通僵尸一半身高；冰车补冰道；寒冰头描述对齐免疫机制；
+//           问号罐阳光实装后文案同步；僵尸罐/问号罐描述具体化。
 (function () {
     const V = '?v=' + Date.now();
     const CARD = 'assets/images/Card/Plants/';
@@ -23,11 +26,11 @@
             '点手套进入拖拽状态，把一株植物拖到另一株上即融合（选卡栏 15 种，其余全靠配方）。',
             '炸弹爆炸会把 3×3 内有配方的植物直接融合；游戏内可点「融合配方大全」查全部秘方。' ] },
         { icon: '🏺', title: '砸罐子', items: [
-            '点击罐子敲开：绿罐出植物、红罐出僵尸、问号罐随机；敲完全部罐子并清场即胜。',
+            '点击罐子敲开：绿罐出植物、红罐出僵尸、问号罐随机（植物 / 僵尸 / 偶尔一撮阳光）；敲完全部罐子并清场即胜。',
             '难度分简单 / 困难 / 地狱；路灯花要花 75 阳光在种子栏购买，能照亮罐中内容。' ] },
         { icon: '🧟', title: '《我是僵尸》', items: [
             '阵营反转：花阳光买僵尸放到草坪上，吃掉全部脑子即胜。',
-            '阳光 < 50 且场上无僵尸存活即判负；小心植物头僵尸的反击防线。' ] },
+            '阳光 < 50 且场上无僵尸存活即判负；小心敌阵植物的反击防线。' ] },
     ];
 
     // ================= 植物图鉴 =================
@@ -60,7 +63,7 @@
         { n: '窝瓜', g: 'Squash', c: 50, cd: 30, hp: 300, t: '跃起压扁 1800，即种即用' },
         { n: '钢地刺', g: 'Spikerock', c: 125, cd: 7.5, hp: 1200, t: '120 / 0.75s，不会被啃，可扛 3 辆冰车' },
         { n: '地刺', g: 'Spikeweed', c: 100, cd: 7.5, hp: 300, t: '40 / 0.75s，贴地不可被啃，扎爆冰车' },
-        { n: '高坚果', g: 'TallNut', c: 125, cd: 30, hp: 8000, t: '撑杆/跳跳无法越过' },
+        { n: '高坚果', g: 'TallNut', c: 125, cd: 30, hp: 8000, t: '肉盾天花板；跳跳僵尸跳不过它（但拦不住一路蹦的撑杆僵尸）' },
         { n: '南瓜头', g: 'PumpkinHead', c: 125, cd: 30, hp: 4000, t: '套在植物外的护壳，三阶段裂纹' },
         { n: '坚果墙', g: 'WallNut', c: 50, cd: 30, hp: 4000, t: '纯肉盾' },
         { n: '双子向日葵', g: 'TwinSunflower', c: 150, cd: 50, hp: 300, t: '2×25 / 24s，经济翻倍' },
@@ -101,40 +104,40 @@
         { title: '经典冒险', list: [
             { n: '巨尸 Boss', img: ZB + 'LGBOSS/1.gif', h: 84, hp: 5000, t: '关底 Boss，血量与压迫感都是 Boss 级' },
             { n: '巨人僵尸', img: ZB + 'Zombie/Zombie.gif', h: 104, dark: true, hp: 4000, t: '2 倍体型重锤砸扁植物，过半血掷出小鬼' },
-            { n: '冰车僵尸', img: ZB + 'Zomboni/1.gif', h: 90, hp: 1300, t: '体型巨大的冰车，碾压植物不留啃痕，驶过之处留下冰道（冰面无法种植，30 秒融化）；只有地刺能扎爆它' },
+            { n: '冰车僵尸', img: ZB + 'Zomboni/1.gif', h: 90, ice: true, hp: 1300, t: '体型巨大的冰车，碾压植物不留啃痕，驶过之处留下冰道（冰面无法种植，30 秒融化）；只有地刺能扎爆它' },
             { n: '橄榄球僵尸', img: ZB + 'FootballZombie/FootballZombie.gif', h: 72, hp: 1600, t: '速度 40 的重装骑兵，头盔 1400 护甲' },
             { n: '铁桶僵尸', img: ZB + 'BucketheadZombie/BucketheadZombie.gif', h: 70, hp: 1300, t: '铁桶 1100 护甲，桶掉后与普通僵尸无异' },
             { n: '铁门僵尸', img: ZB + 'ScreenDoorZombie/ScreenDoorZombie.gif', h: 70, hp: 1300, t: '铁门挡正面直射；投手/孢子类破甲攻击无视它' },
             { n: '舞王僵尸', img: ZB + 'DancingZombie/DancingZombie.gif', h: 72, hp: 500, t: '每 10 秒召唤一排伴舞' },
             { n: '伴舞僵尸', img: ZB + 'BackupDancer/BackupDancer.gif', h: 70, hp: 200, t: '舞王召唤的随从，成群出现' },
-            { n: '撑杆僵尸', img: ZB + 'PoleVaultingZombie/PoleVaultingZombie.gif', h: 74, hp: 500, t: '高速冲来，跳过遇到的第一株植物' },
+            { n: '跳跳僵尸', img: ZB + 'PoleVaultingZombie/PoleVaultingZombie.gif', h: 74, hp: 500, t: '高速冲来，跳过遇到的第一株植物' },
             { n: '读报僵尸', img: ZB + 'NewspaperZombie/HeadWalk1.gif', h: 70, hp: 300, t: '报纸 150 护甲，打碎后狂暴加速' },
             { n: '路障僵尸', img: ZB + 'ConeheadZombie/ConeheadZombie.gif', h: 70, hp: 560, t: '路障 360 护甲，基础加强版' },
             { n: '旗帜僵尸', img: ZB + 'FlagZombie/FlagZombie.gif', h: 70, hp: 200, t: '「一大波僵尸」的先导，举旗领军' },
             { n: '普通僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, hp: 200, t: '最普通的僵尸，啃食植物缓慢前进' },
-            { n: '小鬼僵尸', img: ZB + 'Imp/Zombie.gif', h: 38, hp: 100, t: '只有半个普通僵尸高，又小又快，巨人抛投的常客' },
+            { n: '小鬼僵尸', img: ZB + 'Imp/Zombie.gif', h: 52, hp: 100, t: '只有半个普通僵尸高，又小又快，巨人抛投的常客' },
         ]},
         { title: '砸罐子', list: [
             { n: '锤子僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, hammer: true, hp: 560, t: '手持木锤，一路替你（或敌人）锤碎沿途罐子' },
             { n: '小丑盒僵尸', img: ZB + 'JackinTheBoxZombie/Walk.gif', h: 70, hp: 500, t: '抱着玩偶盒前进，随时开盒自爆，炸毁 3×3 内植物' },
             { n: '铁梯僵尸', img: ZB + 'ScreenDoorZombie/ScreenDoorZombie.gif', h: 70, hp: 500, t: '速度快，架梯翻过坚果墙类防御' },
-            { n: '跳跳僵尸', img: ZB + 'PoleVaultingZombie/PoleVaultingZombieJump.gif', h: 62, hp: 340, t: '踩弹簧连续跳过植物，需高坚果才能拦住' },
+            { n: '撑杆僵尸', img: ZB + 'PoleVaultingZombie/PoleVaultingZombieJump.gif', h: 62, hp: 340, t: '高速冲来，一路跳过所有植物，连高坚果都拦不住' },
         ]},
-        { title: '我是僵尸 · 敌阵', list: [
-            { n: '高坚果头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 74, head: { src: PL + 'TallNut/TallNut.gif', cw: 83, ch: 119, keepTop: 1.0, w: 66 }, hp: 5200, t: '头顶高坚果，全游戏最厚血量之一' },
-            { n: '坚果头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'WallNut/WallNut.gif', cw: 65, ch: 73, keepTop: 1.0, w: 54 }, hp: 2600, t: '头顶坚果墙，普通输出打不动' },
-            { n: '机枪头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'GatlingPea/GatlingPea.gif', cw: 88, ch: 84, keepTop: 0.74, w: 78 }, hp: 200, t: '头顶机枪射手，边走边 4 连发反击' },
-            { n: '寒冰头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'SnowPea/SnowPea.gif', cw: 71, ch: 71, keepTop: 0.70, w: 74 }, hp: 200, t: '头顶寒冰射手，冰弹减速你的僵尸' },
-            { n: '火爆辣椒头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'Jalapeno/Jalapeno.gif', cw: 68, ch: 89, keepTop: 1.0, w: 46 }, hp: 600, t: '连吃 2 株植物后引爆整行' },
-            { n: '豌豆头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'Peashooter/Peashooter.gif', cw: 71, ch: 71, keepTop: 0.70, w: 76 }, hp: 200, t: '头顶豌豆射手，边走边向植物开火' },
-            { n: '向日葵头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'SunFlower/SunFlower1.gif', cw: 73, ch: 74, keepTop: 0.72, w: 78 }, hp: 200, t: '被打死后头顶向日葵掉落一撮阳光' },
+        { title: '植物头 · 特殊僵尸', list: [
+            { n: '高坚果头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 74, head: { src: PL + 'TallNut/TallNut.gif', cw: 83, ch: 119, keepTop: 1.0, w: 34, y: 0, ox: 12 }, hp: 5200, t: '头顶高坚果，全游戏最厚血量之一' },
+            { n: '坚果头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'WallNut/WallNut.gif', cw: 65, ch: 73, keepTop: 1.0, w: 28, y: 2, ox: 12 }, hp: 2600, t: '头顶坚果墙，普通输出打不动' },
+            { n: '机枪头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'GatlingPea/GatlingPea.gif', cw: 88, ch: 84, keepTop: 0.51, w: 46, y: 8, ox: 12 }, hp: 200, t: '头顶机枪射手，边走边 4 连发反击' },
+            { n: '寒冰头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'SnowPea/SnowPea.gif', cw: 71, ch: 71, keepTop: 0.52, w: 40, y: 8, ox: 12 }, hp: 200, t: '头顶寒冰射手，樱桃 / 辣椒等一次性炸弹对它全部免疫，只能用普通火力磨' },
+            { n: '火爆辣椒头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'Jalapeno/Jalapeno.gif', cw: 68, ch: 89, keepTop: 1.0, w: 34, y: 0, ox: 12 }, hp: 600, t: '连吃 2 株植物后引爆整行' },
+            { n: '豌豆头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'Peashooter/Peashooter.gif', cw: 71, ch: 71, keepTop: 0.52, w: 38, y: 8, ox: 12 }, hp: 200, t: '头顶豌豆射手，边走边向植物开火' },
+            { n: '向日葵头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'SunFlower/SunFlower1.gif', cw: 73, ch: 74, keepTop: 0.58, w: 38, y: 5, ox: 12 }, hp: 200, t: '被打死后头顶向日葵掉落一撮阳光' },
             { n: '盲盒僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, gift: true, hp: 200, t: '扛着神秘礼盒，死后打开随机放出一僵尸' },
         ]},
         { title: '有趣的配饰', list: [
             { n: '木锤', img: ZB + 'HammerZombie/Hammer.png', ih: 54, t: '锤子僵尸的配饰，一锤一个罐子' },
             { n: '植物罐', img: 'assets/images/Vase/Vase_Plant.png', ih: 58, t: '绿罐，稳赚的植物' },
-            { n: '僵尸罐', img: 'assets/images/Vase/Vase_Zombie.png', ih: 58, t: '红罐，小心里面有僵尸' },
-            { n: '问号罐', img: 'assets/images/Vase/Vase_Question.png', ih: 58, t: '随机惊喜：阳光、植物或僵尸' },
+            { n: '僵尸罐', img: 'assets/images/Vase/Vase_Zombie.png', ih: 58, t: '红色陶罐——敲开会蹦出僵尸偷袭，看到它先修好防线；路灯花可以提前照亮确认' },
+            { n: '问号罐', img: 'assets/images/Vase/Vase_Question.png', ih: 58, t: '随机开出植物 / 僵尸，偶尔是一撮阳光（+50）——真正的惊喜罐' },
             { n: '金罐', img: 'assets/images/Vase/Vase_Gold.png', ih: 58, t: '地狱限定：必出强力植物或强化僵尸' },
             { n: '冰道', img: ZB + 'Zomboni/ice.png', ih: 44, t: '冰车僵尸驶过草坪留下的冰道（游戏实装）：冰面上无法种植，约 30 秒后融化' },
         ]},
@@ -197,11 +200,12 @@
     .hg-card-ov { position: absolute; right: 1px; bottom: 1px; width: 58px; aspect-ratio: 5/3; pointer-events: none;
         background-size: 100% 200%; background-position: top; background-repeat: no-repeat;
         border-radius: 4px; border: 1px solid rgba(90,60,20,.45); }
-    .hg-zbody { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); image-rendering: auto; }
+    .hg-zbody { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); image-rendering: auto; z-index: 1; }
+    .hg-zice { position: absolute; bottom: 16px; left: calc(50% + 4px); z-index: 0; opacity: .92; }
     .hg-zhead { position: absolute; overflow: hidden; pointer-events: none; }
     .hg-zhead img { position: absolute; left: 0; top: 0; transform: scaleX(-1); }
-    .hg-zhammer { position: absolute; bottom: 6px; right: 2px; width: 34px; transform: rotate(-24deg); }
-    .hg-zgift { position: absolute; bottom: 8px; right: 0px; width: 34px; }
+    .hg-zhammer { position: absolute; bottom: 22px; left: calc(50% - 24px); width: 30px; transform: rotate(-40deg); z-index: 2; }
+    .hg-zgift { position: absolute; bottom: 24px; left: calc(50% - 24px); width: 34px; z-index: 2; }
     .hg-tname { margin-top: 4px; font-size: 12.5px; font-weight: 700; color: #4a3414; text-align: center; line-height: 1.25; }
     .hg-tsub { font-size: 11px; color: #8a6d3b; margin-top: 1px; }
     .hg-tip { font-size: 12px; color: #8a6d3b; margin: 10px 0 2px; text-align: center; }
@@ -260,21 +264,27 @@
             '<div class="hg-d-desc">' + (p.t || '') + '</div>';
     }
 
-    // 僵尸大图：本体 + （可选）头顶植物 / 锤子 / 礼盒，s=放大倍数
+    // 僵尸大图：本体 + （可选）冰道 / 头顶植物 / 锤子 / 礼盒，s=放大倍数
+    // v3.43.0：head 支持 y=贴片显示顶部(px@h70) ox=水平中心偏移(px@h70) —— 坚果/高坚果缩成
+    // "头顶小贴片"露出僵尸本体；射手类头 keepTop 收紧后根茎一点不露；冰车带冰道层。
     function zombieArt(z, s) {
         const h = Math.round((z.h || 70) * s);
-        let art = '<img class="hg-zbody" src="' + z.img + V + '" style="height:' + h + 'px;' +
+        let art = '';
+        if (z.ice) art += '<img class="hg-zice" src="' + ZB + 'Zomboni/ice.png' + V + '" style="width:' + Math.round(52 * s) + 'px;">';
+        art += '<img class="hg-zbody" src="' + z.img + V + '" style="height:' + h + 'px;' +
             (z.dark ? 'filter:brightness(.72) contrast(1.25);' : '') + '">';
         if (z.head) {
             const c = z.head;
             const w = c.w * (h / 70);
             const boxH = Math.round(w * c.ch / c.cw * c.keepTop);
+            const offX = (c.ox !== undefined ? c.ox : 6) * (h / 70);
+            const topPx = (c.y !== undefined ? c.y : 0) * (h / 70);
             art += '<div class="hg-zhead" style="width:' + Math.round(w) + 'px;height:' + boxH + 'px;' +
-                'left:calc(50% - ' + Math.round(w / 2 - 6 * s) + 'px);top:' + Math.max(0, h - 10 - boxH) + 'px;">' +
+                'left:calc(50% - ' + Math.round(w / 2 - offX) + 'px);top:' + Math.round(topPx) + 'px;">' +
                 '<img src="' + c.src + V + '" style="width:' + Math.round(w) + 'px;">' +
                 '</div>';
         }
-        if (z.hammer) art += '<img class="hg-zhammer" src="' + ZB + 'HammerZombie/Hammer.png' + V + '" style="width:' + Math.round(34 * s) + 'px;">';
+        if (z.hammer) art += '<img class="hg-zhammer" src="' + ZB + 'HammerZombie/Hammer.png' + V + '" style="width:' + Math.round(30 * s) + 'px;">';
         if (z.gift) art += '<img class="hg-zgift" src="' + PL + 'PlantBox/GiftBox.png' + V + '" style="width:' + Math.round(34 * s) + 'px;">';
         return art;
     }
