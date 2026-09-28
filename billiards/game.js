@@ -983,6 +983,13 @@ function physStep(dt) {
         if (Math.abs(b.x) > W / 2 + 0.085 || Math.abs(b.z) > H / 2 + 0.085) {
             forcePot(b);
         }
+
+        // 停球救援：球已停稳且球心越过库边鼻线（只可能在袋口咽喉区内）。
+        // 物理袋口开口比视觉袋嘴宽，慢球可能停在"捕获圈外+越界边界内"的死区细条上，
+        // 视觉上嵌进袋口/木框（v2.7.2 用户截图）→ 按掉袋处理。运动中的球不受影响
+        if (b.vx === 0 && b.vz === 0 && (Math.abs(b.x) > L || Math.abs(b.z) > T)) {
+            forcePot(b);
+        }
     }
 
     return anyMoving;
