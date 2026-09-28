@@ -6,6 +6,10 @@
 // v3.43.0：跳跳/撑杆僵尸名称对调；植物头贴片去茎（keepTop 收紧）+ 坚果/高坚果头改"头顶小贴片"露出本体；
 //           锤子/礼盒改到手部；小鬼放大到普通僵尸一半身高；冰车补冰道；寒冰头描述对齐免疫机制；
 //           问号罐阳光实装后文案同步；僵尸罐/问号罐描述具体化。
+// v3.44.0：融合图鉴整版换成"场上实拍外观"（与草地上一模一样的主体+叠加层合成，不再用双卡面叠贴）；
+//           南瓜壳=南瓜头=同一株（融合区不再重复出现）；经典区阳光价对齐新定价（西瓜500/猫尾275/机枪550/
+//           三线325/忧郁菇225/钢地刺225）；撑杆僵尸统一（跳跳僵尸称呼取消，两组都用走路图）；
+//           坚果头/高坚果头改回"盖在僵尸身上"，盲盒礼盒贴在身上。
 (function () {
     const V = '?v=' + Date.now();
     const CARD = 'assets/images/Card/Plants/';
@@ -40,13 +44,13 @@
         { n: '毁灭菇', g: 'DoomShroom', c: 125, cd: 50, hp: 300, t: '全屏 9999 秒杀；原地留陨石坑 30 秒' },
         { n: '樱桃炸弹', g: 'CherryBomb', c: 150, cd: 50, hp: 300, t: '1800 伤害 / 3×3，种下 1 秒后引爆' },
         { n: '火爆辣椒', g: 'Jalapeno', c: 125, cd: 50, hp: 300, t: '1800 伤害烧光一整行' },
-        { n: '冰西瓜投手', g: 'WinterMelon', c: 200, cd: 7.5, hp: 300, t: '直击 60+溅射 30，命中减速 10 秒' },
-        { n: '西瓜投手', g: 'MelonPult', c: 300, cd: 7.5, hp: 300, t: '抛射 60+溅射 30，无视铁门' },
-        { n: '猫尾草', g: 'Cattail', c: 225, cd: 7.5, hp: 300, t: '全场自动追踪，20 伤 / 1.4s' },
-        { n: '机枪射手', g: 'GatlingPea', c: 250, cd: 50, hp: 300, t: '4 连发×20 / 1.5s，单行持续输出' },
-        { n: '三线射手', g: 'Threepeater', c: 300, cd: 7.5, hp: 300, t: '同时射上中下三行，每发 20' },
+        { n: '冰西瓜投手', g: 'WinterMelon', c: 200, cd: 7.5, hp: 300, t: '直击 60+溅射 30，命中减速 10 秒' }, // v3.44.0 定价不变
+        { n: '西瓜投手', g: 'MelonPult', c: 500, cd: 7.5, hp: 300, t: '抛射 60+溅射 30，无视铁门' }, // v3.44.0 300→500
+        { n: '猫尾草', g: 'Cattail', c: 275, cd: 7.5, hp: 300, t: '全场自动追踪，20 伤 / 1.4s' }, // v3.44.0 225→275
+        { n: '机枪射手', g: 'GatlingPea', c: 550, cd: 50, hp: 300, t: '4 连发×20 / 1.5s，单行持续输出' }, // v3.44.0 250→550
+        { n: '三线射手', g: 'Threepeater', c: 325, cd: 7.5, hp: 300, t: '同时射上中下三行，每发 20' }, // v3.44.0 300→325
         { n: '寒冰菇', g: 'IceShroom', c: 75, cd: 50, hp: 300, t: '全屏冻结 + 减速 10 秒' },
-        { n: '忧郁菇', g: 'GloomShroom', c: 150, cd: 7.5, hp: 300, t: '3×3 每 1s 八发×80，穿甲穿门近身绞肉机' },
+        { n: '忧郁菇', g: 'GloomShroom', c: 225, cd: 7.5, hp: 300, t: '3×3 每 1s 八发×80，穿甲穿门近身绞肉机' }, // v3.44.0 150→225
         { n: '卷心菜投手', g: 'CabbagePult', c: 150, cd: 7.5, hp: 300, t: '抛射 40 破甲，护甲打不掉' },
         { n: '玉米投手', g: 'KernelPult', c: 175, cd: 7.5, hp: 300, t: '20 伤，20% 投黄油定身 3 秒' },
         { n: '火炬树桩', g: 'Torchwood', c: 175, cd: 7.5, hp: 300, t: '豌豆穿过点燃，伤害翻倍' },
@@ -61,10 +65,10 @@
         { n: '大嘴花', g: 'Chomper', c: 150, cd: 7.5, hp: 300, t: '整只吞噬（巨人除外），咀嚼 40 秒' },
         { n: '土豆地雷', g: 'PotatoMine', c: 25, cd: 30, hp: 300, t: '武装 15 秒，踩上即 1800 单体' },
         { n: '窝瓜', g: 'Squash', c: 50, cd: 30, hp: 300, t: '跃起压扁 1800，即种即用' },
-        { n: '钢地刺', g: 'Spikerock', c: 125, cd: 7.5, hp: 1200, t: '120 / 0.75s，不会被啃，可扛 3 辆冰车' },
+        { n: '钢地刺', g: 'Spikerock', c: 225, cd: 7.5, hp: 1200, t: '120 / 0.75s，不会被啃，可扛 3 辆冰车' }, // v3.44.0 125→225
         { n: '地刺', g: 'Spikeweed', c: 100, cd: 7.5, hp: 300, t: '40 / 0.75s，贴地不可被啃，扎爆冰车' },
-        { n: '高坚果', g: 'TallNut', c: 125, cd: 30, hp: 8000, t: '肉盾天花板；跳跳僵尸跳不过它（但拦不住一路蹦的撑杆僵尸）' },
-        { n: '南瓜头', g: 'PumpkinHead', c: 125, cd: 30, hp: 4000, t: '套在植物外的护壳，三阶段裂纹' },
+        { n: '高坚果', g: 'TallNut', c: 125, cd: 30, hp: 8000, t: '肉盾天花板，连撑杆僵尸的第一跳都跳不过来' },
+        { n: '南瓜壳', g: 'PumpkinHead', c: 125, cd: 30, hp: 4000, t: '套在植物外的护壳，三阶段裂纹（与融合区南瓜壳同株，坚果+高坚果可融合出壳）' },
         { n: '坚果墙', g: 'WallNut', c: 50, cd: 30, hp: 4000, t: '纯肉盾' },
         { n: '双子向日葵', g: 'TwinSunflower', c: 150, cd: 50, hp: 300, t: '2×25 / 24s，经济翻倍' },
         { n: '向日葵', g: 'SunFlower', c: 50, cd: 7.5, hp: 300, t: '25 / 24s，开局必种' },
@@ -74,29 +78,33 @@
         { n: '小喷菇', g: 'PuffShroom', c: 0, cd: 7.5, hp: 300, t: '完全免费的前排过渡' },
         { n: '植物盲盒', g: 'PlantBox', c: 500, cd: 5, hp: 300, t: '随机开出全植物池一株' },
     ];
-    // 融合专属：p=主体卡面 q=副体卡面（右下角叠放，与游戏内融合卡面同规则）
+    // v3.44.0 融合专属：不再用"主卡+副卡"叠贴 —— 直接复刻场上实拍外观。
+    // base=主体立绘（=草地上的 this.element.src） bf=主体滤镜 bt=主体 transform
+    // ov=叠加层立绘（=fusionOverlay.src） oc=叠加层 clipPath ot=叠加层 transform
+    // 全部数值与 Plant.js 实机分支一字不差；md=素材最大边（算缩放用）
     const FUSION = [
-        { n: '玉米加农炮', g: 'CobCannon', t: '三株玉米投手合体，占两格；充能 25s 后手动瞄准 1800 / 3×3，全游戏最强单发' },
-        { n: '寒冰炸弹', p: 'CherryBomb', q: 'SnowPea', t: '寒冰射手+樱桃炸弹：2400 秒杀铁桶级 / 3×3 且全场冻结减速 10 秒' },
-        { n: '冰西瓜猫尾草', p: 'Cattail', q: 'WinterMelon', t: '冰西瓜投手+猫尾草：全场追踪 60+30 + 减速' },
-        { n: '西瓜猫尾草', p: 'Cattail', q: 'MelonPult', t: '西瓜投手+猫尾草：全场追踪 60+30' },
-        { n: '樱桃射手', p: 'CherryBomb', q: 'Peashooter', t: '豌豆射手+樱桃炸弹：每第 10 发射出小樱桃，900 / 3×3' },
-        { n: '冰杨桃', p: 'SnowPea', q: 'Starfruit', t: '寒冰射手+杨桃：五向冰晶 + 减速' },
-        { n: '爆米花投手', p: 'KernelPult', q: 'Jalapeno', t: '玉米投手+火爆辣椒：40 破甲 + 3×3 焦香溅射' },
-        { n: '双料投手', p: 'KernelPult', q: 'CabbagePult', t: '玉米投手+卷心菜投手：两种弹药交替' },
-        { n: '寒冰卷心菜', p: 'CabbagePult', q: 'IceShroom', t: '卷心菜投手+寒冰菇：40 破甲 + 减速' },
-        { n: '坚果射手', p: 'WallNut', q: 'Peashooter', t: '坚果墙+豌豆射手：能扛能打' },
-        { n: '卷心菜堡垒', p: 'WallNut', q: 'CabbagePult', t: '坚果墙+卷心菜投手：肉盾+破甲投掷' },
-        { n: '大嘴坚果', p: 'WallNut', q: 'Chomper', t: '坚果墙+大嘴花：4000 血又能吞' },
-        { n: '钢刺高坚果', p: 'TallNut', q: 'Spikerock', t: '高坚果+钢地刺：8000 血 + 脚下带刺' },
-        { n: '寒冰坚果', p: 'WallNut', q: 'SnowPea', t: '坚果墙+寒冰射手：啃它的人被冻慢' },
-        { n: '地刺坚果', p: 'WallNut', q: 'Spikeweed', t: '坚果墙+地刺：啃它等于啃刺' },
-        { n: '南瓜壳', p: 'WallNut', q: 'TallNut', t: '坚果墙+高坚果：套在任意植物外的 12000 超厚壳' },
-        { n: '坚果向日葵', p: 'SunFlower', q: 'WallNut', t: '向日葵+坚果墙：能扛的发电机' },
-        { n: '毁灭向日葵', p: 'SunFlower', q: 'DoomShroom', t: '向日葵+毁灭菇：正常产阳光，被啃死时原地 1800 大爆炸' },
-        { n: '豌豆向日葵', p: 'SunFlower', q: 'Peashooter', t: '向日葵+豌豆射手：产阳光还打人' },
-        { n: '孢子地雷', p: 'PotatoMine', q: 'PuffShroom', t: '土豆地雷+小喷菇：廉价控场地雷' },
+        { n: '玉米加农炮', base: PL + 'CobCannon/CobCannon.png', md: 148, t: '三株玉米投手合体，占两格；充能 25s 后手动瞄准 1800 / 3×3，全游戏最强单发' },
+        { n: '寒冰炸弹', base: PL + 'CherryBomb/CherryBomb.gif', bf: 'hue-rotate(180deg) saturate(1.5)', md: 112, t: '寒冰射手+樱桃炸弹：2400 秒杀铁桶级 / 3×3 且全场冻结减速 10 秒' },
+        { n: '冰西瓜猫尾草', base: PL + 'Cattail/Cattail.gif', ov: PL + 'WinterMelon/WinterMelon.png', ot: 'translate(-5px, -30px) scale(0.7)', md: 96, t: '冰西瓜投手+猫尾草：全场追踪 60+30 + 减速' },
+        { n: '西瓜猫尾草', base: PL + 'Cattail/Cattail.gif', ov: PL + 'MelonPult/MelonPult.png', ot: 'translate(-5px, -30px) scale(0.7)', md: 96, t: '西瓜投手+猫尾草：全场追踪 60+30' },
+        { n: '樱桃射手', base: PL + 'Peashooter/Peashooter.gif', bf: 'hue-rotate(-45deg) saturate(2.0)', md: 71, t: '豌豆射手+樱桃炸弹：每第 10 发射出小樱桃，900 / 3×3' },
+        { n: '冰杨桃', base: PL + 'Starfruit/Starfruit.gif', bf: 'brightness(1.1) hue-rotate(160deg) saturate(1.6)', md: 77, t: '寒冰射手+杨桃：五向冰晶 + 减速' },
+        { n: '爆米花投手', base: PL + 'KernelPult/KernelPult.png', bf: 'hue-rotate(-18deg) saturate(1.9) brightness(1.18)', md: 96, t: '玉米投手+火爆辣椒：40 破甲 + 3×3 焦香溅射' },
+        { n: '双料投手', base: PL + 'KernelPult/KernelPult.png', ov: PL + 'CabbagePult/CabbagePult.png', oc: 'polygon(0 0, 48% 0, 48% 50%, 0 50%)', ot: 'translate(37px, 8px)', md: 96, t: '玉米投手+卷心菜投手：两种弹药交替' },
+        { n: '寒冰卷心菜', base: PL + 'CabbagePult/CabbagePult.png', bf: 'brightness(112%) hue-rotate(120deg) saturate(1.7)', md: 96, t: '卷心菜投手+寒冰菇：40 破甲 + 减速' },
+        { n: '坚果射手', base: PL + 'WallNut/WallNut.gif', ov: PL + 'Peashooter/Peashooter.gif', oc: 'polygon(0 0, 100% 0, 100% 65%, 0 65%)', ot: 'translate(5px, -15px)', md: 71, t: '坚果墙+豌豆射手：能扛能打' },
+        { n: '卷心菜堡垒', base: PL + 'WallNut/WallNut.gif', ov: PL + 'CabbagePult/CabbagePult.png', oc: 'polygon(0 0, 46% 0, 46% 46%, 0 46%)', ot: 'translate(26px, -4px)', md: 96, t: '坚果墙+卷心菜投手：肉盾+破甲投掷' },
+        { n: '大嘴坚果', base: PL + 'WallNut/WallNut.gif', ov: PL + 'Chomper/Chomper.gif', oc: 'polygon(0 0, 100% 0, 100% 85%, 0 85%)', ot: 'translate(20px, -25px) scale(0.9)', md: 130, t: '坚果墙+大嘴花：4000 血又能吞' },
+        { n: '钢刺高坚果', base: PL + 'TallNut/TallNut.gif', ov: PL + 'Spikerock/Spikerock.gif', ot: 'translate(0px, 58px)', md: 119, t: '高坚果+钢地刺：8000 血 + 脚下带刺' },
+        { n: '寒冰坚果', base: PL + 'WallNut/WallNut.gif', bf: 'hue-rotate(180deg) saturate(1.5) brightness(1.2)', md: 73, t: '坚果墙+寒冰射手：啃它的人被冻慢' },
+        { n: '地刺坚果', base: PL + 'WallNut/WallNut.gif', ov: PL + 'Spikeweed/Spikeweed.gif', ot: 'translate(0px, 48px)', md: 85, t: '坚果墙+地刺：啃它等于啃刺' },
+        { n: '坚果向日葵', base: PL + 'SunFlower/SunFlower1.gif', bt: 'scale(1.25)', ov: PL + 'WallNut/WallNut.gif', ot: '', md: 92, t: '向日葵+坚果墙：能扛的发电机' },
+        { n: '毁灭向日葵', base: PL + 'SunFlower/SunFlower1.gif', bf: 'grayscale(0.8) brightness(0.6) sepia(1) hue-rotate(240deg) saturate(3)', md: 74, t: '向日葵+毁灭菇：正常产阳光，被啃死时原地 1800 大爆炸' },
+        { n: '豌豆向日葵', base: PL + 'SunFlower/SunFlower1.gif', ov: PL + 'Peashooter/Peashooter.gif', oc: 'polygon(0 0, 100% 0, 100% 65%, 0 65%)', ot: 'translate(0px, -20px)', md: 92, t: '向日葵+豌豆射手：产阳光还打人' },
+        { n: '孢子地雷', base: PL + 'PotatoMine/PotatoMine.gif', ov: PL + 'PuffShroom/PuffShroom.gif', oc: 'polygon(0 0, 100% 0, 100% 85%, 0 85%)', ot: 'translate(0px, -30px) scale(0.9)', md: 75, t: '土豆地雷+小喷菇：廉价控场地雷' },
     ];
+    // 注：南瓜壳不再单独列在融合区 —— 它与经典区"南瓜壳"是同一株植物（坚果墙+高坚果融合=套壳玩法，
+    // 配方见游戏内「融合配方大全」），同一关键词不重复出现。
 
     // ================= 僵尸图鉴（按模式分组，组内按厉害程度排序） =================
     // img=贴图 h=显示高度（按真实体型比例：普通僵尸=70） head=头顶植物 accNote=护甲说明
@@ -110,7 +118,7 @@
             { n: '铁门僵尸', img: ZB + 'ScreenDoorZombie/ScreenDoorZombie.gif', h: 70, hp: 1300, t: '铁门挡正面直射；投手/孢子类破甲攻击无视它' },
             { n: '舞王僵尸', img: ZB + 'DancingZombie/DancingZombie.gif', h: 72, hp: 500, t: '每 10 秒召唤一排伴舞' },
             { n: '伴舞僵尸', img: ZB + 'BackupDancer/BackupDancer.gif', h: 70, hp: 200, t: '舞王召唤的随从，成群出现' },
-            { n: '跳跳僵尸', img: ZB + 'PoleVaultingZombie/PoleVaultingZombie.gif', h: 74, hp: 500, t: '高速冲来，跳过遇到的第一株植物' },
+            { n: '撑杆僵尸', img: ZB + 'PoleVaultingZombie/PoleVaultingZombie.gif', h: 74, hp: 500, t: '高速冲来，跳过遇到的第一株植物（高坚果跳不过去）' },
             { n: '读报僵尸', img: ZB + 'NewspaperZombie/HeadWalk1.gif', h: 70, hp: 300, t: '报纸 150 护甲，打碎后狂暴加速' },
             { n: '路障僵尸', img: ZB + 'ConeheadZombie/ConeheadZombie.gif', h: 70, hp: 560, t: '路障 360 护甲，基础加强版' },
             { n: '旗帜僵尸', img: ZB + 'FlagZombie/FlagZombie.gif', h: 70, hp: 200, t: '「一大波僵尸」的先导，举旗领军' },
@@ -121,11 +129,11 @@
             { n: '锤子僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, hammer: true, hp: 560, t: '手持木锤，一路替你（或敌人）锤碎沿途罐子' },
             { n: '小丑盒僵尸', img: ZB + 'JackinTheBoxZombie/Walk.gif', h: 70, hp: 500, t: '抱着玩偶盒前进，随时开盒自爆，炸毁 3×3 内植物' },
             { n: '铁梯僵尸', img: ZB + 'ScreenDoorZombie/ScreenDoorZombie.gif', h: 70, hp: 500, t: '速度快，架梯翻过坚果墙类防御' },
-            { n: '撑杆僵尸', img: ZB + 'PoleVaultingZombie/PoleVaultingZombieJump.gif', h: 62, hp: 340, t: '高速冲来，一路跳过所有植物，连高坚果都拦不住' },
+            { n: '撑杆僵尸', img: ZB + 'PoleVaultingZombie/PoleVaultingZombie.gif', h: 74, hp: 340, t: '高速冲来，一路蹦跳着越过所有植物，连高坚果都拦不住' },
         ]},
         { title: '植物头 · 特殊僵尸', list: [
-            { n: '高坚果头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 74, head: { src: PL + 'TallNut/TallNut.gif', cw: 83, ch: 119, keepTop: 1.0, w: 34, y: 0, ox: 12 }, hp: 5200, t: '头顶高坚果，全游戏最厚血量之一' },
-            { n: '坚果头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'WallNut/WallNut.gif', cw: 65, ch: 73, keepTop: 1.0, w: 28, y: 2, ox: 12 }, hp: 2600, t: '头顶坚果墙，普通输出打不动' },
+            { n: '高坚果头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 74, head: { src: PL + 'TallNut/TallNut.gif', cw: 83, ch: 119, keepTop: 1.0, w: 40, y: 0, ox: 10 }, hp: 5200, t: '高坚果罩在身上，全游戏最厚血量之一' },
+            { n: '坚果头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'WallNut/WallNut.gif', cw: 65, ch: 73, keepTop: 1.0, w: 42, y: 3, ox: 10 }, hp: 2600, t: '坚果墙盖在身上，普通输出打不动' },
             { n: '机枪头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'GatlingPea/GatlingPea.gif', cw: 88, ch: 84, keepTop: 0.51, w: 46, y: 8, ox: 12 }, hp: 200, t: '头顶机枪射手，边走边 4 连发反击' },
             { n: '寒冰头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'SnowPea/SnowPea.gif', cw: 71, ch: 71, keepTop: 0.52, w: 40, y: 8, ox: 12 }, hp: 200, t: '头顶寒冰射手，樱桃 / 辣椒等一次性炸弹对它全部免疫，只能用普通火力磨' },
             { n: '火爆辣椒头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'Jalapeno/Jalapeno.gif', cw: 68, ch: 89, keepTop: 1.0, w: 34, y: 0, ox: 12 }, hp: 600, t: '连吃 2 株植物后引爆整行' },
@@ -205,7 +213,10 @@
     .hg-zhead { position: absolute; overflow: hidden; pointer-events: none; }
     .hg-zhead img { position: absolute; left: 0; top: 0; transform: scaleX(-1); }
     .hg-zhammer { position: absolute; bottom: 22px; left: calc(50% - 24px); width: 30px; transform: rotate(-40deg); z-index: 2; }
-    .hg-zgift { position: absolute; bottom: 24px; left: calc(50% - 24px); width: 34px; z-index: 2; }
+    .hg-zgift { position: absolute; bottom: 20px; left: calc(50% - 17px); width: 34px; z-index: 2; }
+    /* v3.44.0 融合"场上实拍"容器：flex 居中一个 0×0 缩放锚点 */
+    .hg-lawn { position: relative; width: 100px; height: 64px; display: flex; align-items: center; justify-content: center; }
+    .hg-lawn-d { width: 200px; height: 112px; }
     .hg-tname { margin-top: 4px; font-size: 12.5px; font-weight: 700; color: #4a3414; text-align: center; line-height: 1.25; }
     .hg-tsub { font-size: 11px; color: #8a6d3b; margin-top: 1px; }
     .hg-tip { font-size: 12px; color: #8a6d3b; margin: 10px 0 2px; text-align: center; }
@@ -246,9 +257,25 @@
     function badge(txt) { return '<span class="hg-badge">' + txt + '</span>'; }
 
     // ===== 详情卡内容 =====
+    // v3.44.0 融合株"场上实拍"渲染：0×0 锚点 + 主体/叠加层按实机 transform/clip/filter 原样复刻，
+    // 整体 scale = 目标边长 / 素材最大边（实机 translate 数值以原尺寸为准，等比缩放不变形）
+    function lawnStage(f, target) {
+        const sc = (target / (f.md || 96)).toFixed(3);
+        let h = '';
+        if (f.base) h += '<img src="' + f.base + V + '" style="position:absolute;transform:translate(-50%,-50%) ' + (f.bt || '') + ';' +
+            (f.bf ? 'filter:' + f.bf + ';' : '') + '">';
+        if (f.ov) h += '<img src="' + f.ov + V + '" style="position:absolute;transform:translate(-50%,-50%) ' + (f.ot || '') + ';' +
+            (f.oc ? 'clip-path:' + f.oc + ';' : '') + '">';
+        return '<div style="position:relative;width:0;height:0;transform:scale(' + sc + ');">' + h + '</div>';
+    }
+
     function plantDetail(p, fusion) {
-        let art = '<div class="hg-d-card" style="background-image:' + cardUrl(p.g || p.p) + '"></div>';
-        if (fusion && p.q) art += '<div class="hg-d-card-ov" style="background-image:' + cardUrl(p.q) + '"></div>';
+        let art;
+        if (fusion) {
+            art = '<div class="hg-lawn hg-lawn-d">' + lawnStage(p, 104) + '</div>';
+        } else {
+            art = '<div class="hg-d-card" style="background-image:' + cardUrl(p.g) + '"></div>';
+        }
         let bs = '';
         if (fusion) {
             bs += badge('🧬 融合植物');
@@ -312,9 +339,11 @@
 
     // ===== 瓦片（点击 → 详情） =====
     function plantTile(p, fusion, key) {
-        let art = '<div class="hg-card" style="background-image:' + cardUrl(p.g || p.p) + '"></div>';
-        if (fusion && p.q) {
-            art += '<div class="hg-card-ov" style="background-image:' + cardUrl(p.q) + '"></div>';
+        let art;
+        if (fusion) {
+            art = '<div class="hg-lawn">' + lawnStage(p, 60) + '</div>';
+        } else {
+            art = '<div class="hg-card" style="background-image:' + cardUrl(p.g) + '"></div>';
         }
         DETAILS[key] = plantDetail(p, fusion);
         return '<div class="hg-tile" data-k="' + key + '" title="' + (p.t || '') + '">' +

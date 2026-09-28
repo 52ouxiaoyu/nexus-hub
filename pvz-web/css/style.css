@@ -651,9 +651,49 @@ body {
     align-items: center; justify-content: center;
     background: rgba(0, 0, 0, 0.55); cursor: pointer;
 }
-#pause-overlay .pause-panel { text-align: center; }
-#pause-overlay .pause-big {
-    font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif; font-size: 54px; font-weight: 900;
-    letter-spacing: 6px; color: #fff8e2; text-shadow: 0 4px 16px rgba(0, 0, 0, 0.8);
+/* v3.44.0：暂停面板与其他弹窗同款 —— 深棕色边框羊皮纸卡 */
+#pause-overlay .pause-panel {
+    min-width: 340px; text-align: center; padding: 26px 46px 28px;
+    background: linear-gradient(180deg, #fdf4dc 0%, #f2ddab 55%, #e3c688 100%);
+    border: 6px solid #7a4a1e; border-radius: 20px;
+    box-shadow: inset 0 0 0 3px rgba(255,255,255,0.65), inset 0 0 26px rgba(122,74,30,0.18), 0 18px 44px rgba(0,0,0,0.65);
 }
-#pause-overlay .pause-tip { margin-top: 12px; font-size: 15px; color: rgba(255,255,255,0.85); letter-spacing: 2px; }
+#pause-overlay .pause-big {
+    font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif; font-size: 44px; font-weight: 900;
+    letter-spacing: 6px; color: #a05a00;
+    text-shadow: 2px 2px 0 #fff7e0, -1px 1px 0 #fff7e0, 1px -1px 0 #fff7e0, -1px -1px 0 #fff7e0;
+}
+#pause-overlay .pause-tip { margin-top: 12px; font-size: 15px; color: #5a3a12; letter-spacing: 2px; font-weight: 700; }
+
+
+/* ================= v3.44.0 选卡校验弹窗（深棕框，与暂停/胜利面板同款） ================= */
+#seed-warn-overlay {
+    position: fixed; inset: 0; z-index: 3000; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(24, 12, 2, 0.55);
+}
+#seed-warn-overlay .seed-warn-panel {
+    min-width: 420px; text-align: center; padding: 24px 40px 28px;
+    background: linear-gradient(180deg, #fdf4dc 0%, #f2ddab 55%, #e3c688 100%);
+    border: 6px solid #7a4a1e; border-radius: 20px;
+    box-shadow: inset 0 0 0 3px rgba(255,255,255,0.65), inset 0 0 26px rgba(122,74,30,0.18), 0 18px 44px rgba(0,0,0,0.65);
+    font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif;
+}
+#seed-warn-overlay .seed-warn-title {
+    font-size: 24px; font-weight: 900; letter-spacing: 4px; color: #a05a00;
+    text-shadow: 1px 1px 0 #fff7e0;
+}
+#seed-warn-overlay .seed-warn-text {
+    margin-top: 10px; font-size: 18px; font-weight: 700; color: #5a3a12; letter-spacing: 1px;
+}
+#seed-warn-overlay .seed-warn-btns { margin-top: 18px; display: flex; gap: 18px; justify-content: center; }
+#seed-warn-overlay .seed-warn-btns button {
+    min-width: 120px; padding: 10px 26px; font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif;
+    font-size: 19px; font-weight: 900; letter-spacing: 4px; cursor: pointer;
+    color: #f7e9c0; background: linear-gradient(180deg, #7a5a33 0%, #5d4223 100%);
+    border: 3px solid #3a2812; border-radius: 12px; text-shadow: 1px 1px 0 #2a1c0c;
+    box-shadow: 0 4px 0 #241708, 0 6px 12px rgba(0,0,0,0.4);
+    transition: transform 0.1s ease, filter 0.1s ease;
+}
+#seed-warn-overlay .seed-warn-btns button:hover { filter: brightness(1.15); }
+#seed-warn-overlay .seed-warn-btns button:active { transform: translateY(2px); box-shadow: 0 1px 0 #241708; }
