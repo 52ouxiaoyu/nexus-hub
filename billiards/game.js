@@ -2079,8 +2079,9 @@ function initInput() {
             ghostCue.material.color.setHex(validCuePos(gx, gz) ? 0xffffff : 0xff5f56);
             return;
         }
-        // 蓄力中锁定瞄准：按住鼠标蓄力时手会微抖，此时继续跟随指针会把瞄准带歪
-        if (state === 'aim') updateAimFromPointer(e);
+        // 蓄力中瞄准跟随指针（v2.7.3 应用户要求恢复：力度是时间三角波、与鼠标无关，
+        // 蓄力中移动鼠标=主动调向；依赖力度的长轨迹线蓄力中已隐藏，不会再误导）
+        if (state === 'aim' || state === 'charge') updateAimFromPointer(e);
     });
 
     el.addEventListener('pointerdown', (e) => {
