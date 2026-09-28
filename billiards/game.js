@@ -1121,6 +1121,16 @@ function restoreCueD() {
     placeBallAt(cue, SNK.baulkX - 0.02, 0);
 }
 
+// 平分决胜（官方规则）：重摆黑球（若在袋）→ 抽签决定先手 → 母球手中球（D 区）
+function blackTieBreak(baseMsg) {
+    const b = balls.find(x => x.num === 21);
+    if (b.potted) { b.potted = false; b.fall = -1; spotBall(b); }
+    current = Math.random() < 0.5 ? 0 : 1;
+    restoreCueD();
+    startBallInHand();
+    showMsg(baseMsg + ' · 抽签：' + players[current].name + ' 先手（母球手中球）', 4600);
+}
+
 function resolveSnookerShot() {
     const O = players[1 - current];
     const cuePotted = cueBall().potted;
@@ -1155,6 +1165,18 @@ function resolveSnookerShot() {
         if (cuePotted) restoreCueD();
         snooker.onColour = false;
         switchPlayer(true);
+        // 真实规则：只剩黑球后，任何犯规也直接终局（罚分后平分则进入黑球决胜）
+        if (on.category === 'colourN' && on.num === 21) {
+            const [s0, s1] = snooker.scores;
+            if (s0 !== s1) {
+                gameOver(s0 > s1 ? 0 : 1, '终局比分 ' + players[0].name + ' ' + s0 + ' : ' + s1 + ' ' + players[1].name
+                    + '（黑球阶段犯规即终局）');
+                return;
+            }
+            blackTieBreak('犯规：' + foul + ' · ' + players[current].name + ' +' + pen + ' 分 · 罚后平分！重摆黑球决胜');
+            setRules(); refreshHUD(); maybeRunAI();
+            return;
+        }
         showMsg('犯规：' + foul + ' · ' + players[current].name + ' +' + pen + ' 分' + (cuePotted ? ' · D 区自由球' : ''), 4200);
         if (cuePotted) startBallInHand();
         else { state = 'aim'; setHint(aimHint()); }
@@ -1178,18 +1200,16 @@ function resolveSnookerShot() {
     }
     snooker.scores[current] += gained;
 
-    // 终局：顺序阶段打进黑球
+    // 终局：顺序阶段打进黑球——真实规则：只剩黑球后第一杆进球即终局（平分重摆黑球决胜）
     if (on.category === 'colourN' && on.num === 21) {
         const [s0, s1] = snooker.scores;
         if (s0 === s1) {
-            const b = balls.find(x => x.num === 21);
-            b.potted = false; b.fall = -1;
-            spotBall(b);                       // 平分：重摆黑球决胜
-            showMsg('平分！重摆黑球决胜', 3200);
-        } else {
-            gameOver(s0 > s1 ? 0 : 1, '终局比分 ' + players[0].name + ' ' + s0 + ' : ' + s1 + ' ' + players[1].name);
+            blackTieBreak('平分！重摆黑球决胜');   // 官方规则：抽签先手 + 母球手中球
+            setRules(); refreshHUD(); maybeRunAI();
             return;
         }
+        gameOver(s0 > s1 ? 0 : 1, '终局比分 ' + players[0].name + ' ' + s0 + ' : ' + s1 + ' ' + players[1].name);
+        return;
     }
 
     if (potted.length === 0) {
@@ -1395,10 +1415,15 @@ function snookerRuleHint() {
         foul: '母球落袋 / 先碰或打进红球 / 空杆 → 对方 +4 分起',
     };
     const c = SNK_COLOURS[on.num - 16];
+    const isBlack = on.num === 21;
     return {
         target: '红球清完！按顺序：<b>' + c.name + '</b>（' + on.val + ' 分 · 进袋不再重摆）',
-        legal: '母球先碰这颗彩球并打进 → 得分，继续打下一颗彩球',
-        foul: '母球落袋 / 碰错球 / 打进别的球 → 对方 +4 分起（按涉及球最高分值罚）',
+        legal: isBlack
+            ? '母球先碰黑球并打进 → 得 7 分，一局结束（平分则重摆黑球决胜）'
+            : '母球先碰这颗彩球并打进 → 得分，继续打下一颗彩球',
+        foul: isBlack
+            ? '黑球阶段任何犯规直接终局（罚 7 分，除非罚后平分才重摆黑球决胜）'
+            : '母球落袋 / 碰错球 / 打进别的球 → 对方 +4 分起（按涉及球最高分值罚）',
     };
 }
 
@@ -1462,9 +1487,9 @@ function validCuePos(x, z) {
     const R = CFG.R;
     if (Math.abs(x) > CFG.W / 2 - R || Math.abs(z) > CFG.H / 2 - R) return false;
     if (gameMode === 'snooker') {
-        // 斯诺克自由球只能放在 D 区半圆内（置球区线之后）
+        // 斯诺克自由球只能放在 D 区半圆内（球心在 D 内即可，与台面画线一致）
         if (x > SNK.baulkX + 0.001) return false;
-        if (Math.hypot(x - SNK.baulkX, z) > SNK.dRad - R * 0.5) return false;
+        if (Math.hypot(x - SNK.baulkX, z) > SNK.dRad) return false;
     }
     for (const p of POCKETS) {
         if (Math.hypot(x - p.x, z - p.z) < p.r + R * 0.5) return false;
@@ -1863,12 +1888,29 @@ function aiPlaceCue() {
         }
     }
     if (best && tryPlaceCue(best.cx, best.cz)) return;
-    // 兜底：中心附近
-    const cands = [[0, 0], [-CFG.W / 4, 0], [CFG.W / 4, 0], [0, -CFG.H / 4], [0, CFG.H / 4]];
+    // 兜底：斯诺克只能摆 D 区——候选点取 D 弧内侧一圈（台面中部候选在 D 区外全部无效）；
+    // 其他模式用台面中心附近
+    const cands = [];
+    if (gameMode === 'snooker') {
+        const rr = SNK.dRad - CFG.R;
+        for (let a = -70; a <= 70; a += 17.5) {
+            const r = a * Math.PI / 180;
+            cands.push([SNK.baulkX - rr * Math.cos(r), rr * Math.sin(r)]);
+        }
+    } else {
+        cands.push([0, 0], [-CFG.W / 4, 0], [CFG.W / 4, 0], [0, -CFG.H / 4], [0, CFG.H / 4]);
+    }
     for (const [x, z] of cands) if (tryPlaceCue(x, z)) return;
     for (let i = 0; i < 60; i++) {
-        const x = (Math.random() * 2 - 1) * (CFG.W / 2 - 0.1);
-        const z = (Math.random() * 2 - 1) * (CFG.H / 2 - 0.1);
+        let x, z;
+        if (gameMode === 'snooker') {
+            const a = Math.random() * Math.PI - Math.PI / 2;
+            const d = Math.random() * (SNK.dRad - CFG.R) * 0.9;
+            x = SNK.baulkX - d * Math.cos(a); z = d * Math.sin(a);
+        } else {
+            x = (Math.random() * 2 - 1) * (CFG.W / 2 - 0.1);
+            z = (Math.random() * 2 - 1) * (CFG.H / 2 - 0.1);
+        }
         if (tryPlaceCue(x, z)) return;
     }
 }
@@ -2398,6 +2440,8 @@ window.POOL = {
     __resolveMock(s) { shot = s; resolveShot(); },
     // 测试用：把 isBreak 置 false（模拟开球已经结束）
     __endBreak() { isBreak = false; },
+    // 测试用：把母球摆到指定合法位置（走真实 tryPlaceCue 校验，返回是否成功）
+    placeCue(x, z) { return tryPlaceCue(x, z); },
     // 调试：读取当前环桌走位角度
     getCamAngle() { return camAngle; },
     // 调试：强行设置环桌走位角度
