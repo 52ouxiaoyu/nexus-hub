@@ -10,10 +10,11 @@ class Zombie extends Entity {
         snowpeahead: { src: 'assets/images/Plants/SnowPea/SnowPea.gif',       cw: 71, ch: 71, keepTop: 0.52, w: 90 }, // v3.43.0 0.70→0.52：茎干底座全部裁掉
         jalapenohead:{ src: 'assets/images/Plants/Jalapeno/Jalapeno.gif',     cw: 68, ch: 89, keepTop: 1.0,  w: 50 },
         machinegunhead: { src: 'assets/images/Plants/GatlingPea/GatlingPea.gif', cw: 88, ch: 84, keepTop: 0.51, w: 96 }, // v3.43.0 0.74→0.51：茎干底座全部裁掉
-        tallnuthead: { src: 'assets/images/Plants/TallNut/TallNut.gif',       cw: 83, ch: 119, keepTop: 1.0, w: 64, topOff: -62 },
+        tallnuthead: { src: 'assets/images/Plants/TallNut/TallNut.gif',       cw: 83, ch: 119, keepTop: 1.0, w: 64, topOff: -72 },
         // v3.35.0：礼盒重画为宽幅构图(192x140，四角完整)，显示宽度同步放宽——
         // 旧图 129x179 竖高构图被压到 42px 宽，又瘪又缺角（用户反馈）
-        mysterybox:  { src: 'assets/images/Plants/PlantBox/GiftBox.png',      cw: 192, ch: 140, keepTop: 1.0, w: 88 }
+        // v3.50.0：盲盒位置对齐头部（用户：盲盒应该在脑袋那部分）——topOff 与射手头统一 -72
+        mysterybox:  { src: 'assets/images/Plants/PlantBox/GiftBox.png',      cw: 192, ch: 140, keepTop: 1.0, w: 88, topOff: -72 }
     };
     constructor(game, row, type = 'normal') {
         const x = 950;
@@ -259,7 +260,9 @@ class Zombie extends Entity {
         this.headEl = wrap;      // 外层容器（定位/滤镜/掉落动画作用于此）
         this.headImgEl = img;    // 内层整株 gif
         this.headSize = cfg.w;
-        this.headTopOff = (cfg.topOff !== undefined) ? cfg.topOff : -48; // v3.23.1：高坚果本体占满画布，需单独上移
+        // v3.50.0：头顶锚点统一上移到僵尸头顶（-72）——旧值 -48 会把植物头压在下巴/胸口，
+        // 僵尸自己的灰头露在上面，看起来"植物头躲在僵尸头后面"（用户反馈）
+        this.headTopOff = (cfg.topOff !== undefined) ? cfg.topOff : -72;
         this.hasPlantHead = true;
         this.game.entityLayer.appendChild(wrap);
         this.syncPlantHead();
@@ -272,7 +275,7 @@ class Zombie extends Entity {
         // 约画布 24~90 行（y-48..y+18）：右移 10px + 顶部扣在 y-48，头部整体罩住僵尸灰头
         this.headEl.style.left = (this.x - this.headSize / 2 + 10) + 'px';
         this.headEl.style.top = (this.y + this.yOffset + this.headTopOff) + 'px';
-        this.headEl.style.zIndex = String(Math.floor(this.y) + 1); // 略高于同一行的身体
+        this.headEl.style.zIndex = String(Math.floor(this.y) + 2); // v3.50.0：+1→+2，确保压在本体与叠加件之上（用户：植物头要盖住僵尸头）
         // 被冰冻/黄油定身时头顶植物一起变色（外观联动，与身体同一套状态滤镜）
         this.headEl.style.filter = this._statusFilter();
     }
@@ -893,7 +896,12 @@ class Zombie extends Entity {
                             : '魅惑成功！这只僵尸现在为你而战', '#ff69b4');
                     }
                     this.hypnotize();
-                } else if (this.eatTarget.type === 'garlic' && this.type !== 'snowpeahead') { // v3.23.0 寒冰头免疫大蒜改行
+                } else if ((this.eatTarget.type === 'garlic' ||
+                            // v3.50.0：融合蒜卫家族（含大蒜 trait 的新融合）同样"咬一口就换行"，
+                            // 但纯地面/塔形触发物不算——只认 type 以 fusion_ 开头且大蒜是本体特征
+                            (this.eatTarget.type.startsWith && this.eatTarget.type.startsWith('fusion_') &&
+                             this.eatTarget.hasTrait && this.eatTarget.hasTrait('garlic'))) &&
+                           this.type !== 'snowpeahead') { // v3.23.0 寒冰头免疫大蒜改行
                     // Bite garlic and switch row!
                     this.eatTarget.hp -= 20; // single bite damage
                     // v3.28.0：咬大蒜 = 被辣到干呕（专属"呕吐"合成音，替换原 chomp）

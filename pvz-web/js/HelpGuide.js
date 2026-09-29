@@ -18,25 +18,46 @@
     const ZB = 'assets/images/Zombies/';
     const PL = 'assets/images/Plants/';
 
-    // ================= 玩法说明（精简） =================
+    // ================= 玩法说明 =================
+    // v3.50.0：内容大幅扩充（用户：说明太简短）；每个玩法配专属图标（原版素材，
+    // 用户：经典冒险=向日葵 / 融合进化=手套 / 砸罐子=罐子 / 我是僵尸=僵尸）；
+    // 《我是僵尸》不再套边框盒子（用户：把这个框去掉），改为无框段落。
     const MODES = [
-        { icon: '☀️', title: '通用操作', items: [
-            '点击收集阳光 → 选卡片 → 点格子种植；铲子可移除植物。',
-            '撑过所有波次即胜利；僵尸走进房子（或脑子被吃光）即失败。',
-            '右上角 Speed 可切换游戏倍速。' ] },
-        { icon: '🌻', title: '经典冒险', items: [
-            '开局选最多 10 张卡：向日葵攒阳光，攻击/防御植物守住 5 条草坪。',
-            '卡片有阳光价与冷却，冷却转圈结束后才能再次使用。',
-            '冰车僵尸驶过的格子会结冰，冰面上无法种植，约 30 秒后融化；火爆辣椒可以直接烧毁整行冰道。' ] },
-        { icon: '🧤', title: '融合进化', items: [
-            '点手套进入拖拽状态，把一株植物拖到另一株上即融合（选卡栏 15 种，其余全靠配方）。',
-            '炸弹爆炸会把 3×3 内有配方的植物直接融合；游戏内可点「融合配方大全」查全部秘方。' ] },
-        { icon: '🏺', title: '砸罐子', items: [
-            '点击罐子敲开：绿罐出植物、红罐出僵尸、问号罐随机（植物 / 僵尸 / 偶尔一撮阳光）；敲完全部罐子并清场即胜。',
-            '难度分简单 / 困难 / 地狱；路灯花要花 75 阳光在种子栏购买，能照亮罐中内容。' ] },
-        { icon: '🧟', title: '《我是僵尸》', items: [
-            '阵营反转：花阳光买僵尸放到草坪上，吃掉全部脑子即胜。',
-            '阳光 < 50 且场上无僵尸存活即判负；小心敌阵植物的反击防线。' ] },
+        { icon: '☀️', emoji: '☀️', title: '通用操作', items: [
+            '收集阳光：点击从天上落下的阳光球和向日葵产出的阳光，攒够阳光才能种植物。',
+            '选卡种植：点顶部卡片 → 光标带着植物 → 点草地格子种下；再点一次卡片可取消。',
+            '铲子：点铲子再点植物可把它移除（不退阳光），给重要植物腾位置。',
+            '卡片冷却：每张卡用完都有冷却（转圈），冷却结束才能再次使用；右上角 Speed 可切换 1x/2x 倍速。',
+            '光标操作：选卡/铲子/手套都是"点一下拿起、再点一下放下"；按 Esc 或再点按钮可取消，手套拿着的植物会放回原格。',
+            '胜负：僵尸走进房子（或我是僵尸里脑子被吃光）即失败；撑过所有波次 / 清完所有罐子即胜利。' ] },
+        { icon: '🌻', img: 'assets/images/Plants/SunFlower/0.gif', title: '经典冒险', items: [
+            '开局从选卡栏（Choose Your Plants）选最多 10 张卡：向日葵攒阳光，攻击/防御植物守住 5 条草坪。',
+            '经济链：向日葵(25/24s) → 双子向日葵翻倍；没钱时小喷菇(0 阳光)是免费前排。',
+            '输出链：豌豆 → 双发 → 机枪；寒冰射手带减速；卷心菜/玉米投手是抛射破甲（无视铁门）。',
+            '炸弹类：樱桃炸弹 3×3 秒杀、火爆辣椒清一行、寒冰菇全屏冻结、毁灭菇全屏核平+留陨石坑。',
+            '防御链：坚果墙(4000) → 高坚果(8000) → 南瓜壳可套在任意植物外再叠 4000 护甲。',
+            '特殊地形：冰车僵尸驶过的格子结冰 30 秒无法种植——火爆辣椒可以直接烧毁整行冰道。',
+            '融合植物僵尸：150 秒后会出现头顶植物的僵尸变体（豌豆头/坚果头/向日葵头/寒冰头），难度适中，坚果头很硬要用火力磨。' ] },
+        { icon: '🧤', emoji: '🧤', title: '融合进化', items: [
+            '点手套按钮（或按空格）进入拖拽状态，把一株植物拖到另一株上即融合——两株合二为一。',
+            '选卡栏固定 15 张基础牌（向日葵/豌豆/坚果/樱桃/窝瓜/辣椒/土豆雷/大嘴花/高坚果/小喷菇/寒冰菇/毁灭菇/地刺/大蒜/西瓜投手），其余植物全靠融合获得。',
+            '配方都有清晰逻辑：同类叠加（豌豆+豌豆=双发）、属性移植（+寒冰=冰系）、火烤强化（+火炬=火焰系）……游戏内「融合配方大全」可查全部秘方。',
+            '炸弹融合：樱桃炸弹爆炸时，3×3 内有配方的两株植物会直接原地融合。',
+            '大技能：不少融合株有专属大招（冰系=极寒波动、四头向日葵=阳光雨、火焰双发=过热爆发、一次性植物用完后再补一段爆炸）——同一株的大技能一局只播报一次。',
+            '目前共有 55 种以上融合形态；《我是僵尸》与砸罐子模式也能通过盲盒/金罐开出融合株。' ] },
+        { icon: '🏺', img: 'assets/images/Vase/Vase_Question.png', title: '砸罐子', items: [
+            '点击罐子用木锤敲开（鼠标移到罐子上会变成木锤）：绿罐出植物、红罐出僵尸、问号罐随机（植物/僵尸/偶尔一撮阳光+50）。',
+            '目标：敲完全部罐子并清掉所有僵尸即胜利；僵尸罐敲开前最好先摆好防线。',
+            '罐子种类：植物罐（稳赚）/ 僵尸罐（危险）/ 问号罐（惊喜）/ 金罐（地狱限定，必出强力植物或强化僵尸，1~2 个）。',
+            '路灯花（75 阳光）：种下照亮周围一圈罐子，罐子变半透明、直接看到里面是什么。',
+            '难度分简单 / 困难 / 地狱：地狱僵尸血量 ×1.35，且只有地狱出金罐。',
+            '特殊僵尸：锤子僵尸会替你（或敌人）锤碎沿途罐子；小丑盒随时自爆；铁梯架梯翻坚果。融合植物头僵尸只从金罐里出来（数量不多但很硬）。' ] },
+        { icon: '🧟', img: 'assets/images/Zombies/Zombie/0.gif', title: '《我是僵尸》', plain: true, items: [
+            '阵营反转：这次你指挥僵尸大军——花阳光买僵尸、放到草坪上，吃掉全部脑子即胜利。',
+            '阳光来源：啃死向日葵 +200 / 双子向日葵 +500；阳光不足 50 且场上无僵尸存活即判负。',
+            '阵容推荐：橄榄球/铁门是推线坦，小鬼便宜快速，撑杆一路跳过植物，舞王成群召唤。',
+            '敌阵陷阱：对面草坪有地刺（扎脚）、土豆雷（炸）、忧郁菇（绞肉），还有伪装的毁灭菇陷阱——踩上去全屏湮灭，量着血量上。',
+            '卡带选择：从底部僵尸卡带买僵尸拖到场地上；铁门/橄榄球/冰车按模式概率出现。' ] },
     ];
 
     // ================= 植物图鉴 =================
@@ -96,7 +117,7 @@
         { n: '寒冰卷心菜', base: PL + 'CabbagePult/CabbagePult.png', bf: 'brightness(112%) hue-rotate(120deg) saturate(1.7)', md: 96, t: '卷心菜投手+寒冰菇：40 破甲 + 减速' },
         { n: '坚果射手', base: PL + 'WallNut/WallNut.gif', ov: PL + 'Peashooter/Peashooter.gif', oc: 'polygon(0 0, 100% 0, 100% 65%, 0 65%)', ot: 'translate(5px, -15px)', md: 71, t: '坚果墙+豌豆射手：能扛能打' },
         { n: '卷心菜堡垒', base: PL + 'WallNut/WallNut.gif', ov: PL + 'CabbagePult/CabbagePult.png', oc: 'polygon(0 0, 46% 0, 46% 46%, 0 46%)', ot: 'translate(26px, -4px)', md: 96, t: '坚果墙+卷心菜投手：肉盾+破甲投掷' },
-        { n: '大嘴坚果', base: PL + 'WallNut/WallNut.gif', ov: PL + 'Chomper/Chomper.gif', oc: 'polygon(0 0, 100% 0, 100% 85%, 0 85%)', ot: 'translate(20px, -25px) scale(0.9)', md: 130, t: '坚果墙+大嘴花：4000 血又能吞' },
+        { n: '大嘴坚果', base: PL + 'Chomper/Chomper.gif', ov: PL + 'WallNut/WallNut.gif', ot: 'translate(0px, 16px) scale(0.85)', md: 130, t: '坚果墙+大嘴花：4000 血又能吞；v3.50.0 坚果提前、大嘴花往后，不再遮挡；大技能【吞噬回血】' },
         { n: '钢刺高坚果', base: PL + 'TallNut/TallNut.gif', ov: PL + 'Spikerock/Spikerock.gif', ot: 'translate(0px, 58px)', md: 119, t: '高坚果+钢地刺：8000 血 + 脚下带刺' },
         { n: '寒冰坚果', base: PL + 'WallNut/WallNut.gif', bf: 'hue-rotate(180deg) saturate(1.5) brightness(1.2)', md: 73, t: '坚果墙+寒冰射手：啃它的人被冻慢' },
         { n: '地刺坚果', base: PL + 'WallNut/WallNut.gif', ov: PL + 'Spikeweed/Spikeweed.gif', ot: 'translate(0px, 48px)', md: 85, t: '坚果墙+地刺：啃它等于啃刺' },
@@ -113,10 +134,17 @@
         { n: '爆炸弹跳', base: PL + 'Squash/Squash.gif', bf: 'hue-rotate(-35deg) saturate(1.9)', bt: 'scale(2.75) translate(0px, -72px)', md: 226, t: '窝瓜+樱桃炸弹：跃起压扁，落点 3×3 爆炸 1800' },
         { n: '冰玉米投手', base: PL + 'KernelPult/KernelPult.png', bf: 'brightness(1.15) hue-rotate(160deg) saturate(1.8)', md: 96, t: '玉米投手+寒冰射手：玉米粒 20+减速，20% 黄油定身保留' },
         { n: '火焰地刺', base: PL + 'Spikeweed/Spikeweed.gif', bf: 'sepia(1) saturate(3) hue-rotate(-25deg) brightness(1.15)', md: 85, t: '地刺+火炬树桩：灼烧刺 80 / 0.75s（普通地刺的 2 倍）；僵尸啃不到它（只有冰车能碾爆），它镇守的一行冰车驶过不留冰道' },
-        { n: '火焰双发', base: PL + 'Repeater/Repeater.gif', bf: 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.12)', md: 73, t: '双发射手+火炬树桩：2 连发火焰豌豆 40×2；大技能【过热爆发】——每第 4 轮改为 6 连发爆炎 60×6（弹体加大发光）' },
-        { n: '四头向日葵', base: PL + 'TwinSunflower/TwinSunflower1.gif', bf: 'saturate(1.35) brightness(1.12)', bt: 'scale(1.15)', ov: PL + 'TwinSunflower/TwinSunflower1.gif', ot: 'translate(10px, 6px) scaleX(-1) scale(1.15)', md: 84, t: '双子向日葵+双子向日葵：每轮 4 颗阳光共 100；大技能【阳光雨】——每 60 秒全场天降 6 颗阳光' },
+        { n: '火焰双发', base: PL + 'Repeater/Repeater.gif', bf: 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.12)', md: 73, t: '双发射手+火炬树桩：2 连发火焰豌豆 40×2；大技能【过热爆发】——每第 8 轮改为 6 连发爆炎 60×6（弹体加大发光）' },
+        { n: '四头向日葵', base: PL + 'TwinSunflower/TwinSunflower1.gif', bf: 'saturate(1.35) brightness(1.12)', bt: 'scale(1.15)', ov: PL + 'TwinSunflower/TwinSunflower1.gif', ot: 'translate(10px, 6px) scaleX(-1) scale(1.15)', md: 84, t: '双子向日葵+双子向日葵：每轮 4 颗阳光共 100；大技能【阳光雨】——每 120 秒全场天降 3 颗阳光' },
         { n: '辣椒高坚果', base: PL + 'TallNut/TallNut.gif', bf: 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.1)', md: 119, t: '高坚果+火爆辣椒：8000 血肉盾，啃它的僵尸每秒被烫 40' },
     ];
+    // v3.50.0：数据驱动新融合（PVZ_FUSION_EXTRA 同源）自动追加到融合图鉴
+    if (window.PVZ_FUSION_EXTRA) {
+        for (const f of window.PVZ_FUSION_EXTRA) {
+            const L = f.look || {};
+            FUSION.push({ n: f.name, base: L.base, bf: L.bf, bt: L.bt, ov: L.ov, oc: L.oc, ot: L.ot, md: f.md || 96, t: f.t });
+        }
+    }
     // 注：南瓜壳不再单独列在融合区 —— 它与经典区"南瓜壳"是同一株植物（坚果墙+高坚果融合=套壳玩法，
     // 配方见游戏内「融合配方大全」），同一关键词不重复出现。
 
@@ -199,7 +227,13 @@
     .hg-tab.active { color: #3f6e1f; background: #fbf6e4; box-shadow: 0 -3px 8px rgba(0,0,0,.08); }
     #help-body { flex: 1; overflow-y: auto; padding: 12px 22px 18px; background: #fbf6e4; border-top: 2px solid #b3945c; }
     .hg-mode { background: rgba(255,255,255,.55); border: 1px solid #d8c290; border-radius: 12px;
-        padding: 9px 14px; margin-bottom: 9px; }
+        padding: 9px 14px; margin-bottom: 9px; display: flex; gap: 12px; align-items: flex-start; }
+    /* v3.50.0：我是僵尸段落不带边框盒子（用户要求） */
+    .hg-mode.hg-plain { background: transparent; border: none; box-shadow: none; }
+    .hg-mode-ico { width: 44px; height: 44px; object-fit: contain; flex: 0 0 44px; margin-top: 3px;
+        filter: drop-shadow(0 2px 3px rgba(60,40,10,.35)); }
+    .hg-mode-emoji { display: inline-flex; align-items: center; justify-content: center; font-size: 34px; }
+    .hg-mode-body { flex: 1; min-width: 0; }
     .hg-mode h4 { margin: 0 0 5px; font-size: 17px; color: #3f6e1f; letter-spacing: 1px; }
     .hg-mode ul { margin: 0; padding-left: 20px; }
     .hg-mode li { font-size: 13.5px; line-height: 1.7; color: #5a4a28; }
@@ -224,10 +258,52 @@
         border-radius: 4px; border: 1px solid rgba(90,60,20,.45); }
     .hg-zbody { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); image-rendering: auto; z-index: 1; }
     .hg-zice { position: absolute; bottom: 16px; left: calc(50% + 4px); z-index: 0; opacity: .92; }
-    .hg-zhead { position: absolute; overflow: hidden; pointer-events: none; }
+    /* v3.50.0：植物头必须盖在僵尸本体之上（zbody z=1）——旧版无 z-index 时头贴片被身体盖住，
+       图鉴里看起来"植物头躲在僵尸头后面"（用户反馈），这里提到 2 */
+    .hg-zhead { position: absolute; overflow: hidden; pointer-events: none; z-index: 2; }
     .hg-zhead img { position: absolute; left: 0; top: 0; transform: scaleX(-1); }
-    .hg-zhammer { position: absolute; bottom: 22px; left: calc(50% - 24px); width: 30px; transform: rotate(-40deg); z-index: 2; }
-    .hg-zgift { position: absolute; bottom: 20px; left: calc(50% - 17px); width: 34px; z-index: 2; }
+    .hg-zhammer { position: absolute; bottom: 22px; left: calc(50% - 24px); width: 30px; transform: rotate(-40deg); z-index: 3; }
+    /* v3.50.0：盲盒位置对齐头部（用户：盲盒应该在脑袋那部分）——从手部(bottom 20)上移到头顶 */
+    .hg-zgift { position: absolute; bottom: 46px; left: calc(50% - 15px); width: 30px; z-index: 3; }
+    /* v3.50.0：僵尸图鉴瓦片与植物卡面同款纸感背景框（用户：所有僵尸的图片背景与植物图片框相同） */
+    .hg-art.hg-zcard { background: linear-gradient(180deg, #fffef7 0%, #f6eed6 100%);
+        border: 1px solid rgba(90,60,20,.4); border-radius: 7px; box-shadow: 0 2px 4px rgba(60,40,10,.25); }
+    /* ===== v3.50.0 攻击方式演示（详情卡内的动态小剧场） ===== */
+    .hg-demo { position: relative; width: 100%; height: 74px; margin-top: 8px; overflow: hidden;
+        background: linear-gradient(180deg, #d8ecc0 0%, #b8d98e 100%);
+        border: 1.5px solid #8fae62; border-radius: 10px; }
+    .hg-demo .hd-plant { position: absolute; left: 12px; bottom: 6px; height: 52px; }
+    .hg-demo .hd-zombie { position: absolute; right: 14px; bottom: 6px; height: 56px; }
+    .hg-demo .hd-pea { position: absolute; left: 58px; bottom: 34px; width: 14px; height: 14px; border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, #b6f36a, #4f9a1f); box-shadow: 0 0 6px rgba(120,220,60,.8);
+        animation: hd-fly 1.1s linear infinite; }
+    .hg-demo .hd-pea.hd-ice { background: radial-gradient(circle at 35% 35%, #d4f4ff, #3f9ad0); box-shadow: 0 0 6px rgba(120,210,255,.9); }
+    .hg-demo .hd-pea.hd-fire { background: radial-gradient(circle at 35% 35%, #ffe08a, #e05a12); box-shadow: 0 0 8px rgba(255,140,40,.9); }
+    @keyframes hd-fly { 0% { left: 58px; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { left: calc(100% - 66px); opacity: 0; } }
+    .hg-demo .hd-lob { position: absolute; left: 58px; bottom: 40px; width: 18px; height: 18px; border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, #dff0b0, #7aa53c);
+        animation: hd-lob-fly 1.3s ease-in-out infinite; }
+    @keyframes hd-lob-fly {
+        0% { left: 58px; bottom: 40px; opacity: 0; } 10% { opacity: 1; }
+        50% { bottom: 72px; } 90% { opacity: 1; }
+        100% { left: calc(100% - 70px); bottom: 26px; opacity: 0; } }
+    .hg-demo .hd-boom { position: absolute; right: 26px; bottom: 8px; width: 44px; height: 44px; border-radius: 50%;
+        background: radial-gradient(circle, #fff3b0 0%, #ff9d2e 45%, rgba(255,80,20,.0) 72%);
+        opacity: 0; transform: scale(.3); animation: hd-boom 1.6s ease-out infinite; }
+    @keyframes hd-boom { 0%, 55% { opacity: 0; transform: scale(.3); } 62% { opacity: 1; transform: scale(1.15); }
+        78% { opacity: .85; transform: scale(1.35); } 100% { opacity: 0; transform: scale(1.6); } }
+    .hg-demo .hd-sun { position: absolute; left: 50%; top: -18px; width: 26px; height: 26px; margin-left: -13px; border-radius: 50%;
+        background: radial-gradient(circle at 40% 40%, #fff3a0, #ffc400); box-shadow: 0 0 10px rgba(255,200,40,.9);
+        animation: hd-sun-fall 1.8s linear infinite; }
+    @keyframes hd-sun-fall { 0% { top: -18px; opacity: 0; } 15% { opacity: 1; } 100% { top: 66px; opacity: .2; } }
+    .hg-demo .hd-chomp { animation: hd-chomp 1.6s ease-in-out infinite; }
+    @keyframes hd-chomp { 0%, 55% { transform: translateX(0); } 62% { transform: translateX(-10px); } 72% { transform: translateX(-4px); } 100% { transform: translateX(0); } }
+    .hg-demo .hd-eat { animation: hd-eat 1.2s ease-in-out infinite; }
+    @keyframes hd-eat { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-7px); } }
+    .hg-demo .hd-shake { animation: hd-shake 1.2s ease-in-out infinite; }
+    @keyframes hd-shake { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
+    .hg-demo .hd-cap { position: absolute; left: 8px; top: 5px; font-size: 11.5px; font-weight: 700; color: #3f5a1e;
+        background: rgba(255,255,255,.72); border-radius: 999px; padding: 1px 9px; }
     /* v3.44.0 融合"场上实拍"容器：flex 居中一个 0×0 缩放锚点 */
     .hg-lawn { position: relative; width: 100px; height: 64px; display: flex; align-items: center; justify-content: center; }
     .hg-lawn-d { width: 200px; height: 112px; }
@@ -283,12 +359,58 @@
         return '<div style="position:relative;width:0;height:0;transform:scale(' + sc + ');">' + h + '</div>';
     }
 
+    // v3.50.0：经典植物详情图 → 原版动态 gif（用户：静态图改成动态的，展现怎么进攻/承受伤害）。
+    // 个别素材文件名与卡面名不同（向日葵/双子/投手 png 等），逐一映射；查不到回退卡面。
+    const GIF_MAP = {
+        SunFlower: 'SunFlower/SunFlower1.gif',
+        TwinSunflower: 'TwinSunflower/TwinSunflower1.gif',
+        KernelPult: 'KernelPult/KernelPult.png',
+        CabbagePult: 'CabbagePult/CabbagePult.png',
+        MelonPult: 'MelonPult/MelonPult.png',
+        WinterMelon: 'WinterMelon/WinterMelon.png',
+        PlantBox: 'PlantBox/GiftBox.png'
+    };
+    const gifUrl = g => PL + (GIF_MAP[g] || (g + '/' + g + '.gif'));
+
+    // v3.50.0：攻击方式演示小剧场（用户：展示它的爆炸过程/攻击方式和方法）。
+    // 依植物特性自动选剧本：shoot=豌豆飞行 / lob=抛物线投掷 / bomb=爆炸闪光 /
+    // sun=阳光掉落 / chomp=吞噬啃咬 / wall=纯肉盾（僵尸啃食晃动）。
+    function inferAtk(p) {
+        const n = p.n || '', t = p.t || '';
+        if (/炸弹|辣椒|毁灭菇|地雷|窝瓜|弹跳|加农炮/.test(n) || /全屏|1800/.test(t)) return 'bomb';
+        if (/投手|加农|卷心菜|玉米/.test(n)) return 'lob';
+        if (/向日葵|阳光菇|阳光雨/.test(n) && !/豌豆/.test(n)) return 'sun';
+        if (/大嘴/.test(n)) return 'chomp';
+        if (/坚果|墙|南瓜|大蒜/.test(n) && !/射手|投手|猫尾/.test(n)) return 'wall';
+        if (/蘑菇|地刺/.test(n)) return 'shoot';
+        return 'shoot';
+    }
+    function attackDemo(p, atk) {
+        const plantImg = p.gifSrc || (p.base ? p.base : '');
+        const ice = /寒冰|冰/.test(p.n || '') ? ' hd-ice' : '';
+        const fire = /火焰|烈焰|火炬|爆米花/.test(p.n || '') ? ' hd-fire' : '';
+        const plant = plantImg ? '<img class="hd-plant" src="' + plantImg + V + '">' : '';
+        const zombie = '<img class="hd-zombie' + (atk === 'wall' ? ' hd-eat' : '') + '" src="' + ZB + 'Zombie/Zombie.gif' + V + '">';
+        let inner = '';
+        if (atk === 'shoot') inner = plant + zombie + '<div class="hd-pea' + ice + fire + '"></div>';
+        else if (atk === 'lob') inner = plant + zombie + '<div class="hd-lob' + fire + '"></div>';
+        else if (atk === 'bomb') inner = plant + zombie + '<div class="hd-boom"></div>';
+        else if (atk === 'sun') inner = plant + zombie + '<div class="hd-sun"></div>';
+        else if (atk === 'chomp') inner = '<img class="hd-plant hd-chomp" src="' + plantImg + V + '">' + zombie;
+        else inner = '<img class="hd-plant hd-shake" src="' + plantImg + V + '">' + zombie;
+        const cap = { shoot: '🏹 攻击演示：直线射击', lob: '🎯 攻击演示：抛射轰炸', bomb: '💥 爆炸过程演示', sun: '☀️ 阳光产出演示', chomp: '🕳️ 吞噬演示', wall: '🛡️ 承伤演示：肉盾扛啃' };
+        return '<div class="hg-demo"><span class="hd-cap">' + (cap[atk] || cap.shoot) + '</span>' + inner + '</div>';
+    }
+
     function plantDetail(p, fusion) {
         let art;
         if (fusion) {
             art = '<div class="hg-lawn hg-lawn-d">' + lawnStage(p, 104) + '</div>';
         } else {
-            art = '<div class="hg-d-card" style="background-image:' + cardUrl(p.g) + '"></div>';
+            // v3.50.0：动态 gif 替代静态卡面
+            p.gifSrc = gifUrl(p.g);
+            art = '<img src="' + p.gifSrc + V + '" style="max-height:110px;max-width:180px;object-fit:contain;' +
+                'filter:drop-shadow(0 3px 5px rgba(60,40,10,.3));">';
         }
         let bs = '';
         if (fusion) {
@@ -299,10 +421,11 @@
             bs += badge('❤️ 耐久 ' + p.hp);
         }
         bs += badge('📖 ' + (fusion ? '手套融合获得' : '经典选卡'));
+        const demo = attackDemo(p, fusion ? inferAtk(p) : inferAtk(p));
         return '<div class="hg-d-art">' + art + '</div>' +
             '<div class="hg-d-name">' + p.n + '</div>' +
             '<div class="hg-d-badges">' + bs + '</div>' +
-            '<div class="hg-d-desc">' + (p.t || '') + '</div>';
+            '<div class="hg-d-desc">' + (p.t || '') + '</div>' + demo;
     }
 
     // 僵尸大图：本体 + （可选）冰道 / 头顶植物 / 锤子 / 礼盒，s=放大倍数
@@ -336,10 +459,14 @@
         bs += badge('🧟 ' + groupTitle);
         const big = Math.min(115, Math.max(64, Math.round((z.h || 70) * 1.4)));
         const artH = big + 34;
+        // v3.50.0：僵尸详情也带动态演示（啃食植物晃动 / 攻击方式说明）
+        const demo = '<div class="hg-demo"><span class="hd-cap">🧟 行为演示：啃食植物前进</span>' +
+            '<img class="hd-plant hd-shake" src="' + PL + 'WallNut/WallNut.gif' + V + '">' +
+            '<img class="hd-zombie hd-eat" src="' + z.img + V + '" style="height:56px;filter:' + (z.dark ? 'brightness(.72) contrast(1.25);' : 'none') + '"></div>';
         return '<div class="hg-d-art" style="height:' + artH + 'px;">' + zombieArt(z, big / (z.h || 70)) + '</div>' +
             '<div class="hg-d-name">' + z.n + '</div>' +
             '<div class="hg-d-badges">' + bs + '</div>' +
-            '<div class="hg-d-desc">' + (z.t || '') + '</div>';
+            '<div class="hg-d-desc">' + (z.t || '') + '</div>' + demo;
     }
 
     function propDetail(z) {
@@ -369,7 +496,8 @@
 
     function zombieTile(z, key) {
         return '<div class="hg-tile" data-k="' + key + '" title="' + (z.hp ? '血量 ' + z.hp + ' · ' : '') + (z.t || '') + '">' +
-            '<div class="hg-art">' + zombieArt(z, 1) + '</div>' +
+            // v3.50.0：hg-zcard = 与植物卡面同款纸感背景框
+            '<div class="hg-art hg-zcard">' + zombieArt(z, 1) + '</div>' +
             '<div class="hg-tname">' + z.n + '</div>' +
             '</div>';
     }
@@ -381,12 +509,16 @@
             '</div>';
     }
 
+    // v3.50.0：每个玩法显示专属原版素材图标；plain=true 的段落（我是僵尸）不带边框盒子
     function renderModes() {
         return MODES.map(m =>
-            '<div class="hg-mode"><h4>' + m.icon + ' ' + m.title + '</h4><ul>' +
-            m.items.map(it => '<li>' + it + '</li>').join('') + '</ul></div>'
+            '<div class="hg-mode' + (m.plain ? ' hg-plain' : '') + '">' +
+            (m.img ? '<img class="hg-mode-ico" src="' + m.img + V + '" alt="">'
+                   : (m.emoji ? '<span class="hg-mode-ico hg-mode-emoji">' + m.emoji + '</span>' : '')) +
+            '<div class="hg-mode-body"><h4>' + m.icon + ' ' + m.title + '</h4><ul>' +
+            m.items.map(it => '<li>' + it + '</li>').join('') + '</ul></div></div>'
         ).join('') +
-        '<div class="hg-tip">※ 点击植物 / 僵尸 / 道具图片可查看详细数值（阳光 / 冷却 / 耐久 / 血量 / 特性）。</div>';
+        '<div class="hg-tip">※ 点击植物 / 僵尸 / 道具图片可查看详细数值与攻击方式演示。</div>';
     }
 
     function renderPlants() {

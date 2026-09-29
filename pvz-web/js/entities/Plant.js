@@ -154,33 +154,33 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790663734';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790670633';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790663734';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790670633';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790663734';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790670633';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790663734';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790670633';
             stat.butterChance = 0.2;
         } else if (type === 'cobcannon') {
             // 玉米加农炮（v3.24.0）：PVZ1 原版 Cob Cannon——三株玉米投手合体，占两格。
             // 平时嘴里没有炮；充能 25s 结束后嘴里出现玉米炮弹；
             // 点击它出现瞄准镜（跟随鼠标），按 M 键向准星位置发射（见 GameLoop.enterCobAim）。
             stat.hp = 600;
-            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790663734';
+            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790670633';
             // v3.24.2 立绘 148×85（炮口已用叶壳封住），显示宽 132——两格 160px 内留边，
             // 修"看起来占三格"；+15 补偿缩小后轮子离地
             stat.yOffset = 15;
@@ -210,7 +210,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790663734';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790670633';
             stat.yOffset = 0;
         }
 
@@ -391,14 +391,12 @@ class Plant extends Entity {
                     this.yOffset = -15;
                     this.fusionOverlay.style.display = 'none';
                 } else if (type === 'fusion_chomper_wallnut') {
-                    // 大嘴坚果：坚果身 + 大嘴花头
-                    // v3.11.0：大嘴花立绘在 130×114 画布里整体偏左 ~20px（原图集如此），
-                    // 直接居中叠上去会让头探出坚果左边 24px、看着像"贴歪了"——
-                    // 补 20px 横向偏移后头部才真正压在坚果中心（重合度 52% → 87%）。
-                    this.element.src = s1.src; // wallnut 身体
-                    this.fusionOverlay.src = s2.src; // chomper 头
-                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 85%, 0 85%)';
-                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(20px, -25px) scale(0.9)';
+                    // 大嘴坚果：v3.50.0 层级对调（用户：大嘴花完全遮住了坚果，坚果提前、大嘴花往后）——
+                    // 大嘴花本体铺底（往后），坚果墙缩小放前（视觉上站在大嘴花前面一格的深度）
+                    this.element.src = s2.src; // chomper 本体（后）
+                    this.fusionOverlay.src = s1.src; // wallnut（前）
+                    this.fusionOverlay.style.clipPath = 'none';
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(0px, 16px) scale(0.85)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_icecabbage') {
                     // 寒冰卷心菜：原版卷心菜投手立绘整体转冰蓝（与"冰西瓜=西瓜转蓝"同一套最小改动思路）
@@ -471,6 +469,23 @@ class Plant extends Entity {
                     this.element.src = s2.src;      // tallnut 本体
                     this.element.style.filter = 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.1)';
                     this.fusionOverlay.style.display = 'none';
+                } else if (window.PVZ_FUSION_LOOK && window.PVZ_FUSION_LOOK[type]) {
+                    // v3.50.0：数据驱动新融合外观（PVZ_FUSION_LOOK 表，原版素材帽子式叠放/像素变色）
+                    const L = window.PVZ_FUSION_LOOK[type];
+                    if (L.base) this.element.src = L.base;
+                    if (L.yOffset !== undefined) this.yOffset = L.yOffset;
+                    if (L.bf) this.element.style.filter = L.bf;
+                    if (L.bt) this.setTransform(L.bt);
+                    if (this.fusionOverlay) {
+                        if (!L.ov) {
+                            this.fusionOverlay.style.display = 'none';
+                        } else {
+                            this.fusionOverlay.src = L.ov;
+                            this.fusionOverlay.style.clipPath = L.oc || 'none';
+                            this.fusionOverlay.style.transform = 'translate(-50%, -50%) ' + (L.ot || '');
+                            this.fusionOverlay.style.transformOrigin = 'center center';
+                        }
+                    }
                 }
                 
                 this.game.entityLayer.appendChild(this.fusionOverlay);
@@ -510,7 +525,9 @@ class Plant extends Entity {
         // v3.37.3：毁灭向日葵移除"毁灭新星"周期自爆（用户：毁灭菇爆炸时只需要在
         // 爆炸的地方炸一次，不需要连续几排连续炸）——现在只产阳光 + 阵亡时保留大爆炸
         // 大嘴坚果：坚果的防御 + 大嘴花的啃咬（状态合并时 state 被保留为坚果侧，需显式初始化）
-        if (type === 'fusion_chomper_wallnut') {
+        // v3.50.0：新融合大嘴家族（吞天大嘴/蒜香大嘴花/向日葵大嘴花）同款初始化
+        if (type === 'fusion_chomper_wallnut' || type === 'fusion_chomper_tallnut' ||
+            type === 'fusion_chomper_garlic' || type === 'fusion_sunflower_chomper') {
             this.state = 'idle';
             this.chewTimer = 0;
         }
@@ -529,17 +546,144 @@ class Plant extends Entity {
             !this.hasTrait('wallnut') && !this.hasTrait('tallnut');
     }
 
-    // v3.48.0 四头向日葵大技能【阳光雨】：全场随机天降 6 颗阳光（每颗 25， stagger 250ms 落下）
+    // v3.50.0 四头向日葵大技能【阳光雨】（v3.48.0 降频版）：每 120 秒全场天降 3 颗阳光
+    //（用户：原来 60s×6 颗太多太快）。公告一局只播一次（showUltimateNotice）。
     _sunRain() {
         const b = this.game.board;
-        if (this.game.showAnnouncement) this.game.showAnnouncement('🌻 四头向日葵降下了阳光雨！', '#ffd700');
-        for (let i = 0; i < 6; i++) {
+        if (this.game.showUltimateNotice) this.game.showUltimateNotice('ult_quadsun', '🌻 四头向日葵降下了阳光雨！', '#ffd700');
+        for (let i = 0; i < 3; i++) {
             setTimeout(() => {
                 if (this.isDead || this.game.state !== 'PLAYING') return;
                 const randomX = b.offsetX + Math.random() * (b.cols * b.cellWidth);
                 this.game.entities.push(new Sun(this.game, randomX, -50)); // 与天降阳光同款：从屏顶落下
             }, i * 250);
         }
+    }
+
+    // ========================================================================
+    // v3.50.0 融合大技能统一调度（用户：剩余融合植物也安排大招，频率放缓、公告一局一次）
+    //  ①【极寒波动】冰系家族：每 45s 对 3×3 内僵尸 80 冰伤 + 深度减速 10s（含新冰系融合）
+    //  ②坚果/射手/投手补强（不过分）：坚果射手重击豆 / 卷心菜堡垒巨菜 / 地刺坚果径向突刺 /
+    //    豌豆向日葵阳光豌豆 / 寒冰坚果冰雾护体（冰系名单内）
+    //  ③大嘴家族吞噬回血 1000
+    //  ④一次性植物的"用完再放大招"：二段爆炸在各自爆炸点就地触发（见 explodeNow / 压扁 / 地雷分支）
+    // ========================================================================
+    _updateUltimates(deltaTime) {
+        if (this.isDead || this.game.zombieMode) return;
+        const ICE = (window.PVZ_ICE_ULT_TYPES && window.PVZ_ICE_ULT_TYPES.has(this.type));
+
+        // —— ① 冰系家族【极寒波动】：每 45s 一圈冰雾 ——
+        if (ICE) {
+            this._frostTimer = (this._frostTimer || 0) + deltaTime;
+            if (this._frostTimer >= 45) {
+                this._frostTimer = 0;
+                const zs = this.game.entities.filter(e =>
+                    e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized &&
+                    Math.abs(e.row - this.row) <= 1 && Math.abs(e.x - this.x) < 130
+                );
+                if (zs.length > 0) {
+                    if (this.game.audioManager && this.game.audioManager.playFx) this.game.audioManager.playFx('ice_shatter');
+                    for (const z of zs) {
+                        z.takeDamage(80);
+                        z.setSlow(10.0);
+                    }
+                    this._frostRingFx();
+                    if (this.game.showUltimateNotice) this.game.showUltimateNotice('ult_frost', '❄️ 极寒波动！周围僵尸被深度冻伤', '#9be7ff');
+                }
+            }
+        }
+
+        // —— 四头向日葵【阳光雨】：每 120 秒全场天降 3 颗（v3.50.0 降频，公告一局一次）——
+        if (this.type === 'fusion_quadsun') {
+            this._sunRainTimer = (this._sunRainTimer || 0) + deltaTime;
+            if (this._sunRainTimer >= 120) {
+                this._sunRainTimer = 0;
+                this._sunRain();
+            }
+        }
+
+        // —— ② 坚果射手【坚果重击】：每 12s 一发 60 伤重豌豆 ——
+        if (this.type === 'fusion_nutshooter') {
+            this._heavyTimer = (this._heavyTimer || 0) + deltaTime;
+            if (this._heavyTimer >= 12) {
+                const hasZ = this.game.entities.some(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized && e.row === this.row && e.x > this.x);
+                if (hasZ) {
+                    this._heavyTimer = 0;
+                    const p = new Projectile(this.game, this.x + 30, this.y - 15, this.row, 'peashooter');
+                    p.damage = 60;
+                    p.setTransform('scale(1.35)');
+                    this.game.entities.push(p);
+                    if (this.game.showUltimateNotice) this.game.showUltimateNotice('ult_nutshot', '🌰 坚果射手射出了重击豆！', '#c8e6a0');
+                }
+            }
+        }
+
+        // —— ② 卷心菜堡垒【巨菜炮击】：每 15s 一发 90 伤破甲巨卷心菜 ——
+        if (this.type === 'fusion_cabbagenut') {
+            this._giantTimer = (this._giantTimer || 0) + deltaTime;
+            if (this._giantTimer >= 15) {
+                const ahead = this.game.entities.filter(e =>
+                    e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized && e.row === this.row && e.x > this.x
+                ).sort((a, b) => a.x - b.x)[0];
+                if (ahead) {
+                    this._giantTimer = 0;
+                    const p = new Projectile(this.game, this.x + 20, this.y - 30, this.row, 'cabbage', ahead);
+                    p.damage = 90;
+                    p.setTransform('scale(1.4)');
+                    this.game.entities.push(p);
+                    if (this.game.showUltimateNotice) this.game.showUltimateNotice('ult_giantcabbage', '🥬 卷心菜堡垒投出了巨型卷心菜！', '#a5d76e');
+                }
+            }
+        }
+
+        // —— ② 地刺坚果【径向突刺】：每 10s 对贴身一圈（3×3）僵尸扎 120 ——
+        if (this.type === 'fusion_spikynut') {
+            this._burstTimer = (this._burstTimer || 0) + deltaTime;
+            if (this._burstTimer >= 10) {
+                const zs = this.game.entities.filter(e =>
+                    e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized &&
+                    Math.abs(e.row - this.row) <= 1 && Math.abs(e.x - this.x) < 100
+                );
+                if (zs.length > 0) {
+                    this._burstTimer = 0;
+                    if (this.game.audioManager && this.game.audioManager.playFx) this.game.audioManager.playFx('spike_hit');
+                    for (const z of zs) z.takeDamage(120);
+                    if (this.game.showUltimateNotice) this.game.showUltimateNotice('ult_spikeburst', '🌵 地刺坚果周身钢刺暴起！', '#d0c090');
+                }
+            }
+        }
+
+        // —— ② 豌豆向日葵【阳光豌豆】：每 30s 一发 60 伤阳光豆 ——
+        if (this.type === 'fusion_peaflower') {
+            this._sunpeaTimer = (this._sunpeaTimer || 0) + deltaTime;
+            if (this._sunpeaTimer >= 30) {
+                const hasZ = this.game.entities.some(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized && e.row === this.row && e.x > this.x);
+                if (hasZ) {
+                    this._sunpeaTimer = 0;
+                    const p = new Projectile(this.game, this.x + 30, this.y - 15, this.row, 'peashooter');
+                    p.damage = 60;
+                    p.element.style.filter = 'brightness(1.4) saturate(1.8) drop-shadow(0 0 4px #ffd700)';
+                    this.game.entities.push(p);
+                    if (this.game.showUltimateNotice) this.game.showUltimateNotice('ult_sunpea', '☀️ 豌豆向日葵射出了阳光豌豆！', '#ffd700');
+                }
+            }
+        }
+    }
+
+    // 极寒波动特效：以植物为中心的一圈扩散冰环（纯视觉）
+    _frostRingFx() {
+        const ring = document.createElement('div');
+        ring.style.cssText = 'position:absolute;pointer-events:none;z-index:2500;' +
+            'left:' + this.x + 'px;top:' + (this.y + this.yOffset) + 'px;width:20px;height:20px;' +
+            'margin:-10px 0 0 -10px;border-radius:50%;border:3px solid rgba(160,230,255,.95);' +
+            'box-shadow:0 0 14px rgba(140,220,255,.8), inset 0 0 10px rgba(160,230,255,.5);' +
+            'transition:transform .6s ease-out, opacity .6s ease-out;';
+        this.game.container.appendChild(ring);
+        requestAnimationFrame(() => {
+            ring.style.transform = 'scale(9)';
+            ring.style.opacity = '0';
+        });
+        setTimeout(() => ring.remove(), 700);
     }
     
     // ===== 南瓜壳（护甲层，PVZ 原版机制）=====
@@ -691,9 +835,14 @@ class Plant extends Entity {
                 if (this.hasTrait('cherrybomb') && this.hasTrait('snowpea')) {
                     // v3.42.0：寒冰炸弹 900→2400（用户：900 连铁桶 1300 都炸不死，不配西瓜价）——
                     // 现在铁桶/橄榄球/铁门(1300~1600) 全部秒杀，巨人靠 oneshot 规则照秒；
-                    // 保留 10 秒全场减速（寒冰特色，超越樱桃的核心价值）
+                    // v3.50.0 寒冰炸弹超级大招（用户：要么删掉要么安排很厉害很厉害的大招）：
+                    // 核心圈 2400 秒杀不动；圈子外全屏僵尸一律 800 冰伤 + 冻结减速 10 秒——
+                    // 一颗 350 阳光的炸弹等于半屏清场，对得起"寒冰田+樱桃"的成本
                     if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 100) {
                         z.takeDamage(2400, { bomb: true, oneshot: true });
+                        z.setSlow(10.0);
+                    } else {
+                        z.takeDamage(800, { bomb: true });
                         z.setSlow(10.0);
                     }
                 } else if (this.hasTrait('cherrybomb')) {
@@ -814,7 +963,7 @@ class Plant extends Entity {
             if (!this._cobShellEl) {
                 const el = document.createElement('img');
                 // v3.24.1：装填玉米用原版图鉴里抠出的整根玉米（带根部），从炮口探出
-                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790663734';
+                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790670633';
                 // 裸 img 必须自带 translate(-50%,-50%) 居中基准（与 fusionOverlay 同一教训）
                 // v3.24.2 尺寸随立绘缩放同步：43×48（0.892×）
                 el.style.cssText = 'position:absolute;width:43px;height:48px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);';
@@ -1056,13 +1205,21 @@ class Plant extends Entity {
                     if (this.type === 'fusion_popcorn') projType = 'popcorn';
                     // ===== v3.45.0 =====
                     if (this.type === 'fusion_firerepeater') {
-                        // v3.48.0 大技能【过热爆发】：每第 4 轮改为 6 连发爆炎（60×6、弹体加大发光），
-                        // 其余轮次维持 2 连发火焰豌豆 40×2
+                        // v3.48.0 大技能【过热爆发】：v3.50.0 由每第 4 轮降频为每第 8 轮（用户：大招频率太快），
+                        // 爆发轮 6 连发爆炎（60×6、弹体加大发光），其余轮次维持 2 连发火焰豌豆 40×2
                         this._fireVolley = (this._fireVolley || 0) + 1;
-                        this._overheatBurst = (this._fireVolley % 4 === 0);
+                        this._overheatBurst = (this._fireVolley % 8 === 0);
                         projType = 'firepea';
                     }
                     if (this.type === 'fusion_icekernel' && projType === 'kernel') projType = 'icekernel'; // 冰玉米：减速（黄油定身概率保留）
+                    // ===== v3.50.0 数据驱动新融合的弹种特判 =====
+                    if (this.type === 'fusion_peashooter_torchwood') projType = 'firepea'; // 火焰射手：豌豆过火炬=点燃
+                    if (this.type === 'fusion_melon_cabbagepult') {
+                        projType = Math.random() < 0.5 ? 'melon' : 'cabbage'; // 双果投手：西瓜/卷心菜交替
+                    }
+                    if (this.type === 'fusion_wintermelon_cabbagepult') {
+                        projType = Math.random() < 0.5 ? 'wintermelon' : 'cabbage'; // 冰双果投手：冰瓜/卷心菜交替
+                    }
                     
                     // 樱桃射手特色：普通子弹为樱桃色豌豆，每第 10 次攻击发射小樱桃炸弹
                     // （伤害=原版樱桃炸弹 1800 的一半=900，命中后 3×3 爆炸）
@@ -1116,6 +1273,7 @@ class Plant extends Entity {
                                 target = ahead[0] || null;
                             }
                             // v3.48.0：火焰双发过热爆发 = 爆炎弹体加大发光 + 60 伤（普通轮 40）
+                            // v3.50.0：火焰西瓜 melon 弹伤害 60→75（火炬烤热，与阳光成本匹配）
                             const spawnPea = () => {
                                 const pr = new Projectile(this.game, this.x + 30, this.y - 15, this.row, projType, target);
                                 if (this.type === 'fusion_firerepeater' && this._overheatBurst) {
@@ -1123,12 +1281,16 @@ class Plant extends Entity {
                                     pr.setTransform('scale(1.3)');
                                     pr.element.style.filter = 'brightness(1.35) saturate(1.6)';
                                 }
+                                if (this.type === 'fusion_melonpult_torchwood' && projType === 'melon') {
+                                    pr.damage = 75;
+                                }
                                 this.game.entities.push(pr);
                             };
                             spawnPea();
 
                             let repeatCount = this.hasTrait('gatlingpea') ? 4 : ((this.hasTrait('repeater') || this.hasTrait('cattail')) ? 2 : 1);
                             if (this.type === 'fusion_firerepeater') repeatCount = this._overheatBurst ? 6 : 2; // v3.48.0 过热爆发 6 连发
+                            if (this.type === 'fusion_gatlingpea_repeater') repeatCount = 6; // v3.50.0 超级机枪：机枪+双发=6 连发
                             for (let i = 1; i < repeatCount; i++) {
                                 setTimeout(() => {
                                     if (!this.isDead) {
@@ -1202,14 +1364,8 @@ class Plant extends Entity {
             this.growthTimer += deltaTime;
             this.growthStage = Math.min(3, Math.floor(this.growthTimer / 20.0)); // 0/1/2/3
         }
-        // v3.48.0 四头向日葵大技能【阳光雨】：每 60 秒全场天降 6 颗阳光（与本体每轮 100 产能叠加）
-        if (this.type === 'fusion_quadsun' && !this.game.zombieMode) {
-            this._sunRainTimer = (this._sunRainTimer || 0) + deltaTime;
-            if (this._sunRainTimer >= 60) {
-                this._sunRainTimer = 0;
-                this._sunRain();
-            }
-        }
+        // v3.50.0 融合大技能统一调度（阳光雨降频 120s/3 颗；冰系极寒波动/坚果系/射手系/一次性二段全在这里）
+        this._updateUltimates(deltaTime);
         // 我是僵尸模式：敌方向日葵不产阳光球（我方阳光只来自"啃死向日葵 +200/双子 +500"的奖励，见死亡分支）
         if (!this.game.zombieMode && (this.hasTrait('sunflower') || this.hasTrait('sunshroom') || this.hasTrait('twinsunflower'))) {
             this.sunTimer += deltaTime;
@@ -1270,8 +1426,12 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                 for (let z of zombies) {
                     if (this.hasTrait('cherrybomb') && this.hasTrait('snowpea')) {
                         // v3.42.0：与 explodeNow 同步 —— 900→2400（秒杀铁桶/橄榄球/铁门），保留 10 秒减速
+                        // v3.50.0 超级大招同步：核心圈 2400，圈子外全屏 800 冰伤 + 冻结 10 秒
                         if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 100) {
                             z.takeDamage(2400, { bomb: true, oneshot: true });
+                            z.setSlow(10.0);
+                        } else {
+                            z.takeDamage(800, { bomb: true });
                             z.setSlow(10.0);
                         }
                     } else if (this.hasTrait('cherrybomb')) {
@@ -1453,7 +1613,8 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
         
         // v3.45.0 辣椒高坚果（高坚果+火爆辣椒）：啃它的僵尸被烫——
         // 咬合范围内每秒 40 灼烧（与地刺同频率的贴身 tick）
-        if (this.type === 'fusion_firetallnut') {
+        // v3.50.0：火炬蒜塔（大蒜+火炬树桩）同享灼烧啃食者
+        if (this.type === 'fusion_firetallnut' || this.type === 'fusion_garlic_torchwood') {
             this.burnTick = (this.burnTick || 0) + deltaTime;
             if (this.burnTick >= 1.0) {
                 this.burnTick = 0;
@@ -1544,6 +1705,23 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                             'left:' + (this.x - 130) + 'px;top:' + (this.y - 120) + 'px;width:260px;height:240px;object-fit:contain;';
                         this.game.container.appendChild(boom);
                         setTimeout(() => boom.remove(), 1000);
+                        // v3.50.0 爆炸弹跳大技能【连环弹跳】（用户：一次性植物用完之后再直接放大招）：
+                        // 压扁+3×3 爆炸后 0.6s 原地再炸一次（1800/3×3），等于一次种下两次清算
+                        setTimeout(() => {
+                            if (this.game.state !== 'PLAYING') return;
+                            const zs2 = this.game.entities.filter(e =>
+                                e instanceof Zombie && !e.isDead && e.state !== 'DYING' &&
+                                Math.abs(e.row - this.row) <= 1 && Math.abs(e.x - this.x) < 120
+                            );
+                            for (const z of zs2) z.takeDamage(1800, { bomb: true, oneshot: true });
+                            const boom2 = document.createElement('img');
+                            boom2.src = 'assets/images/Plants/CherryBomb/Boom.gif';
+                            boom2.style.cssText = 'position:absolute;pointer-events:none;z-index:3000;' +
+                                'left:' + (this.x - 130) + 'px;top:' + (this.y - 120) + 'px;width:260px;height:240px;object-fit:contain;';
+                            this.game.container.appendChild(boom2);
+                            setTimeout(() => boom2.remove(), 1000);
+                            if (this.game.showUltimateNotice) this.game.showUltimateNotice('ult_boomsquash', '💥 爆炸弹跳引发了连环爆炸！', '#ff9f43');
+                        }, 600);
                     } else {
                         const zombies = this.game.entities.filter(e => 
                             e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 60 && !e.isDead && e.state !== 'DYING'
@@ -1590,6 +1768,42 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                             'width:' + (b.cols * b.cellWidth) + 'px;height:131px;object-fit:fill;';
                         this.game.container.appendChild(strip);
                         setTimeout(() => strip.remove(), 1000);
+                        // v3.50.0 烈焰地雷大技能【烈焰回火】（用户：一次性植物用完之后再直接放大招）：
+                        // 整行烈焰后 0.6s 原地追加一次 3×3 的 1800 爆炸（Boom.gif），二段清算铁桶级漏网
+                        setTimeout(() => {
+                            if (this.game.state !== 'PLAYING') return;
+                            const zs2 = this.game.entities.filter(e =>
+                                e instanceof Zombie && !e.isDead && e.state !== 'DYING' &&
+                                Math.abs(e.row - this.row) <= 1 && Math.abs(e.x - this.x) < 120
+                            );
+                            for (const z of zs2) z.takeDamage(1800, { bomb: true, oneshot: true });
+                            const boom2 = document.createElement('img');
+                            boom2.src = 'assets/images/Plants/CherryBomb/Boom.gif';
+                            boom2.style.cssText = 'position:absolute;pointer-events:none;z-index:3000;' +
+                                'left:' + (this.x - 130) + 'px;top:' + (this.y - 120) + 'px;width:260px;height:240px;object-fit:contain;';
+                            this.game.container.appendChild(boom2);
+                            setTimeout(() => boom2.remove(), 1000);
+                            if (this.game.showUltimateNotice) this.game.showUltimateNotice('ult_firemine', '💥 烈焰地雷引发烈焰回火！', '#ff7f27');
+                        }, 600);
+                    } else if (this.type === 'fusion_sporemine') {
+                        // v3.50.0 孢子地雷大技能【孢子云爆】（一次性二段）：地雷炸完 0.6s 后
+                        // 原地腾起毒孢子云，3×3 内僵尸再吃 600 破甲伤害
+                        setTimeout(() => {
+                            if (this.game.state !== 'PLAYING') return;
+                            const zs2 = this.game.entities.filter(e =>
+                                e instanceof Zombie && !e.isDead && e.state !== 'DYING' &&
+                                Math.abs(e.row - this.row) <= 1 && Math.abs(e.x - this.x) < 120
+                            );
+                            for (const z of zs2) z.takeDamage(600, { pierce: true });
+                            const cloud = document.createElement('img');
+                            cloud.src = 'assets/images/Plants/PuffShroom/PuffShroom.gif';
+                            cloud.style.cssText = 'position:absolute;pointer-events:none;z-index:2500;' +
+                                'left:' + (this.x - 70) + 'px;top:' + (this.y - 70) + 'px;width:140px;height:140px;object-fit:contain;' +
+                                'filter:blur(1px) saturate(1.4) brightness(1.2);opacity:.9;';
+                            this.game.container.appendChild(cloud);
+                            setTimeout(() => cloud.remove(), 1200);
+                            if (this.game.showUltimateNotice) this.game.showUltimateNotice('ult_sporemine', '🍄 孢子地雷腾起毒孢子云！', '#b0e0a0');
+                        }, 600);
                     } else {
                         // Damage all zombies in a small radius
                         const zombies = this.game.entities.filter(e => 
@@ -1626,16 +1840,16 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
             // 大嘴坚果：保留坚果身+大嘴花头的合成外观，攻击/消化时只换嘴部动画不合适，
             // 因此维持静态外观（咬合音效与伤害照常），其余大嘴花植物照常换图。
             const isBigNutChomper = (this.type === 'fusion_chomper_wallnut');
-            // v3.26.0：坚果大嘴花的咀嚼演出——大嘴花头随啃咬/消化摆动（普通大嘴花直接换攻击/消化图）
-            if (isBigNutChomper && this.fusionOverlay) {
-                const headBase = 'translate(-50%, -50%) translate(20px, -25px) scale(0.9)';
+            // v3.50.0：层级对调后大嘴花=本体（element）、坚果=叠加层——咬合/消化演出改为
+            // 摆动大嘴花本体（rotate 叠加在居中基准上，不破坏 translate(-50%,-50%)）
+            if (isBigNutChomper) {
                 if (this.state === 'biting') {
-                    this.fusionOverlay.style.transform = headBase + ' rotate(-14deg) scale(1.06)';
+                    this.setTransform('rotate(-8deg) scale(1.04)');
                 } else if (this.state === 'chewing') {
-                    const wob = (Math.sin(this.chewTimer * 6) * 9).toFixed(1);
-                    this.fusionOverlay.style.transform = headBase + ' rotate(' + wob + 'deg)';
+                    const wob = (Math.sin(this.chewTimer * 6) * 6).toFixed(1);
+                    this.setTransform('rotate(' + wob + 'deg)');
                 } else {
-                    this.fusionOverlay.style.transform = headBase;
+                    this.setTransform('');
                 }
             }
             if (this.state === 'idle') {
@@ -1647,6 +1861,12 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     this.state = 'biting';
                     this.chewTimer = 0.5; // half second bite animation
                     zombieNear.hp = 0; // instant kill
+                    // v3.50.0 大嘴家族吞噬回血（大嘴坚果/吞天大嘴/蒜香大嘴花/向日葵大嘴花）：
+                    // 每吞一只回 1000 血（不超过上限）——大嘴坚果的大技能，其余同族顺带受益
+                    if (this.type.startsWith('fusion_')) {
+                        this.hp = Math.min(this.maxHp, this.hp + 1000);
+                        if (this.game.showUltimateNotice) this.game.showUltimateNotice('ult_chompheal', '🪴 ' + (this.game.getPlantName ? this.game.getPlantName(this.type) : '大嘴花') + ' 吞噬回血 1000！', '#a0d890');
+                    }
                     if (!isBigNutChomper) this.element.src = 'assets/images/Plants/Chomper/ChomperAttack.gif';
                     this.game.audioManager.play('chomp');
                 }

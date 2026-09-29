@@ -54,10 +54,14 @@ class WaveManager {
         if (this.timeElapsed > 600) bossChance = Math.min(0.05, (this.timeElapsed - 600) / 1000); // Rare boss spawn
         
         // 植物头僵尸（peahead/nuthead/sunhead/snowpeahead）：
-        // 头顶基础植物的"僵尸改造体"，只有融合进化模式会刷出 —— 经典冒险不会出现。
-        // 75 秒后解锁，随对局时长逐渐常见（概率上限 0.24）。
+        // 头顶基础植物的"僵尸改造体"。
+        // v3.50.0（用户：难度适中的融合植物僵尸加入经典模式）：
+        //   融合进化 —— 75s 解锁，概率上限 0.24（原样）；
+        //   经典冒险 —— 150s 解锁，概率上限压到 0.10（融合模式的四成出头，难度适中）。
         if (this.game.fusionMode && this.timeElapsed > 75) {
             plantheadChance = Math.min(0.24, (this.timeElapsed - 75) / 280);
+        } else if (!this.game.fusionMode && this.timeElapsed > 150) {
+            plantheadChance = Math.min(0.10, (this.timeElapsed - 150) / 600);
         }
 
         // v3.22.0 火爆辣椒植物僵尸（融合进化专属）：后期出场，与冰车同期解锁（540s），
