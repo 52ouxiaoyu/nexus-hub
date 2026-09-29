@@ -154,33 +154,33 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790603141';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790655552';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790603141';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790655552';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790603141';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790655552';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790603141';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790655552';
             stat.butterChance = 0.2;
         } else if (type === 'cobcannon') {
             // 玉米加农炮（v3.24.0）：PVZ1 原版 Cob Cannon——三株玉米投手合体，占两格。
             // 平时嘴里没有炮；充能 25s 结束后嘴里出现玉米炮弹；
             // 点击它出现瞄准镜（跟随鼠标），按 M 键向准星位置发射（见 GameLoop.enterCobAim）。
             stat.hp = 600;
-            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790603141';
+            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790655552';
             // v3.24.2 立绘 148×85（炮口已用叶壳封住），显示宽 132——两格 160px 内留边，
             // 修"看起来占三格"；+15 补偿缩小后轮子离地
             stat.yOffset = 15;
@@ -210,7 +210,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790603141';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790655552';
             stat.yOffset = 0;
         }
 
@@ -373,13 +373,6 @@ class Plant extends Entity {
                     this.element.src = 'assets/images/Plants/Starfruit/Starfruit.gif';
                     this.yOffset = -10;
                     this.fusionOverlay.style.display = 'none';
-                } else if (type === 'fusion_sunflower_wallnut') {
-                    // v3.37.0 用户设计：向日葵放大垫底，花瓣探出坚果外圈形成一圈"向日葵边框"
-                    // （旧通用路径里向日葵被坚果完全遮住，看不出融合了什么）
-                    this.element.src = s1.src; // sunflower 主体（放大）
-                    this.setTransform('scale(1.25)');
-                    this.fusionOverlay.src = s2.src; // wallnut 居中盖在花瓣环中心
-                    this.fusionOverlay.style.clipPath = 'none';
                 } else if (type === 'fusion_snowpea_starfruit') {
                     // v3.36.0 冰杨桃（寒冰射手+杨桃）：杨桃整株立绘 + 冰蓝滤镜（同寒冰卷心菜配色）
                     this.element.src = 'assets/images/Plants/Starfruit/Starfruit.gif';
@@ -466,9 +459,13 @@ class Plant extends Entity {
                     this.element.style.filter = 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.12)';
                     this.fusionOverlay.style.display = 'none';
                 } else if (type === 'fusion_quadsun') {
+                    // v3.46.0 四头向日葵：本体两个头（一低一高）+ 镜像副本偏移错开 → 四个头两列错落。
+                    // 镜像副本=原版像素水平翻转（同 PVZ 僵尸朝向翻转，非自画），副本在上层（v3.27.0 约定）
                     this.element.style.filter = 'saturate(1.35) brightness(1.12)';
+                    this.fusionOverlay.style.clipPath = 'none';
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(10px, 6px) scaleX(-1) scale(1.15)';
+                    this.fusionOverlay.style.transformOrigin = 'center center';
                     this.setTransform('scale(1.15)');
-                    this.fusionOverlay.style.display = 'none';
                 } else if (type === 'fusion_firetallnut') {
                     this.yOffset = s2.yOffset;      // 宿主是高坚果
                     this.element.src = s2.src;      // tallnut 本体
@@ -796,7 +793,7 @@ class Plant extends Entity {
             if (!this._cobShellEl) {
                 const el = document.createElement('img');
                 // v3.24.1：装填玉米用原版图鉴里抠出的整根玉米（带根部），从炮口探出
-                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790603141';
+                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790655552';
                 // 裸 img 必须自带 translate(-50%,-50%) 居中基准（与 fusionOverlay 同一教训）
                 // v3.24.2 尺寸随立绘缩放同步：43×48（0.892×）
                 el.style.cssText = 'position:absolute;width:43px;height:48px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);';
