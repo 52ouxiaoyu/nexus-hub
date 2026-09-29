@@ -696,11 +696,14 @@ class Zombie extends Entity {
             // 观感是"身体都碾过去了才回头咬一口"。大型僵尸检测半径 85px 且只认前方目标，
             // 车头/头前端一碰植物就立即结算。
             // v3.40.0：冰车驶过留下冰道——每跨入一个新列就给该格铺冰
+            // v3.48.0：火焰地刺镇守的行不结冰（用户：火烤着呢，冰车驶过不留冰轨）
             if (this.type === 'zomboni' && !this.isDead && this.hp > 0) {
                 const iceCol = Math.floor((this.x - this.game.board.offsetX) / this.game.board.cellWidth);
                 if (iceCol !== this._lastIceCol) {
                     this._lastIceCol = iceCol;
-                    if (iceCol >= 0 && iceCol < this.game.board.cols) this.game.layIce(this.row, iceCol);
+                    const rowHasFireSpike = this.game.entities.some(e =>
+                        e instanceof Plant && !e.isDead && e.row === this.row && e.type === 'fusion_firespikeweed');
+                    if (iceCol >= 0 && iceCol < this.game.board.cols && !rowHasFireSpike) this.game.layIce(this.row, iceCol);
                 }
             }
 
@@ -710,7 +713,8 @@ class Zombie extends Entity {
                 // v3.14.0：地刺/钢地刺都不可啃 —— 所有僵尸直接从上面走过
                 // v3.27.0：只有"纯地面刺"（本体无实体）才整株豁免；地刺坚果/高坚果钢地刺
                 // 这类带坚果躯体的融合株照常被啃食（坚果当盾承伤），脚下地刺在 update 里照常扎人
-                (e.type !== 'spikeweed' && e.type !== 'spikerock') &&
+                // v3.48.0：火焰地刺也是纯地面刺（用户：僵尸不能吃到它，只有冰车能碾）——收进 isPureGroundSpike
+                !(e.isPureGroundSpike && e.isPureGroundSpike()) &&
                 e.row === this.row && 
                 (bigZ ? (e.x <= this.x + 10 && this.x - e.x < 85) : Math.abs(e.x - this.x) < 40) &&
                 !e.isDead && e.type !== 'crater'

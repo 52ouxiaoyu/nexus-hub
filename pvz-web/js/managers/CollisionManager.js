@@ -138,11 +138,12 @@ class CollisionManager {
 
         // v3.23.0：豌豆头/机枪头僵尸的豌豆（zpea）——命中植物造成伤害
         // v3.27.0：只有"纯地面刺"低矮不打；带坚果躯体的融合株（地刺坚果/高坚果钢地刺）照常挨打
+        // v3.48.0：火焰地刺收进 isPureGroundSpike（不可啃也不挨 zpea，只有冰车能碾爆）
         for (let p of projectiles) {
             if (p.type !== 'zpea' || p.isDead) continue;
             const hitPlants = this.game.entities.filter(e => e instanceof Plant && !e.isDead && e.row === p.row &&
                 Math.abs(e.x - p.x) < 35 &&
-                e.type !== 'spikeweed' && e.type !== 'spikerock');
+                !(e.isPureGroundSpike && e.isPureGroundSpike()));
             if (hitPlants.length > 0) {
                 hitPlants[0].hp -= p.damage;
                 if (this.game.audioManager.playFx) this.game.audioManager.playFx('pea_hit');

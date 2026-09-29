@@ -112,9 +112,9 @@
         { n: '烈焰地雷', base: PL + 'PotatoMine/PotatoMine.gif', bf: 'hue-rotate(-30deg) saturate(2.2) brightness(1.15)', md: 75, t: '土豆地雷+火爆辣椒：布好后触发整行 1800 烈焰' },
         { n: '爆炸弹跳', base: PL + 'Squash/Squash.gif', bf: 'hue-rotate(-35deg) saturate(1.9)', bt: 'scale(2.75) translate(0px, -72px)', md: 226, t: '窝瓜+樱桃炸弹：跃起压扁，落点 3×3 爆炸 1800' },
         { n: '冰玉米投手', base: PL + 'KernelPult/KernelPult.png', bf: 'brightness(1.15) hue-rotate(160deg) saturate(1.8)', md: 96, t: '玉米投手+寒冰射手：玉米粒 20+减速，20% 黄油定身保留' },
-        { n: '火焰地刺', base: PL + 'Spikeweed/Spikeweed.gif', bf: 'sepia(1) saturate(3) hue-rotate(-25deg) brightness(1.15)', md: 85, t: '地刺+火炬树桩：灼烧刺 80 / 0.75s（普通地刺的 2 倍）' },
-        { n: '火焰双发', base: PL + 'Repeater/Repeater.gif', bf: 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.12)', md: 73, t: '双发射手+火炬树桩：2 连发火焰豌豆 40×2（豌豆过火炬=点燃）' },
-        { n: '四头向日葵', base: PL + 'TwinSunflower/TwinSunflower1.gif', bf: 'saturate(1.35) brightness(1.12)', bt: 'scale(1.15)', ov: PL + 'TwinSunflower/TwinSunflower1.gif', ot: 'translate(10px, 6px) scaleX(-1) scale(1.15)', md: 84, t: '双子向日葵+双子向日葵：每轮 4 颗阳光共 100' },
+        { n: '火焰地刺', base: PL + 'Spikeweed/Spikeweed.gif', bf: 'sepia(1) saturate(3) hue-rotate(-25deg) brightness(1.15)', md: 85, t: '地刺+火炬树桩：灼烧刺 80 / 0.75s（普通地刺的 2 倍）；僵尸啃不到它（只有冰车能碾爆），它镇守的一行冰车驶过不留冰道' },
+        { n: '火焰双发', base: PL + 'Repeater/Repeater.gif', bf: 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.12)', md: 73, t: '双发射手+火炬树桩：2 连发火焰豌豆 40×2；大技能【过热爆发】——每第 4 轮改为 6 连发爆炎 60×6（弹体加大发光）' },
+        { n: '四头向日葵', base: PL + 'TwinSunflower/TwinSunflower1.gif', bf: 'saturate(1.35) brightness(1.12)', bt: 'scale(1.15)', ov: PL + 'TwinSunflower/TwinSunflower1.gif', ot: 'translate(10px, 6px) scaleX(-1) scale(1.15)', md: 84, t: '双子向日葵+双子向日葵：每轮 4 颗阳光共 100；大技能【阳光雨】——每 60 秒全场天降 6 颗阳光' },
         { n: '辣椒高坚果', base: PL + 'TallNut/TallNut.gif', bf: 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.1)', md: 119, t: '高坚果+火爆辣椒：8000 血肉盾，啃它的僵尸每秒被烫 40' },
     ];
     // 注：南瓜壳不再单独列在融合区 —— 它与经典区"南瓜壳"是同一株植物（坚果墙+高坚果融合=套壳玩法，

@@ -49,6 +49,11 @@ class Board {
             plant.y = this.offsetY + row * this.cellHeight + this.cellHeight / 2;
             
             this.game.entities.push(plant);
+            // v3.48.0：火焰地刺落位即烤化本行已有冰道——它镇守的行不允许有冰
+            //（本格冰面本来就不能种（canPlant 拦截），这里烧的是同行其它格的存量冰）
+            if (plant.type === 'fusion_firespikeweed' && this.game.meltIceTrailsInRow) {
+                this.game.meltIceTrailsInRow(row);
+            }
             return true;
         }
         return false;

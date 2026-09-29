@@ -154,33 +154,33 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790661453';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790662567';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790661453';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790662567';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790661453';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790662567';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790661453';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790662567';
             stat.butterChance = 0.2;
         } else if (type === 'cobcannon') {
             // 玉米加农炮（v3.24.0）：PVZ1 原版 Cob Cannon——三株玉米投手合体，占两格。
             // 平时嘴里没有炮；充能 25s 结束后嘴里出现玉米炮弹；
             // 点击它出现瞄准镜（跟随鼠标），按 M 键向准星位置发射（见 GameLoop.enterCobAim）。
             stat.hp = 600;
-            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790661453';
+            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790662567';
             // v3.24.2 立绘 148×85（炮口已用叶壳封住），显示宽 132——两格 160px 内留边，
             // 修"看起来占三格"；+15 补偿缩小后轮子离地
             stat.yOffset = 15;
@@ -210,7 +210,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790661453';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790662567';
             stat.yOffset = 0;
         }
 
@@ -521,6 +521,26 @@ class Plant extends Entity {
         if (this.traits && this.traits.includes(trait)) return true;
         return false;
     }
+
+    // v3.48.0：纯地面刺（本体无直立躯体）——僵尸不可啃、子弹打不到，
+    // 只有冰车能碾爆（地刺/钢地刺/火焰地刺；带坚果/高坚果躯体的融合株不算，照常被啃）
+    isPureGroundSpike() {
+        return (this.hasTrait('spikeweed') || this.hasTrait('spikerock')) &&
+            !this.hasTrait('wallnut') && !this.hasTrait('tallnut');
+    }
+
+    // v3.48.0 四头向日葵大技能【阳光雨】：全场随机天降 6 颗阳光（每颗 25， stagger 250ms 落下）
+    _sunRain() {
+        const b = this.game.board;
+        if (this.game.showAnnouncement) this.game.showAnnouncement('🌻 四头向日葵降下了阳光雨！', '#ffd700');
+        for (let i = 0; i < 6; i++) {
+            setTimeout(() => {
+                if (this.isDead || this.game.state !== 'PLAYING') return;
+                const randomX = b.offsetX + Math.random() * (b.cols * b.cellWidth);
+                this.game.entities.push(new Sun(this.game, randomX, -50)); // 与天降阳光同款：从屏顶落下
+            }, i * 250);
+        }
+    }
     
     // ===== 南瓜壳（护甲层，PVZ 原版机制）=====
     // 用 坚果墙+高坚果 融合出手套南瓜壳后，可"套"在已有植物上：
@@ -794,7 +814,7 @@ class Plant extends Entity {
             if (!this._cobShellEl) {
                 const el = document.createElement('img');
                 // v3.24.1：装填玉米用原版图鉴里抠出的整根玉米（带根部），从炮口探出
-                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790661453';
+                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790662567';
                 // 裸 img 必须自带 translate(-50%,-50%) 居中基准（与 fusionOverlay 同一教训）
                 // v3.24.2 尺寸随立绘缩放同步：43×48（0.892×）
                 el.style.cssText = 'position:absolute;width:43px;height:48px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);';
@@ -1035,7 +1055,13 @@ class Plant extends Entity {
                     if (this.type === 'fusion_icecabbage') projType = 'icecabbage';
                     if (this.type === 'fusion_popcorn') projType = 'popcorn';
                     // ===== v3.45.0 =====
-                    if (this.type === 'fusion_firerepeater') projType = 'firepea';   // 火焰双发：2 连发火焰豌豆 40×2
+                    if (this.type === 'fusion_firerepeater') {
+                        // v3.48.0 大技能【过热爆发】：每第 4 轮改为 6 连发爆炎（60×6、弹体加大发光），
+                        // 其余轮次维持 2 连发火焰豌豆 40×2
+                        this._fireVolley = (this._fireVolley || 0) + 1;
+                        this._overheatBurst = (this._fireVolley % 4 === 0);
+                        projType = 'firepea';
+                    }
                     if (this.type === 'fusion_icekernel' && projType === 'kernel') projType = 'icekernel'; // 冰玉米：减速（黄油定身概率保留）
                     
                     // 樱桃射手特色：普通子弹为樱桃色豌豆，每第 10 次攻击发射小樱桃炸弹
@@ -1089,13 +1115,24 @@ class Plant extends Entity {
                                 ).sort((a, b) => a.x - b.x);
                                 target = ahead[0] || null;
                             }
-                            this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15, this.row, projType, target));
-                            
-                            const repeatCount = this.hasTrait('gatlingpea') ? 4 : ((this.hasTrait('repeater') || this.hasTrait('cattail')) ? 2 : 1);
+                            // v3.48.0：火焰双发过热爆发 = 爆炎弹体加大发光 + 60 伤（普通轮 40）
+                            const spawnPea = () => {
+                                const pr = new Projectile(this.game, this.x + 30, this.y - 15, this.row, projType, target);
+                                if (this.type === 'fusion_firerepeater' && this._overheatBurst) {
+                                    pr.damage = 60;
+                                    pr.setTransform('scale(1.3)');
+                                    pr.element.style.filter = 'brightness(1.35) saturate(1.6)';
+                                }
+                                this.game.entities.push(pr);
+                            };
+                            spawnPea();
+
+                            let repeatCount = this.hasTrait('gatlingpea') ? 4 : ((this.hasTrait('repeater') || this.hasTrait('cattail')) ? 2 : 1);
+                            if (this.type === 'fusion_firerepeater') repeatCount = this._overheatBurst ? 6 : 2; // v3.48.0 过热爆发 6 连发
                             for (let i = 1; i < repeatCount; i++) {
                                 setTimeout(() => {
                                     if (!this.isDead) {
-                                        this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15, this.row, projType, target));
+                                        spawnPea();
                                     }
                                 }, 150 * i);
                             }
@@ -1164,6 +1201,14 @@ class Plant extends Entity {
             // 成熟（≥60s）后产量=向日葵(25)、阳光恢复全尺寸。
             this.growthTimer += deltaTime;
             this.growthStage = Math.min(3, Math.floor(this.growthTimer / 20.0)); // 0/1/2/3
+        }
+        // v3.48.0 四头向日葵大技能【阳光雨】：每 60 秒全场天降 6 颗阳光（与本体每轮 100 产能叠加）
+        if (this.type === 'fusion_quadsun' && !this.game.zombieMode) {
+            this._sunRainTimer = (this._sunRainTimer || 0) + deltaTime;
+            if (this._sunRainTimer >= 60) {
+                this._sunRainTimer = 0;
+                this._sunRain();
+            }
         }
         // 我是僵尸模式：敌方向日葵不产阳光球（我方阳光只来自"啃死向日葵 +200/双子 +500"的奖励，见死亡分支）
         if (!this.game.zombieMode && (this.hasTrait('sunflower') || this.hasTrait('sunshroom') || this.hasTrait('twinsunflower'))) {
