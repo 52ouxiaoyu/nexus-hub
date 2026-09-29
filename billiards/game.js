@@ -772,8 +772,11 @@ let shotSeq = 0;
 function updateGuide() {
     const ud = guideGroup.userData;
     const assist = assistLevel();
-    const objLen = GUIDE_ASSIST.objLen[assist];
-    const defLen = GUIDE_ASSIST.defLen[assist];
+    // v2.7.4：斯诺克球多路杂，简单档的全程模拟轨迹又长又容易和实际走线偏差
+    // （用户反馈"又差又不好用"）→ 斯诺克保底普通档：短线方向指示，不再画整条模拟路径
+    const effAssist = (gameMode === 'snooker') ? Math.max(assist, 1) : assist;
+    const objLen = GUIDE_ASSIST.objLen[effAssist];
+    const defLen = GUIDE_ASSIST.defLen[effAssist];
     if ((state !== 'aim' && state !== 'charge') || cueBall().potted) {
         guideGroup.visible = false;
         return;
