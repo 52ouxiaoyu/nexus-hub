@@ -934,20 +934,46 @@ class Zombie extends Entity {
                         if (textBubble.parentNode) textBubble.parentNode.removeChild(textBubble);
                     }, 2000);
                     
-                    // Switch row up or down randomly (if possible)
-                    const canGoUp = this.row > 0;
-                    const canGoDown = this.row < this.game.board.rows - 1;
-                    
-                    if (canGoUp && canGoDown) {
-                        this.row += Math.random() < 0.5 ? -1 : 1;
-                    } else if (canGoUp) {
-                        this.row -= 1;
-                    } else if (canGoDown) {
-                        this.row += 1;
+                    // ===== v3.51.0：蒜味家族机制分化（用户逐株定义）=====
+                    const gType = this.eatTarget.type;
+                    const goToRow = (z, r) => {
+                        z.row = r;
+                        z.y = z.game.board.offsetY + z.row * z.game.board.cellHeight + z.game.board.cellHeight / 2 - 20;
+                    };
+                    const adjRowOf = (z) => {
+                        const up = z.row > 0, down = z.row < z.game.board.rows - 1;
+                        if (up && down) return z.row + (Math.random() < 0.5 ? -1 : 1);
+                        if (up) return z.row - 1;
+                        if (down) return z.row + 1;
+                        return z.row;
+                    };
+                    if (gType === 'fusion_fumeshroom_garlic') {
+                        // 蒜味喷雾：被辣得退回出场点，并换到五行中任意一行"从头再走"
+                        let nr;
+                        do { nr = Math.floor(Math.random() * this.game.board.rows); } while (nr === this.row && this.game.board.rows > 1);
+                        goToRow(this, nr);
+                        this.x = 950;   // 僵尸出生点（Zombie 构造 x=950）
+                    } else if (gType === 'fusion_scaredyshroom_garlic') {
+                        // 胆小蒜卫：蒜味保护罩——本行全部僵尸（含咬它这只）都被驱赶到相邻两行
+                        const crowd = this.game.entities.filter(e =>
+                            e instanceof Zombie && !e.isDead && !e.hypnotized && e.row === this.row);
+                        for (const z of crowd) {
+                            if (z.type === 'zomboni' || z.type === 'gargantuar' || z.type === 'lgboss') continue;
+                            goToRow(z, adjRowOf(z));
+                            if (z !== this && z.eatTarget === this.eatTarget) {
+                                z.eatTarget = null;
+                                z.state = 'WALKING';
+                                z.element.src = z.walkSrc;
+                            }
+                        }
+                    } else if (gType === 'fusion_tallnut_garlic') {
+                        // 蒜味高坚果：换行 + 被蒜味弹开一大段（击退 70px）
+                        goToRow(this, adjRowOf(this));
+                        this.x = Math.min(945, this.x + 70);
+                    } else {
+                        // 经典大蒜 / 其他蒜卫家族：咬一口换到相邻一行（原版机制）
+                        goToRow(this, adjRowOf(this));
                     }
-                    
-                    // Update visually
-                    this.y = this.game.board.offsetY + this.row * this.game.board.cellHeight + this.game.board.cellHeight / 2 - 20;
                     
                     this.state = 'WALKING';
                     this.eatTarget = null;

@@ -109,31 +109,31 @@
         { n: '玉米加农炮', base: PL + 'CobCannon/CobCannon.png', md: 148, t: '三株玉米投手合体，占两格；充能 25s 后手动瞄准 1800 / 3×3，全游戏最强单发' },
         { n: '寒冰炸弹', base: PL + 'CherryBomb/CherryBomb.gif', bf: 'hue-rotate(180deg) saturate(1.5)', md: 112, t: '寒冰射手+樱桃炸弹：2400 秒杀铁桶级 / 3×3 且全场冻结减速 10 秒' },
         { n: '冰西瓜猫尾草', base: PL + 'Cattail/Cattail.gif', ov: PL + 'WinterMelon/WinterMelon.png', ot: 'translate(-5px, -30px) scale(0.7)', md: 96, t: '冰西瓜投手+猫尾草：全场追踪 60+30 + 减速' },
-        { n: '西瓜猫尾草', base: PL + 'Cattail/Cattail.gif', ov: PL + 'MelonPult/MelonPult.png', ot: 'translate(-5px, -30px) scale(0.7)', md: 96, t: '西瓜投手+猫尾草：全场追踪 60+30' },
+        { n: '西瓜猫尾草', base: PL + 'Cattail/Cattail.gif', ov: PL + 'MelonPult/MelonPult.png', ot: 'translate(-5px, -30px) scale(0.7)', md: 96, t: '西瓜投手+猫尾草：全场追踪 60+30；大技能【瓜弹连射】——每 20 秒朝全场连投 3 颗西瓜' },
         { n: '樱桃射手', base: PL + 'Peashooter/Peashooter.gif', bf: 'hue-rotate(-45deg) saturate(2.0)', md: 71, t: '豌豆射手+樱桃炸弹：每第 10 发射出小樱桃，900 / 3×3' },
         { n: '冰杨桃', base: PL + 'Starfruit/Starfruit.gif', bf: 'brightness(1.1) hue-rotate(160deg) saturate(1.6)', md: 77, t: '寒冰射手+杨桃：五向冰晶 + 减速' },
-        { n: '爆米花投手', base: PL + 'KernelPult/KernelPult.png', bf: 'hue-rotate(-18deg) saturate(1.9) brightness(1.18)', md: 96, t: '玉米投手+火爆辣椒：40 破甲 + 3×3 焦香溅射' },
-        { n: '双料投手', base: PL + 'KernelPult/KernelPult.png', ov: PL + 'CabbagePult/CabbagePult.png', oc: 'polygon(0 0, 48% 0, 48% 50%, 0 50%)', ot: 'translate(37px, 8px)', md: 96, t: '玉米投手+卷心菜投手：两种弹药交替' },
-        { n: '寒冰卷心菜', base: PL + 'CabbagePult/CabbagePult.png', bf: 'brightness(112%) hue-rotate(120deg) saturate(1.7)', md: 96, t: '卷心菜投手+寒冰菇：40 破甲 + 减速' },
-        { n: '坚果射手', base: PL + 'WallNut/WallNut.gif', ov: PL + 'Peashooter/Peashooter.gif', oc: 'polygon(0 0, 100% 0, 100% 65%, 0 65%)', ot: 'translate(5px, -15px)', md: 71, t: '坚果墙+豌豆射手：能扛能打' },
-        { n: '卷心菜堡垒', base: PL + 'WallNut/WallNut.gif', ov: PL + 'CabbagePult/CabbagePult.png', oc: 'polygon(0 0, 46% 0, 46% 46%, 0 46%)', ot: 'translate(26px, -4px)', md: 96, t: '坚果墙+卷心菜投手：肉盾+破甲投掷' },
+        { n: '爆米花投手', base: PL + 'KernelPult/KernelPult.png', bf: 'hue-rotate(-18deg) saturate(1.9) brightness(1.18)', md: 96, t: '玉米投手+火爆辣椒：40 破甲 + 3×3 焦香溅射；大技能【焦香连环爆】——每 22 秒连投 3 颗爆米花' },
+        { n: '双料投手', base: PL + 'KernelPult/KernelPult.png', ov: PL + 'CabbagePult/CabbagePult.png', ot: 'translate(-8px, -34px) scale(0.68)', md: 96, t: '玉米投手+卷心菜投手：两种弹药交替；大技能【双料连投】——每 18 秒 2 卷心菜+黄油齐投' },
+        { n: '寒冰卷心菜', base: PL + 'CabbagePult/CabbagePult.png', bf: 'brightness(112%) hue-rotate(120deg) saturate(1.7)', md: 96, t: '卷心菜投手+寒冰菇：40 破甲 + 减速；大技能【极寒波动】——每 45 秒冰雾冻伤周围' },
+        { n: '坚果射手', base: PL + 'WallNut/WallNut.gif', ov: PL + 'Peashooter/Peashooter.gif', ot: 'translate(2px, -40px) scale(0.7)', md: 71, t: '坚果墙+豌豆射手：能扛能打' },
+        { n: '卷心菜堡垒', base: PL + 'WallNut/WallNut.gif', ov: PL + 'CabbagePult/CabbagePult.png', ot: 'translate(4px, -42px) scale(0.7)', md: 96, t: '坚果墙+卷心菜投手：肉盾+破甲投掷' },
         { n: '大嘴坚果', base: PL + 'Chomper/Chomper.gif', ov: PL + 'WallNut/WallNut.gif', ot: 'translate(0px, 16px) scale(0.85)', md: 130, t: '坚果墙+大嘴花：4000 血又能吞；v3.50.0 坚果提前、大嘴花往后，不再遮挡；大技能【吞噬回血】' },
-        { n: '钢刺高坚果', base: PL + 'TallNut/TallNut.gif', ov: PL + 'Spikerock/Spikerock.gif', ot: 'translate(0px, 58px)', md: 119, t: '高坚果+钢地刺：8000 血 + 脚下带刺' },
+        { n: '钢刺高坚果', base: PL + 'TallNut/TallNut.gif', ov: PL + 'Spikerock/Spikerock.gif', ot: 'translate(0px, 58px)', md: 119, t: '高坚果+钢地刺：8000 血 + 脚下带刺；大技能【径向突刺】——每 10 秒钢刺暴起扎周围 120' },
         { n: '寒冰坚果', base: PL + 'WallNut/WallNut.gif', bf: 'hue-rotate(180deg) saturate(1.5) brightness(1.2)', md: 73, t: '坚果墙+寒冰射手：啃它的人被冻慢' },
         { n: '地刺坚果', base: PL + 'WallNut/WallNut.gif', ov: PL + 'Spikeweed/Spikeweed.gif', ot: 'translate(0px, 48px)', md: 85, t: '坚果墙+地刺：啃它等于啃刺' },
         // v3.46.0：删除「坚果向日葵」（用户裁定外观太丑）
         { n: '毁灭向日葵', base: PL + 'SunFlower/SunFlower1.gif', bf: 'grayscale(0.8) brightness(0.6) sepia(1) hue-rotate(240deg) saturate(3)', md: 74, t: '向日葵+毁灭菇：正常产阳光，被啃死时原地 1800 大爆炸' },
-        { n: '豌豆向日葵', base: PL + 'SunFlower/SunFlower1.gif', ov: PL + 'Peashooter/Peashooter.gif', oc: 'polygon(0 0, 100% 0, 100% 65%, 0 65%)', ot: 'translate(0px, -20px)', md: 92, t: '向日葵+豌豆射手：产阳光还打人' },
-        { n: '孢子地雷', base: PL + 'PotatoMine/PotatoMine.gif', ov: PL + 'PuffShroom/PuffShroom.gif', oc: 'polygon(0 0, 100% 0, 100% 85%, 0 85%)', ot: 'translate(0px, -30px) scale(0.9)', md: 75, t: '土豆地雷+小喷菇：廉价控场地雷' },
+        { n: '豌豆向日葵', base: PL + 'SunFlower/SunFlower1.gif', ov: PL + 'Peashooter/Peashooter.gif', ot: 'translate(0px, -40px) scale(0.72)', md: 92, t: '向日葵+豌豆射手：产阳光还打人' },
+        { n: '孢子地雷', base: PL + 'PotatoMine/PotatoMine.gif', ov: PL + 'PuffShroom/PuffShroom.gif', ot: 'translate(0px, -30px) scale(0.9)', md: 75, t: '土豆地雷+小喷菇：廉价控场地雷' },
         // ===== v3.45.0 十一条新融合（用户批准名单）=====
         { n: '冰机枪射手', base: PL + 'GatlingPea/GatlingPea.gif', bf: 'brightness(1.15) hue-rotate(180deg) saturate(1.5)', md: 88, t: '机枪射手+寒冰射手：4 连发冰豌豆 20×4，命中减速 10 秒' },
         { n: '冰猫尾草', base: PL + 'Cattail/Cattail.gif', bf: 'brightness(1.2) hue-rotate(160deg) saturate(1.8)', md: 96, t: '猫尾草+寒冰射手：全场追踪冰刺 20，命中减速 10 秒' },
         { n: '冰忧郁菇', base: PL + 'GloomShroom/GloomShroom.gif', bf: 'brightness(1.15) hue-rotate(160deg) saturate(1.7)', md: 112, t: '忧郁菇+寒冰菇：3×3 冰雾 80/发，穿门且命中减速 10 秒' },
-        { n: '十芒杨桃', base: PL + 'Starfruit/Starfruit.gif', bf: 'saturate(1.6) brightness(1.2) hue-rotate(15deg)', md: 77, t: '杨桃+杨桃：十方向 36° 均布齐射，每颗 40 穿透' },
+        { n: '十芒杨桃', base: PL + 'Starfruit/Starfruit.gif', bf: 'saturate(1.6) brightness(1.2) hue-rotate(15deg)', md: 77, t: '杨桃+杨桃：十方向 36° 均布齐射，每颗 40 穿透；大技能【星环爆发】——每 20 秒十向星环爆发' },
         { n: '烈焰地雷', base: PL + 'PotatoMine/PotatoMine.gif', bf: 'hue-rotate(-30deg) saturate(2.2) brightness(1.15)', md: 75, t: '土豆地雷+火爆辣椒：布好后触发整行 1800 烈焰' },
         { n: '爆炸弹跳', base: PL + 'Squash/Squash.gif', bf: 'hue-rotate(-35deg) saturate(1.9)', bt: 'scale(2.75) translate(0px, -72px)', md: 226, t: '窝瓜+樱桃炸弹：跃起压扁，落点 3×3 爆炸 1800' },
         { n: '冰玉米投手', base: PL + 'KernelPult/KernelPult.png', bf: 'brightness(1.15) hue-rotate(160deg) saturate(1.8)', md: 96, t: '玉米投手+寒冰射手：玉米粒 20+减速，20% 黄油定身保留' },
-        { n: '火焰地刺', base: PL + 'Spikeweed/Spikeweed.gif', bf: 'sepia(1) saturate(3) hue-rotate(-25deg) brightness(1.15)', md: 85, t: '地刺+火炬树桩：灼烧刺 80 / 0.75s（普通地刺的 2 倍）；僵尸啃不到它（只有冰车能碾爆），它镇守的一行冰车驶过不留冰道' },
+        { n: '火焰地刺', base: PL + 'Spikeweed/Spikeweed.gif', bf: 'sepia(1) saturate(3) hue-rotate(-25deg) brightness(1.15)', md: 85, t: '地刺+火炬树桩：灼烧刺 80 / 0.75s（普通地刺的 2 倍）；僵尸啃不到它（只有冰车能碾爆），它镇守的一行冰车驶过不留冰道；大技能【烈焰热浪】——每 15 秒本行火焰喷灼 100' },
         { n: '火焰双发', base: PL + 'Repeater/Repeater.gif', bf: 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.12)', md: 73, t: '双发射手+火炬树桩：2 连发火焰豌豆 40×2；大技能【过热爆发】——每第 8 轮改为 6 连发爆炎 60×6（弹体加大发光）' },
         { n: '四头向日葵', base: PL + 'TwinSunflower/TwinSunflower1.gif', bf: 'saturate(1.35) brightness(1.12)', bt: 'scale(1.15)', ov: PL + 'TwinSunflower/TwinSunflower1.gif', ot: 'translate(10px, 6px) scaleX(-1) scale(1.15)', md: 84, t: '双子向日葵+双子向日葵：每轮 4 颗阳光共 100；大技能【阳光雨】——每 120 秒全场天降 3 颗阳光' },
         { n: '辣椒高坚果', base: PL + 'TallNut/TallNut.gif', bf: 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.1)', md: 119, t: '高坚果+火爆辣椒：8000 血肉盾，啃它的僵尸每秒被烫 40' },
@@ -269,24 +269,39 @@
     .hg-art.hg-zcard { background: linear-gradient(180deg, #fffef7 0%, #f6eed6 100%);
         border: 1px solid rgba(90,60,20,.4); border-radius: 7px; box-shadow: 0 2px 4px rgba(60,40,10,.25); }
     /* ===== v3.50.0 攻击方式演示（详情卡内的动态小剧场） ===== */
-    .hg-demo { position: relative; width: 100%; height: 74px; margin-top: 8px; overflow: hidden;
+    /* v3.51.0：演示舞台加大（用户：演示里人和植物太小/看不出攻击方式），
+       弹道改用真实子弹贴图（hd-proj），不再是清一色绿豌豆 CSS 圆点 */
+    .hg-demo { position: relative; width: 100%; height: 96px; margin-top: 8px; overflow: hidden;
         background: linear-gradient(180deg, #d8ecc0 0%, #b8d98e 100%);
         border: 1.5px solid #8fae62; border-radius: 10px; }
-    .hg-demo .hd-plant { position: absolute; left: 12px; bottom: 6px; height: 52px; }
-    .hg-demo .hd-zombie { position: absolute; right: 14px; bottom: 6px; height: 56px; }
-    .hg-demo .hd-pea { position: absolute; left: 58px; bottom: 34px; width: 14px; height: 14px; border-radius: 50%;
+    .hg-demo .hd-plant { position: absolute; left: 12px; bottom: 6px; height: 66px; }
+    .hg-demo .hd-zombie { position: absolute; right: 14px; bottom: 6px; height: 68px; }
+    .hg-demo .hd-pea { position: absolute; left: 58px; bottom: 40px; width: 14px; height: 14px; border-radius: 50%;
         background: radial-gradient(circle at 35% 35%, #b6f36a, #4f9a1f); box-shadow: 0 0 6px rgba(120,220,60,.8);
         animation: hd-fly 1.1s linear infinite; }
     .hg-demo .hd-pea.hd-ice { background: radial-gradient(circle at 35% 35%, #d4f4ff, #3f9ad0); box-shadow: 0 0 6px rgba(120,210,255,.9); }
     .hg-demo .hd-pea.hd-fire { background: radial-gradient(circle at 35% 35%, #ffe08a, #e05a12); box-shadow: 0 0 8px rgba(255,140,40,.9); }
-    @keyframes hd-fly { 0% { left: 58px; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { left: calc(100% - 66px); opacity: 0; } }
+    /* v3.51.0：真实子弹贴图（与场上 Projectile 同款素材） */
+    .hg-demo img.hd-proj { position: absolute; left: 62px; bottom: 44px; object-fit: contain;
+        animation: hd-fly 1.1s linear infinite; filter: drop-shadow(0 1px 2px rgba(40,60,10,.35)); }
+    .hg-demo img.hd-proj.hd-lobimg { animation: hd-lob-fly 1.3s ease-in-out infinite; }
+    @keyframes hd-fly { 0% { left: 58px; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { left: calc(100% - 70px); opacity: 0; } }
     .hg-demo .hd-lob { position: absolute; left: 58px; bottom: 40px; width: 18px; height: 18px; border-radius: 50%;
         background: radial-gradient(circle at 35% 35%, #dff0b0, #7aa53c);
         animation: hd-lob-fly 1.3s ease-in-out infinite; }
     @keyframes hd-lob-fly {
-        0% { left: 58px; bottom: 40px; opacity: 0; } 10% { opacity: 1; }
-        50% { bottom: 72px; } 90% { opacity: 1; }
-        100% { left: calc(100% - 70px); bottom: 26px; opacity: 0; } }
+        0% { left: 58px; bottom: 44px; opacity: 0; } 10% { opacity: 1; }
+        50% { bottom: 84px; } 90% { opacity: 1; }
+        100% { left: calc(100% - 74px); bottom: 26px; opacity: 0; } }
+    /* v3.51.0：路灯花专属演示——周围一圈小罐子被依次照亮（半透明露出内容） */
+    .hg-demo .hd-vase { position: absolute; width: 30px; opacity: 1; transition: none;
+        animation: hd-lit 2.4s ease-in-out infinite; }
+    .hg-demo .hd-vase img { width: 100%; display: block; filter: drop-shadow(0 1px 2px rgba(40,24,4,.4)); }
+    @keyframes hd-lit { 0%, 15% { opacity: 1; } 55%, 80% { opacity: .35; } 100% { opacity: 1; } }
+    .hg-demo .hd-glow { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px;
+        border-radius: 50%; background: radial-gradient(circle, rgba(255,240,150,.95) 0%, rgba(255,220,80,0) 70%);
+        animation: hd-glow 2.4s ease-in-out infinite; }
+    @keyframes hd-glow { 0%, 15% { transform: scale(.6); opacity: .4; } 60%, 80% { transform: scale(4.6); opacity: .95; } 100% { transform: scale(.6); opacity: .4; } }
     .hg-demo .hd-boom { position: absolute; right: 26px; bottom: 8px; width: 44px; height: 44px; border-radius: 50%;
         background: radial-gradient(circle, #fff3b0 0%, #ff9d2e 45%, rgba(255,80,20,.0) 72%);
         opacity: 0; transform: scale(.3); animation: hd-boom 1.6s ease-out infinite; }
@@ -377,28 +392,61 @@
     // sun=阳光掉落 / chomp=吞噬啃咬 / wall=纯肉盾（僵尸啃食晃动）。
     function inferAtk(p) {
         const n = p.n || '', t = p.t || '';
+        if (p.g === 'Plantern' || /路灯/.test(n)) return 'light';   // v3.51.0：路灯花=照亮演示，不是直线射击
         if (/炸弹|辣椒|毁灭菇|地雷|窝瓜|弹跳|加农炮/.test(n) || /全屏|1800/.test(t)) return 'bomb';
-        if (/投手|加农|卷心菜|玉米/.test(n)) return 'lob';
+        if (/投手|加农|卷心菜|玉米|堡垒/.test(n)) return 'lob';
         if (/向日葵|阳光菇|阳光雨/.test(n) && !/豌豆/.test(n)) return 'sun';
         if (/大嘴/.test(n)) return 'chomp';
         if (/坚果|墙|南瓜|大蒜/.test(n) && !/射手|投手|猫尾/.test(n)) return 'wall';
         if (/蘑菇|地刺/.test(n)) return 'shoot';
         return 'shoot';
     }
+    // v3.51.0：演示弹道用"植物原本的子弹"贴图（与场上 Projectile 同素材），
+    // 依名字映射：冰西瓜→整颗冰瓜 / 猫尾→尖刺 / 杨桃→五角星 / 玉米→玉米粒 / 火系→火焰豌豆…
+    const VASE_IMG = 'assets/images/Vase/';
+    function projFor(p) {
+        const n = p.n || '';
+        if (/爆米花/.test(n)) return { img: PL + 'KernelPult/Kernel.png', lob: 1, w: 24, hue: 'hue-rotate(-18deg) saturate(1.9) brightness(1.18)' };
+        if (/西瓜/.test(n)) return /冰/.test(n) ? { img: PL + 'MelonPult/WinterMelon.png', lob: 1, w: 30 } : { img: PL + 'MelonPult/Melon.png', lob: 1, w: 30 };
+        if (/双果/.test(n)) return /冰/.test(n) ? { img: PL + 'MelonPult/WinterMelon.png', lob: 1, w: 30 } : { img: PL + 'MelonPult/Melon.png', lob: 1, w: 30 };
+        if (/杨桃/.test(n)) return { img: PL + 'Starfruit/Star.gif', w: 24 };
+        if (/猫尾/.test(n)) return { img: PL + 'Cactus/Projectile32.png', w: 20, ice: /冰|寒冰/.test(n) };
+        if (/卷心菜/.test(n)) return { img: PL + 'CabbagePult/Cabbage.png', lob: 1, w: 26, ice: /寒冰/.test(n) };
+        if (/玉米/.test(n)) return { img: PL + 'KernelPult/Kernel.png', lob: 1, w: 22 };
+        if (/樱桃/.test(n)) return { img: PL + 'PB10.gif', w: 18, hue: 'hue-rotate(-15deg) saturate(1.8)' };
+        if (/冰蒜卫士/.test(n)) return { img: PL + 'PB-10.gif', w: 18 };          // 冰蒜卫士实际射冰豌豆
+        if (/蒜味喷雾|胆小蒜/.test(n)) return { img: PL + 'ShroomBullet.gif', w: 20 };
+        if (/火|炎|炬/.test(n)) return { img: PL + 'PB10.gif', w: 18 };
+        if (/蘑菇|喷菇|忧郁/.test(n)) return { img: PL + 'ShroomBullet.gif', w: 20 };
+        if (/冰|寒冰/.test(n)) return { img: PL + 'PB-10.gif', w: 18 };
+        return { img: PL + 'PB00.gif', w: 18 };
+    }
     function attackDemo(p, atk) {
         const plantImg = p.gifSrc || (p.base ? p.base : '');
-        const ice = /寒冰|冰/.test(p.n || '') ? ' hd-ice' : '';
         const fire = /火焰|烈焰|火炬|爆米花/.test(p.n || '') ? ' hd-fire' : '';
         const plant = plantImg ? '<img class="hd-plant" src="' + plantImg + V + '">' : '';
         const zombie = '<img class="hd-zombie' + (atk === 'wall' ? ' hd-eat' : '') + '" src="' + ZB + 'Zombie/Zombie.gif' + V + '">';
         let inner = '';
-        if (atk === 'shoot') inner = plant + zombie + '<div class="hd-pea' + ice + fire + '"></div>';
-        else if (atk === 'lob') inner = plant + zombie + '<div class="hd-lob' + fire + '"></div>';
+        if (atk === 'light') {
+            // v3.51.0 路灯花：不是直线射击——周围放一圈小罐子，灯光扫过罐子变半透明（照亮）
+            inner = plant +
+                '<div class="hd-glow"></div>' +
+                '<div class="hd-vase" style="left:calc(50% - 60px);top:6px;"><img src="' + VASE_IMG + 'Vase_Question.png' + V + '"></div>' +
+                '<div class="hd-vase" style="left:calc(50% + 32px);top:10px;animation-delay:.3s;"><img src="' + VASE_IMG + 'Vase_Question.png' + V + '"></div>' +
+                '<div class="hd-vase" style="left:calc(50% - 74px);bottom:4px;animation-delay:.6s;"><img src="' + VASE_IMG + 'Vase_Plant.png' + V + '"></div>' +
+                '<div class="hd-vase" style="left:calc(50% + 46px);bottom:2px;animation-delay:.9s;"><img src="' + VASE_IMG + 'Vase_Zombie.png' + V + '"></div>';
+        } else if (atk === 'shoot' || atk === 'lob') {
+            const pr = projFor(p);
+            const st = 'width:' + pr.w + 'px;height:' + pr.w + 'px;' +
+                (pr.hue ? 'filter:' + pr.hue + ';' : '') +
+                (pr.ice ? 'filter:brightness(1.25) hue-rotate(160deg) saturate(1.9);' : '');
+            inner = plant + zombie + '<img class="hd-proj' + (pr.lob ? ' hd-lobimg' : '') + '" src="' + pr.img + V + '" style="' + st + '">';
+        }
         else if (atk === 'bomb') inner = plant + zombie + '<div class="hd-boom"></div>';
         else if (atk === 'sun') inner = plant + zombie + '<div class="hd-sun"></div>';
         else if (atk === 'chomp') inner = '<img class="hd-plant hd-chomp" src="' + plantImg + V + '">' + zombie;
         else inner = '<img class="hd-plant hd-shake" src="' + plantImg + V + '">' + zombie;
-        const cap = { shoot: '🏹 攻击演示：直线射击', lob: '🎯 攻击演示：抛射轰炸', bomb: '💥 爆炸过程演示', sun: '☀️ 阳光产出演示', chomp: '🕳️ 吞噬演示', wall: '🛡️ 承伤演示：肉盾扛啃' };
+        const cap = { shoot: '🏹 攻击演示：直线射击', lob: '🎯 攻击演示：抛射轰炸', bomb: '💥 爆炸过程演示', sun: '☀️ 阳光产出演示', chomp: '🕳️ 吞噬演示', wall: '🛡️ 承伤演示：肉盾扛啃', light: '💡 演示：照亮周围一圈罐子' };
         return '<div class="hg-demo"><span class="hd-cap">' + (cap[atk] || cap.shoot) + '</span>' + inner + '</div>';
     }
 
@@ -407,9 +455,11 @@
         if (fusion) {
             art = '<div class="hg-lawn hg-lawn-d">' + lawnStage(p, 104) + '</div>';
         } else {
-            // v3.50.0：动态 gif 替代静态卡面
+            // v3.50.0：动态 gif 替代静态卡面；v3.51.0 路灯花素材画布 250×237 但花朵只有 81×88，
+            // 110px 限高下花朵只有 ~40px —— 单独放宽到 240px 才与其他植物等大观感
             p.gifSrc = gifUrl(p.g);
-            art = '<img src="' + p.gifSrc + V + '" style="max-height:110px;max-width:180px;object-fit:contain;' +
+            const dh = (p.g === 'Plantern') ? 240 : 110;
+            art = '<img src="' + p.gifSrc + V + '" style="max-height:' + dh + 'px;max-width:180px;object-fit:contain;' +
                 'filter:drop-shadow(0 3px 5px rgba(60,40,10,.3));">';
         }
         let bs = '';

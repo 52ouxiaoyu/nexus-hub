@@ -154,33 +154,33 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790670633';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790692091';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790670633';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790692091';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790670633';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790692091';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790670633';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790692091';
             stat.butterChance = 0.2;
         } else if (type === 'cobcannon') {
             // 玉米加农炮（v3.24.0）：PVZ1 原版 Cob Cannon——三株玉米投手合体，占两格。
             // 平时嘴里没有炮；充能 25s 结束后嘴里出现玉米炮弹；
             // 点击它出现瞄准镜（跟随鼠标），按 M 键向准星位置发射（见 GameLoop.enterCobAim）。
             stat.hp = 600;
-            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790670633';
+            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790692091';
             // v3.24.2 立绘 148×85（炮口已用叶壳封住），显示宽 132——两格 160px 内留边，
             // 修"看起来占三格"；+15 补偿缩小后轮子离地
             stat.yOffset = 15;
@@ -210,7 +210,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790670633';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790692091';
             stat.yOffset = 0;
         }
 
@@ -311,16 +311,17 @@ class Plant extends Entity {
                 if (type === 'fusion_peaflower') {
                     this.element.src = s2.src;
                     this.fusionOverlay.src = s1.src;
-                    // Keep the entire Peashooter head (remove just the stem)
-                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 65%, 0 65%)';
-                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(0px, -20px) scale(1.0)';
+                    // v3.51.0：矩形切割改"帽子式叠放"（用户：直接切割的不好看）——
+                    // 整株小豌豆缩放后从向日葵身后探出半个头，无切边
+                    this.fusionOverlay.style.clipPath = 'none';
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(0px, -40px) scale(0.72)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_nutshooter') {
                     this.element.src = s2.src;
                     this.fusionOverlay.src = s1.src;
-                    // Keep the entire Peashooter head
-                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 65%, 0 65%)';
-                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(5px, -15px) scale(1.0)';
+                    // v3.51.0：同上帽子式——整株小豌豆在坚果头顶后方探出
+                    this.fusionOverlay.style.clipPath = 'none';
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(2px, -40px) scale(0.7)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_frostbomb') {
                     this.element.src = s2.src;
@@ -413,16 +414,16 @@ class Plant extends Entity {
                     // （v3.11.0 用户要求：这类"帽子"必须落在宿主上方、呈现出帽子的形状）
                     this.yOffset = s2.yOffset;      // 宿主是坚果墙，用它的落位偏移
                     this.element.src = s2.src;      // wallnut 身体
-                    this.fusionOverlay.src = s1.src; // cabbagepult（只取左上角的篮筐+卷心菜）
-                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 46% 0, 46% 46%, 0 46%)';
-                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(26px, -4px)';
+                    this.fusionOverlay.src = s1.src; // cabbagepult 整株当帽子（v3.51.0 不再切 1/4）
+                    this.fusionOverlay.style.clipPath = 'none';
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(4px, -42px) scale(0.7)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_veggiepult') {
                     // 双料投手：玉米投手身 + 把卷心菜的"篮筐+卷心菜"当帽子扣在玉米头顶
                     this.element.src = s2.src;      // kernelpult 本体
-                    this.fusionOverlay.src = s1.src; // cabbagepult（只取左上角的篮筐+卷心菜）
-                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 48% 0, 48% 50%, 0 50%)';
-                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(37px, 8px)';
+                    this.fusionOverlay.src = s1.src; // cabbagepult 整株（v3.51.0 帽子式，不再切半）
+                    this.fusionOverlay.style.clipPath = 'none';
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(-8px, -34px) scale(0.68)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 }
                 // ===== v3.45.0 新融合外观（与"冰西瓜=西瓜转蓝"同一套最小改动思路：原版立绘+滤镜）=====
@@ -510,6 +511,11 @@ class Plant extends Entity {
         // 爆炸"的常驻融合植物不自动引爆，只按普通植物运作。
         this.autoExplode = (type === 'cherrybomb' || type === 'jalapeno' || type === 'iceshroom' || type === 'doomshroom' || type === 'fusion_frostbomb');
         
+        // v3.51.0：路灯花素材画布 250×237 但花朵只占 81×88（约 1/3 画布），
+        // 原样渲染显得比别的植物小一圈 → 整体 scale 1.7，花朵 ~138×150 与场上植株等大
+        if (type === 'plantern') {
+            this.setTransform('scale(1.7)');
+        }
         // v3.24.0 玉米加农炮：立绘 148×85，显示宽 132（两格内留边，观感不再越格）
         if (type === 'cobcannon') {
             this.element.style.width = '132px';
@@ -618,8 +624,8 @@ class Plant extends Entity {
             }
         }
 
-        // —— ② 卷心菜堡垒【巨菜炮击】：每 15s 一发 90 伤破甲巨卷心菜 ——
-        if (this.type === 'fusion_cabbagenut') {
+        // —— ② 卷心菜堡垒/高坚果堡垒【巨菜炮击】：每 15s 一发 90 伤破甲巨卷心菜 ——
+        if (this.type === 'fusion_cabbagenut' || this.type === 'fusion_cabbage_tallnut') {
             this._giantTimer = (this._giantTimer || 0) + deltaTime;
             if (this._giantTimer >= 15) {
                 const ahead = this.game.entities.filter(e =>
@@ -636,8 +642,8 @@ class Plant extends Entity {
             }
         }
 
-        // —— ② 地刺坚果【径向突刺】：每 10s 对贴身一圈（3×3）僵尸扎 120 ——
-        if (this.type === 'fusion_spikynut') {
+        // —— ② 地刺坚果/钢刺高坚果/钢刺坚果【径向突刺】：每 10s 对贴身一圈（3×3）僵尸扎 120 ——
+        if (this.type === 'fusion_spikynut' || this.type === 'fusion_spikerock_tallnut' || this.type === 'fusion_spikerock_wallnut') {
             this._burstTimer = (this._burstTimer || 0) + deltaTime;
             if (this._burstTimer >= 10) {
                 const zs = this.game.entities.filter(e =>
@@ -665,6 +671,207 @@ class Plant extends Entity {
                     p.element.style.filter = 'brightness(1.4) saturate(1.8) drop-shadow(0 0 4px #ffd700)';
                     this.game.entities.push(p);
                     if (this.game.showUltimateNotice) this.game.showUltimateNotice('ult_sunpea', '☀️ 豌豆向日葵射出了阳光豌豆！', '#ffd700');
+                }
+            }
+        }
+
+        // ===== v3.51.0：剩余融合大招补全（用户：所有融合植物都要有大招）=====
+        const notice = (key, text, color) => { if (this.game.showUltimateNotice) this.game.showUltimateNotice(key, text, color); };
+        const allEnemies = () => this.game.entities.filter(e =>
+            e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized);
+        const nearestAhead = () => allEnemies().filter(e => e.row === this.row && e.x > this.x).sort((a, b) => a.x - b.x)[0];
+        const ring = (range) => allEnemies().filter(e =>
+            Math.abs(e.row - this.row) <= 1 && Math.abs(e.x - this.x) < range);
+
+        // 西瓜猫尾草【瓜弹连射】：每 20s 朝全场随机 3 只僵尸各投 1 颗西瓜（60+溅射）
+        if (this.type === 'fusion_melon_cattail') {
+            this._melonVolleyT = (this._melonVolleyT || 0) + deltaTime;
+            if (this._melonVolleyT >= 20) {
+                const zs = allEnemies().sort(() => Math.random() - 0.5).slice(0, 3);
+                if (zs.length > 0) {
+                    this._melonVolleyT = 0;
+                    zs.forEach((z, i) => setTimeout(() => {
+                        if (this.isDead || z.isDead) return;
+                        const p = new Projectile(this.game, this.x + 10, this.y - 30, this.row, 'cattail_melon', z);
+                        p.damage = 60;
+                        this.game.entities.push(p);
+                    }, i * 180));
+                    notice('ult_melonvolley', '🍉 西瓜猫尾草发动【瓜弹连射】！', '#ff8a65');
+                }
+            }
+        }
+        // 爆米花投手【焦香连环爆】：每 22s 连投 3 颗爆米花（40 破甲+3×3 溅射）
+        if (this.type === 'fusion_popcorn') {
+            this._popVolleyT = (this._popVolleyT || 0) + deltaTime;
+            if (this._popVolleyT >= 22) {
+                const zs = allEnemies().sort((a, b) => b.x - a.x).slice(0, 3);
+                if (zs.length > 0) {
+                    this._popVolleyT = 0;
+                    zs.forEach((z, i) => setTimeout(() => {
+                        if (this.isDead || z.isDead) return;
+                        this.game.entities.push(new Projectile(this.game, this.x + 20, this.y - 30, z.row, 'popcorn', z));
+                    }, i * 200));
+                    notice('ult_popvolley', '🍿 爆米花投手发动【焦香连环爆】！', '#e0a84a');
+                }
+            }
+        }
+        // 双料投手【双料连投】：每 18s 齐投 2 卷心菜 + 1 黄油
+        if (this.type === 'fusion_veggiepult') {
+            this._vegVolleyT = (this._vegVolleyT || 0) + deltaTime;
+            if (this._vegVolleyT >= 18) {
+                const t1 = nearestAhead();
+                if (t1) {
+                    this._vegVolleyT = 0;
+                    ['cabbage', 'cabbage', 'butter'].forEach((tp, i) => setTimeout(() => {
+                        if (this.isDead) return;
+                        const tgt = nearestAhead() || t1;
+                        this.game.entities.push(new Projectile(this.game, this.x + 20, this.y - 30, this.row, tp, tgt));
+                    }, i * 160));
+                    notice('ult_vegvolley', '🥬 双料投手发动【双料连投】！', '#a5d76e');
+                }
+            }
+        }
+        // 十芒杨桃【星环爆发】：每 20s 十方向星环齐射（40 穿透）
+        if (this.type === 'fusion_starfruit10') {
+            this._starRingT = (this._starRingT || 0) + deltaTime;
+            if (this._starRingT >= 20) {
+                if (allEnemies().length > 0) {
+                    this._starRingT = 0;
+                    const dirs = [];
+                    for (let k = 0; k < 10; k++) {
+                        const a = (Math.PI * 2 * k) / 10;
+                        dirs.push([Math.cos(a), Math.sin(a)]);
+                    }
+                    for (const d of dirs) {
+                        const p = new Projectile(this.game, this.x + 15, this.y - 15, this.row, 'star', null, d[0] * 350, d[1] * 350);
+                        p.speed = 350;
+                        p.maxDistance = 9999;
+                        this.game.entities.push(p);
+                    }
+                    notice('ult_starring', '⭐ 十芒杨桃发动【星环爆发】！', '#ffd54a');
+                }
+            }
+        }
+        // 火焰地刺【烈焰热浪】：每 15s 本行 220px 内火焰喷灼 100
+        if (this.type === 'fusion_firespikeweed') {
+            this._heatT = (this._heatT || 0) + deltaTime;
+            if (this._heatT >= 15) {
+                const zs = allEnemies().filter(e => e.row === this.row && e.x > this.x - 40 && e.x - this.x < 220);
+                if (zs.length > 0) {
+                    this._heatT = 0;
+                    for (const z of zs) z.takeDamage(100);
+                    notice('ult_heatwave', '🔥 火焰地刺发动【烈焰热浪】！', '#ff7043');
+                }
+            }
+        }
+        // 火焰射手【三连焰豆】：每 15s 连喷 3 颗火焰豌豆（40×3）
+        if (this.type === 'fusion_peashooter_torchwood') {
+            this._fire3T = (this._fire3T || 0) + deltaTime;
+            if (this._fire3T >= 15) {
+                if (nearestAhead()) {
+                    this._fire3T = 0;
+                    for (let i = 0; i < 3; i++) {
+                        setTimeout(() => {
+                            if (this.isDead) return;
+                            this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15, this.row, 'firepea'));
+                        }, i * 150);
+                    }
+                    notice('ult_fire3', '🔥 火焰射手发动【三连焰豆】！', '#ff8a50');
+                }
+            }
+        }
+        // 双果投手【双瓜齐射】：每 20s 西瓜+卷心菜齐投
+        if (this.type === 'fusion_melon_cabbagepult') {
+            this._duoT = (this._duoT || 0) + deltaTime;
+            if (this._duoT >= 20) {
+                const t1 = nearestAhead();
+                if (t1) {
+                    this._duoT = 0;
+                    [['melon', 60], ['cabbage', 40]].forEach(([tp, dm]) => {
+                        const p = new Projectile(this.game, this.x + 20, this.y - 30, this.row, tp, t1);
+                        p.damage = dm;
+                        this.game.entities.push(p);
+                    });
+                    notice('ult_duo', '🍉🥬 双果投手发动【双瓜齐射】！', '#8bc34a');
+                }
+            }
+        }
+        // 金蒜坚果【蒜息冲击】：每 15s 周身 3×3 蒜息波 60
+        if (this.type === 'fusion_wallnut_garlic') {
+            this._garlicPulseT = (this._garlicPulseT || 0) + deltaTime;
+            if (this._garlicPulseT >= 15) {
+                const zs = ring(130);
+                if (zs.length > 0) {
+                    this._garlicPulseT = 0;
+                    for (const z of zs) z.takeDamage(60);
+                    notice('ult_garlicpulse', '🧄 金蒜坚果发动【蒜息冲击】！', '#c5e1a5');
+                }
+            }
+        }
+        // 双子坚果【双阳补给】：每 30s 头顶掉一颗大阳光
+        if (this.type === 'fusion_wallnut_twinsunflower') {
+            this._giftSunT = (this._giftSunT || 0) + deltaTime;
+            if (this._giftSunT >= 30) {
+                this._giftSunT = 0;
+                this.game.entities.push(new Sun(this.game, this.x, this.y - 60, this.y + 20));
+                notice('ult_giftsun', '🌻 双子坚果掉落了一颗大阳光！', '#ffd54a');
+            }
+        }
+        // 火焰西瓜【烈焰瓜】：每 20s 投出 90 伤烈焰瓜
+        if (this.type === 'fusion_melonpult_torchwood') {
+            this._firemelonT = (this._firemelonT || 0) + deltaTime;
+            if (this._firemelonT >= 20) {
+                const t1 = nearestAhead();
+                if (t1) {
+                    this._firemelonT = 0;
+                    const p = new Projectile(this.game, this.x + 20, this.y - 30, this.row, 'melon', t1);
+                    p.damage = 90;
+                    p.element.style.filter = 'sepia(.5) saturate(2.2) hue-rotate(-25deg) brightness(1.2)';
+                    this.game.entities.push(p);
+                    notice('ult_firemelon', '🔥🍉 火焰西瓜投出了烈焰瓜！', '#ff7043');
+                }
+            }
+        }
+        // 超级机枪【弹幕狂潮】：每 20s 急速 8 连发（20×8）
+        if (this.type === 'fusion_gatlingpea_repeater') {
+            this._barrageT = (this._barrageT || 0) + deltaTime;
+            if (this._barrageT >= 20) {
+                if (nearestAhead()) {
+                    this._barrageT = 0;
+                    for (let i = 0; i < 8; i++) {
+                        setTimeout(() => {
+                            if (this.isDead) return;
+                            this.game.entities.push(new Projectile(this.game, this.x + 30, this.y - 15, this.row, 'peashooter'));
+                        }, i * 100);
+                    }
+                    notice('ult_barrage', '🔫 超级机枪发动【弹幕狂潮】！', '#90caf9');
+                }
+            }
+        }
+        // 机枪猫尾草【追踪弹幕】：每 18s 全场 6 刺连射（20×6）
+        if (this.type === 'fusion_gatlingpea_cattail') {
+            this._spikeBarrageT = (this._spikeBarrageT || 0) + deltaTime;
+            if (this._spikeBarrageT >= 18) {
+                const zs = allEnemies().sort(() => Math.random() - 0.5).slice(0, 6);
+                if (zs.length > 0) {
+                    this._spikeBarrageT = 0;
+                    zs.forEach((z, i) => setTimeout(() => {
+                        if (this.isDead || z.isDead) return;
+                        this.game.entities.push(new Projectile(this.game, this.x + 10, this.y - 30, this.row, 'cattail', z));
+                    }, i * 150));
+                    notice('ult_spikebarrage', '🌾 机枪猫尾草发动【追踪弹幕】！', '#a5d6a7');
+                }
+            }
+        }
+        // 射刺豌豆【尖刺爆发】：每 15s 周身 3×3 尖刺 60
+        if (this.type === 'fusion_peashooter_spikeweed') {
+            this._spikeBurstT = (this._spikeBurstT || 0) + deltaTime;
+            if (this._spikeBurstT >= 15) {
+                const zs = ring(100);
+                if (zs.length > 0) {
+                    this._spikeBurstT = 0;
+                    for (const z of zs) z.takeDamage(60);
+                    notice('ult_spikeburst2', '🌵 射刺豌豆发动【尖刺爆发】！', '#d0c090');
                 }
             }
         }
@@ -963,7 +1170,7 @@ class Plant extends Entity {
             if (!this._cobShellEl) {
                 const el = document.createElement('img');
                 // v3.24.1：装填玉米用原版图鉴里抠出的整根玉米（带根部），从炮口探出
-                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790670633';
+                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790692091';
                 // 裸 img 必须自带 translate(-50%,-50%) 居中基准（与 fusionOverlay 同一教训）
                 // v3.24.2 尺寸随立绘缩放同步：43×48（0.892×）
                 el.style.cssText = 'position:absolute;width:43px;height:48px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);';
