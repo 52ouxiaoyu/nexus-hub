@@ -154,33 +154,33 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790754738';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790758447';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790754738';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790758447';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790754738';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790758447';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790754738';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790758447';
             stat.butterChance = 0.2;
         } else if (type === 'cobcannon') {
             // 玉米加农炮（v3.24.0）：PVZ1 原版 Cob Cannon——三株玉米投手合体，占两格。
             // 平时嘴里没有炮；充能 25s 结束后嘴里出现玉米炮弹；
             // 点击它出现瞄准镜（跟随鼠标），按 M 键向准星位置发射（见 GameLoop.enterCobAim）。
             stat.hp = 600;
-            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790754738';
+            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790758447';
             // v3.24.2 立绘 148×85（炮口已用叶壳封住），显示宽 132——两格 160px 内留边，
             // 修"看起来占三格"；+15 补偿缩小后轮子离地
             stat.yOffset = 15;
@@ -210,7 +210,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790754738';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790758447';
             stat.yOffset = 0;
         }
 
@@ -315,17 +315,16 @@ class Plant extends Entity {
                 if (type === 'fusion_peaflower') {
                     this.element.src = s2.src;
                     this.fusionOverlay.src = s1.src;
-                    // v3.51.0：矩形切割改"帽子式叠放"（用户：直接切割的不好看）——
-                    // 整株小豌豆缩放后从向日葵身后探出半个头，无切边
+                    // v3.56.0：帽子收紧——整株小豌豆下沉缩小，茎干藏进向日葵头后只探出头部（更一体）
                     this.fusionOverlay.style.clipPath = 'none';
-                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(0px, -40px) scale(0.72)';
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(0px, -28px) scale(0.6)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_nutshooter') {
                     this.element.src = s2.src;
                     this.fusionOverlay.src = s1.src;
-                    // v3.51.0：同上帽子式——整株小豌豆在坚果头顶后方探出
+                    // v3.56.0：同上收紧
                     this.fusionOverlay.style.clipPath = 'none';
-                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(2px, -40px) scale(0.7)';
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(2px, -28px) scale(0.6)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_frostbomb') {
                     this.element.src = s2.src;
@@ -418,9 +417,9 @@ class Plant extends Entity {
                     // （v3.11.0 用户要求：这类"帽子"必须落在宿主上方、呈现出帽子的形状）
                     this.yOffset = s2.yOffset;      // 宿主是坚果墙，用它的落位偏移
                     this.element.src = s2.src;      // wallnut 身体
-                    this.fusionOverlay.src = s1.src; // cabbagepult 整株当帽子（v3.51.0 不再切 1/4）
+                    this.fusionOverlay.src = s1.src; // cabbagepult 整株当帽子（v3.56.0 收紧：下沉缩小更一体）
                     this.fusionOverlay.style.clipPath = 'none';
-                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(4px, -42px) scale(0.7)';
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(4px, -34px) scale(0.62)';
                     this.fusionOverlay.style.transformOrigin = 'center center';
                 } else if (type === 'fusion_veggiepult') {
                     // 双料投手：玉米投手身 + 把卷心菜的"篮筐+卷心菜"当帽子扣在玉米头顶
@@ -459,8 +458,13 @@ class Plant extends Entity {
                     this.element.style.filter = 'sepia(1) saturate(3) hue-rotate(-25deg) brightness(1.15)';
                     this.fusionOverlay.style.display = 'none';
                 } else if (type === 'fusion_firerepeater') {
-                    this.element.style.filter = 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.12)';
-                    this.fusionOverlay.style.display = 'none';
+                    // v3.56.0：改"火焰头帽"——本体保持原版双发射手绿色，叠加层取同一株的
+                    // 头部（clip 上半）整体烧红扣回头顶，读作"顶着火头的双发射手"（用户：全身焦棕不好看）
+                    this.fusionOverlay.src = s1.src;
+                    this.fusionOverlay.style.clipPath = 'polygon(0 0, 100% 0, 100% 48%, 60% 48%, 58% 60%, 42% 60%, 40% 48%, 0 48%)';
+                    this.fusionOverlay.style.transform = 'translate(-50%, -50%) translate(0px, -2px) scale(1.04)';
+                    this.fusionOverlay.style.transformOrigin = 'center center';
+                    this.fusionOverlay.style.filter = 'sepia(1) saturate(3) hue-rotate(-22deg) brightness(1.18)';
                 } else if (type === 'fusion_quadsun') {
                     // v3.46.0 四头向日葵：本体两个头（一低一高）+ 镜像副本偏移错开 → 四个头两列错落。
                     // 镜像副本=原版像素水平翻转（同 PVZ 僵尸朝向翻转，非自画），副本在上层（v3.27.0 约定）
@@ -537,6 +541,11 @@ class Plant extends Entity {
         this.autoExplode = (type === 'cherrybomb' || type === 'jalapeno' || type === 'iceshroom' || type === 'doomshroom' || type === 'fusion_frostbomb' || type === 'fusion_doomshroom_iceshroom'); // v3.53.0 冰毁灭菇引信
         
         // v3.53.2：路灯花恢复原版大小（v3.51.0 曾整体 scale 1.7 放大，用户反馈在砸罐子里莫名其妙变大）
+        // v3.56.0 双子坚果【双藤再生】状态位：单颗坚果被吃完（血量过半）→ 该坚果脱落，30 秒后长回
+        if (type === 'fusion_wallnut_twinsunflower') {
+            this._twinDowned = false;
+            this._twinRegrowTimer = 0;
+        }
         // v3.24.0 玉米加农炮：立绘 148×85，显示宽 132（两格内留边，观感不再越格）
         if (type === 'cobcannon') {
             this.element.style.width = '132px';
@@ -553,7 +562,7 @@ class Plant extends Entity {
         // 爆炸的地方炸一次，不需要连续几排连续炸）——现在只产阳光 + 阵亡时保留大爆炸
         // 大嘴坚果：坚果的防御 + 大嘴花的啃咬（状态合并时 state 被保留为坚果侧，需显式初始化）
         // v3.50.0：新融合大嘴家族同款初始化（v3.52.0：吞天大嘴/向日葵大嘴花已删除）
-        if (type === 'fusion_chomper_wallnut' || type === 'fusion_chomper_garlic') {
+        if (type === 'fusion_chomper_wallnut') {
             this.state = 'idle';
             this.chewTimer = 0;
         }
@@ -597,6 +606,27 @@ class Plant extends Entity {
     _updateUltimates(deltaTime) {
         if (this.isDead || this.game.zombieMode) return;
         const ICE = (window.PVZ_ICE_ULT_TYPES && window.PVZ_ICE_ULT_TYPES.has(this.type));
+
+        // —— v3.56.0 双子坚果【双藤再生】——
+        // 两颗坚果各自为半管血：第一颗被吃完（hp≤50%）→ 该坚果脱落（隐藏左坚果叠加层）；
+        // 30 秒后原地重新长出（回满半管血）。两颗同时被吃完（hp=0）照常死亡。
+        if (this.type === 'fusion_wallnut_twinsunflower') {
+            if (!this._twinDowned && this.hp > 0 && this.hp <= this.maxHp / 2) {
+                this._twinDowned = true;
+                this._twinRegrowTimer = 30;
+                if (this.fusionOverlay) this.fusionOverlay.style.visibility = 'hidden';
+            }
+            if (this._twinDowned) {
+                this._twinRegrowTimer -= deltaTime;
+                if (this._twinRegrowTimer <= 0 && this.hp > 0) {
+                    this._twinDowned = false;
+                    this.hp = Math.min(this.hp + this.maxHp / 2, this.maxHp);
+                    if (this.fusionOverlay) this.fusionOverlay.style.visibility = 'visible';
+                    if (this.game.audioManager && this.game.audioManager.play) this.game.audioManager.play('plant');
+                    if (this.game.showAnnouncement) this.game.showAnnouncement('双子坚果重新长出了一颗坚果！', '#8bd44a');
+                }
+            }
+        }
 
         // —— ① 冰系家族【极寒波动】：每 45s 一圈冰雾 ——
         if (ICE) {
@@ -713,7 +743,7 @@ class Plant extends Entity {
                     zs.forEach((z, i) => setTimeout(() => {
                         if (this.isDead || z.isDead) return;
                         const p = new Projectile(this.game, this.x + 10, this.y - 30, this.row, 'cattail_melon', z);
-                        p.damage = 60;
+                        p.damage = 40; // v3.56.0 西瓜降伤同步
                         this.game.entities.push(p);
                     }, i * 180));
                     notice('ult_melonvolley', '🍉 西瓜猫尾草发动【瓜弹连射】！', '#ff8a65');
@@ -807,7 +837,7 @@ class Plant extends Entity {
                 const t1 = nearestAhead();
                 if (t1) {
                     this._duoT = 0;
-                    [['melon', 60], ['cabbage', 40]].forEach(([tp, dm]) => {
+                    [['melon', 40], ['cabbage', 40]].forEach(([tp, dm]) => { // v3.56.0 西瓜降伤同步
                         const p = new Projectile(this.game, this.x + 20, this.y - 30, this.row, tp, t1);
                         p.damage = dm;
                         this.game.entities.push(p);
@@ -1067,7 +1097,8 @@ class Plant extends Entity {
             const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
             for (let z of zombies) {
                 z.takeDamage(9999, { bomb: true, oneshot: true });
-                z.setSlow(10.0); // 全场冰冻结余波（对高血量 Boss 也有减速价值）
+                z.freezeAbsolute(4.0); // v3.56.0：名不虚传的"全场冰冻"——幸存者（Boss 级）绝对冰冻
+                z.setSlow(10.0); // 解冻后减速余波（对高血量 Boss 也有减速价值）
             }
             setTimeout(() => {
                 if (this.game.audioManager.playFx) this.game.audioManager.playFx('ice_shatter');
@@ -1139,10 +1170,10 @@ class Plant extends Entity {
                     // 一颗 350 阳光的炸弹等于半屏清场，对得起"寒冰田+樱桃"的成本
                     if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 100) {
                         z.takeDamage(2400, { bomb: true, oneshot: true });
-                        z.setSlow(10.0);
+                        z.freezeAbsolute(4.0); z.setSlow(10.0); // v3.56.0 冻结=绝对冰冻
                     } else {
                         z.takeDamage(800, { bomb: true });
-                        z.setSlow(10.0);
+                        z.freezeAbsolute(4.0); z.setSlow(10.0);
                     }
                 } else if (this.hasTrait('cherrybomb')) {
                     // v3.20.0：爆炸范围收敛为标准 3×3 格（±1 行 / ±1.5 格宽）
@@ -1187,6 +1218,7 @@ class Plant extends Entity {
             this.triggerBombFusion();
             const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
             for (let z of zombies) {
+                z.freezeAbsolute(4.0); // v3.56.0：绝对冰冻 4 秒（动作全停），解冻后仍接减速余波
                 z.setSlow(10.0);
                 z.takeDamage(20); // slight damage
             }
@@ -1262,7 +1294,7 @@ class Plant extends Entity {
             if (!this._cobShellEl) {
                 const el = document.createElement('img');
                 // v3.24.1：装填玉米用原版图鉴里抠出的整根玉米（带根部），从炮口探出
-                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790754738';
+                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790758447';
                 // 裸 img 必须自带 translate(-50%,-50%) 居中基准（与 fusionOverlay 同一教训）
                 // v3.24.2 尺寸随立绘缩放同步：43×48（0.892×）
                 el.style.cssText = 'position:absolute;width:43px;height:48px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);';
@@ -1628,7 +1660,7 @@ class Plant extends Entity {
                                     pr.element.style.filter = 'brightness(1.35) saturate(1.6)';
                                 }
                                 if (this.type === 'fusion_melonpult_torchwood' && projType === 'melon') {
-                                    pr.damage = 75;
+                                    pr.damage = 50; // v3.56.0 西瓜降伤后火焰瓜 40→50（仍保留烤热加成）
                                 }
                                 this.game.entities.push(pr);
                             };
@@ -1852,6 +1884,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                 this.triggerBombFusion();
                 const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                 for (let z of zombies) {
+                    z.freezeAbsolute(4.0); // v3.56.0：绝对冰冻 4 秒（动作全停），解冻后仍接减速余波
                     z.setSlow(10.0);
                     z.takeDamage(20); // slight damage
                 }

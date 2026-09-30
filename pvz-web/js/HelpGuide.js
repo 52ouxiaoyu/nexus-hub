@@ -72,7 +72,7 @@
         { n: '猫尾草', g: 'Cattail', c: 275, cd: 7.5, hp: 300, t: '全场自动追踪，20 伤 / 1.4s' }, // v3.44.0 225→275
         { n: '机枪射手', g: 'GatlingPea', c: 550, cd: 50, hp: 300, t: '4 连发×20 / 1.5s，单行持续输出' }, // v3.44.0 250→550
         { n: '三线射手', g: 'Threepeater', c: 325, cd: 7.5, hp: 300, t: '同时射上中下三行，每发 20' }, // v3.44.0 300→325
-        { n: '寒冰菇', g: 'IceShroom', c: 75, cd: 50, hp: 300, t: '全屏冻结 + 减速 10 秒' },
+        { n: '寒冰菇', g: 'IceShroom', c: 75, cd: 50, hp: 300, t: '全屏绝对冰冻 4 秒（动作全停+脚底结冰）+ 减速余波 10 秒' },
         { n: '忧郁菇', g: 'GloomShroom', c: 225, cd: 7.5, hp: 300, t: '3×3 每 1s 八发×80，穿甲穿门近身绞肉机' }, // v3.44.0 150→225
         { n: '卷心菜投手', g: 'CabbagePult', c: 150, cd: 7.5, hp: 300, t: '抛射 40 破甲，护甲打不掉' },
         { n: '玉米投手', g: 'KernelPult', c: 175, cd: 7.5, hp: 300, t: '20 伤，20% 投黄油定身 3 秒' },
@@ -115,15 +115,15 @@
         { n: '爆米花投手', base: PL + 'KernelPult/KernelPult.png', bf: 'hue-rotate(-18deg) saturate(1.9) brightness(1.18)', md: 96, t: '玉米投手+火爆辣椒：40 破甲 + 3×3 焦香溅射；大技能【焦香连环爆】——每 22 秒连投 3 颗爆米花' },
         { n: '双料投手', base: PL + 'KernelPult/KernelPult.png', ov: PL + 'CabbagePult/CabbagePult.png', ot: 'translate(-8px, -34px) scale(0.68)', md: 96, t: '玉米投手+卷心菜投手：两种弹药交替；大技能【双料连投】——每 18 秒 2 卷心菜+黄油齐投' },
         { n: '寒冰卷心菜', base: PL + 'CabbagePult/CabbagePult.png', bf: 'brightness(112%) hue-rotate(120deg) saturate(1.7)', md: 96, t: '卷心菜投手+寒冰菇：40 破甲 + 减速；大技能【极寒波动】——每 45 秒冰雾冻伤周围' },
-        { n: '坚果射手', base: PL + 'WallNut/WallNut.gif', ov: PL + 'Peashooter/Peashooter.gif', ot: 'translate(2px, -40px) scale(0.7)', md: 71, t: '坚果墙+豌豆射手：能扛能打' },
-        { n: '卷心菜堡垒', base: PL + 'WallNut/WallNut.gif', ov: PL + 'CabbagePult/CabbagePult.png', ot: 'translate(4px, -42px) scale(0.7)', md: 96, t: '坚果墙+卷心菜投手：肉盾+破甲投掷' },
+        { n: '坚果射手', base: PL + 'WallNut/WallNut.gif', ov: PL + 'Peashooter/Peashooter.gif', ot: 'translate(2px, -28px) scale(0.6)', md: 71, t: '坚果墙+豌豆射手：能扛能打' },
+        { n: '卷心菜堡垒', base: PL + 'WallNut/WallNut.gif', ov: PL + 'CabbagePult/CabbagePult.png', ot: 'translate(4px, -34px) scale(0.62)', md: 96, t: '坚果墙+卷心菜投手：肉盾+破甲投掷' },
         { n: '大嘴坚果', base: PL + 'Chomper/Chomper.gif', ov: PL + 'WallNut/WallNut.gif', ot: 'translate(0px, 16px) scale(0.85)', md: 130, t: '坚果墙+大嘴花：4000 血又能吞；v3.50.0 坚果提前、大嘴花往后，不再遮挡；大技能【吞噬回血】' },
         { n: '钢刺高坚果', base: PL + 'TallNut/TallNut.gif', ov: PL + 'Spikerock/Spikerock.gif', ot: 'translate(0px, 58px)', md: 119, t: '高坚果+钢地刺：8000 血 + 脚下带刺；大技能【径向突刺】——每 10 秒钢刺暴起扎周围 120' },
         { n: '寒冰坚果', base: PL + 'WallNut/WallNut.gif', bf: 'hue-rotate(180deg) saturate(1.5) brightness(1.2)', md: 73, t: '坚果墙+寒冰射手：啃它的人被冻慢' },
         { n: '地刺坚果', base: PL + 'WallNut/WallNut.gif', ov: PL + 'Spikeweed/Spikeweed.gif', ot: 'translate(0px, 48px)', md: 85, t: '坚果墙+地刺：啃它等于啃刺' },
         // v3.46.0：删除「坚果向日葵」（用户裁定外观太丑）
         { n: '毁灭向日葵', base: PL + 'SunFlower/SunFlower1.gif', bf: 'grayscale(0.8) brightness(0.6) sepia(1) hue-rotate(240deg) saturate(3)', md: 74, t: '向日葵+毁灭菇：正常产阳光，被啃死时原地 1800 大爆炸' },
-        { n: '豌豆向日葵', base: PL + 'SunFlower/SunFlower1.gif', ov: PL + 'Peashooter/Peashooter.gif', ot: 'translate(0px, -40px) scale(0.72)', md: 92, t: '向日葵+豌豆射手：产阳光还打人' },
+        { n: '豌豆向日葵', base: PL + 'SunFlower/SunFlower1.gif', ov: PL + 'Peashooter/Peashooter.gif', ot: 'translate(0px, -28px) scale(0.6)', md: 92, t: '向日葵+豌豆射手：产阳光还打人' },
         { n: '孢子地雷', base: PL + 'PotatoMine/PotatoMine.gif', ov: PL + 'PuffShroom/PuffShroom.gif', ot: 'translate(0px, -30px) scale(0.9)', md: 75, t: '土豆地雷+小喷菇：廉价控场地雷' },
         // ===== v3.45.0 十一条新融合（用户批准名单）=====
         { n: '冰机枪射手', base: PL + 'GatlingPea/GatlingPea.gif', bf: 'brightness(1.15) hue-rotate(180deg) saturate(1.5)', md: 88, t: '机枪射手+寒冰射手：4 连发冰豌豆 20×4，命中减速 10 秒' },
@@ -134,7 +134,7 @@
         { n: '爆炸弹跳', base: PL + 'Squash/Squash.gif', bf: 'hue-rotate(-35deg) saturate(1.9)', bt: 'scale(2.75) translate(0px, -72px)', md: 226, t: '窝瓜+樱桃炸弹：跃起压扁，落点 3×3 爆炸 1800' },
         { n: '冰玉米投手', base: PL + 'KernelPult/KernelPult.png', bf: 'brightness(1.15) hue-rotate(160deg) saturate(1.8)', md: 96, t: '玉米投手+寒冰射手：玉米粒 20+减速，20% 黄油定身保留' },
         { n: '火焰地刺', base: PL + 'Spikeweed/Spikeweed.gif', bf: 'sepia(1) saturate(3) hue-rotate(-25deg) brightness(1.15)', md: 85, t: '地刺+火炬树桩：灼烧刺 80 / 0.75s（普通地刺的 2 倍）；僵尸啃不到它（只有冰车能碾爆），它镇守的一行冰车驶过不留冰道；大技能【烈焰热浪】——每 15 秒本行火焰喷灼 100' },
-        { n: '火焰双发', base: PL + 'Repeater/Repeater.gif', bf: 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.12)', md: 73, t: '双发射手+火炬树桩：2 连发火焰豌豆 40×2；大技能【过热爆发】——每第 8 轮改为 6 连发爆炎 60×6（弹体加大发光）' },
+        { n: '火焰双发', base: PL + 'Repeater/Repeater.gif', ov: PL + 'Repeater/Repeater.gif', oc: 'polygon(0 0, 100% 0, 100% 48%, 60% 48%, 58% 60%, 42% 60%, 40% 48%, 0 48%)', ot: 'translate(0px, -2px) scale(1.04)', of: 'sepia(1) saturate(3) hue-rotate(-22deg) brightness(1.18)', md: 73, t: '双发射手+火炬树桩：原版绿身顶着火头，2 连发火焰豌豆 40×2；大技能【过热爆发】——每第 8 轮改为 6 连发爆炎 60×6（弹体加大发光）' },
         { n: '四头向日葵', base: PL + 'TwinSunflower/TwinSunflower1.gif', bf: 'saturate(1.35) brightness(1.12)', bt: 'scale(1.15)', ov: PL + 'TwinSunflower/TwinSunflower1.gif', ot: 'translate(10px, 6px) scaleX(-1) scale(1.15)', md: 84, t: '双子向日葵+双子向日葵：每轮 4 颗阳光共 100；大技能【阳光雨】——每 120 秒全场天降 3 颗阳光' },
         { n: '辣椒高坚果', base: PL + 'TallNut/TallNut.gif', bf: 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.1)', md: 119, t: '高坚果+火爆辣椒：8000 血肉盾，啃它的僵尸每秒被烫 40' },
     ];
@@ -157,9 +157,9 @@
             { n: '巨尸 Boss', img: ZB + 'LGBOSS/1.gif', h: 84, hp: 5000, t: '关底 Boss，血量与压迫感都是 Boss 级' },
             { n: '巨人僵尸', img: ZB + 'Zombie/Zombie.gif', h: 104, dark: true, hp: 4000, t: '2 倍体型重锤砸扁植物，过半血掷出小鬼' },
             { n: '冰车僵尸', img: ZB + 'Zomboni/1.gif', h: 90, ice: true, hp: 1300, t: '体型巨大的冰车，碾压植物不留啃痕，驶过之处留下冰道（冰面无法种植，30 秒融化，火爆辣椒可烧毁）；只有地刺能扎爆它' },
-            { n: '橄榄球僵尸', img: ZB + 'FootballZombie/FootballZombie.gif', h: 72, hp: 1600, t: '速度 40 的重装骑兵，头盔 1400 护甲' },
+            { n: '橄榄球僵尸', img: ZB + 'FootballZombie/FootballZombie.gif', h: 72, hp: 2240, t: '速度 40 的重装骑兵，头盔 1400 护甲；v3.56.0 血量按 4 倍路障上调' },
             { n: '铁桶僵尸', img: ZB + 'BucketheadZombie/BucketheadZombie.gif', h: 70, hp: 1300, t: '铁桶 1100 护甲，桶掉后与普通僵尸无异' },
-            { n: '铁门僵尸', img: ZB + 'ScreenDoorZombie/ScreenDoorZombie.gif', h: 70, hp: 1300, t: '铁门挡正面直射；投手/孢子类破甲攻击无视它' },
+            { n: '铁门僵尸', img: ZB + 'ScreenDoorZombie/ScreenDoorZombie.gif', h: 70, hp: 5200, t: 'v3.56.0 血量 = 4 只铁桶（5200），铁门挡正面直射；投手/孢子类破甲攻击无视它' },
             { n: '舞王僵尸', img: ZB + 'DancingZombie/DancingZombie.gif', h: 72, hp: 500, t: '每 10 秒召唤一排伴舞' },
             { n: '伴舞僵尸', img: ZB + 'BackupDancer/BackupDancer.gif', h: 70, hp: 200, t: '舞王召唤的随从，成群出现' },
             { n: '撑杆僵尸', img: ZB + 'PoleVaultingZombie/PoleVaultingZombie.gif', h: 74, hp: 500, t: '高速冲来，跳过遇到的第一株植物（高坚果跳不过去）' },
@@ -274,9 +274,11 @@
     /* v3.51.0：演示舞台加大（用户：演示里人和植物太小/看不出攻击方式），
        弹道改用真实子弹贴图（hd-proj），不再是清一色绿豌豆 CSS 圆点 */
     .hg-demo { position: relative; width: 100%; height: 96px; margin-top: 8px; overflow: hidden;
-        background: linear-gradient(180deg, #d8ecc0 0%, #b8d98e 100%);
+        background: url('assets/images/interface/background1.jpg') center 42% / cover no-repeat; /* v3.56.0 真实草地背景 */
         border: 1.5px solid #8fae62; border-radius: 10px; }
     .hg-demo .hd-plant { position: absolute; left: 12px; bottom: 6px; height: 66px; }
+    /* v3.56.0 带叠加层（帽子/多头）的融合株在演示里按实机复刻，不再只画主体丢掉头部 */
+    .hg-demo .hd-plantstage { position: absolute; left: 40px; bottom: 34px; }
     .hg-demo .hd-zombie { position: absolute; right: 14px; bottom: 6px; height: 68px; }
     .hg-demo .hd-pea { position: absolute; left: 58px; bottom: 40px; width: 14px; height: 14px; border-radius: 50%;
         background: radial-gradient(circle at 35% 35%, #b6f36a, #4f9a1f); box-shadow: 0 0 6px rgba(120,220,60,.8);
@@ -429,7 +431,11 @@
     function attackDemo(p, atk) {
         const plantImg = p.gifSrc || (p.base ? p.base : '');
         const fire = /火焰|烈焰|火炬|爆米花/.test(p.n || '') ? ' hd-fire' : '';
-        const plant = plantImg ? '<img class="hd-plant" src="' + plantImg + V + '">' : '';
+        // v3.56.0：带叠加层（帽子/多头/蒜纹）的融合株 → 用 lawnStage 原样复刻主体+叠加层，
+        // 修复"演示里头部不出现"；无叠加层的普通植物沿用单图
+        const plant = (plantImg && (p.ov || p.ov2))
+            ? '<div class="hd-plantstage">' + lawnStage(p, 76) + '</div>'
+            : (plantImg ? '<img class="hd-plant" src="' + plantImg + V + '"' + (p.bf ? ' style="filter:' + p.bf + ';"' : '') + '>' : '');
         const zombie = '<img class="hd-zombie' + (atk === 'wall' ? ' hd-eat' : '') + '" src="' + ZB + 'Zombie/Zombie.gif' + V + '">';
         let inner = '';
         if (atk === 'light') {

@@ -37,6 +37,10 @@ class Zombie extends Entity {
         // 与寒冰减速完全独立：减速只是"走/啃变慢"，黄油是"一步不动、一口不啃"3 秒。
         this.butterTimer = 0;
         this.isButtered = false;
+        // ===== v3.56.0 寒冰菇绝对冰冻 =====
+        // 与黄油同为"行动力=0"，但更彻底：走路/啃食/撑杆跳/召唤/玩偶盒引信/冰车铺冰全部停摆，
+        // 视觉=冰蓝滤镜 + 脚底原版冰晶(icetrap.gif)；寒冰豌豆僵尸(snowpeahead)免疫。
+        this.freezeTimer = 0;
         // ===== v3.10.0 破甲（卷心菜投手 / 玉米投手）=====
         // hp 是单一血池，护甲（路障/铁桶/报纸）靠"hp 跌破阈值"来脱落。
         // armorHp 单独记录"护甲能感知到的伤害"：被破甲伤害打掉的部分不计入 armorHp，
@@ -132,14 +136,17 @@ class Zombie extends Entity {
             this.hasLostNewspaper = false;
         } else if (type === 'screendoor') {
             // v3.14.0：《我是僵尸》里 铁门(1450) > 橄榄球(1300) = 铁桶(1300)；其它模式原版数值
-            this.hp = this.game.zombieMode ? 1450 : 1300; this.maxHp = this.hp;
+            // v3.56.0：铁门血量 = 4 只铁桶（用户：把铁板门的血量调高，调为 4 只铁桶僵尸的血量）
+            this.hp = this.game.zombieMode ? 1450 : 5200; this.maxHp = this.hp;
             this.element.src = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombie.gif';
             this.walkSrc = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombie.gif';
             this.attackSrc = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
         } else if (type === 'football') {
             // v3.14.0：《我是僵尸》里橄榄球与铁桶同血量(1300)；其它模式维持原版 1600
-            this.hp = this.game.zombieMode ? 1300 : 1600; this.maxHp = this.hp;
+            // v3.56.0：橄榄球调高（用户"调成 4 个读报僵尸的血量"——读报仅 300，×4=1200 反而低于
+            // 原 1600 与"调高"矛盾；按同样 4 倍思路取 4×路障 560 = 2240，如需严格 1200 说一声即可）
+            this.hp = this.game.zombieMode ? 1300 : 2240; this.maxHp = this.hp;
             this.speed = 40; 
             this.element.src = 'assets/images/Zombies/FootballZombie/FootballZombie.gif';
             this.walkSrc = 'assets/images/Zombies/FootballZombie/FootballZombie.gif';
@@ -366,6 +373,46 @@ class Zombie extends Entity {
         this._hammerEl = null;
     }
     
+    // ===== v3.56.0 寒冰菇绝对冰冻：全部动作锁定 sec 秒 =====
+    // 与黄油同级（行动力=0）但范围全屏、连"技能"一起停（撑杆跳滞空/舞王召唤/玩偶盒引信/冰车铺冰）。
+    // 视觉：冰蓝滤镜（_statusFilter freeze 分支）+ 脚底原版冰晶 icetrap.gif。
+    freezeAbsolute(sec = 4) {
+        if (this.isDead || this.hypnotized || this.state === 'DYING' || this.type === 'snowpeahead') return;
+        this.freezeTimer = Math.max(this.freezeTimer || 0, sec);
+        this._tintedByStatus = true;
+        if (this.state === 'EATING') {
+            this.eatTarget = null;
+            this.state = 'WALKING';
+            if (this.element) this.element.src = this.walkSrc;
+        }
+        this._spawnIceSpike();
+        if (this.element) this.element.style.filter = this._statusFilter();
+        if (this.headEl) this.headEl.style.filter = this._statusFilter();
+    }
+    _spawnIceSpike() {
+        if (this._iceSpikeEl || !this.game.entityLayer) return;
+        const el = document.createElement('img');
+        el.src = 'assets/images/Plants/IceShroom/icetrap.gif';
+        el.style.position = 'absolute';
+        el.style.pointerEvents = 'none';
+        el.style.width = '84px';
+        el.style.transform = 'translate(-50%, -50%)';
+        el.style.opacity = '0.9';
+        this._iceSpikeEl = el;
+        this.game.entityLayer.appendChild(el);
+        this._syncIceSpike();
+    }
+    _syncIceSpike() {
+        if (!this._iceSpikeEl) return;
+        this._iceSpikeEl.style.left = this.x + 'px';
+        this._iceSpikeEl.style.top = (this.y + 38) + 'px'; // 脚底
+        this._iceSpikeEl.style.zIndex = String(Math.floor(this.y + 39));
+    }
+    _removeIceSpike() {
+        if (this._iceSpikeEl && this._iceSpikeEl.parentNode) this._iceSpikeEl.parentNode.removeChild(this._iceSpikeEl);
+        this._iceSpikeEl = null;
+    }
+
     // 减速统一入口（植物头僵尸与普通僵尸一致，均可被减速；友方魅惑僵尸不可被减速）
     setSlow(t = 10) {
         // v3.23.0：寒冰头僵尸免疫寒冰减速
@@ -387,8 +434,11 @@ class Zombie extends Entity {
         if (this.headEl) this.headEl.style.filter = this._statusFilter();
     }
     
-    // 状态滤镜统一出口：黄油（暖黄）优先于寒冰减速（冰蓝）；都没有则返回空串
+    // 状态滤镜统一出口：绝对冰冻（冰蓝偏白）优先于黄油（暖黄）优先于寒冰减速（冰蓝）
     _statusFilter() {
+        if (this.freezeTimer > 0) {
+            return 'sepia(35%) hue-rotate(185deg) saturate(260%) brightness(1.15)';   // 绝对冰冻·冰蓝偏白
+        }
         if (this.butterTimer > 0) {
             return 'brightness(105%) sepia(85%) saturate(260%) hue-rotate(5deg)';   // 黄油黄
         }
@@ -397,13 +447,15 @@ class Zombie extends Entity {
         }
         return '';
     }
-    
+
     // 解冻（火爆辣椒/火球等）：清掉减速与黄油、并复位滤镜
     thaw() {
         this.isSlowed = false;
         this.slowTimer = 0;
         this.butterTimer = 0;
         this.isButtered = false;
+        this.freezeTimer = 0;
+        this._removeIceSpike();
         this._tintedByStatus = false;
         if (this.element) this.element.style.filter = '';
         if (this.headEl) this.headEl.style.filter = '';
@@ -484,6 +536,8 @@ class Zombie extends Entity {
             if (this.state === 'DYING' || this.isDead) this._removeHammer();
             else this._syncHammer();
         }
+        // v3.56.0 绝对冰冻：冰晶挂件死亡/垂死即收走
+        if ((this.state === 'DYING' || this.isDead) && this._iceSpikeEl) this._removeIceSpike();
         
         // ===== v3.10.0 状态滤镜（黄油 优先于 寒冰）=====
         // 只在"确有状态"时写入 → 没状态时不动 filter，避免抹掉 zomboni/pogo/ladder 的固有色调。
@@ -496,6 +550,31 @@ class Zombie extends Entity {
             this.element.style.filter = f;
             if (this.headEl) this.headEl.style.filter = f;
             this._tintedByStatus = !!f;
+        }
+
+        // ===== v3.56.0 寒冰菇绝对冰冻 =====
+        // 冻结期间跳过本帧一切行为（移动/啃食/撑杆跳/召唤/引信/铺冰），画面停在冰冻前一瞬。
+        // 垂死/死亡不拦截（冰冻中被打死照常倒地）；冰晶挂件随僵尸同步。
+        if (this.freezeTimer > 0) {
+            this._syncIceSpike();
+            this.freezeTimer -= deltaTime;
+            if (this.freezeTimer <= 0) {
+                this.freezeTimer = 0;
+                this._removeIceSpike();
+                // 解冻当帧重算滤镜（若仍被减速则回到冰蓝减速色）
+                const f = this._statusFilter();
+                this.element.style.filter = f;
+                if (this.headEl) this.headEl.style.filter = f;
+                this._tintedByStatus = !!f;
+            } else if (this.state !== 'DYING' && this.hp > 0) {
+                if (this.state === 'EATING') {
+                    this.eatTarget = null;
+                    this.state = 'WALKING';
+                    if (this.element) this.element.src = this.walkSrc;
+                }
+                this.chompTimer = 0;
+                return; // 绝对冰冻：本帧一切行为停摆
+            }
         }
         
         const currentSpeed = this.isSlowed ? this.speed * 0.3 : this.speed; // 70% slow!
