@@ -20,13 +20,43 @@ class WaveManager {
         if (this.game.vaseMode) return; // 砸罐子模式：所有僵尸来自罐子，waveManager 不刷怪
         if (this.game.zombieMode) return; // 我是僵尸模式：僵尸全部由玩家购买释放，waveManager 不刷怪
         this.timeElapsed += deltaTime;
-        
+
         if (this.timeElapsed >= this.nextSpawnTime) {
+            if (this.game.fusionMode) {
+                // —— v3.58.0 融合进化难度×2（用户爸爸指定）——
+                // ①间隔衰减加倍：每次 -1.0（原 -0.5），下限 5s→2.5s——前中期刷怪速率约翻倍；
+                // ②后期（≥420s，7 分钟）改「尸潮制」：一次上一波 18~24 只（"上一次大概上 20 多个"），
+                //   波与波之间用间隔下限 10s 拉开，真的"一波一波上、一批一批上"。前期节奏不变软。
+                this.spawnInterval = Math.max(2.5, this.spawnInterval - 1.0);
+                if (this.timeElapsed >= 420) {
+                    const count = 18 + Math.floor(Math.random() * 7); // 18~24 只
+                    for (let i = 0; i < count; i++) this.spawnZombie();
+                    this._showHugeWaveNote(count);
+                    this.waveCount++;
+                    this.nextSpawnTime = this.timeElapsed + Math.max(10, this.spawnInterval);
+                    return;
+                }
+            } else {
+                this.spawnInterval = Math.max(5, this.spawnInterval - 0.5); // Gradually speeds up, minimum 5 seconds
+            }
             this.spawnZombie();
-            
-            this.spawnInterval = Math.max(5, this.spawnInterval - 0.5); // Gradually speeds up, minimum 5 seconds
+            this.waveCount++;
             this.nextSpawnTime = this.timeElapsed + this.spawnInterval;
         }
+    }
+
+    // v3.58.0 尸潮预警横幅（复刻原版"一大波僵尸正在接近！"的红色大字）
+    _showHugeWaveNote(count) {
+        try {
+            const note = document.createElement('div');
+            note.textContent = '一大波僵尸正在接近！（' + count + ' 只）';
+            note.style.cssText = 'position:absolute;left:50%;top:18%;transform:translateX(-50%);' +
+                'z-index:5000;pointer-events:none;white-space:nowrap;' +
+                'font:bold 34px/1.4 "Hiragino Sans GB",sans-serif;color:#c62828;' +
+                'text-shadow:0 2px 6px rgba(0,0,0,.55), 0 0 2px #fff;';
+            this.game.container.appendChild(note);
+            setTimeout(() => note.remove(), 3000);
+        } catch (e) { /* 横幅失败不影响刷怪 */ }
     }
     
     spawnZombie() {
