@@ -63,6 +63,23 @@ class InputManager {
         });
         
         document.addEventListener('mousemove', (e) => {
+            // v3.55.0：砸罐子锤子光标只在未砸罐子上出现（用户指定；修复"种植后锤子消失"——
+            // 旧版全场锤子被点卡片/铲子路径的 cursor='default' 重置后再也回不来）
+            if (this.game.vaseMode) {
+                let cur = 'default';
+                if (!this.selectedSeed && !this.isShovelSelected && !this.game.isGloveDragging) {
+                    const rect = this.container.getBoundingClientRect();
+                    const scale = window.gameScale || 1;
+                    const gp = this.game.board.getGridPos(
+                        (e.clientX - rect.left) / scale, (e.clientY - rect.top) / scale
+                    );
+                    if (gp && this.game.vases && this.game.vases.some(v => !v.smashed && v.row === gp.row && v.col === gp.col)) {
+                        const h = this.game._vaseHammerData;
+                        if (h) cur = `url("${h.url}") ${h.hx} ${h.hy}, auto`;
+                    }
+                }
+                if (this.container.style.cursor !== cur) this.container.style.cursor = cur;
+            }
             if (this.selectedSeed || this.isShovelSelected || this.game.isGloveDragging) {
                 const rect = this.container.getBoundingClientRect();
                 const scale = window.gameScale || 1;
@@ -234,7 +251,7 @@ class InputManager {
             // v3.26.0 植物盲盒：拖拽图改回"盲盒图案"（红丝带礼盒）——用户明确盲盒≠问号罐
             // v3.35.0：礼盒重画为宽幅构图，拖拽幽灵同步改宽尺寸
             if (type === 'plantbox') {
-                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1790753848')";
+                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1790754738')";
                 this.dragGhost.style.width = '68px';
                 this.dragGhost.style.height = '50px';
                 this.dragGhost.style.backgroundSize = 'contain';
@@ -246,8 +263,8 @@ class InputManager {
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1790753848`
-                : `assets/images/Plants/${imgName}.gif?v=1790753848`;
+                ? `assets/images/Plants/${imgName}.png?v=1790754738`
+                : `assets/images/Plants/${imgName}.gif?v=1790754738`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
 
             // v3.20.0：倭瓜立绘画布 100×226（身体只占底部 68×82），60×60 contain 后
