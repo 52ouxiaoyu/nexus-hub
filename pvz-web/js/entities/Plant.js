@@ -154,33 +154,33 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790739510';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790742095';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790739510';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790742095';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790739510';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790742095';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790739510';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790742095';
             stat.butterChance = 0.2;
         } else if (type === 'cobcannon') {
             // 玉米加农炮（v3.24.0）：PVZ1 原版 Cob Cannon——三株玉米投手合体，占两格。
             // 平时嘴里没有炮；充能 25s 结束后嘴里出现玉米炮弹；
             // 点击它出现瞄准镜（跟随鼠标），按 M 键向准星位置发射（见 GameLoop.enterCobAim）。
             stat.hp = 600;
-            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790739510';
+            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790742095';
             // v3.24.2 立绘 148×85（炮口已用叶壳封住），显示宽 132——两格 160px 内留边，
             // 修"看起来占三格"；+15 补偿缩小后轮子离地
             stat.yOffset = 15;
@@ -210,7 +210,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790739510';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790742095';
             stat.yOffset = 0;
         }
 
@@ -235,6 +235,7 @@ class Plant extends Entity {
             // ===== v3.10.0 以卷心菜投手 / 玉米投手为基础的新融合 =====
             else if (type === 'fusion_icecabbage') { p1 = 'cabbagepult'; p2 = 'iceshroom'; }    // 寒冰卷心菜：卷心菜投手+寒冰菇
             else if (type === 'fusion_popcorn') { p1 = 'kernelpult'; p2 = 'jalapeno'; }          // 爆米花投手：玉米投手+火爆辣椒
+            else if (type === 'fusion_scaredy_sunflower') { p1 = 'scaredyshroom'; p2 = 'sunflower'; } // v3.52.0 修复：'scaredy' 不是植物名，胆小菇特性此前从未生效（类型名按下划线解析截断）
             else if (type === 'fusion_cabbagenut') { p1 = 'cabbagepult'; p2 = 'wallnut'; }       // 卷心菜堡垒：卷心菜投手+坚果墙
             else if (type === 'fusion_veggiepult') { p1 = 'cabbagepult'; p2 = 'kernelpult'; }    // 双料投手：卷心菜投手+玉米投手
             // ===== v3.45.0 十一条新融合（用户批准名单）=====
@@ -472,10 +473,12 @@ class Plant extends Entity {
                     this.fusionOverlay.style.display = 'none';
                 } else if (window.PVZ_FUSION_LOOK && window.PVZ_FUSION_LOOK[type]) {
                     // v3.50.0：数据驱动新融合外观（PVZ_FUSION_LOOK 表，原版素材帽子式叠放/像素变色）
+                    // v3.52.0：扩展 bc（基础裁剪）/ of（叠加层滤镜）/ ov2+oc2+ot2+of2（第二叠加层，双半剖分冰火等）
                     const L = window.PVZ_FUSION_LOOK[type];
                     if (L.base) this.element.src = L.base;
                     if (L.yOffset !== undefined) this.yOffset = L.yOffset;
                     if (L.bf) this.element.style.filter = L.bf;
+                    if (L.bc) this.element.style.clipPath = L.bc;
                     if (L.bt) this.setTransform(L.bt);
                     if (this.fusionOverlay) {
                         if (!L.ov) {
@@ -485,7 +488,26 @@ class Plant extends Entity {
                             this.fusionOverlay.style.clipPath = L.oc || 'none';
                             this.fusionOverlay.style.transform = 'translate(-50%, -50%) ' + (L.ot || '');
                             this.fusionOverlay.style.transformOrigin = 'center center';
+                            if (L.of) this.fusionOverlay.style.filter = L.of;
                         }
+                    }
+                    // 第二叠加层（与第一层同 z 基准：都在主体之下，靠位置错开表现不同部位）
+                    if (L.ov2) {
+                        if (!this.fusionOverlay2) {
+                            this.fusionOverlay2 = document.createElement('img');
+                            this.fusionOverlay2.style.position = 'absolute';
+                            this.fusionOverlay2.style.pointerEvents = 'none';
+                            this.fusionOverlay2.style.zIndex = '1';
+                            this.fusionOverlay2.style.transformOrigin = 'center center';
+                            this.game.entityLayer.appendChild(this.fusionOverlay2);
+                        }
+                        this.fusionOverlay2.src = L.ov2;
+                        this.fusionOverlay2.style.clipPath = L.oc2 || 'none';
+                        this.fusionOverlay2.style.transform = 'translate(-50%, -50%) ' + (L.ot2 || '');
+                        if (L.of2) this.fusionOverlay2.style.filter = L.of2;
+                    } else if (this.fusionOverlay2) {
+                        this.fusionOverlay2.parentNode.removeChild(this.fusionOverlay2);
+                        this.fusionOverlay2 = null;
                     }
                 }
                 
@@ -531,9 +553,8 @@ class Plant extends Entity {
         // v3.37.3：毁灭向日葵移除"毁灭新星"周期自爆（用户：毁灭菇爆炸时只需要在
         // 爆炸的地方炸一次，不需要连续几排连续炸）——现在只产阳光 + 阵亡时保留大爆炸
         // 大嘴坚果：坚果的防御 + 大嘴花的啃咬（状态合并时 state 被保留为坚果侧，需显式初始化）
-        // v3.50.0：新融合大嘴家族（吞天大嘴/蒜香大嘴花/向日葵大嘴花）同款初始化
-        if (type === 'fusion_chomper_wallnut' || type === 'fusion_chomper_tallnut' ||
-            type === 'fusion_chomper_garlic' || type === 'fusion_sunflower_chomper') {
+        // v3.50.0：新融合大嘴家族同款初始化（v3.52.0：吞天大嘴/向日葵大嘴花已删除）
+        if (type === 'fusion_chomper_wallnut' || type === 'fusion_chomper_garlic') {
             this.state = 'idle';
             this.chewTimer = 0;
         }
@@ -808,15 +829,7 @@ class Plant extends Entity {
                 }
             }
         }
-        // 双子坚果【双阳补给】：每 30s 头顶掉一颗大阳光
-        if (this.type === 'fusion_wallnut_twinsunflower') {
-            this._giftSunT = (this._giftSunT || 0) + deltaTime;
-            if (this._giftSunT >= 30) {
-                this._giftSunT = 0;
-                this.game.entities.push(new Sun(this.game, this.x, this.y - 60, this.y + 20));
-                notice('ult_giftsun', '🌻 双子坚果掉落了一颗大阳光！', '#ffd54a');
-            }
-        }
+        // v3.52.0：双子坚果【双阳补给】已随"不产阳光"改版移除（纯 4000 血肉盾）
         // 火焰西瓜【烈焰瓜】：每 20s 投出 90 伤烈焰瓜
         if (this.type === 'fusion_melonpult_torchwood') {
             this._firemelonT = (this._firemelonT || 0) + deltaTime;
@@ -875,6 +888,53 @@ class Plant extends Entity {
                 }
             }
         }
+    }
+
+    // ===== v3.52.0 帕修向日葵：缩头视觉与点击切换 =====
+    // 缩头 = 本体缩小下沉 + 胆小菇帽隐藏（不改贴图；抬头恢复原状）
+    _applyShrinkVisual(hide) {
+        this.isHiding = hide;
+        if (hide) {
+            this.setTransform('scale(0.72)');
+            this._shrinkBaseYOff = this.yOffset;
+            this.yOffset = this.yOffset + 10;
+            if (this.fusionOverlay) this.fusionOverlay.style.display = 'none';
+        } else {
+            this.setTransform('scale(1)');
+            if (this._shrinkBaseYOff !== undefined) {
+                this.yOffset = this._shrinkBaseYOff;
+                this._shrinkBaseYOff = undefined;
+            }
+            if (this.fusionOverlay) this.fusionOverlay.style.display = 'block';
+        }
+    }
+
+    // 点击切换：当前缩头→强制抬头；当前抬头→强制缩头（僵尸在旁也尊重手动选择）
+    toggleShrink() {
+        this._shrinkOverride = this.isHiding ? 'up' : 'down';
+        const wantHide = this._shrinkOverride === 'down';
+        if (wantHide !== this.isHiding) this._applyShrinkVisual(wantHide);
+        if (this.game.audioManager) this.game.audioManager.play('btn');
+    }
+
+    // ===== v3.52.0 射刺豌豆小大招：每射满 50 枚子弹，在本行随机空格布一根地刺 =====
+    _plantRandomSpikeweed() {
+        const b = this.game.board;
+        const candidates = [];
+        for (let c = 0; c < b.cols; c++) {
+            if (b.grid[this.row][c]) continue;
+            if (this.game.vaseMode && this.game.vases && this.game.vases.some(v => !v.smashed && v.row === this.row && v.col === c)) continue;
+            candidates.push(c);
+        }
+        if (!candidates.length) return;
+        const col = candidates[Math.floor(Math.random() * candidates.length)];
+        try {
+            const sw = new Plant(this.game, 'spikeweed');
+            if (this.game.board.addPlant(sw, this.row, col)) {
+                if (this.game.showAnnouncement) this.game.showAnnouncement('🌵 射刺豌豆布下了一根地刺！', '#d0c090');
+                if (this.game.audioManager) this.game.audioManager.play('plant');
+            }
+        } catch (e) { console.error(e); }
     }
 
     // 极寒波动特效：以植物为中心的一圈扩散冰环（纯视觉）
@@ -1170,7 +1230,7 @@ class Plant extends Entity {
             if (!this._cobShellEl) {
                 const el = document.createElement('img');
                 // v3.24.1：装填玉米用原版图鉴里抠出的整根玉米（带根部），从炮口探出
-                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790739510';
+                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790742095';
                 // 裸 img 必须自带 translate(-50%,-50%) 居中基准（与 fusionOverlay 同一教训）
                 // v3.24.2 尺寸随立绘缩放同步：43×48（0.892×）
                 el.style.cssText = 'position:absolute;width:43px;height:48px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);';
@@ -1193,6 +1253,7 @@ class Plant extends Entity {
             this._gloveOvDisplay = this.fusionOverlay.style.display;
             this.fusionOverlay.style.display = 'none';
         }
+        if (this.fusionOverlay2) this.fusionOverlay2.style.display = 'none';
         this.element.style.display = 'none';
     }
 
@@ -1201,6 +1262,7 @@ class Plant extends Entity {
         if (this.fusionOverlay) {
             this.fusionOverlay.style.display = (this._gloveOvDisplay === 'none') ? 'none' : 'block';
         }
+        if (this.fusionOverlay2) this.fusionOverlay2.style.display = 'block';
     }
 
     // ===== v3.24.0 玉米加农炮发射：朝准星位置抛出玉米炮弹，落地 3×3 爆炸 =====
@@ -1221,6 +1283,10 @@ class Plant extends Entity {
         if (this.fusionOverlay) {
             this.fusionOverlay.style.left = `${this.x}px`;
             this.fusionOverlay.style.top = `${this.y + this.yOffset}px`;
+        }
+        if (this.fusionOverlay2) {
+            this.fusionOverlay2.style.left = `${this.x}px`;
+            this.fusionOverlay2.style.top = `${this.y + this.yOffset}px`;
         }
         // ===== v3.24.0 玉米加农炮：充能循环 + 嘴里炮弹跟随（不走普通射手逻辑）=====
         // 注意：死亡（hp<=0）时不提前 return，让流程继续走到下方死亡块清理双格与炮弹 overlay
@@ -1322,6 +1388,10 @@ class Plant extends Entity {
             if (this.fusionOverlay && this.fusionOverlay.parentNode) {
                 this.fusionOverlay.parentNode.removeChild(this.fusionOverlay);
             }
+            if (this.fusionOverlay2 && this.fusionOverlay2.parentNode) {
+                this.fusionOverlay2.parentNode.removeChild(this.fusionOverlay2);
+                this.fusionOverlay2 = null;
+            }
             if (this.ladderOverlay && this.ladderOverlay.parentNode) {
                 this.ladderOverlay.parentNode.removeChild(this.ladderOverlay);
             }
@@ -1347,11 +1417,20 @@ class Plant extends Entity {
             
             // Handle Scaredy-shroom hiding
             if (this.hasTrait('scaredyshroom')) {
-                const zombieNear = this.game.entities.some(e => 
+                const zombieNear = this.game.entities.some(e =>
                     // v3.20.0：周围一圈（8 邻格）有僵尸就缩头，不再只看同一行
                     e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized && Math.abs(e.row - this.row) <= 1 && e.x - this.x > -120 && e.x - this.x < 120
                 );
-                if (zombieNear && !this.isHiding) {
+                if (this.type === 'fusion_scaredy_sunflower') {
+                    // v3.52.0 帕修向日葵：缩头=本体缩小下沉+帽子隐藏（不改贴图，头缩进花里）。
+                    // 自动模式跟随 3×3 僵尸；点击可手动强制抬头/缩头（_shrinkOverride）。
+                    this._scaredyAuto = zombieNear;
+                    const wantHide = (this._shrinkOverride === 'down') ? true
+                        : (this._shrinkOverride === 'up') ? false
+                        : zombieNear;
+                    if (wantHide && !this.isHiding) this._applyShrinkVisual(true);
+                    else if (!wantHide && this.isHiding) this._applyShrinkVisual(false);
+                } else if (zombieNear && !this.isHiding) {
                     this.isHiding = true;
                     this.element.src = 'assets/images/Plants/ScaredyShroom/ScaredyShroomSleep.gif';
                     this.yOffset = 15;
@@ -1361,9 +1440,10 @@ class Plant extends Entity {
                     this.yOffset = 0;
                 }
             }
-            
+
             let skipShooting = false;
             if (this.hasTrait('scaredyshroom') && this.isHiding) skipShooting = true;
+            if (this.type === 'fusion_scaredy_sunflower') skipShooting = true; // v3.52.0 帕修向日葵：纯产能无攻击（用户：它已经缺少攻击功能，只能产出阳光）
             if (this.hasTrait('potatomine') && !this.isArmed) skipShooting = true;
             // 魅惑菇是被动植物（不走射击逻辑）；杨桃走专属五星分支（见下方 type 特判）
             if (this.type === 'fusion_hypnoshroom' || this.type === 'hypnoshroom') skipShooting = true;
@@ -1430,6 +1510,7 @@ class Plant extends Entity {
                     // 两个投手系融合的专属弹种
                     if (this.type === 'fusion_icecabbage') projType = 'icecabbage';
                     if (this.type === 'fusion_popcorn') projType = 'popcorn';
+                    if (this.type === 'fusion_peashooter_spikeweed') projType = 'spikepea'; // v3.52.0 射刺豌豆：棕色地刺弹
                     // ===== v3.45.0 =====
                     if (this.type === 'fusion_firerepeater') {
                         // v3.48.0 大技能【过热爆发】：v3.50.0 由每第 4 轮降频为每第 8 轮（用户：大招频率太快），
@@ -1525,6 +1606,14 @@ class Plant extends Entity {
                                     }
                                 }, 150 * i);
                             }
+                            // v3.52.0 射刺豌豆：每射满 50 枚在本行随机空格布一根地刺（小大招）
+                            if (this.type === 'fusion_peashooter_spikeweed') {
+                                this._spikeAmmo = (this._spikeAmmo || 0) + 1;
+                                if (this._spikeAmmo >= 50) {
+                                    this._spikeAmmo = 0;
+                                    this._plantRandomSpikeweed();
+                                }
+                            }
                         }
                         
                         // Backward shot
@@ -1594,7 +1683,10 @@ class Plant extends Entity {
         // v3.50.0 融合大技能统一调度（阳光雨降频 120s/3 颗；冰系极寒波动/坚果系/射手系/一次性二段全在这里）
         this._updateUltimates(deltaTime);
         // 我是僵尸模式：敌方向日葵不产阳光球（我方阳光只来自"啃死向日葵 +200/双子 +500"的奖励，见死亡分支）
-        if (!this.game.zombieMode && (this.hasTrait('sunflower') || this.hasTrait('sunshroom') || this.hasTrait('twinsunflower'))) {
+        // v3.52.0：双子坚果改版后不产阳光；帕修向日葵缩头时暂停产阳光
+        if (!this.game.zombieMode && (this.hasTrait('sunflower') || this.hasTrait('sunshroom') || this.hasTrait('twinsunflower'))
+            && this.type !== 'fusion_wallnut_twinsunflower'
+            && !(this.type === 'fusion_scaredy_sunflower' && this.isHiding)) {
             this.sunTimer += deltaTime;
             if (this.sunTimer >= this.sunRate) {
                 this.sunTimer = 0;
@@ -2088,7 +2180,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                     this.state = 'biting';
                     this.chewTimer = 0.5; // half second bite animation
                     zombieNear.hp = 0; // instant kill
-                    // v3.50.0 大嘴家族吞噬回血（大嘴坚果/吞天大嘴/蒜香大嘴花/向日葵大嘴花）：
+                    // v3.50.0 大嘴家族吞噬回血（大嘴坚果/蒜香大嘴花；v3.52.0 起吞天大嘴/向日葵大嘴花已删除）：
                     // 每吞一只回 1000 血（不超过上限）——大嘴坚果的大技能，其余同族顺带受益
                     if (this.type.startsWith('fusion_')) {
                         this.hp = Math.min(this.maxHp, this.hp + 1000);

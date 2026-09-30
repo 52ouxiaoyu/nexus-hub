@@ -711,14 +711,16 @@ class Zombie extends Entity {
             }
 
             const bigZ = (this.type === 'zomboni' || this.type === 'gargantuar' || this.type === 'lgboss');
-            const plant = this.game.entities.find(e => 
-                e instanceof Plant && 
+            const plant = this.game.entities.find(e =>
+                e instanceof Plant &&
                 // v3.14.0：地刺/钢地刺都不可啃 —— 所有僵尸直接从上面走过
                 // v3.27.0：只有"纯地面刺"（本体无实体）才整株豁免；地刺坚果/高坚果钢地刺
                 // 这类带坚果躯体的融合株照常被啃食（坚果当盾承伤），脚下地刺在 update 里照常扎人
                 // v3.48.0：火焰地刺也是纯地面刺（用户：僵尸不能吃到它，只有冰车能碾）——收进 isPureGroundSpike
                 !(e.isPureGroundSpike && e.isPureGroundSpike()) &&
-                e.row === this.row && 
+                // v3.52.0：帕修向日葵缩头时僵尸不吃它，直接走过（抬头/被手动抬起后照常可啃）
+                !(e.type === 'fusion_scaredy_sunflower' && e.isHiding) &&
+                e.row === this.row &&
                 (bigZ ? (e.x <= this.x + 10 && this.x - e.x < 85) : Math.abs(e.x - this.x) < 40) &&
                 !e.isDead && e.type !== 'crater'
             );

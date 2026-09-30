@@ -142,7 +142,9 @@
     if (window.PVZ_FUSION_EXTRA) {
         for (const f of window.PVZ_FUSION_EXTRA) {
             const L = f.look || {};
-            FUSION.push({ n: f.name, base: L.base, bf: L.bf, bt: L.bt, ov: L.ov, oc: L.oc, ot: L.ot, md: f.md || 96, t: f.t });
+            // v3.52.0：透传 bc/of 与第二叠加层 ov2/oc2/ot2/of2（双半剖分冰火等新外观）
+            FUSION.push({ n: f.name, base: L.base, bf: L.bf, bt: L.bt, bc: L.bc, ov: L.ov, oc: L.oc, ot: L.ot, of: L.of,
+                ov2: L.ov2, oc2: L.oc2, ot2: L.ot2, of2: L.of2, md: f.md || 96, t: f.t });
         }
     }
     // 注：南瓜壳不再单独列在融合区 —— 它与经典区"南瓜壳"是同一株植物（坚果墙+高坚果融合=套壳玩法，
@@ -368,9 +370,12 @@
         const sc = (target / (f.md || 96)).toFixed(3);
         let h = '';
         if (f.base) h += '<img src="' + f.base + V + '" style="position:absolute;transform:translate(-50%,-50%) ' + (f.bt || '') + ';' +
-            (f.bf ? 'filter:' + f.bf + ';' : '') + '">';
+            (f.bf ? 'filter:' + f.bf + ';' : '') + (f.bc ? 'clip-path:' + f.bc + ';' : '') + '">';
         if (f.ov) h += '<img src="' + f.ov + V + '" style="position:absolute;transform:translate(-50%,-50%) ' + (f.ot || '') + ';' +
-            (f.oc ? 'clip-path:' + f.oc + ';' : '') + '">';
+            (f.oc ? 'clip-path:' + f.oc + ';' : '') + (f.of ? 'filter:' + f.of + ';' : '') + '">';
+        // v3.52.0：第二叠加层（冰火两重天双半剖分 / 藤上双坚果等）
+        if (f.ov2) h += '<img src="' + f.ov2 + V + '" style="position:absolute;transform:translate(-50%,-50%) ' + (f.ot2 || '') + ';' +
+            (f.oc2 ? 'clip-path:' + f.oc2 + ';' : '') + (f.of2 ? 'filter:' + f.of2 + ';' : '') + '">';
         return '<div style="position:relative;width:0;height:0;transform:scale(' + sc + ');">' + h + '</div>';
     }
 
