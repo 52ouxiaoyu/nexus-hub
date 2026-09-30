@@ -1,6 +1,6 @@
 {
-  "version": "v3.45.1",
+  "version": "v3.51.2",
   "build": "2026-09-30",
-  "feature": "v3.51.1：砸罐子鼠标光标改用锤子僵尸手上的原版小木锤（HammerZombie/Hammer.png，热点=锤头），替换掉此前的自制锤子图形。",
-  "assetVersion": 1790739271
+  "feature": "v3.51.2：修复手套 bug——拿起融合植物再撤回后场上出现两个本体。根因=滤镜路线融合体的叠加层构造时即 display:none，手套放回路径却无条件恢复 'block'。现改为拿起时快照叠加层显示状态、放回时按快照还原（全部 12 处恢复点统一走 Plant.gloveHide/gloveRestore）。",
+  "assetVersion": 1790739510
 }
