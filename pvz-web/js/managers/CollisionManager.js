@@ -38,7 +38,7 @@ class CollisionManager {
                                         || p.type === 'fume_burst';   // v3.26.0：大喷菇弹幕穿门
                             z.takeDamage(p.damage, pierce ? { pierce: true } : undefined);
                             
-                            if (p.type === 'snowpea' || p.type === 'wintermelon' || p.type === 'icecabbage' || p.type === 'icekernel' || p._iceFume) { // v3.53.0：冰雾大喷菇孢子命中减速
+                            if (p.type === 'snowpea' || p.type === 'wintermelon' || p.type === 'icecabbage' || p.type === 'icekernel') { // v3.57.0：冰雾大喷菇已删，_iceFume 移除
                                 z.setSlow(10.0);
                             } else if (p.type === 'firepea') {
                                 z.thaw(); // Fire thaws out zombies
