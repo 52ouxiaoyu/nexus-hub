@@ -43,7 +43,7 @@ class InputManager {
                     this.isShovelSelected = false;
                     this.game.isGloveActive = false;
                     if(document.getElementById('glove-bank')) document.getElementById('glove-bank').style.background = 'rgba(0,0,0,0.5)';
-                    if(this.game.gloveSource) { this.game.gloveSource.element.style.display = 'block'; if (this.game.gloveSource.fusionOverlay) this.game.gloveSource.fusionOverlay.style.display = 'block'; this.game.isGloveDragging = false; this.game.gloveSource = null; }
+                    if(this.game.gloveSource) { this.game.gloveSource.gloveRestore(); this.game.isGloveDragging = false; this.game.gloveSource = null; }
                     this.game.container.style.cursor = 'default';
                     this.updateDragGhost(e.clientX, e.clientY, type);
                     this.game.audioManager.play('btn');
@@ -56,7 +56,7 @@ class InputManager {
             this.selectedSeed = null;
             this.game.isGloveActive = false;
             if(document.getElementById('glove-bank')) document.getElementById('glove-bank').style.background = 'rgba(0,0,0,0.5)';
-            if(this.game.gloveSource) { this.game.gloveSource.element.style.display = 'block'; if (this.game.gloveSource.fusionOverlay) this.game.gloveSource.fusionOverlay.style.display = 'block'; this.game.isGloveDragging = false; this.game.gloveSource = null; }
+            if(this.game.gloveSource) { this.game.gloveSource.gloveRestore(); this.game.isGloveDragging = false; this.game.gloveSource = null; }
             this.game.container.style.cursor = 'default';
             this.updateDragGhost(e.clientX, e.clientY, 'shovel');
             this.game.audioManager.play('btn');
@@ -229,7 +229,7 @@ class InputManager {
             // v3.26.0 植物盲盒：拖拽图改回"盲盒图案"（红丝带礼盒）——用户明确盲盒≠问号罐
             // v3.35.0：礼盒重画为宽幅构图，拖拽幽灵同步改宽尺寸
             if (type === 'plantbox') {
-                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1790692359')";
+                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1790739271')";
                 this.dragGhost.style.width = '68px';
                 this.dragGhost.style.height = '50px';
                 this.dragGhost.style.backgroundSize = 'contain';
@@ -241,8 +241,8 @@ class InputManager {
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1790692359`
-                : `assets/images/Plants/${imgName}.gif?v=1790692359`;
+                ? `assets/images/Plants/${imgName}.png?v=1790739271`
+                : `assets/images/Plants/${imgName}.gif?v=1790739271`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
 
             // v3.20.0：倭瓜立绘画布 100×226（身体只占底部 68×82），60×60 contain 后

@@ -1,6 +1,6 @@
 {
-  "version": "v3.51.1",
-  "build": "2026-09-29",
+  "version": "v3.45.1",
+  "build": "2026-09-30",
   "feature": "v3.51.1：砸罐子鼠标光标改用锤子僵尸手上的原版小木锤（HammerZombie/Hammer.png，热点=锤头），替换掉此前的自制锤子图形。",
-  "assetVersion": 1790692359
+  "assetVersion": 1790739271
 }
