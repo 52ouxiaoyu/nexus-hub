@@ -1778,6 +1778,71 @@ function scoreSim(res, ctx) {
     return val;
 }
 
+// 斯诺克版评分：镜像 resolveSnookerShot 的判罚/计分规则，把一杆模拟结果换算成期望分差。
+// （scoreSim 是 8 球花色专用，斯诺克的红/彩交替 + 罚分体系完全不同，v2.7.5 起斯诺克 AI 全难度用脑内模拟）
+function scoreSnookerSim(res, on) {
+    const sb = res.balls;
+    const cueEnd = sb[0];
+    const potted = res.potted.filter(n => n !== 0);
+    const cuePotted = cueEnd.potted;
+    let foul = null, pen = 4;
+    const bump = v => { pen = Math.max(pen, v); };
+    if (on.category === 'colourN') bump(on.val);
+    if (cuePotted) foul = '母球落袋';
+    if (!foul && res.first === null) foul = '空杆';
+    if (!foul && res.first !== null) {
+        const legal = on.category === 'red' ? snIsRed(res.first)
+                    : on.category === 'colour' ? snIsColour(res.first)
+                    : res.first === on.num;
+        if (!legal) { foul = '首触错球'; bump(snVal(res.first)); }
+    }
+    for (const n of potted) {
+        const ok = on.category === 'red' ? snIsRed(n)
+                 : on.category === 'colour' ? snIsColour(n)
+                 : n === on.num;
+        if (!ok) { if (!foul) foul = '打进错球'; bump(snVal(n)); }
+    }
+    if (!foul && potted.length === 0 && !cuePotted && !res.cushionAfter) foul = '无碰库';
+
+    // 终局：合法打进黑球直接赢
+    if (!foul && on.category === 'colourN' && on.num === 21 && potted.includes(21)) return 2000;
+
+    // 犯规 = 对手白拿 pen 分 + 自己丢杆权
+    if (foul) return -(pen * 45) - 70;
+
+    // 合法进球：分值收益（红 1 / 彩 2~7，连得即保持杆权）
+    let gained = 0;
+    if (on.category === 'red') gained = potted.filter(snIsRed).length;
+    else if (on.category === 'colour') gained = potted.reduce((s, n) => s + snVal(n), 0);
+    else gained = on.val;
+    let val = 40 + gained * 65;
+
+    // 走位：打完这杆后下一目标在母球终点的进球质量
+    if (on.category === 'red') {
+        // 下一杆任选彩球——黑球 7 分优先，给黑球额外权重
+        let bestQ = 0;
+        for (let n = 16; n <= 21; n++) {
+            const q = geoBestScore(cueEnd.x, cueEnd.z, sb, [n]);
+            if (q > bestQ) bestQ = q;
+        }
+        const qb = geoBestScore(cueEnd.x, cueEnd.z, sb, [21]);
+        val += Math.min(Math.max(bestQ * 110, qb * 150), 110);
+    } else if (on.category === 'colour') {
+        // 彩球进袋重摆后继续打红球
+        const redNums = sb.filter(b => !b.potted && snIsRed(b.num)).map(b => b.num);
+        if (!redNums.length) val += 60;   // 红球清完 → 下一杆进顺序阶段
+        else val += Math.min(geoBestScore(cueEnd.x, cueEnd.z, sb, redNums) * 110, 100);
+    } else {
+        // 顺序阶段：下一颗彩球
+        const idx = SNK_COLOURS.findIndex(c => c.num === on.num);
+        const nextNums = [];
+        for (let i = idx + 1; i < SNK_COLOURS.length; i++) nextNums.push(SNK_COLOURS[i].num);
+        if (!nextNums.length) val += 60;
+        else val += Math.min(geoBestScore(cueEnd.x, cueEnd.z, sb, nextNums) * 110, 100);
+    }
+    return val;
+}
+
 function aiChooseShot() {
     const cue = cueBall();
     const targets = legalTargetBalls();
@@ -1821,8 +1886,55 @@ function aiChooseShot() {
     }
     cands.sort((a, b) => b.geo - a.geo);
 
-    // ---- 简单难度 / 斯诺克：一步几何决策（scoreSim 是 8 球花色专用，斯诺克不适用） ----
-    if (aiLevel === 0 || gameMode === 'snooker') {
+    // ---- 斯诺克：全难度脑内模拟搜索（v2.7.5 起不再用一步几何，用户反馈 AI 太弱） ----
+    if (gameMode === 'snooker') {
+        const on = snookerTargets();
+        const aims = cands.slice(0, aiLevel === 2 ? 10 : aiLevel === 1 ? 7 : 4);
+        const powers = aiLevel === 2 ? [0.30, 0.50, 0.75, 0.92] : aiLevel === 1 ? [0.35, 0.60, 0.85] : [0.50, 0.85];
+        const noise = aiLevel === 2 ? 0.5 : aiLevel === 1 ? 1.6 : 4.5;
+        let bestPlan = null, bestVal = -Infinity;
+        for (const c of aims) {
+            // 高低杆只对较直的球有意义（省算力）
+            const spinList = aiLevel === 2 && c.cosCut > 0.55 ? [0, 0.55, -0.55] : [0];
+            for (const pf of powers) {
+                for (const sy of spinList) {
+                    const res = simulateShot(c.dir.x, c.dir.z, pf, sy);
+                    const val = scoreSnookerSim(res, on) + gauss() * noise;
+                    if (val > bestVal) { bestVal = val; bestPlan = { dir: c.dir, power: pf, vert: sy }; }
+                }
+            }
+        }
+        // 防守候选：轻推最近合法球，多档力度进同一评分体系（安全球是斯诺克核心战术）
+        let nb = null, nd = Infinity;
+        for (const b of targets) {
+            const d = Math.hypot(b.x - cue.x, b.z - cue.z);
+            if (d < nd) { nd = d; nb = b; }
+        }
+        if (nb) {
+            const da = Math.atan2(nb.z - cue.z, nb.x - cue.x);
+            const ddir = { x: Math.cos(da), z: Math.sin(da) };
+            for (const pf of [0.10, 0.18, 0.28]) {
+                const res = simulateShot(ddir.x, ddir.z, pf, 0);
+                const val = scoreSnookerSim(res, on) + gauss() * noise;
+                if (val > bestVal) { bestVal = val; bestPlan = { dir: ddir, power: pf, vert: 0 }; }
+            }
+        }
+        if (!bestPlan) return aiDefense(targets, sigma);
+        // 噪声复验：从理想线 + 3 个噪声样本里选模拟实测最优的方向
+        const vert = bestPlan.vert || 0;
+        let bdir = bestPlan.dir;
+        let bval = scoreSnookerSim(simulateShot(bdir.x, bdir.z, bestPlan.power, vert), on);
+        for (let k = 0; k < 3; k++) {
+            const a0 = Math.atan2(bestPlan.dir.z, bestPlan.dir.x) + gauss() * sigma;
+            const d = { x: Math.cos(a0), z: Math.sin(a0) };
+            const v = scoreSnookerSim(simulateShot(d.x, d.z, bestPlan.power, vert), on);
+            if (v > bval) { bval = v; bdir = d; }
+        }
+        return { dir: bdir, power: clamp(bestPlan.power, 0.10, 0.95), vert };
+    }
+
+    // ---- 八球简单难度：一步几何决策 ----
+    if (aiLevel === 0) {
         const best = cands.find(c => c.cosCut >= cutMin);
         if (best) {
             const v = clamp(1.5 + best.dist * 2.3 / Math.max(best.cosCut, 0.32), 1.7, 7.4);
