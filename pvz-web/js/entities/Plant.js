@@ -154,33 +154,33 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790742095';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790751564';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790742095';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790751564';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790742095';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790751564';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790742095';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790751564';
             stat.butterChance = 0.2;
         } else if (type === 'cobcannon') {
             // 玉米加农炮（v3.24.0）：PVZ1 原版 Cob Cannon——三株玉米投手合体，占两格。
             // 平时嘴里没有炮；充能 25s 结束后嘴里出现玉米炮弹；
             // 点击它出现瞄准镜（跟随鼠标），按 M 键向准星位置发射（见 GameLoop.enterCobAim）。
             stat.hp = 600;
-            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790742095';
+            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790751564';
             // v3.24.2 立绘 148×85（炮口已用叶壳封住），显示宽 132——两格 160px 内留边，
             // 修"看起来占三格"；+15 补偿缩小后轮子离地
             stat.yOffset = 15;
@@ -210,7 +210,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790742095';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790751564';
             stat.yOffset = 0;
         }
 
@@ -282,7 +282,10 @@ class Plant extends Entity {
             }
             
             this.element.src = s1.src;
-            
+
+            // v3.53.0 南瓜高坚果：双壳血量=高坚果 8000 + 南瓜套 4000 叠加（普通融合取 max，这里特意叠满）
+            if (type === 'fusion_pumpkinhead_tallnut') { this.hp = 12000; this.maxHp = 12000; }
+
             const customImages = {};
             
             if (customImages[type]) {
@@ -531,7 +534,7 @@ class Plant extends Entity {
         // 自动引爆标记：樱桃炸弹/火爆辣椒/寒冰菇/毁灭菇与寒冰炸弹（融合炸弹）种下后
         // 自动执行本来的爆炸功能（无需点击/手套）；而樱桃射手/毁灭向日葵这类"阵亡时
         // 爆炸"的常驻融合植物不自动引爆，只按普通植物运作。
-        this.autoExplode = (type === 'cherrybomb' || type === 'jalapeno' || type === 'iceshroom' || type === 'doomshroom' || type === 'fusion_frostbomb');
+        this.autoExplode = (type === 'cherrybomb' || type === 'jalapeno' || type === 'iceshroom' || type === 'doomshroom' || type === 'fusion_frostbomb' || type === 'fusion_doomshroom_iceshroom'); // v3.53.0 冰毁灭菇引信
         
         // v3.51.0：路灯花素材画布 250×237 但花朵只占 81×88（约 1/3 画布），
         // 原样渲染显得比别的植物小一圈 → 整体 scale 1.7，花朵 ~138×150 与场上植株等大
@@ -1047,6 +1050,36 @@ class Plant extends Entity {
     
     // 爆炸融合：以炸弹所在格为中心，扫描自身 3×3（含斜角，同寒冰菇范围）内的植物，
     // 凡与该炸弹有配方的植物全部与原植物格融合（炸弹为催化剂，随爆炸消耗）。
+    // v3.53.0 冰毁灭菇专属爆炸（自动引信与手动点击共用）：
+    // 1 秒膨胀 → 全屏核平 + 全场冰冻 10 秒；极寒中和毁灭——不留陨石坑（对比本体毁灭菇 30 秒弹坑）
+    _doomIceExplode() {
+        if (this.state !== 'idle') return;
+        this.state = 'swelling';
+        this.element.src = 'assets/images/Plants/DoomShroom/BeginBoom.gif';
+        this.game.audioManager.play('plant');
+        setTimeout(() => {
+            if (this.isDead) return;
+            this.state = 'exploding';
+            this.game.audioManager.play('frozen'); // 冰冻主音（极寒身份）
+            this.triggerBombFusion();
+            this.element.src = 'assets/images/Plants/DoomShroom/Boom.png';
+            this.element.style.filter = 'hue-rotate(160deg) saturate(1.5) brightness(1.25)'; // 冰蓝蘑菇云
+            this.element.style.zIndex = 3000;
+            this.element.style.transform = 'translate(-50%, -80%)';
+            this.element.style.width = '150px';
+
+            const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+            for (let z of zombies) {
+                z.takeDamage(9999, { bomb: true, oneshot: true });
+                z.setSlow(10.0); // 全场冰冻结余波（对高血量 Boss 也有减速价值）
+            }
+            setTimeout(() => {
+                if (this.game.audioManager.playFx) this.game.audioManager.playFx('ice_shatter');
+            }, 300);
+            setTimeout(() => { this.hp = 0; }, 1000); // 无弹坑，爆完直接消散
+        }, 1000);
+    }
+
     triggerBombFusion() {
         // v3.33.0：砸罐子模式也开放爆炸融合 —— 一次性植物（樱桃炸弹等）种下爆炸时，
         // 把 3×3 内有配方的植物融合掉（此前仅融合进化模式，砸罐子里樱桃只会把豌豆炸掉）
@@ -1089,7 +1122,10 @@ class Plant extends Entity {
     explodeNow() {
         if (this.isDead) return;
         if (!this.autoExplode) return; // 常驻融合植物（樱桃射手等）点击不引爆
-        
+
+        // v3.53.0 冰毁灭菇：手动点击与自动引信共用同一条爆炸路径（排在 iceshroom 弱冰爆之前）
+        if (this.type === 'fusion_doomshroom_iceshroom') { this._doomIceExplode(); return; }
+
         if (this.hasTrait('cherrybomb') || this.hasTrait('jalapeno')) {
             if (this.hasExploded) return;
             this.hasExploded = true;
@@ -1230,7 +1266,7 @@ class Plant extends Entity {
             if (!this._cobShellEl) {
                 const el = document.createElement('img');
                 // v3.24.1：装填玉米用原版图鉴里抠出的整根玉米（带根部），从炮口探出
-                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790742095';
+                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790751564';
                 // 裸 img 必须自带 translate(-50%,-50%) 居中基准（与 fusionOverlay 同一教训）
                 // v3.24.2 尺寸随立绘缩放同步：43×48（0.892×）
                 el.style.cssText = 'position:absolute;width:43px;height:48px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);';
@@ -1522,6 +1558,7 @@ class Plant extends Entity {
                     if (this.type === 'fusion_icekernel' && projType === 'kernel') projType = 'icekernel'; // 冰玉米：减速（黄油定身概率保留）
                     // ===== v3.50.0 数据驱动新融合的弹种特判 =====
                     if (this.type === 'fusion_peashooter_torchwood') projType = 'firepea'; // 火焰射手：豌豆过火炬=点燃
+                    if (this.type === 'fusion_threepeater_torchwood') projType = 'firepea'; // v3.53.0 火焰三线：三行火豌豆
                     if (this.type === 'fusion_melon_cabbagepult') {
                         projType = Math.random() < 0.5 ? 'melon' : 'cabbage'; // 双果投手：西瓜/卷心菜交替
                     }
@@ -1555,6 +1592,11 @@ class Plant extends Entity {
                                 for (let j = 0; j < 3; j++) {
                                     const p = new Projectile(this.game,
                                         this.x + 22 + j * 14, this.y - 15, this.row, 'fume_burst');
+                                    if (this.type === 'fusion_fumeshroom_iceshroom') {
+                                        // v3.53.0 冰雾大喷菇：冰蓝孢子 + 命中减速（CollisionManager 消费 _iceFume）
+                                        p._iceFume = true;
+                                        p.element.style.filter = 'brightness(1.2) hue-rotate(160deg) saturate(1.9)';
+                                    }
                                     this.game.entities.push(p);
                                 }
                             }, i * 120);
@@ -1793,6 +1835,17 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                 setTimeout(() => { this.hp = 0; }, 500);
                 }
             }
+        } else if (this.type === 'fusion_doomshroom_iceshroom' && this.autoExplode) {
+            // v3.53.0 冰毁灭菇（毁灭菇+寒冰菇）：必须排在 iceshroom trait 分支之前——
+            // 否则会被 hasTrait('iceshroom') 的弱冰爆（20 伤）抢先命中。引信钳回原版 1 秒
+            // （双亲 explodeTimer 1.0+1.0 会相加成 2s）。被手套拎起时引信暂停（v3.33.0 约定）。
+            this.explodeTimer = Math.min(this.explodeTimer, 1.0);
+            if (!(this.game.isGloveDragging && this.game.gloveSource === this)) {
+                this.explodeTimer -= deltaTime;
+            }
+            if (this.explodeTimer <= 0 && this.state === 'idle') {
+                this._doomIceExplode();
+            }
         } else if (this.hasTrait('iceshroom') && this.autoExplode) {
             // v3.33.0：同樱桃炸弹 —— 被手套拎起时引信暂停
             if (!(this.game.isGloveDragging && this.game.gloveSource === this)) {
@@ -1933,7 +1986,8 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
         // v3.45.0 辣椒高坚果（高坚果+火爆辣椒）：啃它的僵尸被烫——
         // 咬合范围内每秒 40 灼烧（与地刺同频率的贴身 tick）
         // v3.50.0：火炬蒜塔（大蒜+火炬树桩）同享灼烧啃食者
-        if (this.type === 'fusion_firetallnut' || this.type === 'fusion_garlic_torchwood') {
+        // v3.53.0：火焰钢刺（钢地刺+火炬树桩）——踩上/啃到它的僵尸每秒再被烫 40
+        if (this.type === 'fusion_firetallnut' || this.type === 'fusion_garlic_torchwood' || this.type === 'fusion_spikerock_torchwood') {
             this.burnTick = (this.burnTick || 0) + deltaTime;
             if (this.burnTick >= 1.0) {
                 this.burnTick = 0;
