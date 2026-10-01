@@ -78,7 +78,11 @@ class Zombie extends Entity {
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
-            this.createPlantHead(headCfg); // 头顶植物头（裁剪+放大，遮住僵尸本头）
+            // v3.78.0：本体身体整体隐藏（用户：植物头僵尸只露一个植物头，埋的身体不该全露出来）
+            // —— 行走/吃脑/受击逻辑全部照旧（碰撞按坐标结算，不依赖 DOM），场上只见头顶植物头
+            this.hideBody = true;
+            this.element.style.display = 'none';
+            this.createPlantHead(headCfg); // 头顶植物头（裁剪+放大；hideBody 时直接坐地面）
             if (type === 'jalapenohead') {
                 // v3.22.0 火爆辣椒植物僵尸（融合进化后期专属）：精锐血量保证走到植物跟前，
                 // 连续吃掉 2 株植物 → 引爆整排（见 _jalapenoRowBoom）
@@ -301,7 +305,8 @@ class Zombie extends Entity {
         wrap.style.pointerEvents = 'none';
         wrap.style.overflow = 'hidden';
         wrap.style.width = cfg.w + 'px';
-        wrap.style.height = Math.round(cfg.w * cfg.ch / cfg.cw * cfg.keepTop) + 'px';
+        const headH = Math.round(cfg.w * cfg.ch / cfg.cw * cfg.keepTop);
+        wrap.style.height = headH + 'px';
         const img = document.createElement('img');
         img.src = cfg.src;
         img.style.position = 'absolute';
@@ -316,7 +321,10 @@ class Zombie extends Entity {
         this.headSize = cfg.w;
         // v3.50.0：头顶锚点统一上移到僵尸头顶（-72）——旧值 -48 会把植物头压在下巴/胸口，
         // 僵尸自己的灰头露在上面，看起来"植物头躲在僵尸头后面"（用户反馈）
-        this.headTopOff = (cfg.topOff !== undefined) ? cfg.topOff : -72;
+        // v3.78.0：身体隐藏（埋进土里）时植物头改坐地面——头底边贴脚底线（y+yOffset+72），
+        // 不再悬在半空，看起来像"埋着身体只露一颗头"
+        this.headTopOff = this.hideBody ? (72 - headH)
+            : ((cfg.topOff !== undefined) ? cfg.topOff : -72);
         this.hasPlantHead = true;
         this.game.entityLayer.appendChild(wrap);
         this.syncPlantHead();
@@ -479,8 +487,16 @@ class Zombie extends Entity {
     }
     _syncFlame() {
         if (!this._flameEl) return;
-        this._flameEl.style.left = (this.x - 12) + 'px';
-        this._flameEl.style.top = (this.y + this.yOffset - 52) + 'px';
+        // v3.78.0：有植物头的僵尸（含盲盒）火焰跟着头顶植物走；无头挂件才锚定僵尸头部
+        if (this.headEl) {
+            const hl = parseFloat(this.headEl.style.left) || this.x;
+            const ht = parseFloat(this.headEl.style.top) || (this.y + this.yOffset);
+            this._flameEl.style.left = (hl + this.headSize / 2 - 12) + 'px';
+            this._flameEl.style.top = (ht - 8) + 'px';
+        } else {
+            this._flameEl.style.left = (this.x - 12) + 'px';
+            this._flameEl.style.top = (this.y + this.yOffset - 52) + 'px';
+        }
         this._flameEl.style.zIndex = String(Math.floor(this.y) + 3);
     }
     _removeFlame() {
