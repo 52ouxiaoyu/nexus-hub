@@ -21,7 +21,7 @@
     // ================= 玩法说明 =================
     // v3.50.0：内容大幅扩充（用户：说明太简短）；每个玩法配专属图标（原版素材，
     // 用户：经典冒险=向日葵 / 融合进化=手套 / 砸罐子=罐子 / 我是僵尸=僵尸）；
-    // 《我是僵尸》不再套边框盒子（用户：把这个框去掉），改为无框段落。
+    // v3.62.0：《我是僵尸》恢复与其他玩法一致的边框盒子（用户：操作与说明里很不统一）。
     const MODES = [
         { icon: '☀️', emoji: '☀️', title: '通用操作', items: [
             '收集阳光：点击从天上落下的阳光球和向日葵产出的阳光，攒够阳光才能种植物。',
@@ -52,7 +52,7 @@
             '路灯花（75 阳光）：种下照亮周围一圈罐子，罐子变半透明、直接看到里面是什么。',
             '难度分简单 / 困难 / 地狱：地狱僵尸血量 ×1.35，且只有地狱出金罐。',
             '特殊僵尸：锤子僵尸会替你（或敌人）锤碎沿途罐子；小丑盒随时自爆；铁梯架梯翻坚果。融合植物头僵尸只从金罐里出来（数量不多但很硬）。' ] },
-        { icon: '🧟', img: 'assets/images/Zombies/Zombie/0.gif', title: '《我是僵尸》', plain: true, items: [
+        { icon: '🧟', img: 'assets/images/Zombies/Zombie/0.gif', title: '《我是僵尸》', items: [
             '阵营反转：这次你指挥僵尸大军——花阳光买僵尸、放到草坪上，吃掉全部脑子即胜利。',
             '阳光来源：啃死向日葵 +200 / 双子向日葵 +500；阳光不足 50 且场上无僵尸存活即判负。',
             '阵容推荐：橄榄球/铁门是推线坦，小鬼便宜快速，撑杆一路跳过植物，舞王成群召唤。',
@@ -140,11 +140,14 @@
     ];
     // v3.50.0：数据驱动新融合（PVZ_FUSION_EXTRA 同源）自动追加到融合图鉴
     if (window.PVZ_FUSION_EXTRA) {
+        // v3.62.0：双子坚果 bt scale(1.4)+translate(0,16px) 在瓦片里超出容器盖住名字 —— 单独放大 md
+        // 缩小图鉴渲染（只影响图鉴/演示，不影响场上实机）
+        const MD_OVERRIDE = { fusion_wallnut_twinsunflower: 150 };
         for (const f of window.PVZ_FUSION_EXTRA) {
             const L = f.look || {};
             // v3.52.0：透传 bc/of 与第二叠加层 ov2/oc2/ot2/of2（双半剖分冰火等新外观）
             FUSION.push({ n: f.name, base: L.base, bf: L.bf, bt: L.bt, bc: L.bc, ov: L.ov, oc: L.oc, ot: L.ot, of: L.of,
-                ov2: L.ov2, oc2: L.oc2, ot2: L.ot2, of2: L.of2, md: f.md || 96, t: f.t });
+                ov2: L.ov2, oc2: L.oc2, ot2: L.ot2, of2: L.of2, md: MD_OVERRIDE[f.type] || f.md || 96, t: f.t });
         }
     }
     // 注：南瓜壳不再单独列在融合区 —— 它与经典区"南瓜壳"是同一株植物（坚果墙+高坚果融合=套壳玩法，
@@ -570,7 +573,7 @@
             '</div>';
     }
 
-    // v3.50.0：每个玩法显示专属原版素材图标；plain=true 的段落（我是僵尸）不带边框盒子
+    // v3.50.0：每个玩法显示专属原版素材图标；v3.62.0 所有玩法（含我是僵尸）统一边框盒子
     function renderModes() {
         return MODES.map(m =>
             '<div class="hg-mode' + (m.plain ? ' hg-plain' : '') + '">' +
@@ -632,7 +635,7 @@
                     '<div class="hg-tabs">' +
                         '<div class="hg-tab active" data-tab="modes">玩法说明</div>' +
                         '<div class="hg-tab" data-tab="plants">植物图鉴（' + (CLASSIC.length + FUSION.length) + '）</div>' +
-                        '<div class="hg-tab" data-tab="zombies">僵尸图鉴</div>' +
+                        '<div class="hg-tab" data-tab="zombies">僵尸图鉴（' + Z_GROUPS.reduce((s, g) => s + g.list.length, 0) + '）</div>' +
                     '</div>' +
                 '</div>' +
                 '<div id="help-body"></div>' +

@@ -159,11 +159,6 @@ class InputManager {
                     }
                     // 点击已种下的炸弹可立即引爆（不点也会自动爆炸）
                     const p = this.game.board.grid[gridPos.row][gridPos.col];
-                    // v3.52.0：点击帕修向日葵 = 切换缩头/抬头
-                    if (p && p.type === 'fusion_scaredy_sunflower' && !p.isDead && p.toggleShrink) {
-                        p.toggleShrink();
-                        return;
-                    }
                     // v3.24.0：点击充能完毕的玉米加农炮 → 出现瞄准镜（M 键发射）
                     if (p && p.type === 'cobcannon' && p.chargeReady && !p.isDead) {
                         this.game.enterCobAim(p);
@@ -251,7 +246,7 @@ class InputManager {
             // v3.26.0 植物盲盒：拖拽图改回"盲盒图案"（红丝带礼盒）——用户明确盲盒≠问号罐
             // v3.35.0：礼盒重画为宽幅构图，拖拽幽灵同步改宽尺寸
             if (type === 'plantbox') {
-                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1790823894')";
+                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1790825623')";
                 this.dragGhost.style.width = '68px';
                 this.dragGhost.style.height = '50px';
                 this.dragGhost.style.backgroundSize = 'contain';
@@ -263,8 +258,8 @@ class InputManager {
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1790823894`
-                : `assets/images/Plants/${imgName}.gif?v=1790823894`;
+                ? `assets/images/Plants/${imgName}.png?v=1790825623`
+                : `assets/images/Plants/${imgName}.gif?v=1790825623`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
 
             // v3.20.0：倭瓜立绘画布 100×226（身体只占底部 68×82），60×60 contain 后

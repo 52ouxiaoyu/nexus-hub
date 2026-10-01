@@ -163,7 +163,8 @@ body {
     overflow: hidden;
     background-size: 100% 200%;
     background-position: top;
-    box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+    /* v3.62.0：物品栏外框统一——无论卡面自带什么颜色（黑/白/绿）的框，最外圈一律压一圈黑边 */
+    box-shadow: inset 0 0 0 2px #000, 1px 1px 3px rgba(0,0,0,0.5);
     border-radius: 4px;
 }
 
@@ -174,7 +175,7 @@ body {
 
 /* 砸罐子：植物罐砸出的免费一次性植物卡 */
 .seed-card.vase-free-card {
-    box-shadow: 0 0 6px 1px rgba(255, 220, 120, 0.95), 1px 1px 3px rgba(0,0,0,0.5);
+    box-shadow: inset 0 0 0 2px #000, 0 0 6px 1px rgba(255, 220, 120, 0.95), 1px 1px 3px rgba(0,0,0,0.5);
     outline: 1px solid rgba(255, 200, 60, 0.8);
     outline-offset: 1px;
 }
@@ -186,7 +187,7 @@ body {
 .seed-card.plantern-shop-card {
     outline: 2px solid #ffd54a;
     outline-offset: 1px;
-    box-shadow: 0 0 8px 1px rgba(255, 213, 74, 0.7), 1px 1px 3px rgba(0,0,0,0.5);
+    box-shadow: inset 0 0 0 2px #000, 0 0 8px 1px rgba(255, 213, 74, 0.7), 1px 1px 3px rgba(0,0,0,0.5);
 }
 .seed-card.plantern-shop-card:hover {
     filter: brightness(1.2);
@@ -226,6 +227,9 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    /* v3.62.0：物品栏外框统一——最外圈压一圈黑边 */
+    box-shadow: inset 0 0 0 2px #000;
+    border-radius: 6px;
 }
 
 /* 融合模式工具：手套 / 图鉴（经典模式隐藏，JS 置 display:flex 显示） */
@@ -242,6 +246,8 @@ body {
     align-items: center;
     box-sizing: border-box;
     flex-shrink: 0;
+    /* v3.62.0：物品栏外框统一——最外圈压一圈黑边 */
+    box-shadow: inset 0 0 0 2px #000;
 }
 
 .tool-emoji {

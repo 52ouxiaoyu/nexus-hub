@@ -797,8 +797,6 @@ class Zombie extends Entity {
                 // 这类带坚果躯体的融合株照常被啃食（坚果当盾承伤），脚下地刺在 update 里照常扎人
                 // v3.48.0：火焰地刺也是纯地面刺（用户：僵尸不能吃到它，只有冰车能碾）——收进 isPureGroundSpike
                 !(e.isPureGroundSpike && e.isPureGroundSpike()) &&
-                // v3.52.0：帕修向日葵缩头时僵尸不吃它，直接走过（抬头/被手动抬起后照常可啃）
-                !(e.type === 'fusion_scaredy_sunflower' && e.isHiding) &&
                 e.row === this.row &&
                 (bigZ ? (e.x <= this.x + 10 && this.x - e.x < 85) : Math.abs(e.x - this.x) < 40) &&
                 !e.isDead && e.type !== 'crater'
