@@ -3,11 +3,13 @@ import Hls from 'hls.js';
 
 interface HlsPlayerProps {
   src: string;
+  proxyAll?: boolean;
+  proxyUrl?: string;
   initialTime?: number;
   onTimeUpdate?: (time: number) => void;
 }
 
-export const HlsPlayer: React.FC<HlsPlayerProps> = ({ src, initialTime, onTimeUpdate }) => {
+export const HlsPlayer: React.FC<HlsPlayerProps> = ({ src, proxyAll, proxyUrl, initialTime, onTimeUpdate }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [codecError, setCodecError] = useState('');
 
@@ -22,7 +24,15 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({ src, initialTime, onTimeUp
     if (!isMp4 && Hls.isSupported()) {
       hls = new Hls({
         debug: false,
-        enableWorker: true
+        enableWorker: true,
+        // Relay every manifest/segment request through the proxy (live IPTV:
+        // http streams break mixed-content rules and lack CORS headers)
+        xhrSetup: (xhr, url) => {
+          if (proxyAll) {
+            const base = proxyUrl || '/proxy?url=';
+            xhr.open('GET', base + encodeURIComponent(url), true);
+          }
+        }
       });
       hls.loadSource(src);
       hls.attachMedia(video);

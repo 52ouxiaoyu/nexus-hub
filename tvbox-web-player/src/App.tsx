@@ -7,6 +7,14 @@ interface Site {
   name: string;
   type: number;
   api: string;
+  live?: boolean;
+}
+
+interface LiveChannel {
+  name: string;
+  url: string;
+  group: string;
+  logo: string;
 }
 
 interface Category {
@@ -52,14 +60,14 @@ const proxyName = (base: string) => {
   return base.split('?')[0].slice(0, 40);
 };
 
-const fetchViaProxy = async (base: string, url: string) => {
+const fetchViaProxy = async (base: string, url: string, asText = false) => {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 12000);
   try {
     const res = await fetch(base + encodeURIComponent(url), { signal: ctrl.signal });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const text = await res.text();
-    return parseRelaxedJSON(text);
+    return asText ? text : parseRelaxedJSON(text);
   } finally {
     clearTimeout(timer);
   }
@@ -67,12 +75,13 @@ const fetchViaProxy = async (base: string, url: string) => {
 
 // Helper to fetch with multi-level proxy chain:
 // custom proxy -> last working proxy -> CF cloud proxy -> local proxy -> public fallbacks
-const fetchWithProxy = async (url: string) => {
+const fetchWithProxy = async (url: string, asText = false) => {
   // Same-origin resources load directly, no proxy needed
   if (isSameOrigin(url)) {
     const res = await fetch(url);
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    return parseRelaxedJSON(await res.text());
+    const text = await res.text();
+    return asText ? text : parseRelaxedJSON(text);
   }
   const custom = localStorage.getItem('tvbox_custom_proxy') || '';
   const bases: string[] = [];
@@ -82,7 +91,7 @@ const fetchWithProxy = async (url: string) => {
   const errors: string[] = [];
   for (const base of bases) {
     try {
-      const data = await fetchViaProxy(base, url);
+      const data = await fetchViaProxy(base, url, asText);
       if (workingProxy !== base) {
         workingProxy = base;
         localStorage.setItem('tvbox_working_proxy', base);
@@ -93,6 +102,30 @@ const fetchWithProxy = async (url: string) => {
     }
   }
   throw new Error(errors.join('；'));
+};
+
+// Preferred proxy for stream relaying (hls.js segments): custom > last working > cloud
+const getPreferredProxy = () =>
+  localStorage.getItem('tvbox_custom_proxy') || workingProxy || PROXY_URL;
+
+const parseM3U = (text: string): LiveChannel[] => {
+  const out: LiveChannel[] = [];
+  let cur: { name: string; group: string; logo: string } | null = null;
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    if (line.startsWith('#EXTINF')) {
+      const name = (line.split(',').pop() || '').trim();
+      const group = /group-title="([^"]*)"/.exec(line)?.[1] || '未分组';
+      const logo = /tvg-logo="([^"]*)"/.exec(line)?.[1] || '';
+      cur = { name, group, logo };
+    } else if (line && !line.startsWith('#')) {
+      if (/^https?:\/\//i.test(line) && cur && cur.name) {
+        out.push({ ...cur, url: line });
+      }
+      cur = null;
+    }
+  }
+  return out;
 };
 
 // Helper to parse relaxed JSON (TVBox configs often have // comments)
@@ -163,6 +196,7 @@ function App() {
       return saved ? JSON.parse(saved) : null;
     } catch { return null; }
   });
+  const [liveChannels, setLiveChannels] = useState<LiveChannel[]>([]);
 
   const handleTimeUpdate = (time: number) => {
     if (activeSite && activeVideo && playingUrl) {
@@ -192,8 +226,18 @@ function App() {
     setLoading(true);
     try {
       const data = await fetchWithProxy(urlToLoad);
-      const type1Sites = data.sites.filter((s: Site) => s.type === 0 || s.type === 1);
-      setSites(type1Sites);
+      const type1Sites: Site[] = data.sites.filter((s: Site) => s.type === 0 || s.type === 1);
+      // Convert TVBox lives config into pseudo live sites (m3u playlists)
+      const liveSites: Site[] = (data.lives || [])
+        .filter((l: any) => l && (l.url || (Array.isArray(l.groups) && l.groups.length)))
+        .map((l: any, i: number) => ({
+          key: 'live_' + i,
+          name: '📺 ' + (l.name || '电视直播'),
+          type: 99,
+          api: l.url || '',
+          live: true
+        }));
+      setSites([...type1Sites, ...liveSites]);
       
       // Save config to history if successful
       if (!savedConfigs.includes(urlToLoad)) {
@@ -245,14 +289,30 @@ function App() {
     setActiveSite(site);
     setActiveVideo(null);
     setVideos([]);
+    setLiveChannels([]);
     setLoading(true);
     try {
-      const url = buildApiUrl(site.api, { ac: 'list' });
-      const data = await fetchWithProxy(url);
-      setCategories(data.class || []);
-      setVideos(data.list || []);
-      if (data.class && data.class.length > 0) {
-        setActiveCategory(data.class[0].type_id);
+      if (site.live) {
+        // Live site: parse m3u playlist, group by channel category
+        const text = await fetchWithProxy(site.api, true);
+        const channels = parseM3U(text);
+        setLiveChannels(channels);
+        const groups = [...new Set(channels.map(c => c.group))];
+        setCategories(groups.map(g => ({ type_id: g, type_name: `${g} (${channels.filter(c => c.group === g).length})` })));
+        const first = groups[0] || '';
+        setActiveCategory(first);
+        setVideos(channels
+          .map((c, i) => ({ ...c, idx: i }))
+          .filter(c => c.group === first)
+          .map(c => ({ vod_id: String(c.idx), vod_name: c.name, vod_pic: c.logo, vod_remarks: c.group })));
+      } else {
+        const url = buildApiUrl(site.api, { ac: 'list' });
+        const data = await fetchWithProxy(url);
+        setCategories(data.class || []);
+        setVideos(data.list || []);
+        if (data.class && data.class.length > 0) {
+          setActiveCategory(data.class[0].type_id);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -268,9 +328,16 @@ function App() {
     setSearchKeyword('');
     setLoading(true);
     try {
-      const url = buildApiUrl(activeSite.api, { ac: 'detail', t: type_id, pg: '1' });
-      const data = await fetchWithProxy(url);
-      setVideos(data.list || []);
+      if (activeSite.live) {
+        setVideos(liveChannels
+          .map((c, i) => ({ ...c, idx: i }))
+          .filter(c => c.group === type_id)
+          .map(c => ({ vod_id: String(c.idx), vod_name: c.name, vod_pic: c.logo, vod_remarks: c.group })));
+      } else {
+        const url = buildApiUrl(activeSite.api, { ac: 'detail', t: type_id, pg: '1' });
+        const data = await fetchWithProxy(url);
+        setVideos(data.list || []);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -284,9 +351,17 @@ function App() {
     setActiveCategory('');
     setLoading(true);
     try {
-      const url = buildApiUrl(activeSite.api, { ac: 'detail', wd: searchKeyword.trim() });
-      const data = await fetchWithProxy(url);
-      setVideos(data.list || []);
+      if (activeSite.live) {
+        const kw = searchKeyword.trim().toLowerCase();
+        setVideos(liveChannels
+          .map((c, i) => ({ ...c, idx: i }))
+          .filter(c => c.name.toLowerCase().includes(kw))
+          .map(c => ({ vod_id: String(c.idx), vod_name: c.name, vod_pic: c.logo, vod_remarks: c.group })));
+      } else {
+        const url = buildApiUrl(activeSite.api, { ac: 'detail', wd: searchKeyword.trim() });
+        const data = await fetchWithProxy(url);
+        setVideos(data.list || []);
+      }
     } catch (err) {
       console.error(err);
       alert('搜索失败，可能是该线路不支持搜索或格式不兼容。');
@@ -299,6 +374,25 @@ function App() {
     if (!activeSite) return;
     setLoading(true);
     try {
+      if (activeSite.live) {
+        // Live channel: play directly, no detail API needed
+        const ch = liveChannels[Number(vod_id)];
+        if (ch) {
+          setActiveVideo({
+            vod_id,
+            vod_name: ch.name,
+            vod_pic: ch.logo,
+            vod_remarks: ch.group,
+            vod_play_from: '直播流',
+            vod_play_url: `直播$${ch.url}`
+          });
+          setPlayingUrl(ch.url);
+        } else {
+          alert('频道不存在，请刷新直播列表。');
+        }
+        setLoading(false);
+        return;
+      }
       const url = buildApiUrl(activeSite.api, { ac: 'detail', ids: vod_id });
       const data = await fetchWithProxy(url);
       if (data.list && data.list.length > 0) {
@@ -451,8 +545,10 @@ function App() {
               
               <div style={{ width: '100%', aspectRatio: '16/9', background: '#000', borderRadius: '8px', overflow: 'hidden', marginBottom: '24px' }}>
                 {playingUrl ? (
-                  <HlsPlayer 
-                    src={playingUrl} 
+                  <HlsPlayer
+                    src={playingUrl}
+                    proxyAll={!!activeSite?.live}
+                    proxyUrl={getPreferredProxy()}
                     initialTime={history?.playUrl === playingUrl ? history.time : 0}
                     onTimeUpdate={handleTimeUpdate}
                   />
@@ -466,6 +562,7 @@ function App() {
               <h2>{activeVideo.vod_name}</h2>
               <p style={{ color: 'var(--text-muted)', marginTop: '8px' }} dangerouslySetInnerHTML={{ __html: activeVideo.vod_remarks || '暂无简介' }} />
               
+              {!activeSite?.live && (
               <div style={{ marginTop: '24px' }}>
                 <h3>选集</h3>
                 {(activeVideo.vod_play_url || '').split('$$$').map((source, sIdx) => {
@@ -497,6 +594,7 @@ function App() {
                   );
                 })}
               </div>
+              )}
             </div>
           ) : (
             // Video List View
