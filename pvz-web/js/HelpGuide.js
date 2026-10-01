@@ -52,7 +52,7 @@
             '罐子种类：植物罐（稳赚）/ 僵尸罐（危险）/ 问号罐（惊喜）/ 金罐（地狱限定，必出强力植物或强化僵尸，1~2 个）。',
             '路灯花（75 阳光）：种下照亮周围一圈罐子，罐子变半透明、直接看到里面是什么。',
             '难度分简单 / 困难 / 地狱：地狱僵尸血量 ×1.35，且只有地狱出金罐。',
-            '特殊僵尸：锤子僵尸会替你（或敌人）锤碎沿途罐子。融合植物头僵尸只从金罐里出来（数量不多但很硬）。' ] },
+            '特殊僵尸：锤子僵尸会替你（或敌人）锤碎沿途罐子。问号罐只会开出普通/路障/铁桶/读报/撑杆/小鬼六种僵尸；橄榄球/舞王只出紫罐（困难/地狱），冰车/巨人/植物头/盲盒只出金罐。融合植物头僵尸只从金罐里出来（数量不多但很硬）。' ] },
         { icon: '🧟', img: 'assets/images/Zombies/Zombie/0.gif', title: '《我是僵尸》', items: [
             '阵营反转：这次你指挥僵尸大军——花阳光买僵尸、放到草坪上，吃掉全部脑子即胜利。',
             '阳光来源：啃死向日葵 +200 / 双子向日葵 +500 / 阳光菇 +450；阳光不足 50 且场上无僵尸存活即判负。',
@@ -174,12 +174,24 @@
             { n: '小鬼僵尸', img: ZB + 'Imp/Zombie.gif', h: 52, hp: 100, t: '只有半个普通僵尸高，又小又快，巨人抛投的常客' },
         ]},
         { title: '砸罐子', list: [
-            { n: '锤子僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, hammer: true, hp: 560, t: '手持木锤，一路替你（或敌人）锤碎沿途罐子' },
-            { n: '小丑盒僵尸', img: ZB + 'JackinTheBoxZombie/Walk.gif', h: 70, hp: 500, t: '抱着玩偶盒前进，随时开盒自爆，炸毁 3×3 内植物' },
-            { n: '铁梯僵尸', img: ZB + 'ScreenDoorZombie/ScreenDoorZombie.gif', h: 70, hp: 500, t: '速度快，架梯翻过坚果墙类防御' },
-            { n: '撑杆僵尸', img: ZB + 'PoleVaultingZombie/PoleVaultingZombie.gif', h: 74, hp: 340, t: '高速冲来，一路蹦跳着越过所有植物，连高坚果都拦不住' },
+            // v3.69.0 整组重写（用户报的 22 种名单）：删掉实际不存在的玩偶盒/铁梯僵尸，
+            // 补齐小鬼/伴舞；植物头 7 种+盲盒在"植物头 · 特殊僵尸"组（金罐限定），此处不重复
+            { n: '巨人僵尸', img: ZB + 'Zombie/Zombie.gif', h: 104, dark: true, hp: 4000, t: '金罐限定：2 倍体型重锤砸扁植物，过半血掷出小鬼' },
+            { n: '冰车僵尸', img: ZB + 'Zomboni/1.gif', h: 90, ice: true, hp: 1300, t: '金罐限定：碾压植物不留啃痕，驶过之处留下 30 秒冰道；只有地刺能扎爆它' },
+            { n: '橄榄球僵尸', img: ZB + 'FootballZombie/FootballZombie.gif', h: 72, hp: 2240, t: '困难/地狱的紫罐与金罐：速度 40 的重装骑兵，头盔 1400 护甲' },
+            { n: '舞王僵尸', img: ZB + 'DancingZombie/DancingZombie.gif', h: 72, hp: 500, t: '地狱紫罐限定：每 10 秒召唤一排伴舞' },
+            { n: '伴舞僵尸', img: ZB + 'BackupDancer/BackupDancer.gif', h: 70, hp: 200, t: '紫罐：舞王的随从，成群出现也会单独从罐里蹦出来' },
+            { n: '铁门僵尸', img: ZB + 'ScreenDoorZombie/ScreenDoorZombie.gif', h: 70, hp: 5200, t: '紫罐低频：铁门挡正面直射（血量 = 4 只铁桶），投手/孢子类破甲攻击无视它' },
+            { n: '锤子僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, hammer: true, hp: 560, t: '紫罐/金罐：手持木锤，一路替你（或敌人）锤碎沿途罐子' },
+            { n: '铁桶僵尸', img: ZB + 'BucketheadZombie/BucketheadZombie.gif', h: 70, hp: 1300, t: '紫罐/问号罐：铁桶 1100 护甲，桶掉后与普通僵尸无异' },
+            { n: '路障僵尸', img: ZB + 'ConeheadZombie/ConeheadZombie.gif', h: 70, hp: 560, t: '紫罐/问号罐：路障 360 护甲，基础加强版' },
+            { n: '撑杆僵尸', img: ZB + 'PoleVaultingZombie/PoleVaultingZombie.gif', h: 74, hp: 340, t: '紫罐/问号罐：高速冲来，一路蹦跳着越过所有植物，连高坚果都拦不住' },
+            { n: '读报僵尸', img: ZB + 'NewspaperZombie/HeadWalk1.gif', h: 70, hp: 300, t: '紫罐/问号罐：报纸 150 护甲，打碎后狂暴加速' },
+            { n: '旗帜僵尸', img: ZB + 'FlagZombie/FlagZombie.gif', h: 70, hp: 200, t: '紫罐：「一大波僵尸」的先导，举旗领军' },
+            { n: '小鬼僵尸', img: ZB + 'Imp/Zombie.gif', h: 52, hp: 100, t: '紫罐/问号罐：只有半个普通僵尸高，又小又快' },
+            { n: '普通僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, hp: 200, t: '紫罐/问号罐：最普通的僵尸，啃食植物缓慢前进' },
         ]},
-        { title: '植物头 · 特殊僵尸', list: [
+        { title: '植物头 · 金罐特殊僵尸', list: [
             { n: '高坚果头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 74, head: { src: PL + 'TallNut/TallNut.gif', cw: 83, ch: 119, keepTop: 1.0, w: 40, y: 0, ox: 10 }, hp: 5200, t: '高坚果罩在身上，全游戏最厚血量之一' },
             { n: '坚果头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'WallNut/WallNut.gif', cw: 65, ch: 73, keepTop: 1.0, w: 42, y: 3, ox: 10 }, hp: 2600, t: '坚果墙盖在身上，普通输出打不动' },
             { n: '机枪头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'GatlingPea/GatlingPea.gif', cw: 88, ch: 84, keepTop: 0.51, w: 46, y: 8, ox: 12 }, hp: 200, t: '头顶机枪射手，边走边 4 连发反击' },
@@ -192,7 +204,7 @@
         { title: '有趣的配饰', list: [
             { n: '木锤', img: ZB + 'HammerZombie/Hammer.png', ih: 54, t: '锤子僵尸的配饰，一锤一个罐子' },
             { n: '植物罐', img: 'assets/images/Vase/Vase_Plant.png', ih: 58, t: '绿罐，稳赚的植物' },
-            { n: '僵尸罐', img: 'assets/images/Vase/Vase_Zombie.png', ih: 58, t: '红色陶罐——敲开会蹦出僵尸偷袭，看到它先修好防线；路灯花可以提前照亮确认' },
+            { n: '僵尸罐', img: 'assets/images/Vase/Vase_Zombie.png', ih: 58, t: '紫色陶罐——敲开会蹦出僵尸偷袭，看到它先修好防线；路灯花可以提前照亮确认' },
             { n: '问号罐', img: 'assets/images/Vase/Vase_Question.png', ih: 58, t: '随机开出植物 / 僵尸，偶尔是一撮阳光（+50）——真正的惊喜罐' },
             { n: '金罐', img: 'assets/images/Vase/Vase_Gold.png', ih: 58, t: '地狱限定：必出强力植物或强化僵尸' },
             { n: '冰道', img: ZB + 'Zomboni/ice.png', ih: 44, t: '冰车僵尸驶过草坪留下的冰道（游戏实装）：冰面上无法种植，约 30 秒后融化；火爆辣椒可以直接烧毁整行冰道' },
@@ -274,71 +286,7 @@
     /* v3.50.0：僵尸图鉴瓦片与植物卡面同款纸感背景框（用户：所有僵尸的图片背景与植物图片框相同） */
     .hg-art.hg-zcard { background: linear-gradient(180deg, #fffef7 0%, #f6eed6 100%);
         border: 1px solid rgba(90,60,20,.4); border-radius: 7px; box-shadow: 0 2px 4px rgba(60,40,10,.25); }
-    /* ===== v3.50.0 攻击方式演示（详情卡内的动态小剧场） ===== */
-    /* v3.51.0：演示舞台加大（用户：演示里人和植物太小/看不出攻击方式），
-       弹道改用真实子弹贴图（hd-proj），不再是清一色绿豌豆 CSS 圆点 */
-    .hg-demo { position: relative; width: 100%; height: 96px; margin-top: 8px; overflow: hidden;
-        background: url('assets/images/interface/background1.jpg') center 42% / cover no-repeat; /* v3.56.0 真实草地背景 */
-        border: 1.5px solid #8fae62; border-radius: 10px; }
-    .hg-demo .hd-plant { position: absolute; left: 12px; bottom: 6px; height: 66px; }
-    /* v3.56.0 带叠加层（帽子/多头）的融合株在演示里按实机复刻，不再只画主体丢掉头部 */
-    .hg-demo .hd-plantstage { position: absolute; left: 40px; bottom: 34px; }
-    .hg-demo .hd-zombie { position: absolute; right: 14px; bottom: 6px; height: 68px; }
-    .hg-demo .hd-pea { position: absolute; left: 58px; bottom: 40px; width: 14px; height: 14px; border-radius: 50%;
-        background: radial-gradient(circle at 35% 35%, #b6f36a, #4f9a1f); box-shadow: 0 0 6px rgba(120,220,60,.8);
-        animation: hd-fly 1.1s linear infinite; }
-    .hg-demo .hd-pea.hd-ice { background: radial-gradient(circle at 35% 35%, #d4f4ff, #3f9ad0); box-shadow: 0 0 6px rgba(120,210,255,.9); }
-    .hg-demo .hd-pea.hd-fire { background: radial-gradient(circle at 35% 35%, #ffe08a, #e05a12); box-shadow: 0 0 8px rgba(255,140,40,.9); }
-    /* v3.51.0：真实子弹贴图（与场上 Projectile 同款素材） */
-    .hg-demo img.hd-proj { position: absolute; left: 62px; bottom: 44px; object-fit: contain;
-        animation: hd-fly 1.1s linear infinite; filter: drop-shadow(0 1px 2px rgba(40,60,10,.35)); }
-    .hg-demo img.hd-proj.hd-lobimg { animation: hd-lob-fly 1.3s ease-in-out infinite; }
-    @keyframes hd-fly { 0% { left: 58px; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { left: calc(100% - 70px); opacity: 0; } }
-    .hg-demo .hd-lob { position: absolute; left: 58px; bottom: 40px; width: 18px; height: 18px; border-radius: 50%;
-        background: radial-gradient(circle at 35% 35%, #dff0b0, #7aa53c);
-        animation: hd-lob-fly 1.3s ease-in-out infinite; }
-    @keyframes hd-lob-fly {
-        0% { left: 58px; bottom: 44px; opacity: 0; } 10% { opacity: 1; }
-        50% { bottom: 84px; } 90% { opacity: 1; }
-        100% { left: calc(100% - 74px); bottom: 26px; opacity: 0; } }
-    /* v3.51.0：路灯花专属演示——周围一圈小罐子被依次照亮（半透明露出内容） */
-    .hg-demo .hd-vase { position: absolute; width: 30px; opacity: 1; transition: none;
-        animation: hd-lit 2.4s ease-in-out infinite; }
-    .hg-demo .hd-vase img { width: 100%; display: block; filter: drop-shadow(0 1px 2px rgba(40,24,4,.4)); }
-    @keyframes hd-lit { 0%, 15% { opacity: 1; } 55%, 80% { opacity: .35; } 100% { opacity: 1; } }
-    .hg-demo .hd-glow { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px;
-        border-radius: 50%; background: radial-gradient(circle, rgba(255,240,150,.95) 0%, rgba(255,220,80,0) 70%);
-        animation: hd-glow 2.4s ease-in-out infinite; }
-    @keyframes hd-glow { 0%, 15% { transform: scale(.6); opacity: .4; } 60%, 80% { transform: scale(4.6); opacity: .95; } 100% { transform: scale(.6); opacity: .4; } }
-    .hg-demo .hd-boom { position: absolute; right: 26px; bottom: 8px; width: 44px; height: 44px; border-radius: 50%;
-        background: radial-gradient(circle, #fff3b0 0%, #ff9d2e 45%, rgba(255,80,20,.0) 72%);
-        opacity: 0; transform: scale(.3); animation: hd-boom 1.6s ease-out infinite; }
-    @keyframes hd-boom { 0%, 55% { opacity: 0; transform: scale(.3); } 62% { opacity: 1; transform: scale(1.15); }
-        78% { opacity: .85; transform: scale(1.35); } 100% { opacity: 0; transform: scale(1.6); } }
-    .hg-demo .hd-sun { position: absolute; left: 50%; top: -18px; width: 26px; height: 26px; margin-left: -13px; border-radius: 50%;
-        background: radial-gradient(circle at 40% 40%, #fff3a0, #ffc400); box-shadow: 0 0 10px rgba(255,200,40,.9);
-        animation: hd-sun-fall 1.8s linear infinite; }
-    @keyframes hd-sun-fall { 0% { top: -18px; opacity: 0; } 15% { opacity: 1; } 100% { top: 66px; opacity: .2; } }
-    .hg-demo .hd-chomp { animation: hd-chomp 1.6s ease-in-out infinite; }
-    @keyframes hd-chomp { 0%, 55% { transform: translateX(0); } 62% { transform: translateX(-10px); } 72% { transform: translateX(-4px); } 100% { transform: translateX(0); } }
-    .hg-demo .hd-eat { animation: hd-eat 1.2s ease-in-out infinite; }
-    @keyframes hd-eat { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-7px); } }
-    .hg-demo .hd-shake { animation: hd-shake 1.2s ease-in-out infinite; }
-    @keyframes hd-shake { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
-    .hg-demo .hd-cap { position: absolute; left: 8px; top: 5px; font-size: 11.5px; font-weight: 700; color: #3f5a1e;
-        background: rgba(255,255,255,.72); border-radius: 999px; padding: 1px 9px; }
-    /* v3.44.0 融合"场上实拍"容器：flex 居中一个 0×0 缩放锚点 */
-    .hg-lawn { position: relative; width: 100px; height: 64px; display: flex; align-items: center; justify-content: center; }
-    .hg-lawn-d { width: 200px; height: 112px; }
-    .hg-tname { margin-top: 4px; font-size: 12.5px; font-weight: 700; color: #4a3414; text-align: center; line-height: 1.25; }
-    .hg-tsub { font-size: 11px; color: #8a6d3b; margin-top: 1px; }
-    .hg-tip { font-size: 12px; color: #8a6d3b; margin: 10px 0 2px; text-align: center; }
-    .hg-foot { padding: 10px; text-align: center; }
-    #help-close { padding: 8px 44px; font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif; font-size: 18px;
-        font-weight: 900; letter-spacing: 3px; color: #f7e9c0; cursor: pointer;
-        background: linear-gradient(180deg, #7a5a33 0%, #5d4223 100%);
-        border: 3px solid #3a2812; border-radius: 10px; text-shadow: 1px 1px 0 #2a1c0c; }
-    #help-close:hover { filter: brightness(1.12); }
+    /* v3.69.0：演示小剧场 CSS 已随功能整体移除 */
     /* ===== v3.40.0 点击详情卡 —— v3.42.0 中等化：不再全屏铺满，改为居中紧凑卡片 ===== */
     #hg-detail { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
         z-index: 8; display: none; flex-direction: column; align-items: center; justify-content: flex-start;
@@ -398,72 +346,8 @@
     };
     const gifUrl = g => PL + (GIF_MAP[g] || (g + '/' + g + '.gif'));
 
-    // v3.50.0：攻击方式演示小剧场（用户：展示它的爆炸过程/攻击方式和方法）。
-    // 依植物特性自动选剧本：shoot=豌豆飞行 / lob=抛物线投掷 / bomb=爆炸闪光 /
-    // sun=阳光掉落 / chomp=吞噬啃咬 / wall=纯肉盾（僵尸啃食晃动）。
-    function inferAtk(p) {
-        const n = p.n || '', t = p.t || '';
-        if (p.g === 'Plantern' || /路灯/.test(n)) return 'light';   // v3.51.0：路灯花=照亮演示，不是直线射击
-        if (/炸弹|辣椒|毁灭菇|地雷|窝瓜|弹跳|加农炮/.test(n) || /全屏|1800/.test(t)) return 'bomb';
-        if (/投手|加农|卷心菜|玉米|堡垒/.test(n)) return 'lob';
-        if (/向日葵|阳光菇|阳光雨/.test(n) && !/豌豆/.test(n)) return 'sun';
-        if (/大嘴/.test(n)) return 'chomp';
-        if (/坚果|墙|南瓜|大蒜/.test(n) && !/射手|投手|猫尾/.test(n)) return 'wall';
-        if (/蘑菇|地刺/.test(n)) return 'shoot';
-        return 'shoot';
-    }
-    // v3.51.0：演示弹道用"植物原本的子弹"贴图（与场上 Projectile 同素材），
-    // 依名字映射：冰西瓜→整颗冰瓜 / 猫尾→尖刺 / 杨桃→五角星 / 玉米→玉米粒 / 火系→火焰豌豆…
-    const VASE_IMG = 'assets/images/Vase/';
-    function projFor(p) {
-        const n = p.n || '';
-        if (/爆米花/.test(n)) return { img: PL + 'KernelPult/Kernel.png', lob: 1, w: 24, hue: 'hue-rotate(-18deg) saturate(1.9) brightness(1.18)' };
-        if (/西瓜/.test(n)) return /冰/.test(n) ? { img: PL + 'MelonPult/WinterMelon.png', lob: 1, w: 30 } : { img: PL + 'MelonPult/Melon.png', lob: 1, w: 30 };
-        if (/双果/.test(n)) return /冰/.test(n) ? { img: PL + 'MelonPult/WinterMelon.png', lob: 1, w: 30 } : { img: PL + 'MelonPult/Melon.png', lob: 1, w: 30 };
-        if (/杨桃/.test(n)) return { img: PL + 'Starfruit/Star.gif', w: 24 };
-        if (/猫尾/.test(n)) return { img: PL + 'Cactus/Projectile32.png', w: 20, ice: /冰|寒冰/.test(n) };
-        if (/卷心菜/.test(n)) return { img: PL + 'CabbagePult/Cabbage.png', lob: 1, w: 26, ice: /寒冰/.test(n) };
-        if (/玉米/.test(n)) return { img: PL + 'KernelPult/Kernel.png', lob: 1, w: 22 };
-        if (/樱桃/.test(n)) return { img: PL + 'PB10.gif', w: 18, hue: 'hue-rotate(-15deg) saturate(1.8)' };
-        if (/冰蒜卫士/.test(n)) return { img: PL + 'PB-10.gif', w: 18 };          // 冰蒜卫士实际射冰豌豆
-        if (/蒜味喷雾|胆小蒜/.test(n)) return { img: PL + 'ShroomBullet.gif', w: 20 };
-        if (/火|炎|炬/.test(n)) return { img: PL + 'PB10.gif', w: 18 };
-        if (/蘑菇|喷菇|忧郁/.test(n)) return { img: PL + 'ShroomBullet.gif', w: 20 };
-        if (/冰|寒冰/.test(n)) return { img: PL + 'PB-10.gif', w: 18 };
-        return { img: PL + 'PB00.gif', w: 18 };
-    }
-    function attackDemo(p, atk) {
-        const plantImg = p.gifSrc || (p.base ? p.base : '');
-        const fire = /火焰|烈焰|火炬|爆米花/.test(p.n || '') ? ' hd-fire' : '';
-        // v3.56.0：带叠加层（帽子/多头/蒜纹）的融合株 → 用 lawnStage 原样复刻主体+叠加层，
-        // 修复"演示里头部不出现"；无叠加层的普通植物沿用单图
-        const plant = (plantImg && (p.ov || p.ov2))
-            ? '<div class="hd-plantstage">' + lawnStage(p, 76) + '</div>'
-            : (plantImg ? '<img class="hd-plant" src="' + plantImg + V + '"' + (p.bf ? ' style="filter:' + p.bf + ';"' : '') + '>' : '');
-        const zombie = '<img class="hd-zombie' + (atk === 'wall' ? ' hd-eat' : '') + '" src="' + ZB + 'Zombie/Zombie.gif' + V + '">';
-        let inner = '';
-        if (atk === 'light') {
-            // v3.51.0 路灯花：不是直线射击——周围放一圈小罐子，灯光扫过罐子变半透明（照亮）
-            inner = plant +
-                '<div class="hd-glow"></div>' +
-                '<div class="hd-vase" style="left:calc(50% - 60px);top:6px;"><img src="' + VASE_IMG + 'Vase_Question.png' + V + '"></div>' +
-                '<div class="hd-vase" style="left:calc(50% + 32px);top:10px;animation-delay:.3s;"><img src="' + VASE_IMG + 'Vase_Question.png' + V + '"></div>' +
-                '<div class="hd-vase" style="left:calc(50% - 74px);bottom:4px;animation-delay:.6s;"><img src="' + VASE_IMG + 'Vase_Plant.png' + V + '"></div>' +
-                '<div class="hd-vase" style="left:calc(50% + 46px);bottom:2px;animation-delay:.9s;"><img src="' + VASE_IMG + 'Vase_Zombie.png' + V + '"></div>';
-        } else if (atk === 'shoot' || atk === 'lob') {
-            const pr = projFor(p);
-            const st = 'width:' + pr.w + 'px;height:' + pr.w + 'px;' +
-                (pr.hue ? 'filter:' + pr.hue + ';' : '') +
-                (pr.ice ? 'filter:brightness(1.25) hue-rotate(160deg) saturate(1.9);' : '');
-            inner = plant + zombie + '<img class="hd-proj' + (pr.lob ? ' hd-lobimg' : '') + '" src="' + pr.img + V + '" style="' + st + '">';
-        }
-        else if (atk === 'bomb') inner = plant + zombie + '<div class="hd-boom"></div>';
-        else if (atk === 'sun') inner = plant + zombie + '<div class="hd-sun"></div>';
-        else if (atk === 'chomp') inner = '<img class="hd-plant hd-chomp" src="' + plantImg + V + '">' + zombie;
-        else inner = '<img class="hd-plant hd-shake" src="' + plantImg + V + '">' + zombie;
-        const cap = { shoot: '🏹 攻击演示：直线射击', lob: '🎯 攻击演示：抛射轰炸', bomb: '💥 爆炸过程演示', sun: '☀️ 阳光产出演示', chomp: '🕳️ 吞噬演示', wall: '🛡️ 承伤演示：肉盾扛啃', light: '💡 演示：照亮周围一圈罐子' };
-        return '<div class="hg-demo"><span class="hd-cap">' + (cap[atk] || cap.shoot) + '</span>' + inner + '</div>';
-    }
+    // v3.69.0：攻击方式演示小剧场已整体移除（用户：爆炸过程这类演示太难看）。
+
 
     function plantDetail(p, fusion) {
         let art;
@@ -486,11 +370,11 @@
             bs += badge('❤️ 耐久 ' + p.hp);
         }
         bs += badge('📖 ' + (fusion ? '手套融合获得' : '经典选卡'));
-        const demo = attackDemo(p, fusion ? inferAtk(p) : inferAtk(p));
+        // v3.69.0：详情卡不再附攻击方式演示小剧场（用户：爆炸过程这类演示太难看，全部去掉）
         return '<div class="hg-d-art">' + art + '</div>' +
             '<div class="hg-d-name">' + p.n + '</div>' +
             '<div class="hg-d-badges">' + bs + '</div>' +
-            '<div class="hg-d-desc">' + (p.t || '') + '</div>' + demo;
+            '<div class="hg-d-desc">' + (p.t || '') + '</div>';
     }
 
     // 僵尸大图：本体 + （可选）冰道 / 头顶植物 / 锤子 / 礼盒，s=放大倍数
@@ -524,14 +408,11 @@
         bs += badge('🧟 ' + groupTitle);
         const big = Math.min(115, Math.max(64, Math.round((z.h || 70) * 1.4)));
         const artH = big + 34;
-        // v3.50.0：僵尸详情也带动态演示（啃食植物晃动 / 攻击方式说明）
-        const demo = '<div class="hg-demo"><span class="hd-cap">🧟 行为演示：啃食植物前进</span>' +
-            '<img class="hd-plant hd-shake" src="' + PL + 'WallNut/WallNut.gif' + V + '">' +
-            '<img class="hd-zombie hd-eat" src="' + z.img + V + '" style="height:56px;filter:' + (z.dark ? 'brightness(.72) contrast(1.25);' : 'none') + '"></div>';
+        // v3.69.0：僵尸详情同样去掉行为演示（用户：演示太难看，全部去掉）
         return '<div class="hg-d-art" style="height:' + artH + 'px;">' + zombieArt(z, big / (z.h || 70)) + '</div>' +
             '<div class="hg-d-name">' + z.n + '</div>' +
             '<div class="hg-d-badges">' + bs + '</div>' +
-            '<div class="hg-d-desc">' + (z.t || '') + '</div>' + demo;
+            '<div class="hg-d-desc">' + (z.t || '') + '</div>';
     }
 
     function propDetail(z) {
@@ -583,7 +464,7 @@
             '<div class="hg-mode-body"><h4>' + m.icon + ' ' + m.title + '</h4><ul>' +
             m.items.map(it => '<li>' + it + '</li>').join('') + '</ul></div></div>'
         ).join('') +
-        '<div class="hg-tip">※ 点击植物 / 僵尸 / 道具图片可查看详细数值与攻击方式演示。</div>';
+        '<div class="hg-tip">※ 点击植物 / 僵尸 / 道具图片可查看详细数值。</div>';
     }
 
     function renderPlants() {
