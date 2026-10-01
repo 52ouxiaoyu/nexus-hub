@@ -112,7 +112,15 @@ const parseRelaxedJSON = (text: string) => {
 };
 
 const buildApiUrl = (api: string, params: Record<string, string>) => {
-  // Resolve against current origin so relative APIs (e.g. "/proxy?url=...") keep their query string
+  // Wrapped proxy APIs ("/proxy?url=<target>"): params belong to the inner target URL
+  const m = /^([^?]*\?url=)(.*)$/.exec(api);
+  if (m) {
+    try {
+      const inner = new URL(decodeURIComponent(m[2]));
+      Object.entries(params).forEach(([k, v]) => inner.searchParams.set(k, v));
+      return new URL(m[1] + encodeURIComponent(inner.toString()), window.location.origin).toString();
+    } catch { /* fall through to plain handling */ }
+  }
   const url = new URL(api, window.location.origin);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   return url.toString();
@@ -296,8 +304,16 @@ function App() {
         setActiveVideo(data.list[0]);
         const urls = data.list[0].vod_play_url;
         if (urls) {
-          const firstUrl = urls.split('#')[0].split('$')[1];
-          if (firstUrl) setPlayingUrl(firstUrl);
+          // Prefer a directly playable stream (m3u8/mp4); share-page URLs cannot play in browser
+          let fallback = '';
+          let playable = '';
+          for (const group of urls.split('$$$')) {
+            const firstEpUrl = group.split('#')[0].split('$')[1] || '';
+            if (firstEpUrl && !fallback) fallback = firstEpUrl;
+            if (/\.(m3u8|mp4)/i.test(firstEpUrl)) { playable = firstEpUrl; break; }
+          }
+          const pick = playable || fallback;
+          if (pick) setPlayingUrl(pick);
         }
       } else {
         alert('该视频没有可用的播放数据，可能是线路格式(XML)不兼容。');
@@ -516,11 +532,21 @@ function App() {
                     style={{ cursor: 'pointer' }}
                   >
                     <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '8px', overflow: 'hidden', position: 'relative', marginBottom: '8px' }}>
-                      <img 
-                        src={video.vod_pic} 
+                      <img
+                        src={video.vod_pic}
                         alt={video.vod_name}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' }}
-                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x400?text=No+Image'; }}
+                        referrerPolicy="no-referrer"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s', background: 'var(--glass-border)' }}
+                        onError={(e) => {
+                          // Retry via proxy (bypasses hotlink/referer checks), then hide gracefully
+                          const img = e.currentTarget;
+                          if (!img.dataset.fb && video.vod_pic) {
+                            img.dataset.fb = '1';
+                            img.src = '/proxy?url=' + encodeURIComponent(video.vod_pic);
+                          } else {
+                            img.style.visibility = 'hidden';
+                          }
+                        }}
                       />
                       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '8px', background: 'linear-gradient(transparent, rgba(0,0,0,0.8))', fontSize: '12px', color: '#fff' }}>
                         {video.vod_remarks}

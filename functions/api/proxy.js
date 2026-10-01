@@ -10,8 +10,20 @@ export async function onRequest(context) {
     return new Response('Invalid url parameter', { status: 400 });
   }
 
+  // Merge extra params (ac/wd/ids...) into the target URL instead of dropping them
+  let target = targetUrl;
   try {
-    const fetchRes = await fetch(targetUrl, {
+    const t = new URL(targetUrl);
+    for (const [k, v] of requestUrl.searchParams.entries()) {
+      if (k !== 'url') t.searchParams.set(k, v);
+    }
+    target = t.toString();
+  } catch (e) {
+    target = targetUrl;
+  }
+
+  try {
+    const fetchRes = await fetch(target, {
       headers: {
         'User-Agent': 'okhttp/4.12.0'
       },
