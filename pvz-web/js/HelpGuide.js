@@ -283,6 +283,11 @@
     .hg-zhammer { position: absolute; bottom: 22px; left: calc(50% - 24px); width: 30px; transform: rotate(-40deg); z-index: 3; }
     /* v3.50.0：盲盒位置对齐头部（用户：盲盒应该在脑袋那部分）——从手部(bottom 20)上移到头顶 */
     .hg-zgift { position: absolute; bottom: 46px; left: calc(50% - 15px); width: 30px; z-index: 3; }
+    /* v3.70.0：v3.69 删演示 CSS 时误删的瓦片样式，补回——.hg-lawn 定高防止场上实拍图溢出压住名字 */
+    .hg-lawn { position: relative; width: 100px; height: 64px; display: flex; align-items: center; justify-content: center; }
+    .hg-lawn-d { width: 200px; height: 112px; }
+    .hg-tname { margin-top: 4px; font-size: 12.5px; font-weight: 700; color: #4a3414; text-align: center; line-height: 1.25; }
+    .hg-tsub { font-size: 11px; color: #8a6d3b; margin-top: 1px; }
     /* v3.50.0：僵尸图鉴瓦片与植物卡面同款纸感背景框（用户：所有僵尸的图片背景与植物图片框相同） */
     .hg-art.hg-zcard { background: linear-gradient(180deg, #fffef7 0%, #f6eed6 100%);
         border: 1px solid rgba(90,60,20,.4); border-radius: 7px; box-shadow: 0 2px 4px rgba(60,40,10,.25); }
