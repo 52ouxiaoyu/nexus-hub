@@ -46,6 +46,12 @@ class Zombie extends Entity {
         // armorHp 单独记录"护甲能感知到的伤害"：被破甲伤害打掉的部分不计入 armorHp，
         // 于是打本体却不掉护甲（护甲外观一直保留）。见 takeDamage()。
         this.armorHp = null;
+        // ===== v3.74.0 灼烧（火焰西瓜点燃）与融合僵尸挂件 =====
+        this.burnTimer = 0;   // >0 = 身上着火（火炬火焰挂件 + 持续掉血）
+        this.burnDps = 0;
+        this._flameEl = null;
+        this._accEl = null;   // 融合僵尸防具/手持物挂件（双盔铁桶/火把/大蒜）
+        this._garlicHits = 0; // 大蒜僵尸：被打 4 次辣得换行
         
         if (type === 'normal') {
             this.hp = 200; this.maxHp = 200;
@@ -118,6 +124,44 @@ class Zombie extends Entity {
             this.walkSrc = 'assets/images/Zombies/BucketheadZombie/BucketheadZombie.gif';
             this.attackSrc = 'assets/images/Zombies/BucketheadZombie/BucketheadZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+        } else if (type === 'ironcone') {
+            // ===== v3.74.0 双盔僵尸（路障+铁桶 融合）：路障在外、铁桶在里 =====
+            // 血量 1500：路障 360 先掉（回到铁桶外观），铁桶 940 再掉（变普通僵尸）。
+            this.hp = 1500; this.maxHp = 1500;
+            this.element.src = 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif';
+            this.walkSrc = 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif';
+            this.attackSrc = 'assets/images/Zombies/ConeheadZombie/ConeheadZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this._ironStage = 2; // 2=双盔 1=仅铁桶 0=无
+            this._spawnAcc({ src: 'assets/images/Zombies/BucketheadZombie/BucketheadZombie.gif', cw: 166, ch: 144, x1: 52, y1: 2, x2: 104, y2: 52, w: 34, dx: 2, dy: -30 });
+        } else if (type === 'madpaper') {
+            // ===== v3.74.0 疯狂读报僵尸（读报+撑杆 融合）=====
+            // 高速冲来跳过第一株植物（撑杆），报纸被打碎后再度狂暴加速（读报）。
+            this.hp = 340; this.maxHp = 340;
+            this.speed = 45;
+            this.hasVaulted = false;
+            this.element.src = 'assets/images/Zombies/NewspaperZombie/HeadWalk1.gif';
+            this.walkSrc = 'assets/images/Zombies/NewspaperZombie/HeadWalk1.gif';
+            this.attackSrc = 'assets/images/Zombies/NewspaperZombie/HeadAttack1.gif';
+            this.dieSrc = 'assets/images/Zombies/NewspaperZombie/Die.gif';
+        } else if (type === 'torchzombie') {
+            // ===== v3.74.0 火把僵尸（僵尸+火炬树桩 融合）=====
+            // 手持燃烧火把：啃植物时每秒额外烧 40（见 EATING 分支）。
+            this.hp = 400; this.maxHp = 400;
+            this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this._spawnAcc({ src: 'assets/images/Plants/Torchwood/Torchwood.gif', cw: 73, ch: 87, x1: 0, y1: 0, x2: 73, y2: 42, w: 22, dx: -15, dy: -2 });
+        } else if (type === 'garliczombie') {
+            // ===== v3.74.0 大蒜僵尸（僵尸+大蒜 融合）=====
+            // 胸前挂大蒜：每被打 4 次就被辣得跳到相邻一行（大蒜机制的僵尸版）。
+            this.hp = 300; this.maxHp = 300;
+            this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this._spawnAcc({ src: 'assets/images/Plants/Garlic/Garlic.gif', cw: 60, ch: 59, x1: 0, y1: 0, x2: 60, y2: 59, w: 24, dx: -8, dy: 8 });
         } else if (type === 'polevaulting') {
             this.hp = 500; this.maxHp = 500;
             this.speed = 45; // Fast initially
@@ -372,6 +416,76 @@ class Zombie extends Entity {
         if (this._hammerEl && this._hammerEl.parentNode) this._hammerEl.parentNode.removeChild(this._hammerEl);
         this._hammerEl = null;
     }
+
+    // ===== v3.74.0 融合僵尸挂件（双盔铁桶/火把/大蒜）=====
+    // cfg: {src, cw, ch, x1, y1, x2, y2, w, dx, dy} —— 从源图裁剪 (x1,y1)-(x2,y2) 区域，
+    // 显示宽 w px，锚点=僵尸身体中心 + (dx, dy)（同 _spawnHammer 几何约定）。
+    _spawnAcc(cfg) {
+        if (this._accEl) return;
+        this._accCfg = cfg;
+        const w = cfg.w;
+        const cw2 = cfg.x2 - cfg.x1, ch2 = cfg.y2 - cfg.y1;
+        const scale = w / cw2;
+        const el = document.createElement('div');
+        el.style.cssText = 'position:absolute;pointer-events:none;overflow:hidden;' +
+            'width:' + w + 'px;height:' + (ch2 * scale).toFixed(1) + 'px;' +
+            'z-index:' + (Math.floor(this.y) + 2) + ';';
+        const img = document.createElement('img');
+        img.src = cfg.src;
+        img.style.cssText = 'position:absolute;max-width:none;' +
+            'left:' + (-cfg.x1 * scale).toFixed(1) + 'px;top:' + (-cfg.y1 * scale).toFixed(1) + 'px;' +
+            'width:' + (cfg.cw * scale).toFixed(1) + 'px;';
+        el.appendChild(img);
+        this._accEl = el;
+        this.game.entityLayer.appendChild(el);
+        this._syncAcc();
+    }
+    _syncAcc() {
+        if (!this._accEl || !this._accCfg) return;
+        const cfg = this._accCfg;
+        const cw2 = cfg.x2 - cfg.x1, ch2 = cfg.y2 - cfg.y1;
+        const scale = cfg.w / cw2;
+        this._accEl.style.left = (this.x + cfg.dx - cfg.w / 2) + 'px';
+        this._accEl.style.top = (this.y + this.yOffset + cfg.dy - ch2 * scale / 2) + 'px';
+        this._accEl.style.zIndex = String(Math.floor(this.y) + 2);
+    }
+    _removeAcc() {
+        if (this._accEl && this._accEl.parentNode) this._accEl.parentNode.removeChild(this._accEl);
+        this._accEl = null;
+        this._accCfg = null;
+    }
+
+    // ===== v3.74.0 灼烧：火焰西瓜点燃 —— 僵尸身上点着火炬火焰并持续掉血 =====
+    setBurn(sec = 3, dps = 25) {
+        if (this.isDead || this.state === 'DYING') return;
+        this.burnTimer = Math.max(this.burnTimer, sec);
+        this.burnDps = Math.max(this.burnDps, dps);
+        if (!this._flameEl) {
+            // 火炬树桩顶部的火焰（Torchwood.gif 73×87 顶部区域）裁剪挂在僵尸头部
+            const el = document.createElement('div');
+            el.style.cssText = 'position:absolute;pointer-events:none;overflow:hidden;' +
+                'width:30px;height:17px;z-index:' + (Math.floor(this.y) + 3) + ';';
+            const img = document.createElement('img');
+            img.src = 'assets/images/Plants/Torchwood/Torchwood.gif';
+            img.style.cssText = 'position:absolute;max-width:none;left:0;top:0;width:64px;';
+            el.appendChild(img);
+            this._flameEl = el;
+            this.game.entityLayer.appendChild(el);
+        }
+        this._syncFlame();
+    }
+    _syncFlame() {
+        if (!this._flameEl) return;
+        this._flameEl.style.left = (this.x - 12) + 'px';
+        this._flameEl.style.top = (this.y + this.yOffset - 52) + 'px';
+        this._flameEl.style.zIndex = String(Math.floor(this.y) + 3);
+    }
+    _removeFlame() {
+        if (this._flameEl && this._flameEl.parentNode) this._flameEl.parentNode.removeChild(this._flameEl);
+        this._flameEl = null;
+        this.burnTimer = 0;
+        this.burnDps = 0;
+    }
     
     // ===== v3.56.0 寒冰菇绝对冰冻：全部动作锁定 sec 秒 =====
     // 与黄油同级（行动力=0）但范围全屏、连"技能"一起停（撑杆跳滞空/舞王召唤/玩偶盒引信/冰车铺冰）。
@@ -536,6 +650,23 @@ class Zombie extends Entity {
             if (this.state === 'DYING' || this.isDead) this._removeHammer();
             else this._syncHammer();
         }
+        // v3.74.0 融合僵尸挂件跟随；死亡即收走
+        if (this._accEl) {
+            if (this.state === 'DYING' || this.isDead) this._removeAcc();
+            else this._syncAcc();
+        }
+        // v3.74.0 灼烧：火焰西瓜点燃 —— 火焰跟随 + 持续掉血（打死后走下方 DYING 统一结算）
+        if (this._flameEl) {
+            if (this.state === 'DYING' || this.isDead) { this._removeFlame(); }
+            else if (this.burnTimer > 0) {
+                this.burnTimer -= deltaTime;
+                if (this.burnTimer <= 0) this._removeFlame();
+                else {
+                    this.hp -= this.burnDps * deltaTime;
+                    this._syncFlame();
+                }
+            }
+        }
         // v3.56.0 绝对冰冻：冰晶挂件死亡/垂死即收走
         if ((this.state === 'DYING' || this.isDead) && this._iceSpikeEl) this._removeIceSpike();
         
@@ -598,17 +729,34 @@ class Zombie extends Entity {
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
             this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
         }
-        
-        // 植物头僵尸的头顶植物是纯外观：不提供装甲/不掉落，随僵尸一起行动直到死亡。
-        
-        // Handle newspaper falling off
-        if (this.type === 'newspaper' && this.armorHp <= 150 * armorMul && !this.hasLostNewspaper && this.state !== 'DYING') {
+
+        // ===== v3.74.0 双盔僵尸：路障先掉（回铁桶外观）→ 铁桶再掉（变普通）=====
+        if (this.type === 'ironcone' && this.state !== 'DYING') {
+            if (this._ironStage === 2 && this.armorHp <= 1140 * armorMul) {
+                // 路障脱落：底图切铁桶僵尸，摘掉铁桶挂件（桶已并入底图）
+                this._ironStage = 1;
+                this.walkSrc = 'assets/images/Zombies/BucketheadZombie/BucketheadZombie.gif';
+                this.attackSrc = 'assets/images/Zombies/BucketheadZombie/BucketheadZombieAttack.gif';
+                this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
+                this._removeAcc();
+            } else if (this._ironStage === 1 && this.armorHp <= 200 * armorMul) {
+                this.type = 'normal';
+                this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
+                this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
+                this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
+            }
+        }
+
+        // Handle newspaper falling off（v3.74.0：疯狂读报僵尸同享报纸狂暴）
+        if ((this.type === 'newspaper' || this.type === 'madpaper') && this.armorHp <= 150 * armorMul && !this.hasLostNewspaper && this.state !== 'DYING') {
             this.hasLostNewspaper = true;
             this.speed = 45; // Gets very angry and fast
             this.walkSrc = 'assets/images/Zombies/NewspaperZombie/HeadWalk0.gif';
             this.attackSrc = 'assets/images/Zombies/NewspaperZombie/HeadAttack0.gif';
             this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
         }
+
+        // 植物头僵尸的头顶植物是纯外观：不提供装甲/不掉落，随僵尸一起行动直到死亡。
 
         // Handle screendoor falling off
         if (this.type === 'screendoor' && this.armorHp <= 200 * armorMul && this.state !== 'DYING') {
@@ -684,6 +832,8 @@ class Zombie extends Entity {
             }
             // v3.23.0：盲盒僵尸被击杀 → 开出一只随机僵尸
             if (this.type === 'mysterybox' && !this.hypnotized) this._openMysteryBox();
+            // v3.74.0：装甲僵尸死亡按概率掉下身上物品（路障/铁桶/旗帜/铁门/报纸）
+            if (!this.hypnotized && this.game._dropZombieLoot) this.game._dropZombieLoot(this);
             setTimeout(() => { this.isDead = true; }, 2000); 
         }
         
@@ -857,8 +1007,8 @@ class Zombie extends Entity {
                     plant.element.parentNode.appendChild(ladderImg);
                     plant.ladderOverlay = ladderImg; // keep reference to clean up on death
                     
-                } else if (this.type === 'polevaulting' && !this.hasVaulted && (!plant.hasTrait || !plant.hasTrait('tallnut'))) {
-                    // Jump over it!
+                } else if ((this.type === 'polevaulting' || this.type === 'madpaper') && !this.hasVaulted && (!plant.hasTrait || !plant.hasTrait('tallnut'))) {
+                    // Jump over it!（v3.74.0：疯狂读报僵尸也带撑杆，跳过第一株植物）
                     this.hasVaulted = true;
                     this.state = 'JUMPING';
                     this.jumpTimer = 1.0; 
@@ -962,10 +1112,10 @@ class Zombie extends Entity {
                         this.game.audioManager.play('chomp');
                         this.chompTimer = this.isSlowed ? 3.0 : 1.0;
                     }
-                } else if ((this.eatTarget.type === 'fusion_hypnoshroom' || this.eatTarget.type === 'hypnoshroom' ||
-                            this.eatTarget.type === 'fusion_hypnoshroom_sunflower') && !this.eatTarget._hypnoUsed &&
+                } else if ((this.eatTarget.type === 'fusion_hypnoshroom' || this.eatTarget.type === 'hypnoshroom') && !this.eatTarget._hypnoUsed &&
                     this.type !== 'gargantuar' && this.type !== 'zomboni' && this.type !== 'lgboss') {
-                    // 魅惑菇（融合版/经典版通用）+ 魅惑向日葵（v3.53.0）：吃下即被策反，转为友方僵尸（巨人与冰车不会"吃"，只会砸烂，故不触发）
+                    // 魅惑菇（融合版/经典版通用）：吃下即被策反，转为友方僵尸（巨人与冰车不会"吃"，只会砸烂，故不触发）
+                    // v3.74.0：魅惑向日葵不再"一口策反"——改为"吃光才策反"，见下方默认啃食分支的死亡触发
                     this.eatTarget._hypnoUsed = true;
                     this.eatTarget.hp = 0;      // 蘑菇被吃掉
                     this.game.audioManager.play('chomp');
@@ -1076,6 +1226,34 @@ class Zombie extends Entity {
                         // 其它模式维持原速，不影响玩家用植物防守的手感。
                         const eatMul = this.game.zombieMode ? 3 : 1;
                         this.eatTarget.hp -= currentDamage * eatMul * deltaTime;
+                        // v3.74.0：火把僵尸——嘴里的火把烤着植物，每秒额外烧 40
+                        if (this.type === 'torchzombie') this.eatTarget.hp -= 40 * deltaTime;
+                        // v3.74.0：魅惑向日葵（重做）——僵尸把它的总血量吃光后：
+                        // ① 它最后生产一大批阳光（5×25 围着植株落下）；② 吃掉它的僵尸被策反成魅惑状态。
+                        if (this.eatTarget.type === 'fusion_hypnoshroom_sunflower' &&
+                            this.eatTarget.hp <= 0 && !this.eatTarget._hypnoDeath) {
+                            this.eatTarget._hypnoDeath = true;
+                            const g = this.game;
+                            const sx = this.eatTarget.x, sy = this.eatTarget.y;
+                            for (let i = 0; i < 5; i++) {
+                                setTimeout(() => {
+                                    if (g.state !== 'PLAYING') return;
+                                    const sun = new Sun(g, sx + (Math.random() * 60 - 30), sy - 30, sy + 20);
+                                    sun.value = 25;
+                                    g.entities.push(sun);
+                                }, i * 160);
+                            }
+                            g.audioManager.play('sun');
+                            if (g.showAnnouncement) {
+                                g.showAnnouncement(g.zombieMode
+                                    ? '倒戈！僵尸吃光了魅惑向日葵，被策反了'
+                                    : '魅惑向日葵被吃光：洒下一大片阳光，吃掉它的僵尸被策反了！', '#ff69b4');
+                            }
+                            this.hypnotize();
+                            this.eatTarget = null;
+                            this.state = 'WALKING';
+                            if (this.element) this.element.src = this.walkSrc;
+                        }
                         // v3.22.0：火爆辣椒植物僵尸——吃掉一株植物计 1 次，连续 2 株 → 整排引爆
                         if (this.type === 'jalapenohead' && this.eatTarget.hp <= 0) {
                             this._eatenCount++;
@@ -1159,5 +1337,23 @@ class Zombie extends Entity {
         if (this.armorHp === null || this.armorHp === undefined) this.armorHp = this.hp + amount;
         this.hp -= amount;
         if (!(opts && opts.pierce)) this.armorHp -= amount;
+        // ===== v3.74.0 大蒜僵尸：每被打 4 次被辣得跳到相邻一行（大蒜机制的僵尸版）=====
+        if (this.type === 'garliczombie' && this.hp > 0 && this.state !== 'DYING' && !this.hypnotized) {
+            this._garlicHits++;
+            if (this._garlicHits >= 4) {
+                this._garlicHits = 0;
+                const up = this.row > 0, down = this.row < this.game.board.rows - 1;
+                const nr = (up && down) ? this.row + (Math.random() < 0.5 ? -1 : 1) : (up ? this.row - 1 : (down ? this.row + 1 : this.row));
+                if (nr !== this.row) {
+                    this.row = nr;
+                    this.y = this.game.board.offsetY + this.row * this.game.board.cellHeight + this.game.board.cellHeight / 2 - 20;
+                    this.eatTarget = null;
+                    if (this.state === 'EATING') {
+                        this.state = 'WALKING';
+                        if (this.element) this.element.src = this.walkSrc;
+                    }
+                }
+            }
+        }
     }
 }

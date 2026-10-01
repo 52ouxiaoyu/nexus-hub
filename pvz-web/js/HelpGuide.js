@@ -45,14 +45,17 @@
             '炸弹融合：樱桃炸弹爆炸时，3×3 内有配方的两株植物会直接原地融合。',
             '爆炸类融合全名单（一次性植物）：寒冰炸弹（寒冰射手+樱桃炸弹：3×3 秒杀+全屏冻结减速）、爆炸弹跳（窝瓜+樱桃炸弹：压扁后落点 3×3 爆炸）、烈焰地雷（土豆地雷+火爆辣椒：整行 1800 烈焰）、孢子地雷（土豆地雷+小喷菇：廉价控场地雷）、毁灭向日葵（向日葵+毁灭菇：被啃死时原地 1800 全屏大爆炸）；樱桃射手（每第 10 发小樱桃 3×3 爆炸）与辣椒高坚果（啃它的僵尸持续被烫）也带爆炸/火焰成分。',
             '专属大招全名单（同一株的大招一局只播报一次）：冰系 16 株（寒冰卷心菜/冰西瓜猫尾草/冰忧郁菇/冰机枪射手/冰猫尾草/冰杨桃/寒冰坚果/冰玉米投手/冰双发射手/冰三线射手/冰双向射手/冰雾小喷菇/冰蒜卫士/冰晶向日葵/冰火西瓜/冰双果投手）【极寒波动】每 45 秒冻伤周围；火焰双发【过热爆发】每第 8 轮 6 连发爆炎；火焰射手【三连焰豆】每 15 秒；火焰地刺【烈焰热浪】每 15 秒；火焰西瓜【烈焰瓜】每 20 秒；西瓜猫尾草【瓜弹连射】每 20 秒；爆米花投手【焦香连环爆】每 22 秒；双料投手【双料连投】每 18 秒；双果投手【双瓜齐射】每 20 秒；超级机枪【弹幕狂潮】每 20 秒；机枪猫尾草【追踪弹幕】每 18 秒；十芒杨桃【星环爆发】每 20 秒；坚果射手【重击豆】每 12 秒；卷心菜堡垒/卷心菜高坚果【巨菜炮击】每 15 秒；地刺坚果/钢刺高坚果/钢刺坚果【径向突刺】每 10 秒；射刺豌豆【尖刺爆发】每 15 秒；金蒜坚果【蒜息冲击】每 15 秒；四头向日葵【阳光雨】每 120 秒；双子坚果【双藤再生】半血 30 秒后长回；大嘴坚果/蒜香大嘴花【吞噬回血】每吞一尸回 1000。',
-            '目前共有 55 种以上融合形态；《我是僵尸》与砸罐子模式也能通过盲盒/金罐开出融合株。' ] },
+            '目前共有 60 种以上融合形态；《我是僵尸》与砸罐子模式也能通过盲盒/金罐开出融合株。' ] },
         { icon: '🏺', img: 'assets/images/Vase/Vase_Question.png', title: '砸罐子', items: [
             '点击罐子用木锤敲开（鼠标移到罐子上会变成木锤）：绿罐出植物、紫罐出僵尸、问号罐随机（植物/僵尸/偶尔一撮阳光+50）。',
             '目标：敲完全部罐子并清掉所有僵尸即胜利；僵尸罐敲开前最好先摆好防线。',
             '罐子种类：植物罐（稳赚）/ 僵尸罐（危险）/ 问号罐（惊喜）/ 金罐（地狱限定，必出强力植物或强化僵尸，1~2 个）。',
             '路灯花（75 阳光）：种下照亮周围一圈罐子，罐子变半透明、直接看到里面是什么。',
             '难度分简单 / 困难 / 地狱：地狱僵尸血量 ×1.35，且只有地狱出金罐。',
-            '特殊僵尸：锤子僵尸会替你（或敌人）锤碎沿途罐子。问号罐只会开出普通/路障/铁桶/读报/撑杆/小鬼六种僵尸；橄榄球/舞王只出紫罐（困难/地狱），冰车/巨人/植物头/盲盒只出金罐。融合植物头僵尸只从金罐里出来（数量不多但很硬）。' ] },
+            '特殊僵尸：锤子僵尸会替你（或敌人）锤碎沿途罐子。问号罐只会开出普通/路障/铁桶/读报/撑杆/小鬼六种僵尸；橄榄球/舞王只出紫罐（困难/地狱），冰车/巨人/植物头/盲盒只出金罐。融合植物头僵尸只从金罐里出来（数量不多但很硬）。',
+            '融合僵尸（困难/地狱）：双盔僵尸（路障+铁桶）、疯狂读报僵尸（读报+撑杆）、火把僵尸（僵尸+火炬）、大蒜僵尸（僵尸+大蒜）——紫罐低频出现、金罐也能开出，见僵尸图鉴「融合僵尸」组。',
+            '防具掉落：路障/铁桶/旗帜/铁门/读报僵尸死亡时有 2%~10% 概率掉下身上的物品——把对应植物种到物品那一格就能融合（路障+豌豆=路障豌豆、铁桶+豌豆=铁桶豌豆、旗帜+向日葵=旗帜向日葵、铁门+坚果=铁门坚果、报纸+大喷菇=狂暴大喷菇），详见植物图鉴「掉落物」来源说明。',
+            '金罐植物：全部融合植物等概率开出，另有玉米加农炮与植物盲盒各 10%；普通植物罐所有植物等概率（毁灭菇仍约 1% 稀有）。' ] },
         { icon: '🧟', img: 'assets/images/Zombies/Zombie/0.gif', title: '《我是僵尸》', items: [
             '阵营反转：这次你指挥僵尸大军——花阳光买僵尸、放到草坪上，吃掉全部脑子即胜利。',
             '阳光来源：啃死向日葵 +200 / 双子向日葵 +500 / 阳光菇 +450；阳光不足 50 且场上无僵尸存活即判负。',
@@ -191,6 +194,28 @@
             { n: '旗帜僵尸', img: ZB + 'FlagZombie/FlagZombie.gif', h: 70, hp: 200, t: '紫罐：「一大波僵尸」的先导，举旗领军' },
             { n: '小鬼僵尸', img: ZB + 'Imp/Zombie.gif', h: 52, hp: 100, t: '紫罐/问号罐：只有半个普通僵尸高，又小又快' },
             { n: '普通僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, hp: 200, t: '紫罐/问号罐：最普通的僵尸，啃食植物缓慢前进' },
+        ]},
+        { title: '融合僵尸', list: [
+            // v3.74.0 用户点名新增：两两融合而来，难度温和；禁用巨人/冰车/橄榄球/舞王/Boss 系
+            { n: '双盔僵尸', img: ZB + 'ConeheadZombie/ConeheadZombie.gif', h: 70,
+              acc: { src: ZB + 'BucketheadZombie/BucketheadZombie.gif', cw: 166, ch: 144, x1: 52, y1: 2, x2: 104, y2: 52, w: 34, ox: 2, by: 44 },
+              hp: 1500, t: '路障+铁桶 融合（紫罐困难/地狱低频·金罐）：路障套在铁桶外面——路障 360 先掉，露出铁桶再扛 940，全部打掉才变普通僵尸' },
+            { n: '疯狂读报僵尸', img: ZB + 'NewspaperZombie/HeadWalk1.gif', h: 70, hp: 340,
+              t: '读报+撑杆 融合（紫罐困难/地狱低频·金罐）：举着报纸高速冲来，跳过遇到的第一株植物；报纸被打碎后再度狂暴加速' },
+            { n: '火把僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70,
+              acc: { src: PL + 'Torchwood/Torchwood.gif', cw: 73, ch: 87, x1: 0, y1: 0, x2: 73, y2: 42, w: 22, ox: -16, by: 10 },
+              hp: 400, t: '僵尸+火炬树桩 融合（紫罐困难/地狱低频·金罐）：手持燃烧火把，啃植物时每秒额外烧 40——防线被它啃得特别快' },
+            { n: '大蒜僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70,
+              acc: { src: PL + 'Garlic/Garlic.gif', cw: 60, ch: 59, x1: 0, y1: 0, x2: 60, y2: 59, w: 24, ox: -8, by: 12 },
+              hp: 300, t: '僵尸+大蒜 融合（紫罐困难/地狱低频·金罐）：胸前挂着大蒜，每被打 4 次就被辣得跳到相邻一行——火力要重新瞄准' },
+        ]},
+        { title: '掉落物 · 可融合防具', list: [
+            // v3.74.0：装甲僵尸死亡概率掉落；把"配方植物"种到物品所在格即融合（crop=从僵尸 gif 裁出防具区域）
+            { n: '路障', img: ZB + 'ConeheadZombie/ConeheadZombie.gif', ih: 46, crop: { cw: 166, ch: 144, x1: 60, y1: 0, x2: 102, y2: 32, w: 36 }, t: '路障僵尸死亡 10% 掉落。和豌豆射手种在同一格 → 路障豌豆（660 耐久）' },
+            { n: '铁桶', img: ZB + 'BucketheadZombie/BucketheadZombie.gif', ih: 46, crop: { cw: 166, ch: 144, x1: 52, y1: 2, x2: 104, y2: 52, w: 36 }, t: '铁桶僵尸死亡 8% 掉落。和豌豆射手种在同一格 → 铁桶豌豆（1400 耐久）' },
+            { n: '旗帜', img: ZB + 'FlagZombie/FlagZombie.gif', ih: 46, crop: { cw: 166, ch: 144, x1: 34, y1: 0, x2: 84, y2: 62, w: 36 }, t: '旗帜僵尸死亡 2% 掉落。和向日葵种在同一格 → 旗帜向日葵（15 秒一产阳光）' },
+            { n: '铁门', img: ZB + 'ScreenDoorZombie/ScreenDoorZombie.gif', ih: 46, crop: { cw: 166, ch: 157, x1: 24, y1: 36, x2: 90, y2: 150, w: 40 }, t: '铁门僵尸死亡 5% 掉落。和坚果墙种在同一格 → 铁门坚果（5200 耐久）' },
+            { n: '报纸', img: ZB + 'NewspaperZombie/HeadWalk1.gif', ih: 46, crop: { cw: 216, ch: 164, x1: 26, y1: 90, x2: 110, y2: 144, w: 40 }, t: '读报僵尸死亡 6% 掉落。和大喷菇种在同一格 → 狂暴大喷菇（450 耐久，血量跌破 150 攻速翻倍）' },
         ]},
         { title: '植物头 · 金罐特殊僵尸', list: [
             { n: '高坚果头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 74, head: { src: PL + 'TallNut/TallNut.gif', cw: 83, ch: 119, keepTop: 1.0, w: 40, y: 0, ox: 10 }, hp: 5200, t: '高坚果罩在身上，全游戏最厚血量之一' },
@@ -405,6 +430,23 @@
         }
         if (z.hammer) art += '<img class="hg-zhammer" src="' + ZB + 'HammerZombie/Hammer.png' + V + '" style="width:' + Math.round(30 * s) + 'px;">';
         if (z.gift) art += '<img class="hg-zgift" src="' + PL + 'PlantBox/GiftBox.png' + V + '" style="width:' + Math.round(34 * s) + 'px;">';
+        // v3.74.0：融合僵尸挂件 —— 从源图裁剪 (x1,y1)-(x2,y2) 区域叠到本体上（溢出裁剪，同场上 _spawnAcc）
+        // acc: {src, cw, ch, x1, y1, x2, y2, w, ox, by} —— w=显示宽(px@h70)，ox=中心水平偏移(px@h70)，
+        // by=挂件底边距本体底边的高度(px@h70)（本体 bottom:2px 对齐，与 hg-zhead 的 top 体系解耦）
+        if (z.acc) {
+            const a = z.acc;
+            const dispW = a.w * (h / 70);
+            const sc = dispW / (a.x2 - a.x1);
+            const boxW = (a.x2 - a.x1) * sc, boxH = (a.y2 - a.y1) * sc;
+            const cx = (a.ox !== undefined ? a.ox : 2) * (h / 70);
+            const by = (a.by !== undefined ? a.by : 44) * (h / 70);
+            art += '<div style="position:absolute;overflow:hidden;pointer-events:none;' +
+                'width:' + boxW.toFixed(1) + 'px;height:' + boxH.toFixed(1) + 'px;' +
+                'left:calc(50% + ' + (cx - boxW / 2).toFixed(1) + 'px);bottom:' + (2 + by).toFixed(1) + 'px;z-index:3;">' +
+                '<img src="' + a.src + V + '" style="position:absolute;max-width:none;' +
+                'left:' + (-a.x1 * sc).toFixed(1) + 'px;top:' + (-a.y1 * sc).toFixed(1) + 'px;' +
+                'width:' + (a.cw * sc).toFixed(1) + 'px;"></div>';
+        }
         return art;
     }
 
@@ -421,10 +463,21 @@
             '<div class="hg-d-desc">' + (z.t || '') + '</div>';
     }
 
+    // v3.74.0：道具/掉落物支持 z.crop 裁剪 —— 从整只僵尸 gif 画布上只露出防具区域
+    function propArt(z, maxH, maxW) {
+        if (!z.crop) return '<img src="' + z.img + V + '" style="max-height:' + maxH + 'px;max-width:' + maxW + 'px;object-fit:contain;">';
+        const c = z.crop;
+        const w = c.w || Math.min(maxW, (c.x2 - c.x1));
+        const sc = w / (c.x2 - c.x1);
+        return '<div style="position:relative;overflow:hidden;width:' + ((c.x2 - c.x1) * sc).toFixed(1) + 'px;height:' + ((c.y2 - c.y1) * sc).toFixed(1) + 'px;">' +
+            '<img src="' + z.img + V + '" style="position:absolute;max-width:none;' +
+            'left:' + (-c.x1 * sc).toFixed(1) + 'px;top:' + (-c.y1 * sc).toFixed(1) + 'px;width:' + (c.cw * sc).toFixed(1) + 'px;"></div>';
+    }
+
     function propDetail(z) {
         const big = Math.min(105, Math.max(60, (z.ih || 56) * 1.6));
         return '<div class="hg-d-art" style="height:' + (big + 30) + 'px;">' +
-            '<img src="' + z.img + V + '" style="max-height:' + big + 'px;max-width:180px;object-fit:contain;"></div>' +
+            propArt(z, big, 180) + '</div>' +
             '<div class="hg-d-name">' + z.n + '</div>' +
             '<div class="hg-d-badges">' + badge('🏷️ 道具配饰') + '</div>' +
             '<div class="hg-d-desc">' + (z.t || '') + '</div>';
@@ -456,7 +509,7 @@
 
     function propTile(z, key) {
         return '<div class="hg-tile" data-k="' + key + '" title="' + (z.t || '') + '">' +
-            '<div class="hg-art"><img src="' + z.img + V + '" style="max-height:' + (z.ih || 56) + 'px;max-width:80px;"></div>' +
+            '<div class="hg-art">' + propArt(z, z.ih || 56, 80) + '</div>' +
             '<div class="hg-tname">' + z.n + '</div>' +
             '</div>';
     }

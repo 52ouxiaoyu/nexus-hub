@@ -50,10 +50,13 @@ class CollisionManager {
                             // 旧版没有溅射，玩家反馈"猫尾草西瓜伤害弱一档"，现与普通西瓜完全同一档
                             if (p.type === 'melon' || p.type === 'wintermelon' ||
                                 p.type === 'cattail_melon' || p.type === 'cattail_wintermelon') {
+                                // v3.74.0：火焰西瓜（p.ignite）——直击与溅射的僵尸身上都点着火炬火焰持续灼烧
+                                if (p.ignite && z.setBurn) z.setBurn(3, 25);
                                 const allZombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                                 for (let oz of allZombies) {
                                     if (oz !== z && Math.abs(oz.row - z.row) <= 1 && Math.abs(oz.x - z.x) < 120) {
                                         oz.takeDamage(p.damage / 2);
+                                        if (p.ignite && oz.setBurn) oz.setBurn(3, 25);
                                         if (p.type === 'wintermelon' || p.type === 'cattail_wintermelon') {
                                             oz.setSlow(10.0);
                                         }
