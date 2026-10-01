@@ -40,8 +40,8 @@ class Projectile extends Entity {
             // v3.28.0 伤害定档（恒定不再改动）：西瓜系全部统一 直击 60 + 溅射 30
             //（溅射见 CollisionManager；猫尾草西瓜/铁冰西瓜猫尾草与普通西瓜完全同一档）
             this.element.src = type === 'melon'
-                ? 'assets/images/Plants/MelonPult/Melon.png?v=1790843500'
-                : 'assets/images/Plants/MelonPult/WinterMelon.png?v=1790843500';
+                ? 'assets/images/Plants/MelonPult/Melon.png?v=1790844602'
+                : 'assets/images/Plants/MelonPult/WinterMelon.png?v=1790844602';
             this.setTransform();   // v3.10.0：裸写 transform 会顶掉 .entity 的居中基准（贴图偏移半个身位）
             // 注意：不能再加 border-radius:50% —— 那会把完整的椭圆瓜体按内切圆再裁一圈
             // v3.56.0：西瓜降伤（用户）——直击 60→40，溅射=直击一半 30→20（CollisionManager）
@@ -52,7 +52,7 @@ class Projectile extends Entity {
             // 子弹取自 TSR 原版 Projectiles 图集（行标签 "Cabbage"）：30×27 绿色卷心菜。
             // 破甲：命中时以 {pierce:true} 结算 → 越过路障/铁桶/报纸/铁门直接打本体，护甲不脱落
             // （见 CollisionManager.update 与 Zombie.takeDamage）。
-            this.element.src = 'assets/images/Plants/CabbagePult/Cabbage.png?v=1790843500';
+            this.element.src = 'assets/images/Plants/CabbagePult/Cabbage.png?v=1790844602';
             // v3.11.0 尺寸校准：原图 30×27 投出来只有"米粒大"，与立绘篮筐里那颗（实测 35×29）
             // 不成比例 → 放大到 34×31 与篮内弹药等大（用 width/height，不碰 transform 以免顶掉居中基准）
             this.element.style.width = '34px';
@@ -69,7 +69,7 @@ class Projectile extends Entity {
             // ===== v3.10.0 玉米投手 =====
             // 子弹取自原版图集（行标签 "Kernel"）：淡黄玉米粒。同样走抛物线 + 破甲。
             // 爆米花（融合：玉米投手+火爆辣椒）：焦色更大颗，命中 3×3 溅射。
-            this.element.src = 'assets/images/Plants/KernelPult/Kernel.png?v=1790843500';
+            this.element.src = 'assets/images/Plants/KernelPult/Kernel.png?v=1790844602';
             // v3.11.0 尺寸校准：原图 16×17 投出来只有"米粒大"；立绘篮筐里那颗实测 19×20，
             // 所以放大到 22×23 —— 略大于篮内单颗，空中飞行时才有存在感（爆米花更大一颗 30×30）。
             // 用 width/height 而不是 transform，避免顶掉 .entity 的 translate(-50%,-50%) 居中基准。
@@ -95,7 +95,7 @@ class Projectile extends Entity {
             // 原版 Cob（TSR Projectiles 图集行标签 "Cob"）：161×76 完整玉米炮弹。
             // 飞向固定坐标点（不锁定僵尸），落地 3×3 范围 1800 炸弹伤害（见 _cobExplode）。
             // 注意：这里不 setupLob——fireCob() 随后调用 setupLobToPoint(tx,ty) 指定落点。
-            this.element.src = 'assets/images/Plants/CobCannon/Cob.png?v=1790843500';
+            this.element.src = 'assets/images/Plants/CobCannon/Cob.png?v=1790844602';
             this.element.style.width = '56px';
             this.element.style.height = '27px';
             this.element.style.objectFit = 'contain';
@@ -110,7 +110,7 @@ class Projectile extends Entity {
             // 原版图集行标签 "Butter" 的黄油块；命中后定身 3 秒（见 CollisionManager）。
             // v3.11.0：与放大后的玉米粒同一档体积，46×48 → 28×29
             // （用 width/height，不碰 transform，以免破坏 .entity 的 translate(-50%,-50%) 居中基准）。
-            this.element.src = 'assets/images/Plants/KernelPult/Butter.png?v=1790843500';
+            this.element.src = 'assets/images/Plants/KernelPult/Butter.png?v=1790844602';
             this.element.style.width = '28px';
             this.element.style.height = '29px';
             this.element.style.objectFit = 'contain';
@@ -125,13 +125,13 @@ class Projectile extends Entity {
         } else if (type === 'cattail_melon') {
             // v3.28.0：猫尾草西瓜的瓜弹改用与普通西瓜投手**完全同一张**整瓜贴图（54×46 原尺寸）——
             // 旧版用 Melon_small + scale(0.8)，玩家反馈"猫尾草西瓜的瓜看起来小一圈"
-            this.element.src = 'assets/images/Plants/MelonPult/Melon.png?v=1790843500';
+            this.element.src = 'assets/images/Plants/MelonPult/Melon.png?v=1790844602';
             this.setTransform();
             this.damage = 40;   // v3.28.0 与普通西瓜同档；v3.56.0 降伤 60→40，速度保留猫尾草的 400
             this.speed = 400;
         } else if (type === 'cattail_wintermelon') {
             // v3.28.0：铁冰西瓜猫尾草同理——冰瓜弹与普通冰西瓜同尺寸同贴图
-            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon.png?v=1790843500';
+            this.element.src = 'assets/images/Plants/MelonPult/WinterMelon.png?v=1790844602';
             this.setTransform();
             this.damage = 40;   // v3.28.0 同档；v3.56.0 降伤 60→40
             this.speed = 400;
@@ -251,21 +251,48 @@ class Projectile extends Entity {
         this.peakHeight = peak;
     }
 
-    // v3.24.0 玉米加农炮炮弹落地爆炸：3×3 范围 1800 炸弹伤害（同樱桃炸弹量级）
+    // v3.24.0 玉米加农炮炮弹落地爆炸
+    // v3.65.0：范围 3×3→4×4（以落点格为中央的 4 行 × 4 列）；圈内僵尸无视种类/血量直接秒杀；
+    // 地面留下 4×4 的黑色焦块（普通爆炸烧痕，非毁灭菇陨石坑），15 秒后淡出
     _cobExplode() {
         const g = this.game;
+        const b = g.board;
         const boom = document.createElement('img');
         boom.src = 'assets/images/Plants/CherryBomb/Boom.gif';
-        boom.style.cssText = 'position:absolute;width:220px;height:220px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);z-index:500;';
+        boom.style.cssText = 'position:absolute;width:320px;height:320px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);z-index:500;';
         boom.style.left = this.x + 'px';
         boom.style.top = this.y + 'px';
         g.entityLayer.appendChild(boom);
         setTimeout(() => boom.remove(), 900);
-        // 以落点为中心的 3×3：行距 ≤1 行（100px）且水平 ±120px；炸弹伤害可被"坦克化"结算
+        // 落点所在格 (R,C)：4×4 = 行 R-1..R+2 / 列 C-2..C+1（落点居块中央），越界裁剪
+        const R = Math.floor((this.y - b.offsetY) / b.cellHeight);
+        const C = Math.floor((this.x - b.offsetX) / b.cellWidth);
+        const rowLo = Math.max(0, R - 1), rowHi = Math.min(b.rows - 1, R + 2);
+        const colLo = Math.max(0, C - 2), colHi = Math.min(b.cols - 1, C + 1);
         const zombies = g.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
         for (const z of zombies) {
-            if (Math.abs(z.y - this.y) < 120 && Math.abs(z.x - this.x) < 120) {
-                z.takeDamage(this.damage, { bomb: true, oneshot: true });
+            if (z.row >= rowLo && z.row <= rowHi &&
+                z.x >= b.offsetX + colLo * b.cellWidth && z.x <= b.offsetX + (colHi + 1) * b.cellWidth) {
+                z.takeDamage(9999, { bomb: true, oneshot: true, obliterate: true });
+            }
+        }
+        // 地面焦块：覆盖 4×4 每格一块半透明黑斑（垫在实体层最底下，与冰道同一层位）
+        for (let r = rowLo; r <= rowHi; r++) {
+            for (let c = colLo; c <= colHi; c++) {
+                const sc = document.createElement('div');
+                sc.className = 'cob-scorch';
+                sc.style.left = (b.offsetX + c * b.cellWidth) + 'px';
+                sc.style.top = (b.offsetY + r * b.cellHeight) + 'px';
+                sc.style.width = b.cellWidth + 'px';
+                sc.style.height = b.cellHeight + 'px';
+                if (g.entityLayer.firstChild) g.entityLayer.insertBefore(sc, g.entityLayer.firstChild);
+                else g.entityLayer.appendChild(sc);
+                setTimeout(() => {
+                    if (!sc.parentNode) return;
+                    sc.style.transition = 'opacity 3s ease-out';
+                    sc.style.opacity = '0';
+                    setTimeout(() => { if (sc.parentNode) sc.remove(); }, 3100);
+                }, 12000);
             }
         }
         if (g.audioManager && g.audioManager.playFx) g.audioManager.playFx('crash');

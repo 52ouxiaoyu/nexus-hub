@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1790843500">
+    <link rel="stylesheet" href="css/style.css?v=1790844602">
 </head>
 <body>
     <div id="game-container">
@@ -185,6 +185,21 @@
                 border-radius: 12px; padding: 4px 12px;
                 text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
             }
+            /* v3.65.0 返回 Game Center：与「操作与道具说明」同款木牌按钮，放在 player 右边 */
+            #btn-back-gc {
+                display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+                margin-left: 16px; pointer-events: auto;
+                padding: 8px 20px;
+                font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif;
+                font-size: 19px; font-weight: 900; letter-spacing: 2px;
+                color: #f7e9c0; cursor: pointer;
+                background: linear-gradient(180deg, #7a5a33 0%, #5d4223 60%, #4a331b 100%);
+                border: 3px solid #3a2812; border-radius: 12px;
+                box-shadow: inset 0 2px 0 rgba(255,235,180,.25), 0 5px 12px rgba(0,0,0,.45);
+                text-shadow: 1px 1px 0 #2a1c0c;
+                transition: transform .12s ease, filter .12s ease;
+            }
+            #btn-back-gc:hover { transform: translateY(-2px); filter: brightness(1.1); }
         </style>
         <div id="start-menu">
             <div class="menu-scene">
@@ -241,7 +256,10 @@
             </div>
 
             <div class="menu-footer">
-                <div class="player" id="player-name">区耀丁<small>PLAYER</small></div>
+                <div style="display:flex; align-items:flex-end;">
+                    <div class="player" id="player-name">区耀丁<small>PLAYER</small></div>
+                    <button id="btn-back-gc" onclick="location.href='../games.html'"><span style="font-size:19px;">🏰</span>返回游戏中心</button>
+                </div>
                 <div class="ver" id="start-version">加载版本号...</div>
             </div>
         </div>
@@ -340,17 +358,17 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1790843500"></script>
-    <script src="js/Board.js?v=1790843500"></script>
-    <script src="js/entities/Entity.js?v=1790843500"></script>
-    <script src="js/entities/Plant.js?v=1790843500"></script>
-    <script src="js/entities/Zombie.js?v=1790843500"></script>
-    <script src="js/entities/Projectile.js?v=1790843500"></script>
-    <script src="js/entities/Sun.js?v=1790843500"></script>
-    <script src="js/managers/WaveManager.js?v=1790843500"></script>
-    <script src="js/managers/CollisionManager.js?v=1790843500"></script>
-    <script src="js/managers/EventManager.js?v=1790843500"></script>
-    <script src="js/GameLoop.js?v=1790843500"></script>
-    <script src="js/HelpGuide.js?v=1790843500"></script>
+    <script src="js/InputManager.js?v=1790844602"></script>
+    <script src="js/Board.js?v=1790844602"></script>
+    <script src="js/entities/Entity.js?v=1790844602"></script>
+    <script src="js/entities/Plant.js?v=1790844602"></script>
+    <script src="js/entities/Zombie.js?v=1790844602"></script>
+    <script src="js/entities/Projectile.js?v=1790844602"></script>
+    <script src="js/entities/Sun.js?v=1790844602"></script>
+    <script src="js/managers/WaveManager.js?v=1790844602"></script>
+    <script src="js/managers/CollisionManager.js?v=1790844602"></script>
+    <script src="js/managers/EventManager.js?v=1790844602"></script>
+    <script src="js/GameLoop.js?v=1790844602"></script>
+    <script src="js/HelpGuide.js?v=1790844602"></script>
 </body>
 </html>

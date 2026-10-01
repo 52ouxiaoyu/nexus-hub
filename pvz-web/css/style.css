@@ -723,3 +723,15 @@ body {
     animation: vase-hammer-swing 0.3s ease-in forwards;
     pointer-events: none;
 }
+
+/* ===== v3.65.0 玉米加农炮炮弹焦痕：4×4 黑色烧痕块（普通爆炸焦土，非毁灭菇陨石坑）===== */
+.cob-scorch {
+    position: absolute;
+    pointer-events: none;
+    z-index: 0;
+    background: radial-gradient(ellipse at 50% 55%,
+        rgba(18, 14, 10, 0.88) 0%,
+        rgba(28, 22, 16, 0.62) 52%,
+        rgba(34, 26, 18, 0.28) 74%,
+        rgba(34, 26, 18, 0) 88%);
+}

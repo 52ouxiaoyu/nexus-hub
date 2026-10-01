@@ -154,33 +154,33 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790843500';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790844602';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790843500';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790844602';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790843500';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790844602';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790843500';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790844602';
             stat.butterChance = 0.2;
         } else if (type === 'cobcannon') {
             // 玉米加农炮（v3.24.0）：PVZ1 原版 Cob Cannon——三株玉米投手合体，占两格。
             // 平时嘴里没有炮；充能 25s 结束后嘴里出现玉米炮弹；
             // 点击它出现瞄准镜（跟随鼠标），按 M 键向准星位置发射（见 GameLoop.enterCobAim）。
             stat.hp = 600;
-            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790843500';
+            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790844602';
             // v3.24.2 立绘 148×85（炮口已用叶壳封住），显示宽 132——两格 160px 内留边，
             // 修"看起来占三格"；+15 补偿缩小后轮子离地
             stat.yOffset = 15;
@@ -210,7 +210,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790843500';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790844602';
             stat.yOffset = 0;
         }
 
@@ -1109,7 +1109,7 @@ class Plant extends Entity {
                     // 核心圈 2400 秒杀不动；圈子外全屏僵尸一律 800 冰伤 + 冻结减速 10 秒——
                     // 一颗 350 阳光的炸弹等于半屏清场，对得起"寒冰田+樱桃"的成本
                     if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 100) {
-                        z.takeDamage(2400, { bomb: true, oneshot: true });
+                        z.takeDamage(2400, { bomb: true, oneshot: true, obliterate: this.game.vaseMode });
                         z.freezeAbsolute(4.0); z.setSlow(10.0); // v3.56.0 冻结=绝对冰冻
                     } else {
                         z.takeDamage(800, { bomb: true });
@@ -1118,11 +1118,12 @@ class Plant extends Entity {
                 } else if (this.hasTrait('cherrybomb')) {
                     // v3.20.0：爆炸范围收敛为标准 3×3 格（±1 行 / ±1.5 格宽）
                     if (Math.abs(z.row - this.row) <= 1 && Math.abs(z.x - this.x) < 120) {
-                        z.takeDamage(1800, { bomb: true, oneshot: true });
+                        // v3.65.0 砸罐子特权：范围内僵尸全部直接击杀（无视种类与血量）
+                        z.takeDamage(1800, { bomb: true, oneshot: true, obliterate: this.game.vaseMode });
                     }
                 } else if (this.hasTrait('jalapeno')) {
                     if (z.row === this.row) {
-                        z.takeDamage(1800, { bomb: true, oneshot: true });
+                        z.takeDamage(1800, { bomb: true, oneshot: true, obliterate: this.game.vaseMode });
                     }
                 }
             }
@@ -1184,7 +1185,8 @@ class Plant extends Entity {
                     // v3.20.0：恢复全屏核平（用户："只打周围一圈的不叫毁灭菇"）
                     const zombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                     for (let z of zombies) {
-                        z.takeDamage(9999, { bomb: true });
+                        // v3.65.0 砸罐子特权：全屏僵尸无论种类/血量直接湮灭
+                        z.takeDamage(9999, { bomb: true, obliterate: this.game.vaseMode });
                     }
 
                     // v3.26.0：爆炸后地面留陨石坑 30 秒（用户要求，与我是僵尸陷阱毁灭菇同一套：
@@ -1234,7 +1236,7 @@ class Plant extends Entity {
             if (!this._cobShellEl) {
                 const el = document.createElement('img');
                 // v3.24.1：装填玉米用原版图鉴里抠出的整根玉米（带根部），从炮口探出
-                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790843500';
+                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790844602';
                 // 裸 img 必须自带 translate(-50%,-50%) 居中基准（与 fusionOverlay 同一教训）
                 // v3.24.2 尺寸随立绘缩放同步：43×48（0.892×）
                 el.style.cssText = 'position:absolute;width:43px;height:48px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);';
@@ -2015,7 +2017,8 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                             Math.abs(e.row - this.row) <= 1 && Math.abs(e.x - this.x) < 120
                         );
                         for (let z of zombies) {
-                            z.takeDamage(1800, { bomb: true, oneshot: true });
+                            // v3.65.0 砸罐子特权：爆炸弹跳（窝瓜+樱桃）在砸罐子同样全灭圈内僵尸
+                            z.takeDamage(1800, { bomb: true, oneshot: true, obliterate: this.game.vaseMode });
                         }
                         const boom = document.createElement('img');
                         boom.src = 'assets/images/Plants/CherryBomb/Boom.gif';
@@ -2031,7 +2034,7 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                                 e instanceof Zombie && !e.isDead && e.state !== 'DYING' &&
                                 Math.abs(e.row - this.row) <= 1 && Math.abs(e.x - this.x) < 120
                             );
-                            for (const z of zs2) z.takeDamage(1800, { bomb: true, oneshot: true });
+                            for (const z of zs2) z.takeDamage(1800, { bomb: true, oneshot: true, obliterate: this.game.vaseMode });
                             const boom2 = document.createElement('img');
                             boom2.src = 'assets/images/Plants/CherryBomb/Boom.gif';
                             boom2.style.cssText = 'position:absolute;pointer-events:none;z-index:3000;' +
@@ -2041,11 +2044,12 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                             if (this.game.showUltimateNotice) this.game.showUltimateNotice('ult_boomsquash', '💥 爆炸弹跳引发了连环爆炸！', '#ff9f43');
                         }, 600);
                     } else {
-                        const zombies = this.game.entities.filter(e => 
+                        const zombies = this.game.entities.filter(e =>
                             e instanceof Zombie && e.row === this.row && Math.abs(e.x - this.x) < 60 && !e.isDead && e.state !== 'DYING'
                         );
                         for (let z of zombies) {
-                            z.takeDamage(1800, { oneshot: true }); // 窝瓜压扁：一次性植物秒杀巨人
+                            // v3.65.0 砸罐子特权：倭瓜压扁无视种类与血量（冰车等高血量也照压死）
+                            z.takeDamage(1800, { oneshot: true, obliterate: this.game.vaseMode }); // 窝瓜压扁：一次性植物秒杀巨人
                         }
                     }
 
@@ -2076,7 +2080,8 @@ let isHybridSun = this.hasTrait('peashooter') || this.hasTrait('snowpea') || thi
                             e instanceof Zombie && e.row === this.row && !e.isDead && e.state !== 'DYING'
                         );
                         for (let z of zombies) {
-                            z.takeDamage(1800, { bomb: true, oneshot: true });
+                            // v3.65.0 砸罐子特权：烈焰地雷（辣椒家族）整行灼烧同样全灭
+                            z.takeDamage(1800, { bomb: true, oneshot: true, obliterate: this.game.vaseMode });
                         }
                         const b = this.game.board;
                         const strip = document.createElement('img');

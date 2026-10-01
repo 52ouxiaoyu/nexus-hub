@@ -1130,6 +1130,13 @@ class Zombie extends Entity {
         // 友方（被魅惑）僵尸免疫我方植物/子弹/爆炸的一切伤害，
         // 只能被敌方僵尸肉搏杀死（FIGHTING 直接扣血）
         if (this.hypnotized) return;
+        // v3.65.0 秒杀特权：砸罐子一次性植物（毁灭菇/倭瓜/樱桃炸弹/火爆辣椒）与玉米加农炮炮弹
+        // 无视僵尸种类/护甲/血量直接击杀（含寒冰头的炸弹免疫、冰车等高血量坦克）
+        if (opts && opts.obliterate) {
+            this.hp = 0;
+            this.armorHp = 0;
+            return;
+        }
         // v3.23.0：寒冰头僵尸免疫一次性炸弹（普通子弹与地刺/钢地刺仍可伤害它）
         if (this.type === 'snowpeahead' && opts && opts.bomb) return;
         // v3.14.0：《我是僵尸》里 橄榄球/铁门/冰车 可以硬扛 3 次一次性炸弹引爆
