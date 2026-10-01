@@ -67,6 +67,12 @@ const fetchViaProxy = async (base: string, url: string) => {
 // Helper to fetch with multi-level proxy chain:
 // custom proxy -> last working proxy -> CF cloud proxy -> local proxy -> public fallbacks
 const fetchWithProxy = async (url: string) => {
+  // Same-origin resources load directly, no proxy needed
+  if (isSameOrigin(url)) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return parseRelaxedJSON(await res.text());
+  }
   const custom = localStorage.getItem('tvbox_custom_proxy') || '';
   const bases: string[] = [];
   [custom, workingProxy, PROXY_URL, LOCAL_PROXY, ...FALLBACK_PROXIES].forEach(b => {
@@ -106,15 +112,17 @@ const parseRelaxedJSON = (text: string) => {
 };
 
 const buildApiUrl = (api: string, params: Record<string, string>) => {
+  // Resolve against current origin so relative APIs (e.g. "/proxy?url=...") keep their query string
+  const url = new URL(api, window.location.origin);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  return url.toString();
+};
+
+// Same-origin requests (e.g. bundled config / /proxy based sites) need no CORS proxy
+const isSameOrigin = (url: string) => {
   try {
-    const url = new URL(api);
-    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return url.toString();
-  } catch {
-    const base = api.split('?')[0];
-    const query = new URLSearchParams(params).toString();
-    return `${base}?${query}`;
-  }
+    return new URL(url, window.location.origin).origin === window.location.origin;
+  } catch { return false; }
 };
 
 function App() {
@@ -125,8 +133,8 @@ function App() {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) return parsed;
       }
-      return ['http://tv.nxog.top'];
-    } catch { return ['http://tv.nxog.top']; }
+      return ['./config.json'];
+    } catch { return ['./config.json']; }
   });
   const [configUrl, setConfigUrl] = useState<string>(() => {
     return localStorage.getItem('tvbox_last_config') || savedConfigs[0] || '';
