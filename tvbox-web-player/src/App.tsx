@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Settings2, Film, ChevronLeft, Play, Search, Network } from 'lucide-react';
 import { HlsPlayer } from './HlsPlayer';
 
@@ -187,6 +187,73 @@ const isSameOrigin = (url: string) => {
   try {
     return new URL(url, window.location.origin).origin === window.location.origin;
   } catch { return false; }
+};
+
+// Poster with skeleton placeholder + multi-hop retry chain (direct -> CF proxy A -> CF
+// proxy B) + periodic background refresh: failed posters retry the whole chain after a
+// delay (up to 3 rounds), so they pop in automatically once the network recovers.
+const PosterImg: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
+  const [cycle, setCycle] = useState(0); // retry round
+  const [idx, setIdx] = useState(0);     // hop within the chain
+  const [loaded, setLoaded] = useState(false);
+  const timer = useRef<number | null>(null);
+
+  const chain = useMemo(() => src ? [
+    src,
+    '/proxy?url=' + encodeURIComponent(src),
+    '/api/proxy?url=' + encodeURIComponent(src)
+  ] : [], [src]);
+
+  useEffect(() => {
+    setCycle(0);
+    setIdx(0);
+    setLoaded(false);
+    return () => { if (timer.current) window.clearTimeout(timer.current); };
+  }, [src]);
+
+  const exhausted = chain.length === 0 || cycle >= 3;
+  const currentSrc = exhausted ? '' : chain[idx];
+
+  const handleError = () => {
+    if (idx + 1 < chain.length) {
+      setIdx(idx + 1);
+    } else if (cycle < 2) {
+      // Whole chain failed: back off, then retry from the top (network may recover)
+      if (timer.current) window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(() => {
+        setCycle(c => c + 1);
+        setIdx(0);
+      }, 6000 + cycle * 6000);
+    }
+    // Final failure: keep showing the skeleton (never a broken image)
+  };
+
+  const skeleton = (
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', background: 'linear-gradient(135deg, rgba(148,163,184,0.18), rgba(148,163,184,0.05))', color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.3, padding: '8px', textAlign: 'center' }}>
+      <Film size={20} />
+      <span style={{ overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', wordBreak: 'break-all' }}>{alt}</span>
+    </div>
+  );
+
+  if (!src) return skeleton;
+
+  return (
+    <>
+      {!loaded && skeleton}
+      {currentSrc && (
+        <img
+          key={currentSrc}
+          src={currentSrc}
+          alt={alt}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onLoad={() => setLoaded(true)}
+          onError={handleError}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s', background: 'var(--glass-border)' }}
+        />
+      )}
+    </>
+  );
 };
 
 function App() {
@@ -766,22 +833,7 @@ function App() {
                           style={{ cursor: 'pointer' }}
                         >
                           <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '8px', overflow: 'hidden', position: 'relative', marginBottom: '8px' }}>
-                            <img
-                              src={video.vod_pic}
-                              alt={video.vod_name}
-                              referrerPolicy="no-referrer"
-                              style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s', background: 'var(--glass-border)' }}
-                              onError={(e) => {
-                                // Retry via proxy (bypasses hotlink/referer checks), then hide gracefully
-                                const img = e.currentTarget;
-                                if (!img.dataset.fb && video.vod_pic) {
-                                  img.dataset.fb = '1';
-                                  img.src = '/proxy?url=' + encodeURIComponent(video.vod_pic);
-                                } else {
-                                  img.style.visibility = 'hidden';
-                                }
-                              }}
-                            />
+                            <PosterImg src={video.vod_pic} alt={video.vod_name} />
                             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '8px', background: 'linear-gradient(transparent, rgba(0,0,0,0.8))', fontSize: '12px', color: '#fff' }}>
                               {video.vod_remarks}
                             </div>
