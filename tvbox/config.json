@@ -129,8 +129,8 @@
   ],
   "lives": [
     {
-      "name": "央视卫视(饭太硬)",
-      "url": "https://live.fanmingming.com/tv/m3u/ipv6.m3u"
+      "name": "央视卫视(vbskycn)",
+      "url": "https://raw.githubusercontent.com/vbskycn/iptv/master/tv/iptv4.m3u"
     },
     {
       "name": "中国频道(iptv-org)",

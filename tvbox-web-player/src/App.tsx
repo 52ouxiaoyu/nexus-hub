@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Settings2, Film, ChevronLeft, Play, Search, Network } from 'lucide-react';
 import { HlsPlayer } from './HlsPlayer';
 
@@ -13,6 +13,8 @@ interface Site {
 interface LiveChannel {
   name: string;
   url: string;
+  // Same-name channels from multiple sources get merged into one entry with backup URLs
+  urls?: string[];
   group: string;
   logo: string;
 }
@@ -133,6 +135,21 @@ const parseM3U = (text: string): LiveChannel[] => {
   return out;
 };
 
+// Merge same-name channels (m3u lists often carry several URLs per channel from
+// different CDNs/ISPs) into one entry with ordered backup URLs
+const mergeChannelSources = (channels: LiveChannel[]): LiveChannel[] => {
+  const map = new Map<string, LiveChannel>();
+  for (const c of channels) {
+    const ex = map.get(c.group + '|' + c.name);
+    if (ex) {
+      if (!ex.urls!.includes(c.url)) ex.urls!.push(c.url);
+    } else {
+      map.set(c.group + '|' + c.name, { ...c, urls: [c.url] });
+    }
+  }
+  return [...map.values()];
+};
+
 // Helper to parse relaxed JSON (TVBox configs often have // comments)
 const parseRelaxedJSON = (text: string) => {
   const clean = text.replace(/\\"|"(?:\\"|[^"])*"|(\/\/.*|\/\*[\s\S]*?\*\/)/g, (m, g) => g ? "" : m);
@@ -202,6 +219,10 @@ function App() {
     } catch { return null; }
   });
   const [liveChannels, setLiveChannels] = useState<LiveChannel[]>([]);
+  // Live playback candidates: (stream URL x proxy base) pairs, auto-failover in order
+  const [liveCands, setLiveCands] = useState<{ url: string; proxy: string }[]>([]);
+  const [liveIdx, setLiveIdx] = useState(0);
+  const [liveFailMsg, setLiveFailMsg] = useState('');
   // null = normal browse mode; array = global search mode (results aggregated from all sites)
   const [searchResults, setSearchResults] = useState<SearchItem[] | null>(null);
   const [searchProgress, setSearchProgress] = useState({ done: 0, total: 0 });
@@ -302,9 +323,9 @@ function App() {
     setLoading(true);
     try {
       if (site.live) {
-        // Live site: parse m3u playlist, group by channel category
+        // Live site: parse m3u playlist, merge same-name backup sources, group by category
         const text = await fetchWithProxy(site.api, true);
-        const channels = parseM3U(text);
+        const channels = mergeChannelSources(parseM3U(text));
         setLiveChannels(channels);
         const groups = [...new Set(channels.map(c => c.group))];
         setCategories(groups.map(g => ({ type_id: g, type_name: `${g} (${channels.filter(c => c.group === g).length})` })));
@@ -423,9 +444,22 @@ function App() {
     setLoading(true);
     try {
       if (site.live) {
-        // Live channel: play directly, no detail API needed
+        // Live channel: build candidate chain (each backup URL x each proxy base),
+        // hls.js will auto-failover through them on fatal errors
         const ch = liveChannels[Number(vod_id)];
         if (ch) {
+          const urls = ch.urls && ch.urls.length ? ch.urls : [ch.url];
+          const proxies = [getPreferredProxy(), PROXY_URL, LOCAL_PROXY]
+            .filter(Boolean)
+            .filter((v, i, a) => a.indexOf(v) === i);
+          const cands: { url: string; proxy: string }[] = [];
+          for (const u of urls) {
+            for (const p of proxies) cands.push({ url: u, proxy: p });
+          }
+          setLiveCands(cands);
+          liveIdxRef.current = 0;
+          setLiveIdx(0);
+          setLiveFailMsg('');
           setActiveVideo({
             vod_id,
             vod_name: ch.name,
@@ -472,6 +506,20 @@ function App() {
       alert('获取视频详情失败，此线路可能不兼容网页版(如 XML 格式)。');
     }
     setLoading(false);
+  };
+
+  // Live failover: advance to the next (URL x proxy) candidate on fatal stream error
+  const liveCandsRef = useRef(liveCands);
+  liveCandsRef.current = liveCands;
+  const liveIdxRef = useRef(0);
+  const tryNextLiveCandidate = () => {
+    const next = liveIdxRef.current + 1;
+    if (next < liveCandsRef.current.length) {
+      liveIdxRef.current = next;
+      setLiveIdx(next);
+    } else {
+      setLiveFailMsg('该频道的所有备源与代理组合均无法播放，请尝试其他频道。');
+    }
   };
 
   return (
@@ -600,9 +648,10 @@ function App() {
               <div style={{ width: '100%', aspectRatio: '16/9', background: '#000', borderRadius: '8px', overflow: 'hidden', marginBottom: '24px' }}>
                 {playingUrl ? (
                   <HlsPlayer
-                    src={playingUrl}
+                    src={activeSite?.live ? (liveCands[liveIdx]?.url || '') : playingUrl}
                     proxyAll={!!activeSite?.live}
-                    proxyUrl={getPreferredProxy()}
+                    proxyUrl={activeSite?.live ? (liveCands[liveIdx]?.proxy || PROXY_URL) : getPreferredProxy()}
+                    onFatal={activeSite?.live ? tryNextLiveCandidate : undefined}
                     initialTime={history?.playUrl === playingUrl ? history.time : 0}
                     onTimeUpdate={handleTimeUpdate}
                   />
@@ -612,7 +661,13 @@ function App() {
                   </div>
                 )}
               </div>
-              
+
+              {activeSite?.live && liveCands.length > 0 && (
+                <div style={{ color: liveFailMsg ? '#fca5a5' : 'var(--text-muted)', fontSize: '13px', marginBottom: '12px' }}>
+                  {liveFailMsg || `正在通过备源 ${liveIdx + 1}/${liveCands.length} 播放（失败自动切换）`}
+                </div>
+              )}
+
               <h2>{activeVideo.vod_name}</h2>
               <p style={{ color: 'var(--text-muted)', marginTop: '8px' }} dangerouslySetInnerHTML={{ __html: activeVideo.vod_remarks || '暂无简介' }} />
               

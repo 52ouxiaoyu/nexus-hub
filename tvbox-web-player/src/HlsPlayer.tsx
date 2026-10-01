@@ -7,16 +7,20 @@ interface HlsPlayerProps {
   proxyUrl?: string;
   initialTime?: number;
   onTimeUpdate?: (time: number) => void;
+  // Live mode: called once on fatal stream error so the parent can switch to the next candidate
+  onFatal?: () => void;
 }
 
-export const HlsPlayer: React.FC<HlsPlayerProps> = ({ src, proxyAll, proxyUrl, initialTime, onTimeUpdate }) => {
+export const HlsPlayer: React.FC<HlsPlayerProps> = ({ src, proxyAll, proxyUrl, initialTime, onTimeUpdate, onFatal }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [codecError, setCodecError] = useState('');
+  const fatalHandled = useRef(false);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
     setCodecError('');
+    fatalHandled.current = false;
 
     let hls: Hls | null = null;
     const isMp4 = src.toLowerCase().includes('.mp4');
@@ -58,7 +62,14 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({ src, proxyAll, proxyUrl, i
         video.play().catch(e => console.log('Auto-play prevented:', e));
       });
       hls.on(Hls.Events.ERROR, (_event, data) => {
-        if (data.fatal) {
+        if (!data.fatal) return;
+        if (onFatal) {
+          // Live mode: let the parent advance to the next (URL x proxy) candidate
+          if (!fatalHandled.current) {
+            fatalHandled.current = true;
+            onFatal();
+          }
+        } else {
           console.warn('HLS error, trying native playback...');
           video.src = src;
         }
@@ -78,7 +89,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({ src, proxyAll, proxyUrl, i
         hls.destroy();
       }
     };
-  }, [src]);
+  }, [src, proxyAll, proxyUrl]);
 
   useEffect(() => {
     const video = videoRef.current;
