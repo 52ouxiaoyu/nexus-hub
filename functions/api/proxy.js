@@ -6,6 +6,10 @@ export async function onRequest(context) {
     return new Response('Missing url parameter', { status: 400 });
   }
 
+  if (!/^https?:\/\//i.test(targetUrl)) {
+    return new Response('Invalid url parameter', { status: 400 });
+  }
+
   try {
     const fetchRes = await fetch(targetUrl, {
       headers: {

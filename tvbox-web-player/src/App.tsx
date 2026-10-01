@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings2, Film, ChevronLeft, Play, Search } from 'lucide-react';
+import { Settings2, Film, ChevronLeft, Play, Search, Network } from 'lucide-react';
 import { HlsPlayer } from './HlsPlayer';
 
 interface Site {
@@ -34,7 +34,59 @@ interface PlaybackHistory {
 }
 
 const PROXY_URL = '/api/proxy?url=';
-const FALLBACK_PROXY = 'https://api.allorigins.win/raw?url=';
+const LOCAL_PROXY = 'http://localhost:8080/api/proxy?url=';
+const FALLBACK_PROXIES = [
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.io/?url='
+];
+
+// Cache of the last proxy that actually worked, so we try it first next time
+let workingProxy = localStorage.getItem('tvbox_working_proxy') || '';
+
+const proxyName = (base: string) => {
+  if (base === PROXY_URL) return '云端代理';
+  if (base.includes('localhost')) return '本地代理';
+  if (base.includes('allorigins')) return '兜底代理A';
+  if (base.includes('corsproxy')) return '兜底代理B';
+  return base.split('?')[0].slice(0, 40);
+};
+
+const fetchViaProxy = async (base: string, url: string) => {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    const res = await fetch(base + encodeURIComponent(url), { signal: ctrl.signal });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    return parseRelaxedJSON(text);
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+// Helper to fetch with multi-level proxy chain:
+// custom proxy -> last working proxy -> CF cloud proxy -> local proxy -> public fallbacks
+const fetchWithProxy = async (url: string) => {
+  const custom = localStorage.getItem('tvbox_custom_proxy') || '';
+  const bases: string[] = [];
+  [custom, workingProxy, PROXY_URL, LOCAL_PROXY, ...FALLBACK_PROXIES].forEach(b => {
+    if (b && !bases.includes(b)) bases.push(b);
+  });
+  const errors: string[] = [];
+  for (const base of bases) {
+    try {
+      const data = await fetchViaProxy(base, url);
+      if (workingProxy !== base) {
+        workingProxy = base;
+        localStorage.setItem('tvbox_working_proxy', base);
+      }
+      return data;
+    } catch (e: any) {
+      errors.push(proxyName(base) + '：' + (e?.name === 'AbortError' ? '超时' : (e?.message || '失败')));
+    }
+  }
+  throw new Error(errors.join('；'));
+};
 
 // Helper to parse relaxed JSON (TVBox configs often have // comments)
 const parseRelaxedJSON = (text: string) => {
@@ -50,24 +102,6 @@ const parseRelaxedJSON = (text: string) => {
       // Last resort fallback for completely malformed JSON from TVBox sources
       return new Function('return ' + noTrailing)();
     }
-  }
-};
-
-// Helper to fetch with fallback
-const fetchWithProxy = async (url: string) => {
-  try {
-    const res = await fetch(PROXY_URL + encodeURIComponent(url));
-    if (!res.ok) throw new Error('Primary proxy failed with status ' + res.status);
-    const text = await res.text();
-    // Try parsing. If it's an actual HTML block page, parseRelaxedJSON will throw,
-    // and we will automatically fall back to the public proxy.
-    return parseRelaxedJSON(text);
-  } catch (e) {
-    console.warn('Falling back to public proxy...', e);
-    const fallbackRes = await fetch(FALLBACK_PROXY + encodeURIComponent(url));
-    if (!fallbackRes.ok) throw new Error('Fallback proxy failed');
-    const text = await fallbackRes.text();
-    return parseRelaxedJSON(text);
   }
 };
 
@@ -152,8 +186,17 @@ function App() {
       }
       localStorage.setItem('tvbox_last_config', urlToLoad);
       setConfigUrl(urlToLoad);
-    } catch (e) {
-      alert('加载配置失败，可能是该线路屏蔽了海外云节点，请检查网络或更换其他线路（如：饭太硬/王二小）');
+    } catch (e: any) {
+      const detail = e?.message || '';
+      alert(
+        '加载配置失败。\n\n' +
+        (detail ? '已依次尝试 → ' + detail + '\n\n' : '') +
+        '常见原因：\n' +
+        '① 该线路屏蔽了海外 IP（云端代理部署在 CF 海外节点上）\n' +
+        '② 本地代理未启动：双击桌面"启动TVBox播放器.command"后重试\n' +
+        '③ 接口地址已失效，可更换其他线路（如：饭太硬/王二小）\n\n' +
+        '也可以点击顶部"代理"按钮配置自定义代理地址。'
+      );
     }
     setLoading(false);
   };
@@ -306,6 +349,29 @@ function App() {
         <div className="header-buttons">
           <button className="btn primary" onClick={() => loadConfig(configUrl)} disabled={loading}>
             <Settings2 size={16} /> 刷新
+          </button>
+          <button
+            className="btn"
+            title="配置自定义代理（留空恢复自动）"
+            onClick={() => {
+              const cur = localStorage.getItem('tvbox_custom_proxy') || '';
+              const input = prompt(
+                '自定义代理地址（留空恢复默认自动）：\n例如：http://localhost:8080/api/proxy?url=\n\n说明：本地代理走家庭宽带国内 IP，不会被线路屏蔽，最稳定；云端代理在 CF 海外节点，部分线路会拒绝。',
+                cur
+              );
+              if (input !== null) {
+                if (input.trim()) {
+                  localStorage.setItem('tvbox_custom_proxy', input.trim());
+                } else {
+                  localStorage.removeItem('tvbox_custom_proxy');
+                }
+                localStorage.removeItem('tvbox_working_proxy');
+                workingProxy = '';
+                loadConfig(configUrl);
+              }
+            }}
+          >
+            <Network size={16} /> 代理
           </button>
           <button className="btn" onClick={deleteConfig} disabled={!configUrl || savedConfigs.length === 0}>
             删除

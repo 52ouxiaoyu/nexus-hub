@@ -1,0 +1,49 @@
+{
+  "sites": [
+    {
+      "key": "lzzy",
+      "name": "量子高清",
+      "type": 1,
+      "api": "/proxy?url=https://cj.lziapi.com/api.php/provide/vod/at/json/",
+      "searchable": 1,
+      "quickSearch": 1,
+      "filterable": 0
+    },
+    {
+      "key": "ffzy",
+      "name": "非凡高清",
+      "type": 1,
+      "api": "/proxy?url=https://cj.ffzyapi.com/api.php/provide/vod/at/json/",
+      "searchable": 1,
+      "quickSearch": 1,
+      "filterable": 0
+    },
+    {
+      "key": "snzy",
+      "name": "索尼高清",
+      "type": 1,
+      "api": "/proxy?url=https://suoniapi.com/api.php/provide/vod/at/json/",
+      "searchable": 1,
+      "quickSearch": 1,
+      "filterable": 0
+    },
+    {
+      "key": "bdzy",
+      "name": "百度资源",
+      "type": 1,
+      "api": "/proxy?url=https://api.apibdzy.com/api.php/provide/vod/at/json/",
+      "searchable": 1,
+      "quickSearch": 1,
+      "filterable": 0
+    },
+    {
+      "key": "wlm3u8",
+      "name": "卧龙资源",
+      "type": 1,
+      "api": "/proxy?url=https://collect.vod360.net/api.php/provide/vod/at/json/",
+      "searchable": 1,
+      "quickSearch": 1,
+      "filterable": 0
+    }
+  ]
+}
