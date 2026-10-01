@@ -4,7 +4,7 @@
  * 双人对战俄罗斯方块 · 道具攻防系统
  * ============================================================ */
 
-const VERSION = 'v1.5.0';
+const VERSION = 'v1.5.1';
 const COLS = 10, ROWS = 20, CELL = 30;
 const MAX_CHARGE = 10;          // 必杀充能
 const ITEM_SLOTS = 3;           // 道具栏格数
@@ -670,12 +670,13 @@ class Player {
 }
 
 // ---------- AI 难度 ----------
-// actInterval: 每步操作间隔（越小越快）; itemChance: 主动用攻击道具概率; planNoise: 落点评分噪声（越大越菜）
+// actInterval: 每步操作间隔（越小越快）; react: 每个新方块的"反应时间"; itemChance: 主动用攻击道具概率; planNoise: 落点评分噪声（越大越菜）
+// 速度基准：保证地狱级单块落定 ≈ 0.6~0.9 秒（人类极限手速，绝不快于按住下键硬降的可能节奏）
 const AI_LEVELS = {
-    1: { name: '初级',   actInterval: 420, itemChance: 0.10, planNoise: 300 },
-    2: { name: '中级',   actInterval: 220, itemChance: 0.22, planNoise: 110 },
-    3: { name: '高级',   actInterval: 110, itemChance: 0.35, planNoise: 30 },
-    4: { name: '地狱级', actInterval: 60,  itemChance: 0.50, planNoise: 0 },
+    1: { name: '初级',   actInterval: 420, react: 400, itemChance: 0.10, planNoise: 300 },
+    2: { name: '中级',   actInterval: 260, react: 250, itemChance: 0.22, planNoise: 110 },
+    3: { name: '高级',   actInterval: 160, react: 150, itemChance: 0.35, planNoise: 30 },
+    4: { name: '地狱级', actInterval: 120, react: 100, itemChance: 0.50, planNoise: 0 },
 };
 
 // ---------- 简单 AI ----------
@@ -772,6 +773,7 @@ const AI = {
         if (!p.plan || p.planSpawn !== p.spawnId) {
             p.plan = this.plan(p, cfg.planNoise);
             p.planSpawn = p.spawnId;
+            this.actTimer = -(cfg.react || 0);   // 新方块先"反应"一下再动手，人类不可能零延迟
             if (!p.plan) { p.hardDrop(); return; }
         }
         const pl = p.plan;
