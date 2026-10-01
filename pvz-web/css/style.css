@@ -134,7 +134,7 @@ body {
 #seed-bank {
     display: flex;
     flex-wrap: wrap;        /* 关键：选满 10 张时换行显示,避免被横滚遮挡导致玩家误以为"卡消失" */
-    gap: 5px;
+    gap: 9px;               /* v3.66.0：5→9px，卡片外圈 2px 黑边后相邻不粘连 */
     flex: 1 1 0;            /* 吃掉全部剩余宽度 */
     min-width: 0;           /* 允许收窄,配合 flex-wrap 换行 */
     overflow-x: hidden;     /* 换行后无需横向滚动 */
@@ -144,9 +144,6 @@ body {
     background-size: cover;
     padding: 5px 10px;
     border-radius: 5px;
-    /* v3.64.0：物品栏黑圈正解（用户澄清）——黑圈围在"选植物的种子栏"外围一圈，
-       而非只圈在单张卡上；经典/融合/砸罐子共用此栏，一处生效 */
-    box-shadow: 0 0 0 2px #000;
 }
 /* Custom scrollbar for seed bank */
 #seed-bank::-webkit-scrollbar {
@@ -166,8 +163,9 @@ body {
     overflow: hidden;
     background-size: 100% 200%;
     background-position: top;
-    /* v3.62.0：物品栏外框统一——无论卡面自带什么颜色（黑/白/绿）的框，最外圈一律压一圈黑边 */
-    box-shadow: inset 0 0 0 2px #000, 1px 1px 3px rgba(0,0,0,0.5);
+    /* v3.66.0：黑圈画在每张卡片外面（外扩环，木纹背景上清晰圈出每株植物的位置）——
+       用户澄清 v3.62 的 inset 内缘圈贴着卡面不明显、v3.64 的整栏外圈不是本意 */
+    box-shadow: 0 0 0 2px #000, 1px 1px 3px rgba(0,0,0,0.5);
     border-radius: 4px;
 }
 
@@ -178,9 +176,9 @@ body {
 
 /* 砸罐子：植物罐砸出的免费一次性植物卡 */
 .seed-card.vase-free-card {
-    box-shadow: inset 0 0 0 2px #000, 0 0 6px 1px rgba(255, 220, 120, 0.95), 1px 1px 3px rgba(0,0,0,0.5);
+    box-shadow: 0 0 0 2px #000, 0 0 6px 1px rgba(255, 220, 120, 0.95), 1px 1px 3px rgba(0,0,0,0.5);
     outline: 1px solid rgba(255, 200, 60, 0.8);
-    outline-offset: 1px;
+    outline-offset: 3px;
 }
 .seed-card.vase-free-card:hover {
     filter: brightness(1.15);
@@ -189,8 +187,8 @@ body {
 /* 砸罐子：路灯花商店卡（种子栏首位常驻, 点击=花 75 阳光购买） */
 .seed-card.plantern-shop-card {
     outline: 2px solid #ffd54a;
-    outline-offset: 1px;
-    box-shadow: inset 0 0 0 2px #000, 0 0 8px 1px rgba(255, 213, 74, 0.7), 1px 1px 3px rgba(0,0,0,0.5);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 2px #000, 0 0 8px 1px rgba(255, 213, 74, 0.7), 1px 1px 3px rgba(0,0,0,0.5);
 }
 .seed-card.plantern-shop-card:hover {
     filter: brightness(1.2);
