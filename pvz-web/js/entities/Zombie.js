@@ -181,7 +181,10 @@ class Zombie extends Entity {
         } else if (type === 'screendoor') {
             // v3.14.0：《我是僵尸》里 铁门(1450) > 橄榄球(1300) = 铁桶(1300)；其它模式原版数值
             // v3.56.0：铁门血量 = 4 只铁桶（用户：把铁板门的血量调高，调为 4 只铁桶僵尸的血量）
+            // v3.76.0：拆分"门血/本体血"——血池 5200 里本体只占普通僵尸的 200，
+            //          西瓜/大喷菇/忧郁菇等 pierce 命中直接穿门打本体（见 takeDamage），本体 200 打穿即死
             this.hp = this.game.zombieMode ? 1450 : 5200; this.maxHp = this.hp;
+            this._bodyHp = 200; this._bodyMax = 200;
             this.element.src = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombie.gif';
             this.walkSrc = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombie.gif';
             this.attackSrc = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombieAttack.gif';
@@ -1337,6 +1340,14 @@ class Zombie extends Entity {
         if (this.armorHp === null || this.armorHp === undefined) this.armorHp = this.hp + amount;
         this.hp -= amount;
         if (!(opts && opts.pierce)) this.armorHp -= amount;
+        // ===== v3.76.0 铁门穿透 =====
+        // 西瓜/大喷菇/忧郁菇等 pierce 弹打铁门僵尸 = 直接打本体（普通僵尸的 200 血），
+        // 门那 5000 点额外血量被整个无视；本体打穿立刻判死（hp=0）。
+        // 非 pierce 伤害照旧磨整池（门挡在前面吃表面伤害）。
+        if (opts && opts.pierce && this._bodyMax) {
+            this._bodyHp -= amount;
+            if (this._bodyHp <= 0) this.hp = 0;
+        }
         // ===== v3.74.0 大蒜僵尸：每被打 4 次被辣得跳到相邻一行（大蒜机制的僵尸版）=====
         if (this.type === 'garliczombie' && this.hp > 0 && this.state !== 'DYING' && !this.hypnotized) {
             this._garlicHits++;

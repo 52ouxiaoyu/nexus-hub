@@ -34,6 +34,8 @@ class CollisionManager {
                             const pierce = p.type === 'cabbage' || p.type === 'icecabbage'
                                         || p.type === 'kernel' || p.type === 'popcorn' || p.type === 'icekernel'
                                         || p.type === 'butter'
+                                        || p.type === 'melon' || p.type === 'wintermelon'                    // v3.76.0：西瓜/冰西瓜穿铁门
+                                        || p.type === 'cattail_melon' || p.type === 'cattail_wintermelon'    // v3.76.0：猫尾西瓜同档
                                         || p.type === 'scaredyshroom' // v3.14.0：胆小菇孢子穿门
                                         || p.type === 'fume_burst';   // v3.26.0：大喷菇弹幕穿门
                             z.takeDamage(p.damage, pierce ? { pierce: true } : undefined);
@@ -55,7 +57,7 @@ class CollisionManager {
                                 const allZombies = this.game.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
                                 for (let oz of allZombies) {
                                     if (oz !== z && Math.abs(oz.row - z.row) <= 1 && Math.abs(oz.x - z.x) < 120) {
-                                        oz.takeDamage(p.damage / 2);
+                                        oz.takeDamage(p.damage / 2, { pierce: true }); // v3.76.0：西瓜溅射同穿铁门
                                         if (p.ignite && oz.setBurn) oz.setBurn(3, 25);
                                         if (p.type === 'wintermelon' || p.type === 'cattail_wintermelon') {
                                             oz.setSlow(10.0);
