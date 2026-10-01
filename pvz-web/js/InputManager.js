@@ -251,7 +251,7 @@ class InputManager {
             // v3.26.0 植物盲盒：拖拽图改回"盲盒图案"（红丝带礼盒）——用户明确盲盒≠问号罐
             // v3.35.0：礼盒重画为宽幅构图，拖拽幽灵同步改宽尺寸
             if (type === 'plantbox') {
-                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1790767339')";
+                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1790823894')";
                 this.dragGhost.style.width = '68px';
                 this.dragGhost.style.height = '50px';
                 this.dragGhost.style.backgroundSize = 'contain';
@@ -263,8 +263,8 @@ class InputManager {
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1790767339`
-                : `assets/images/Plants/${imgName}.gif?v=1790767339`;
+                ? `assets/images/Plants/${imgName}.png?v=1790823894`
+                : `assets/images/Plants/${imgName}.gif?v=1790823894`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
 
             // v3.20.0：倭瓜立绘画布 100×226（身体只占底部 68×82），60×60 contain 后
@@ -274,14 +274,6 @@ class InputManager {
                 this.dragGhost.style.height = '85px';
                 this.dragGhost.style.backgroundSize = '100px 226px';
                 this.dragGhost.style.backgroundPosition = 'center bottom';
-            } else if (type === 'melonpult' || type === 'wintermelon') {
-                // v3.60.0：西瓜投手/冰西瓜投手拖拽图上移（用户反馈"西瓜不在鼠标上，在鼠标偏下"）——
-                // 素材 96×96 里株体（叶脸）集中在画布下半，60×60 居中会让脸垂在光标下方。
-                // 改为 60×85 框 + 贴图置顶：框中心=光标，株体脸恰好落在光标上。
-                this.dragGhost.style.width = '60px';
-                this.dragGhost.style.height = '85px';
-                this.dragGhost.style.backgroundSize = '60px 60px';
-                this.dragGhost.style.backgroundPosition = 'center top';
             } else {
                 this.dragGhost.style.width = '60px';
                 this.dragGhost.style.height = '60px';
