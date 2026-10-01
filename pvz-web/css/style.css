@@ -703,3 +703,20 @@ body {
 }
 #seed-warn-overlay .seed-warn-btns button:hover { filter: brightness(1.15); }
 #seed-warn-overlay .seed-warn-btns button:active { transform: translateY(2px); box-shadow: 0 1px 0 #241708; }
+
+/* ===== v3.63.0 砸罐子挥锤动画：直杆木锤在罐子上方抡起劈下（锤头落罐心+回弹），播完由 JS 淡出移除 ===== */
+@keyframes vase-hammer-swing {
+    0%   { transform: rotate(-60deg); }   /* 抡起（锤头在握点左上） */
+    55%  { transform: rotate(-172deg); }  /* 劈中（锤头落到罐心上） */
+    70%  { transform: rotate(-152deg); }  /* 回弹 */
+    85%  { transform: rotate(-174deg); }
+    100% { transform: rotate(-172deg); }
+}
+.vase-hammer-swing {
+    position: absolute;
+    width: 44px;
+    height: 76px;
+    transform-origin: 50% 95%; /* 柄底握点为轴 */
+    animation: vase-hammer-swing 0.3s ease-in forwards;
+    pointer-events: none;
+}

@@ -65,9 +65,15 @@ class InputManager {
         document.addEventListener('mousemove', (e) => {
             // v3.55.0：砸罐子锤子光标只在未砸罐子上出现（用户指定；修复"种植后锤子消失"——
             // 旧版全场锤子被点卡片/铲子路径的 cursor='default' 重置后再也回不来）
+            // v3.63.0：暂停中 / 选卡·开始菜单·融合图鉴打开时不出锤子光标（与点击守卫配套）
             if (this.game.vaseMode) {
                 let cur = 'default';
-                if (!this.selectedSeed && !this.isShovelSelected && !this.game.isGloveDragging) {
+                const blocked = this.game.paused ||
+                    ['seed-chooser', 'start-menu', 'recipe-modal'].some((id) => {
+                        const el = document.getElementById(id);
+                        return !!el && el.style.display !== 'none' && el.style.display !== '';
+                    });
+                if (!blocked && !this.selectedSeed && !this.isShovelSelected && !this.game.isGloveDragging) {
                     const rect = this.container.getBoundingClientRect();
                     const scale = window.gameScale || 1;
                     const gp = this.game.board.getGridPos(
@@ -91,6 +97,15 @@ class InputManager {
         });
         
         this.container.addEventListener('mouseup', (e) => {
+            // v3.63.0：暂停中 / 选卡界面·开始菜单·融合图鉴打开时，一切点击不生效。
+            // 旧 bug：暂停遮罩与配方书弹窗都挂在 container 里，mouseup 冒泡上来，
+            // "点遮罩恢复暂停/翻配方书"的那一下就把指位上的罐子砸破了（用户实测复现）。
+            if (this.game.paused) return;
+            const overlayOpen = (id) => {
+                const el = document.getElementById(id);
+                return !!el && el.style.display !== 'none' && el.style.display !== '';
+            };
+            if (overlayOpen('seed-chooser') || overlayOpen('start-menu') || overlayOpen('recipe-modal')) return;
             // ===== 我是僵尸模式：点草坪行 = 在该行最右释放选中的僵尸（v3.7.0）=====
             if (this.game.zombieMode) {
                 const rect = this.container.getBoundingClientRect();
@@ -154,6 +169,7 @@ class InputManager {
                         const v = this.game.vases.find(x => !x.smashed && x.row === gridPos.row && x.col === gridPos.col);
                         if (v) {
                             this.game.smashVase(gridPos.row, gridPos.col);
+                            this.game._vaseHammerSwingFX(gridPos.row, gridPos.col); // v3.63.0 挥锤动画
                             return;
                         }
                     }
@@ -246,7 +262,7 @@ class InputManager {
             // v3.26.0 植物盲盒：拖拽图改回"盲盒图案"（红丝带礼盒）——用户明确盲盒≠问号罐
             // v3.35.0：礼盒重画为宽幅构图，拖拽幽灵同步改宽尺寸
             if (type === 'plantbox') {
-                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1790825623')";
+                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1790827191')";
                 this.dragGhost.style.width = '68px';
                 this.dragGhost.style.height = '50px';
                 this.dragGhost.style.backgroundSize = 'contain';
@@ -258,8 +274,8 @@ class InputManager {
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1790825623`
-                : `assets/images/Plants/${imgName}.gif?v=1790825623`;
+                ? `assets/images/Plants/${imgName}.png?v=1790827191`
+                : `assets/images/Plants/${imgName}.gif?v=1790827191`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
 
             // v3.20.0：倭瓜立绘画布 100×226（身体只占底部 68×82），60×60 contain 后
