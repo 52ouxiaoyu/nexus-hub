@@ -526,7 +526,6 @@
                     '</div>' +
                 '</div>' +
                 '<div id="help-body"></div>' +
-                '<div class="hg-foot"><button id="help-close">返 回</button></div>' +
                 '<div id="hg-detail"></div>' +
             '</div>';
         document.body.appendChild(modal);
@@ -559,7 +558,7 @@
             closeDetail();
             tabs[0].click();
         });
-        modal.querySelector('#help-close').addEventListener('click', () => { modal.style.display = 'none'; closeDetail(); });
+        // v3.71.0：底部"返 回"按钮删除（用户：点弹窗外空白即可关闭）——点 modal 空白/下一行遮罩关闭逻辑保留
         modal.addEventListener('click', e => { if (e.target === modal) { modal.style.display = 'none'; closeDetail(); } });
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') {
