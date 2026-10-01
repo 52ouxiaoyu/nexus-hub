@@ -49,6 +49,16 @@ interface PlaybackHistory {
   timestamp: number;
 }
 
+// Favorite: a video bookmarked together with its source site so it can be replayed later
+interface FavItem {
+  site: Site;
+  vod_id: string;
+  vod_name: string;
+  vod_pic: string;
+  vod_remarks: string;
+  ts: number;
+}
+
 const PROXY_URL = '/api/proxy?url=';
 const LOCAL_PROXY = 'http://localhost:8080/api/proxy?url=';
 const FALLBACK_PROXIES = [
@@ -290,6 +300,11 @@ function App() {
   const [liveCands, setLiveCands] = useState<{ url: string; proxy: string }[]>([]);
   const [liveIdx, setLiveIdx] = useState(0);
   const [liveFailMsg, setLiveFailMsg] = useState('');
+  // Favorites (persisted per browser)
+  const [favorites, setFavorites] = useState<FavItem[]>(() => {
+    try { return JSON.parse(localStorage.getItem('tvbox_favorites') || '[]'); } catch { return []; }
+  });
+  const [showFavorites, setShowFavorites] = useState(false);
   // null = normal browse mode; array = global search mode (results aggregated from all sites)
   const [searchResults, setSearchResults] = useState<SearchItem[] | null>(null);
   const [searchProgress, setSearchProgress] = useState({ done: 0, total: 0 });
@@ -383,6 +398,7 @@ function App() {
   // Load Categories for Site
   const loadSite = async (site: Site) => {
     exitSearch();
+    setShowFavorites(false);
     setActiveSite(site);
     setActiveVideo(null);
     setVideos([]);
@@ -422,6 +438,7 @@ function App() {
   const loadCategory = async (type_id: string) => {
     if (!activeSite) return;
     exitSearch();
+    setShowFavorites(false);
     setActiveCategory(type_id);
     setSearchKeyword('');
     setLoading(true);
@@ -461,6 +478,7 @@ function App() {
     if (activeSite?.live) {
       const k = kw.toLowerCase();
       exitSearch();
+      setShowFavorites(false);
       setVideos(liveChannels
         .map((c, i) => ({ ...c, idx: i }))
         .filter(c => c.name.toLowerCase().includes(k))
@@ -471,6 +489,7 @@ function App() {
     if (vodSites.length === 0) return;
     setActiveCategory('');
     setActiveVideo(null);
+    setShowFavorites(false);
     setSearchResults([]);
     setSearchProgress({ done: 0, total: vodSites.length });
     const seen = new Set<string>();
@@ -587,6 +606,41 @@ function App() {
     } else {
       setLiveFailMsg('该频道的所有备源与代理组合均无法播放，请尝试其他频道。');
     }
+  };
+
+  // Favorites helpers
+  const favKey = (siteKey: string, vodId: string) => siteKey + '|' + vodId;
+  const isFavorited = !!(activeSite && activeVideo &&
+    favorites.some(f => favKey(f.site.key, String(f.vod_id)) === favKey(activeSite.key, String(activeVideo.vod_id))));
+
+  const toggleFavorite = () => {
+    if (!activeSite || !activeVideo) return;
+    const key = favKey(activeSite.key, String(activeVideo.vod_id));
+    const next = favorites.filter(f => favKey(f.site.key, String(f.vod_id)) !== key);
+    if (next.length === favorites.length) {
+      next.unshift({
+        site: activeSite,
+        vod_id: activeVideo.vod_id,
+        vod_name: activeVideo.vod_name,
+        vod_pic: activeVideo.vod_pic,
+        vod_remarks: activeVideo.vod_remarks || '',
+        ts: Date.now()
+      });
+    }
+    setFavorites(next);
+    localStorage.setItem('tvbox_favorites', JSON.stringify(next));
+  };
+
+  const removeFavorite = (f: FavItem) => {
+    const next = favorites.filter(x => favKey(x.site.key, String(x.vod_id)) !== favKey(f.site.key, String(f.vod_id)));
+    setFavorites(next);
+    localStorage.setItem('tvbox_favorites', JSON.stringify(next));
+  };
+
+  const openFavorites = () => {
+    exitSearch();
+    setActiveVideo(null);
+    setShowFavorites(true);
   };
 
   // Cast current video to a DLNA renderer (e.g. Xiaomi TV) via the local helper server.
@@ -716,6 +770,22 @@ function App() {
           <div style={{ padding: '16px', borderBottom: '1px solid var(--glass-border)', fontWeight: 600 }}>
             可用线路 (Type 1)
           </div>
+          <div style={{ padding: '8px 8px 0 8px', borderBottom: '1px solid var(--glass-border)' }}>
+            <div
+              onClick={openFavorites}
+              style={{
+                padding: '12px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                marginBottom: '8px',
+                background: showFavorites ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                color: showFavorites ? 'var(--accent)' : 'inherit',
+                transition: 'all 0.2s'
+              }}
+            >
+              ⭐ 我的收藏{favorites.length > 0 ? ` (${favorites.length})` : ''}
+            </div>
+          </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
             {sites.map(site => (
               <div 
@@ -754,6 +824,9 @@ function App() {
                 </button>
                 <button className="btn" onClick={castToDevice} title="通过本地服务投屏到局域网 DLNA 电视（小米等）">
                   📺 投屏到电视
+                </button>
+                <button className="btn" onClick={toggleFavorite} title="收藏后可在左侧「我的收藏」快速找到">
+                  {isFavorited ? '★ 已收藏' : '☆ 收藏'}
                 </button>
               </div>
               
@@ -856,9 +929,10 @@ function App() {
               <div className="video-grid" style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px', alignContent: 'start' }}>
                 {(() => {
                   const isSearch = searchResults !== null;
-                  const items: (Video & { site?: Site })[] = isSearch ? searchResults! : videos;
-                  const showLoading = loading && !isSearch;
-                  const showEmpty = !loading && items.length === 0 && (isSearch || !!activeSite);
+                  const isFav = showFavorites && !isSearch;
+                  const items: (Video & { site?: Site })[] = isSearch ? searchResults! : isFav ? favorites : videos;
+                  const showLoading = loading && !isSearch && !isFav;
+                  const showEmpty = !loading && items.length === 0 && (isSearch || isFav || !!activeSite);
                   return (
                     <>
                       {isSearch && (
@@ -870,12 +944,17 @@ function App() {
                           <button className="btn" onClick={exitSearch}>退出搜索</button>
                         </div>
                       )}
+                      {isFav && (
+                        <div style={{ gridColumn: '1 / -1', color: 'var(--text-muted)', fontSize: '14px' }}>
+                          ⭐ 我的收藏：{items.length} 部（收藏记录保存在本浏览器；点击卡片回放）
+                        </div>
+                      )}
                       {items.map(video => (
                         <div
                           key={(video.site?.key || '') + video.vod_id}
                           className="animate-fade-in"
                           onClick={() => video.site ? loadVideoDetail(video.vod_id, video.site) : loadVideoDetail(video.vod_id)}
-                          style={{ cursor: 'pointer' }}
+                          style={{ cursor: 'pointer', position: 'relative' }}
                         >
                           <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '8px', overflow: 'hidden', position: 'relative', marginBottom: '8px' }}>
                             <PosterImg src={video.vod_pic} alt={video.vod_name} />
@@ -886,6 +965,13 @@ function App() {
                               <div style={{ position: 'absolute', top: 0, right: 0, padding: '3px 8px', background: 'rgba(59,130,246,0.9)', fontSize: '11px', color: '#fff', borderBottomLeftRadius: '8px' }}>
                                 {video.site.name}
                               </div>
+                            )}
+                            {isFav && (
+                              <button
+                                title="取消收藏"
+                                onClick={(e) => { e.stopPropagation(); removeFavorite(video as FavItem); }}
+                                style={{ position: 'absolute', top: 0, left: 0, width: '26px', height: '26px', border: 'none', borderRadius: '0 0 8px 0', background: 'rgba(0,0,0,0.55)', color: '#fca5a5', fontSize: '14px', cursor: 'pointer', lineHeight: 1 }}
+                              >✕</button>
                             )}
                           </div>
                           <div style={{ fontSize: '14px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -903,6 +989,10 @@ function App() {
                           {searchProgress.done < searchProgress.total
                             ? `正在搜索 ${searchProgress.done}/${searchProgress.total} 条线路...`
                             : '没有找到可播放的结果（无播放流的来源已自动过滤）'}
+                        </div>
+                      ) : isFav ? (
+                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                          还没有收藏。打开任意影片，点「☆ 收藏」即可保存到这里。
                         </div>
                       ) : (
                         <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
