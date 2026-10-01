@@ -41,15 +41,18 @@ interface SearchItem extends VideoDetail {
   site: Site;
 }
 
-interface PlaybackHistory {
+// Watch history entry: full detail is kept so the exact episode and its stream can resume
+interface WatchHistoryItem {
   site: Site;
   video: VideoDetail;
   playUrl: string;
+  epLabel: string;
   time: number;
   timestamp: number;
 }
 
-// Favorite: a video bookmarked together with its source site so it can be replayed later
+// Favorite: a video bookmarked together with its source site so it can be replayed later.
+// epCount/epDelta power the "updated N episodes" badge (追更提醒)
 interface FavItem {
   site: Site;
   vod_id: string;
@@ -57,6 +60,8 @@ interface FavItem {
   vod_pic: string;
   vod_remarks: string;
   ts: number;
+  epCount?: number;
+  epDelta?: number;
 }
 
 const PROXY_URL = '/api/proxy?url=';
@@ -289,11 +294,22 @@ function App() {
   const [playingUrl, setPlayingUrl] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [history, setHistory] = useState<PlaybackHistory | null>(() => {
+  // Watch history: one entry per series (multiple series never overwrite each other)
+  const [histories, setHistories] = useState<WatchHistoryItem[]>(() => {
     try {
-      const saved = localStorage.getItem('tvbox_history');
-      return saved ? JSON.parse(saved) : null;
-    } catch { return null; }
+      const raw = localStorage.getItem('tvbox_watch_history');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+      // Migrate the legacy single-record format
+      const legacy = localStorage.getItem('tvbox_history');
+      if (legacy) {
+        const h = JSON.parse(legacy);
+        if (h && h.site) return [{ site: h.site, video: h.video, playUrl: h.playUrl, epLabel: '', time: h.time || 0, timestamp: h.timestamp || Date.now() }];
+      }
+      return [];
+    } catch { return []; }
   });
   const [liveChannels, setLiveChannels] = useState<LiveChannel[]>([]);
   // Live playback candidates: (stream URL x proxy base) pairs, auto-failover in order
@@ -305,30 +321,138 @@ function App() {
     try { return JSON.parse(localStorage.getItem('tvbox_favorites') || '[]'); } catch { return []; }
   });
   const [showFavorites, setShowFavorites] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   // null = normal browse mode; array = global search mode (results aggregated from all sites)
   const [searchResults, setSearchResults] = useState<SearchItem[] | null>(null);
   const [searchProgress, setSearchProgress] = useState({ done: 0, total: 0 });
+  // Auto-play next episode (binger mode), with a cancellable countdown
+  const [autoNext, setAutoNext] = useState(() => localStorage.getItem('tvbox_auto_next') !== '0');
+  const [nextCountdown, setNextCountdown] = useState<{ title: string; url: string; seconds: number } | null>(null);
+  // External subtitle (VTT blob) and its display name
+  const [subtitleBlob, setSubtitleBlob] = useState('');
+  const [subtitleName, setSubtitleName] = useState('');
+  // Version counter to re-render when remembered skip-intro values change
+  const [skipTick, setSkipTick] = useState(0);
 
-  const handleTimeUpdate = (time: number) => {
-    if (activeSite && activeVideo && playingUrl) {
-      const newHistory: PlaybackHistory = {
-        site: activeSite,
-        video: activeVideo,
-        playUrl: playingUrl,
-        time,
-        timestamp: Date.now()
-      };
-      setHistory(newHistory);
-      localStorage.setItem('tvbox_history', JSON.stringify(newHistory));
+  // Which episode is currently playing: index/total inside its source group + the next episode
+  const getEpisodeContext = (video: VideoDetail | null, url: string) => {
+    if (!video || !url) return null;
+    for (const g of (video.vod_play_url || '').split('$$$')) {
+      const eps = g.split('#').filter(ep => ep.includes('$'));
+      const idx = eps.findIndex(ep => ep.split('$')[1] === url);
+      if (idx >= 0) {
+        return {
+          idx,
+          total: eps.length,
+          next: idx + 1 < eps.length ? eps[idx + 1].split('$') : null
+        };
+      }
     }
+    return null;
+  };
+  const epCtx = getEpisodeContext(activeVideo, playingUrl);
+  const nextEp = epCtx && epCtx.next ? { title: epCtx.next[0] || `第${epCtx.idx + 2}集`, url: epCtx.next[1] } : null;
+
+  const fmtTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.round(s % 60);
+    return m > 0 ? `${m}分${sec}秒` : `${sec}秒`;
   };
 
-  const resumeHistory = () => {
-    if (history) {
-      setActiveSite(history.site);
-      setActiveVideo(history.video);
-      setPlayingUrl(history.playUrl);
+  // Auto-advance into the next episode starts it fresh (resume suppressed once)
+  const suppressResumeRef = useRef('');
+
+  // Auto-next countdown tick; fires the switch at zero
+  useEffect(() => {
+    if (!nextCountdown) return;
+    if (nextCountdown.seconds <= 0) {
+      suppressResumeRef.current = nextCountdown.url;
+      setPlayingUrl(nextCountdown.url);
+      setNextCountdown(null);
+      return;
     }
+    const t = window.setTimeout(() => setNextCountdown(c => (c ? { ...c, seconds: c.seconds - 1 } : null)), 1000);
+    return () => window.clearTimeout(t);
+  }, [nextCountdown]);
+
+  // Any source/episode change cancels a pending countdown
+  useEffect(() => { setNextCountdown(null); }, [playingUrl]);
+
+  const handleEnded = () => {
+    if (!autoNext || !nextEp || activeSite?.live) return;
+    setNextCountdown({ title: nextEp.title, url: nextEp.url, seconds: 5 });
+  };
+
+  // Resume position for the current playing URL (0 when auto-advancing into a fresh episode)
+  const resumeTime = useMemo(() => {
+    if (playingUrl && suppressResumeRef.current === playingUrl) return 0;
+    if (!activeSite || !playingUrl) return 0;
+    const h = histories.find(x => x.site.key === activeSite.key && x.playUrl === playingUrl);
+    return h && h.time > 10 ? h.time : 0;
+  }, [histories, activeSite, playingUrl]);
+
+  const handleTimeUpdate = (time: number) => {
+    if (!activeSite || !activeVideo || !playingUrl || activeSite.live) return;
+    const key = activeSite.key + '|' + String(activeVideo.vod_id);
+    const ctx = getEpisodeContext(activeVideo, playingUrl);
+    const epLabel = ctx ? `${activeVideo.vod_name} 第${ctx.idx + 1}/${ctx.total}集` : activeVideo.vod_name;
+    const item: WatchHistoryItem = { site: activeSite, video: activeVideo, playUrl: playingUrl, epLabel, time, timestamp: Date.now() };
+    setHistories(prev => {
+      const next = [item, ...prev.filter(h => h.site.key + '|' + String(h.video.vod_id) !== key)].slice(0, 30);
+      localStorage.setItem('tvbox_watch_history', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const removeHistory = (h: WatchHistoryItem) => {
+    setHistories(prev => {
+      const next = prev.filter(x => x.site.key + '|' + String(x.video.vod_id) !== h.site.key + '|' + String(h.video.vod_id));
+      localStorage.setItem('tvbox_watch_history', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const clearHistories = () => {
+    setHistories([]);
+    localStorage.removeItem('tvbox_watch_history');
+  };
+
+  const openHistoryItem = (h: WatchHistoryItem) => {
+    setActiveSite(h.site);
+    setActiveVideo(h.video);
+    setPlayingUrl(h.playUrl);
+  };
+
+  // Remembered skip-intro seconds for the current series
+  const readSkipIntros = () => {
+    try { return JSON.parse(localStorage.getItem('tvbox_skip_intros') || '{}') as Record<string, number>; } catch { return {}; }
+  };
+  const skipKey = activeSite && activeVideo ? activeSite.key + '|' + activeVideo.vod_name : '';
+  const rememberedSkip = useMemo(() => {
+    void skipTick; // re-read when a new intro length is remembered
+    return skipKey ? (readSkipIntros()[skipKey] || 0) : 0;
+  }, [skipTick, skipKey, activeVideo]);
+  const rememberSkipIntro = (sec: number) => {
+    const m = readSkipIntros();
+    m[skipKey] = sec;
+    localStorage.setItem('tvbox_skip_intros', JSON.stringify(m));
+    setSkipTick(x => x + 1);
+  };
+
+  // External subtitle: read SRT/VTT, convert SRT -> VTT, hand the blob to the player
+  const subtitleInputRef = useRef<HTMLInputElement>(null);
+  const handleSubtitleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    let text = await file.text();
+    if (/\.srt$/i.test(file.name) || /\d{2}:\d{2}:\d{2},\d{3}/.test(text)) {
+      text = 'WEBVTT\n\n' + text.replace(/\r/g, '').replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+    }
+    if (subtitleBlob) URL.revokeObjectURL(subtitleBlob);
+    const blob = new Blob([text], { type: 'text/vtt' });
+    setSubtitleBlob(URL.createObjectURL(blob));
+    setSubtitleName(file.name);
+    e.target.value = '';
   };
 
   // Parse TVBox Config
@@ -399,6 +523,7 @@ function App() {
   const loadSite = async (site: Site) => {
     exitSearch();
     setShowFavorites(false);
+    setShowHistory(false);
     setActiveSite(site);
     setActiveVideo(null);
     setVideos([]);
@@ -439,6 +564,7 @@ function App() {
     if (!activeSite) return;
     exitSearch();
     setShowFavorites(false);
+    setShowHistory(false);
     setActiveCategory(type_id);
     setSearchKeyword('');
     setLoading(true);
@@ -479,6 +605,7 @@ function App() {
       const k = kw.toLowerCase();
       exitSearch();
       setShowFavorites(false);
+      setShowHistory(false);
       setVideos(liveChannels
         .map((c, i) => ({ ...c, idx: i }))
         .filter(c => c.name.toLowerCase().includes(k))
@@ -490,6 +617,7 @@ function App() {
     setActiveCategory('');
     setActiveVideo(null);
     setShowFavorites(false);
+    setShowHistory(false);
     setSearchResults([]);
     setSearchProgress({ done: 0, total: vodSites.length });
     const seen = new Set<string>();
@@ -624,7 +752,9 @@ function App() {
         vod_name: activeVideo.vod_name,
         vod_pic: activeVideo.vod_pic,
         vod_remarks: activeVideo.vod_remarks || '',
-        ts: Date.now()
+        ts: Date.now(),
+        epCount: epCtx?.total || 0,
+        epDelta: 0
       });
     }
     setFavorites(next);
@@ -637,10 +767,157 @@ function App() {
     localStorage.setItem('tvbox_favorites', JSON.stringify(next));
   };
 
+  // 追更检查：打开收藏页时并行刷新每部收藏的集数，发现新增集数就打上徽标
+  const refreshFavoriteEpCounts = async () => {
+    const targets = favorites.filter(f => !f.site.live).slice(0, 15);
+    if (targets.length === 0) return;
+    const counts = new Map<string, number>();
+    await Promise.allSettled(targets.map(async f => {
+      try {
+        const url = buildApiUrl(f.site.api, { ac: 'detail', ids: String(f.vod_id) });
+        const data = await fetchWithProxy(url);
+        const d = data.list && data.list[0];
+        if (!d) return;
+        let count = 0;
+        for (const g of (d.vod_play_url || '').split('$$$')) {
+          const eps = g.split('#').filter((ep: string) => ep.includes('$'));
+          if (eps.length) {
+            count = eps.length;
+            break;
+          }
+        }
+        if (count) counts.set(favKey(f.site.key, String(f.vod_id)), count);
+      } catch { /* 单线失败不影响其他 */ }
+    }));
+    if (counts.size === 0) return;
+    const next = favorites.map(f => {
+      const c = counts.get(favKey(f.site.key, String(f.vod_id)));
+      if (!c) return f;
+      const delta = f.epCount ? Math.max(0, c - f.epCount) : 0;
+      return { ...f, epCount: c, epDelta: delta };
+    });
+    setFavorites(next);
+    localStorage.setItem('tvbox_favorites', JSON.stringify(next));
+  };
+
   const openFavorites = () => {
     exitSearch();
     setActiveVideo(null);
     setShowFavorites(true);
+    setShowHistory(false);
+    refreshFavoriteEpCounts();
+  };
+
+  const openHistories = () => {
+    exitSearch();
+    setActiveVideo(null);
+    setShowFavorites(false);
+    setShowHistory(true);
+  };
+
+  // 一键换源：并行搜其他线路的同名资源，选一条后自动对齐到当前集数
+  const switchSource = async () => {
+    if (!activeVideo || activeSite?.live) return;
+    const title = activeVideo.vod_name.trim();
+    const epIdx = epCtx?.idx ?? 0;
+    setLoading(true);
+    const found: SearchItem[] = [];
+    const seenSites = new Set<string>();
+    await Promise.allSettled(sites.filter(s => !s.live && s.key !== activeSite?.key).map(async site => {
+      try {
+        const url = buildApiUrl(site.api, { ac: 'detail', wd: title });
+        const data = await fetchWithProxy(url);
+        for (const v of (data.list || [])) {
+          if (String(v.vod_name).trim() === title && isPlayableItem(v) && !seenSites.has(site.key)) {
+            seenSites.add(site.key);
+            found.push({ ...v, site });
+            break;
+          }
+        }
+      } catch { /* skip */ }
+    }));
+    setLoading(false);
+    if (found.length === 0) {
+      alert('其他线路没有找到同名可播放资源。');
+      return;
+    }
+    const listing = found.map((f, i) => {
+      const firstGroup = (f.vod_play_url || '').split('$$$')[0] || '';
+      const eps = firstGroup.split('#').filter((ep: string) => ep.includes('$'));
+      return `${i + 1}. ${f.site.name}（${eps.length}集）`;
+    }).join('\n');
+    const pick = prompt(`以下线路有「${title}」，输入编号换源（当前第 ${epIdx + 1} 集会自动对齐）：\n${listing}`);
+    if (!pick) return;
+    const target = found[Number(pick) - 1];
+    if (!target) { alert('编号无效'); return; }
+    let pickUrl = '';
+    for (const g of (target.vod_play_url || '').split('$$$')) {
+      const eps = g.split('#').filter((ep: string) => ep.includes('$'));
+      if (eps.length && /\.(m3u8|mp4)/i.test(eps[0].split('$')[1] || '')) {
+        const ep = eps[Math.min(epIdx, eps.length - 1)];
+        pickUrl = ep.split('$')[1] || '';
+        break;
+      }
+    }
+    if (!pickUrl) { alert('该线路解析播放地址失败，试试换一条。'); return; }
+    suppressResumeRef.current = '';
+    setActiveSite(target.site);
+    setActiveVideo(target);
+    setPlayingUrl(pickUrl);
+  };
+
+  // 数据导出/导入（收藏 + 观看历史 + 片头记忆），用于跨浏览器/设备手动迁移
+  const exportData = () => {
+    const payload = { version: 1, exportedAt: Date.now(), favorites, histories, skipIntros: readSkipIntros() };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'tvbox-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const importDataFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    try {
+      const data = JSON.parse(await file.text());
+      let favCount = 0, histCount = 0;
+      if (Array.isArray(data.favorites)) {
+        const merged = new Map<string, FavItem>();
+        [...favorites, ...data.favorites].forEach((f: FavItem) => {
+          const k = favKey(f.site.key, String(f.vod_id));
+          const ex = merged.get(k);
+          if (!ex || (f.ts || 0) >= (ex.ts || 0)) merged.set(k, f);
+        });
+        const next = [...merged.values()];
+        setFavorites(next);
+        localStorage.setItem('tvbox_favorites', JSON.stringify(next));
+        favCount = next.length;
+      }
+      if (Array.isArray(data.histories)) {
+        const merged = new Map<string, WatchHistoryItem>();
+        [...histories, ...data.histories].forEach((h: WatchHistoryItem) => {
+          const k = h.site.key + '|' + String(h.video.vod_id);
+          const ex = merged.get(k);
+          if (!ex || (h.timestamp || 0) >= (ex.timestamp || 0)) merged.set(k, h);
+        });
+        const next = [...merged.values()]
+          .sort((a, b) => b.timestamp - a.timestamp)
+          .slice(0, 30);
+        setHistories(next);
+        localStorage.setItem('tvbox_watch_history', JSON.stringify(next));
+        histCount = next.length;
+      }
+      if (data.skipIntros && typeof data.skipIntros === 'object') {
+        const merged = { ...readSkipIntros(), ...data.skipIntros };
+        localStorage.setItem('tvbox_skip_intros', JSON.stringify(merged));
+      }
+      alert(`导入完成：收藏 ${favCount} 条，观看历史 ${histCount} 条。`);
+    } catch {
+      alert('导入失败：文件不是有效的备份 JSON。');
+    }
+    e.target.value = '';
   };
 
   // Cast current video to a DLNA renderer (e.g. Xiaomi TV) via the local helper server.
@@ -708,14 +985,14 @@ function App() {
         <div style={{ flex: 1 }} className="spacer" />
         
         <div className="header-controls">
-        {history && (
-          <button 
-            className="btn" 
+        {histories.length > 0 && (
+          <button
+            className="btn"
             style={{ marginRight: '16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(59,130,246,0.1)', color: 'var(--accent)', border: '1px solid var(--accent)' }}
-            onClick={resumeHistory}
-            title="上次播放记录"
+            onClick={() => openHistoryItem(histories[0])}
+            title="继续上次播放（含集数和进度）"
           >
-            <Play size={16} /> 继续播放: {history.video.vod_name}
+            <Play size={16} /> 继续：{histories[0].epLabel || histories[0].video.vod_name}
           </button>
         )}
         
@@ -789,13 +1066,27 @@ function App() {
                 padding: '12px',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                marginBottom: '8px',
+                marginBottom: '4px',
                 background: showFavorites ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
                 color: showFavorites ? 'var(--accent)' : 'inherit',
                 transition: 'all 0.2s'
               }}
             >
               ⭐ 我的收藏{favorites.length > 0 ? ` (${favorites.length})` : ''}
+            </div>
+            <div
+              onClick={openHistories}
+              style={{
+                padding: '12px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                marginBottom: '8px',
+                background: showHistory ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                color: showHistory ? 'var(--accent)' : 'inherit',
+                transition: 'all 0.2s'
+              }}
+            >
+              🕘 继续观看{histories.length > 0 ? ` (${histories.length})` : ''}
             </div>
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
@@ -822,6 +1113,15 @@ function App() {
               </div>
             )}
           </div>
+          <div style={{ padding: '8px', borderTop: '1px solid var(--glass-border)', display: 'flex', gap: '6px' }}>
+            <button className="btn" style={{ flex: 1, fontSize: '12px' }} onClick={exportData} title="导出收藏、观看历史、片头记忆为 JSON 文件">
+              ⬇ 导出
+            </button>
+            <button className="btn" style={{ flex: 1, fontSize: '12px' }} onClick={() => document.getElementById('tvbox-import-input')?.click()} title="从备份 JSON 导入（合并到现有数据）">
+              ⬆ 导入
+            </button>
+            <input id="tvbox-import-input" type="file" accept=".json" style={{ display: 'none' }} onChange={importDataFile} />
+          </div>
         </div>
 
         {/* Content Area */}
@@ -830,7 +1130,7 @@ function App() {
           {activeVideo ? (
             // Video Player View
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px', overflowY: 'auto' }}>
-              <div style={{ display: 'flex', gap: '8px', alignSelf: 'flex-start', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', gap: '8px', alignSelf: 'flex-start', marginBottom: '16px', flexWrap: 'wrap' }}>
                 <button className="btn" onClick={() => setActiveVideo(null)}>
                   <ChevronLeft size={16} /> 返回列表
                 </button>
@@ -840,21 +1140,67 @@ function App() {
                 <button className="btn" onClick={toggleFavorite} title="收藏后可在左侧「我的收藏」快速找到">
                   {isFavorited ? '★ 已收藏' : '☆ 收藏'}
                 </button>
+                {!activeSite?.live && (
+                  <button className="btn" onClick={switchSource} title="并行搜索其他线路的同名资源，自动对齐当前集数">
+                    🔄 换源
+                  </button>
+                )}
+                {!activeSite?.live && nextEp && (
+                  <button className="btn primary" onClick={() => { suppressResumeRef.current = ''; setPlayingUrl(nextEp.url); }} title="直接播放下一集">
+                    ▶ 下一集：{nextEp.title}
+                  </button>
+                )}
+                {!activeSite?.live && (
+                  <button
+                    className="btn"
+                    onClick={() => { const v = !autoNext; setAutoNext(v); localStorage.setItem('tvbox_auto_next', v ? '1' : '0'); }}
+                    title="播放结束后自动连播下一集（5 秒倒计时，可取消）"
+                  >
+                    连播：{autoNext ? '开' : '关'}
+                  </button>
+                )}
+                {!activeSite?.live && (
+                  <>
+                    <button className="btn" onClick={() => subtitleInputRef.current?.click()} title="加载本地 SRT/VTT 字幕文件">
+                      🔤 字幕{subtitleName ? ' ✓' : ''}
+                    </button>
+                    {subtitleName && (
+                      <button className="btn" onClick={() => { setSubtitleBlob(''); setSubtitleName(''); }} title="移除已加载的字幕">
+                        ✕字幕
+                      </button>
+                    )}
+                    <input ref={subtitleInputRef} type="file" accept=".srt,.vtt" style={{ display: 'none' }} onChange={handleSubtitleFile} />
+                  </>
+                )}
               </div>
-              
-              <div style={{ width: '100%', aspectRatio: '16/9', background: '#000', borderRadius: '8px', overflow: 'hidden', marginBottom: '24px' }}>
+
+              <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', background: '#000', borderRadius: '8px', overflow: 'hidden', marginBottom: '24px' }}>
                 {playingUrl ? (
                   <HlsPlayer
                     src={activeSite?.live ? (liveCands[liveIdx]?.url || '') : playingUrl}
                     proxyAll={!!activeSite?.live}
                     proxyUrl={activeSite?.live ? (liveCands[liveIdx]?.proxy || PROXY_URL) : getPreferredProxy()}
                     onFatal={activeSite?.live ? tryNextLiveCandidate : undefined}
-                    initialTime={history?.playUrl === playingUrl ? history.time : 0}
+                    initialTime={resumeTime}
                     onTimeUpdate={handleTimeUpdate}
+                    onEnded={handleEnded}
+                    subtitleBlob={activeSite?.live ? '' : subtitleBlob}
+                    skipIntro={activeSite?.live ? undefined : rememberedSkip}
+                    onRememberSkip={rememberSkipIntro}
                   />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
                     {loading ? '解析视频流中...' : '无可用播放地址'}
+                  </div>
+                )}
+                {nextCountdown && (
+                  <div style={{ position: 'absolute', inset: 0, zIndex: 6, background: 'rgba(0,0,0,0.7)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', color: '#fff' }}>
+                    <div style={{ fontSize: '22px', fontWeight: 600 }}>{nextCountdown.seconds} 秒后自动连播</div>
+                    <div style={{ fontSize: '14px', opacity: 0.85 }}>下一集：{nextCountdown.title}</div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button className="btn primary" onClick={() => { suppressResumeRef.current = nextCountdown.url; setPlayingUrl(nextCountdown.url); setNextCountdown(null); }}>立即播放</button>
+                      <button className="btn" onClick={() => setNextCountdown(null)}>取消连播</button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -978,9 +1324,21 @@ function App() {
                 {(() => {
                   const isSearch = searchResults !== null;
                   const isFav = showFavorites && !isSearch;
-                  const items: (Video & { site?: Site })[] = isSearch ? searchResults! : isFav ? favorites : videos;
-                  const showLoading = loading && !isSearch && !isFav;
-                  const showEmpty = !loading && items.length === 0 && (isSearch || isFav || !!activeSite);
+                  const isHist = showHistory && !isSearch && !isFav;
+                  const items: (Video & { site?: Site })[] = isSearch
+                    ? searchResults!
+                    : isFav
+                      ? favorites
+                      : isHist
+                        ? histories.map((h, i) => ({
+                            ...h.video,
+                            site: h.site,
+                            vod_remarks: `${h.epLabel || h.video.vod_name} · 已看 ${fmtTime(h.time)}`,
+                            _hi: i
+                          }))
+                        : videos;
+                  const showLoading = loading && !isSearch && !isFav && !isHist;
+                  const showEmpty = !loading && items.length === 0 && (isSearch || isFav || isHist || !!activeSite);
                   return (
                     <>
                       {isSearch && (
@@ -994,14 +1352,27 @@ function App() {
                       )}
                       {isFav && (
                         <div style={{ gridColumn: '1 / -1', color: 'var(--text-muted)', fontSize: '14px' }}>
-                          ⭐ 我的收藏：{items.length} 部（收藏记录保存在本浏览器；点击卡片回放）
+                          ⭐ 我的收藏：{items.length} 部（收藏记录保存在本浏览器；点击卡片回放；打开本页时自动检查各线路集数更新）
+                        </div>
+                      )}
+                      {isHist && (
+                        <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
+                          <span>🕘 继续观看：{items.length} 部（点击卡片从上次进度继续）</span>
+                          <button className="btn" onClick={clearHistories}>清空历史</button>
                         </div>
                       )}
                       {items.map(video => (
                         <div
                           key={(video.site?.key || '') + video.vod_id}
                           className="animate-fade-in"
-                          onClick={() => video.site ? loadVideoDetail(video.vod_id, video.site) : loadVideoDetail(video.vod_id)}
+                          onClick={() => {
+                            if (isHist) {
+                              const h = histories[(video as any)._hi];
+                              if (h) openHistoryItem(h);
+                            } else {
+                              video.site ? loadVideoDetail(video.vod_id, video.site) : loadVideoDetail(video.vod_id);
+                            }
+                          }}
                           style={{ cursor: 'pointer', position: 'relative' }}
                         >
                           <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '8px', overflow: 'hidden', position: 'relative', marginBottom: '8px' }}>
@@ -1014,10 +1385,22 @@ function App() {
                                 {video.site.name}
                               </div>
                             )}
-                            {isFav && (
+                            {isFav && !!(video as FavItem).epDelta && (
+                              <div style={{ position: 'absolute', top: 0, left: 0, padding: '3px 8px', background: 'rgba(34,197,94,0.92)', fontSize: '11px', color: '#fff', borderBottomRightRadius: '8px' }}>
+                                更新 {(video as FavItem).epDelta} 集
+                              </div>
+                            )}
+                            {(isFav || isHist) && (
                               <button
-                                title="取消收藏"
-                                onClick={(e) => { e.stopPropagation(); removeFavorite(video as FavItem); }}
+                                title={isFav ? '取消收藏' : '删除这条历史'}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (isFav) removeFavorite(video as FavItem);
+                                  else {
+                                    const h = histories[(video as any)._hi];
+                                    if (h) removeHistory(h);
+                                  }
+                                }}
                                 style={{ position: 'absolute', top: 0, left: 0, width: '26px', height: '26px', border: 'none', borderRadius: '0 0 8px 0', background: 'rgba(0,0,0,0.55)', color: '#fca5a5', fontSize: '14px', cursor: 'pointer', lineHeight: 1 }}
                               >✕</button>
                             )}
@@ -1041,6 +1424,10 @@ function App() {
                       ) : isFav ? (
                         <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                           还没有收藏。打开任意影片，点「☆ 收藏」即可保存到这里。
+                        </div>
+                      ) : isHist ? (
+                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                          还没有观看记录。看过的剧会自动出现在这里，带集数和进度。
                         </div>
                       ) : (
                         <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
