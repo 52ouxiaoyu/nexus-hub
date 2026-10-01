@@ -683,6 +683,18 @@ function App() {
     }
   };
 
+  // Copy helper with fallback (clipboard API needs secure context / permission)
+  const copyText = (text: string) => {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(
+        () => alert('已复制到剪贴板'),
+        () => { prompt('请手动复制：', text); }
+      );
+    } else {
+      prompt('请手动复制：', text);
+    }
+  };
+
   return (
     <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       
@@ -852,6 +864,42 @@ function App() {
                   {liveFailMsg || `正在通过备源 ${liveIdx + 1}/${liveCands.length} 播放（失败自动切换）`}
                 </div>
               )}
+
+              {playingUrl && (() => {
+                const debugUrl = activeSite?.live ? (liveCands[liveIdx]?.url || playingUrl) : playingUrl;
+                const cloudUrl = window.location.origin + '/proxy?url=' + encodeURIComponent(debugUrl);
+                return (
+                  <details style={{ marginBottom: '12px', fontSize: '13px', color: 'var(--text-muted)' }}>
+                    <summary style={{ cursor: 'pointer', userSelect: 'none' }}>🔧 调试信息（流地址 / 播放方式）</summary>
+                    <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '10px', lineHeight: 1.5 }}>
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'inherit' }}>视频流原始地址{activeSite?.live ? '（当前备源）' : ''}：</div>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                          <code style={{ wordBreak: 'break-all', flex: 1, minWidth: '200px' }}>{debugUrl}</code>
+                          <a className="btn" href={debugUrl} target="_blank" rel="noreferrer">新标签打开</a>
+                          <button className="btn" onClick={() => copyText(debugUrl)}>复制</button>
+                        </div>
+                        <div style={{ marginTop: '4px', opacity: 0.8 }}>↑ 新标签能看到 m3u8 文本 = 资源正常、问题在播放器；403/超时 = 资源或网络问题</div>
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'inherit' }}>实际播放方式：</div>
+                        <div>{activeSite?.live
+                          ? `经代理转发：${liveCands[liveIdx]?.proxy || ''}（备源 ${liveIdx + 1}/${liveCands.length}，清单和分段都走此代理）`
+                          : '浏览器直连播放（未经代理，需资源允许跨域）'}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'inherit' }}>经云端代理的地址（对比测试）：</div>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                          <code style={{ wordBreak: 'break-all', flex: 1, minWidth: '200px' }}>{cloudUrl}</code>
+                          <a className="btn" href={cloudUrl} target="_blank" rel="noreferrer">新标签打开</a>
+                          <button className="btn" onClick={() => copyText(cloudUrl)}>复制</button>
+                        </div>
+                        <div style={{ marginTop: '4px', opacity: 0.8 }}>↑ 走 CF 海外节点转发；直连失败但它能打开 = 源屏蔽了当前网络</div>
+                      </div>
+                    </div>
+                  </details>
+                );
+              })()}
 
               <h2>{activeVideo.vod_name}</h2>
               <p style={{ color: 'var(--text-muted)', marginTop: '8px' }} dangerouslySetInnerHTML={{ __html: activeVideo.vod_remarks || '暂无简介' }} />
