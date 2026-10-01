@@ -22,6 +22,7 @@ interface Video {
 }
 
 interface VideoDetail extends Video {
+  vod_play_from: string;
   vod_play_url: string;
 }
 
@@ -467,24 +468,34 @@ function App() {
               
               <div style={{ marginTop: '24px' }}>
                 <h3>选集</h3>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px' }}>
-                  {(activeVideo.vod_play_url || '').split('$$$').map((source, sIdx) => {
-                    const eps = source.split('#');
-                    return eps.map((ep, eIdx) => {
-                      const [title, url] = ep.split('$');
-                      if (!url) return null;
-                      return (
-                        <button 
-                          key={`${sIdx}-${eIdx}`}
-                          className={`btn ${playingUrl === url ? 'primary' : ''}`}
-                          onClick={() => setPlayingUrl(url)}
-                        >
-                          {title || `第${eIdx+1}集`}
-                        </button>
-                      );
-                    });
-                  })}
-                </div>
+                {(activeVideo.vod_play_url || '').split('$$$').map((source, sIdx) => {
+                  const eps = source.split('#').filter(ep => ep.includes('$'));
+                  if (eps.length === 0) return null;
+                  const fromNames = (activeVideo.vod_play_from || '').split('$$$');
+                  const srcName = fromNames[sIdx]?.trim() || `线路${sIdx + 1}`;
+                  return (
+                    <div key={sIdx} style={{ marginTop: '12px' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                        播放源 {sIdx + 1}：{srcName}（{eps.length}集）
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {eps.map((ep, eIdx) => {
+                          const [title, url] = ep.split('$');
+                          if (!url) return null;
+                          return (
+                            <button
+                              key={`${sIdx}-${eIdx}`}
+                              className={`btn ${playingUrl === url ? 'primary' : ''}`}
+                              onClick={() => setPlayingUrl(url)}
+                            >
+                              {title || `第${eIdx+1}集`}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : (
