@@ -589,6 +589,46 @@ function App() {
     }
   };
 
+  // Cast current video to a DLNA renderer (e.g. Xiaomi TV) via the local helper server.
+  // Browsers cannot do SSDP/UPnP themselves; localhost:8080 does discovery + push.
+  const fetchWithTimeout = async (url: string, opts: RequestInit = {}, ms = 6000) => {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms);
+    try {
+      return await fetch(url, { ...opts, signal: ctrl.signal });
+    } finally {
+      clearTimeout(t);
+    }
+  };
+
+  const castToDevice = async () => {
+    if (!playingUrl || !activeVideo) { alert('当前没有正在播放的视频。'); return; }
+    const base = 'http://localhost:8080';
+    try {
+      const res = await fetchWithTimeout(base + '/api/dlna/devices', {}, 8000);
+      const devices = await res.json();
+      if (!Array.isArray(devices) || devices.length === 0) {
+        alert('未发现局域网内的投屏设备。请检查：\n① 电视与电脑连接同一个路由器网络\n② 电视已开机，且"投屏/DLNA/多屏互动"功能可用\n③ 本地服务已启动并保持运行');
+        return;
+      }
+      let device = devices[0];
+      if (devices.length > 1) {
+        const pick = prompt('发现以下投屏设备，请输入编号：\n' + devices.map((d: any, i: number) => `${i + 1}. ${d.name}`).join('\n'), '1');
+        if (!pick) return;
+        device = devices[Number(pick) - 1];
+        if (!device) { alert('编号无效'); return; }
+      }
+      await fetchWithTimeout(base + '/api/dlna/play', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ controlURL: device.controlURL, url: playingUrl, title: activeVideo.vod_name })
+      }, 10000);
+      alert(`已推送「${activeVideo.vod_name}」到「${device.name}」，请在电视上确认播放。`);
+    } catch {
+      alert('投屏功能需要本地服务支持：\n请先双击桌面「启动TVBox播放器.command」启动本地服务（保持运行），再点投屏。');
+    }
+  };
+
   return (
     <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       
@@ -708,9 +748,14 @@ function App() {
           {activeVideo ? (
             // Video Player View
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px', overflowY: 'auto' }}>
-              <button className="btn" onClick={() => setActiveVideo(null)} style={{ alignSelf: 'flex-start', marginBottom: '16px' }}>
-                <ChevronLeft size={16} /> 返回列表
-              </button>
+              <div style={{ display: 'flex', gap: '8px', alignSelf: 'flex-start', marginBottom: '16px' }}>
+                <button className="btn" onClick={() => setActiveVideo(null)}>
+                  <ChevronLeft size={16} /> 返回列表
+                </button>
+                <button className="btn" onClick={castToDevice} title="通过本地服务投屏到局域网 DLNA 电视（小米等）">
+                  📺 投屏到电视
+                </button>
+              </div>
               
               <div style={{ width: '100%', aspectRatio: '16/9', background: '#000', borderRadius: '8px', overflow: 'hidden', marginBottom: '24px' }}>
                 {playingUrl ? (
