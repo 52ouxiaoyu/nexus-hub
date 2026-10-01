@@ -141,11 +141,12 @@
     ];
     // v3.50.0：数据驱动新融合（PVZ_FUSION_EXTRA 同源）自动追加到融合图鉴
     if (window.PVZ_FUSION_EXTRA) {
-        // v3.62.0：双子坚果 bt scale(1.4)+translate(0,16px) 在瓦片里超出容器盖住名字 —— 单独放大 md
-        // 缩小图鉴渲染（只影响图鉴/演示，不影响场上实机）
-        const MD_OVERRIDE = { fusion_wallnut_twinsunflower: 150 };
+        // v3.72.0：双子坚果 md 150→64 —— 用户要求两个坚果放大到与双子向日葵卡面葵花等大（~40px）；
+        // 底座向日葵在图鉴专用压扁（bt 14px/0.9）防整体溢出再盖名（只影响图鉴，场上实机不动）
+        const MD_OVERRIDE = { fusion_wallnut_twinsunflower: 64 };
         for (const f of window.PVZ_FUSION_EXTRA) {
-            const L = f.look || {};
+            let L = f.look || {};
+            if (f.type === 'fusion_wallnut_twinsunflower') L = Object.assign({}, L, { bt: 'translate(0px, 2px) scale(0.75)' });
             // v3.52.0：透传 bc/of 与第二叠加层 ov2/oc2/ot2/of2（双半剖分冰火等新外观）
             FUSION.push({ n: f.name, base: L.base, bf: L.bf, bt: L.bt, bc: L.bc, ov: L.ov, oc: L.oc, ot: L.ot, of: L.of,
                 ov2: L.ov2, oc2: L.oc2, ot2: L.ot2, of2: L.of2, md: MD_OVERRIDE[f.type] || f.md || 96, t: f.t });
@@ -529,6 +530,31 @@
                 '<div id="hg-detail"></div>' +
             '</div>';
         document.body.appendChild(modal);
+
+        // v3.72.0：图鉴内所有 gif 全部静止（用户：不想让植物/僵尸在说明里动）——
+        // 监听弹窗子树新增节点，img 加载完成后用 canvas 抓第一帧替换 src（素材无静态 png，只能取帧）
+        const freezeOne = im => {
+            if (im.dataset.frozen || !/\.gif(\?|$)/.test(im.getAttribute('src') || '')) return;
+            im.dataset.frozen = '1';
+            const draw = () => {
+                if (!im.naturalWidth || !im.naturalHeight) return;
+                try {
+                    const c = document.createElement('canvas');
+                    c.width = im.naturalWidth; c.height = im.naturalHeight;
+                    c.getContext('2d').drawImage(im, 0, 0);
+                    im.src = c.toDataURL('image/png');
+                } catch (err) { /* 取帧失败保持原 gif，不影响展示 */ }
+            };
+            if (im.complete) draw();
+            else im.addEventListener('load', draw, { once: true });
+        };
+        new MutationObserver(muts => {
+            for (const m of muts) for (const n of m.addedNodes) {
+                if (n.nodeType !== 1) continue;
+                if (n.tagName === 'IMG') freezeOne(n);
+                else if (n.querySelectorAll) n.querySelectorAll('img').forEach(freezeOne);
+            }
+        }).observe(modal, { childList: true, subtree: true });
 
         const body = modal.querySelector('#help-body');
         const detail = modal.querySelector('#hg-detail');
