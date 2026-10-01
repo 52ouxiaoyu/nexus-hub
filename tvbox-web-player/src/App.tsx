@@ -34,6 +34,11 @@ interface VideoDetail extends Video {
   vod_play_url: string;
 }
 
+// Global search result: carries the site it came from so detail can be loaded from the right source
+interface SearchItem extends VideoDetail {
+  site: Site;
+}
+
 interface PlaybackHistory {
   site: Site;
   video: VideoDetail;
@@ -197,6 +202,9 @@ function App() {
     } catch { return null; }
   });
   const [liveChannels, setLiveChannels] = useState<LiveChannel[]>([]);
+  // null = normal browse mode; array = global search mode (results aggregated from all sites)
+  const [searchResults, setSearchResults] = useState<SearchItem[] | null>(null);
+  const [searchProgress, setSearchProgress] = useState({ done: 0, total: 0 });
 
   const handleTimeUpdate = (time: number) => {
     if (activeSite && activeVideo && playingUrl) {
@@ -286,6 +294,7 @@ function App() {
 
   // Load Categories for Site
   const loadSite = async (site: Site) => {
+    exitSearch();
     setActiveSite(site);
     setActiveVideo(null);
     setVideos([]);
@@ -324,6 +333,7 @@ function App() {
   // Load Videos for Category
   const loadCategory = async (type_id: string) => {
     if (!activeSite) return;
+    exitSearch();
     setActiveCategory(type_id);
     setSearchKeyword('');
     setLoading(true);
@@ -344,37 +354,75 @@ function App() {
     setLoading(false);
   };
 
-  // Search Video
-  const handleSearch = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!activeSite || !searchKeyword.trim()) return;
-    setActiveCategory('');
-    setLoading(true);
-    try {
-      if (activeSite.live) {
-        const kw = searchKeyword.trim().toLowerCase();
-        setVideos(liveChannels
-          .map((c, i) => ({ ...c, idx: i }))
-          .filter(c => c.name.toLowerCase().includes(kw))
-          .map(c => ({ vod_id: String(c.idx), vod_name: c.name, vod_pic: c.logo, vod_remarks: c.group })));
-      } else {
-        const url = buildApiUrl(activeSite.api, { ac: 'detail', wd: searchKeyword.trim() });
-        const data = await fetchWithProxy(url);
-        setVideos(data.list || []);
-      }
-    } catch (err) {
-      console.error(err);
-      alert('搜索失败，可能是该线路不支持搜索或格式不兼容。');
-    }
-    setLoading(false);
+  // Global aggregated search across ALL VOD sites (parallel, progressive results).
+  // Playability filter: macCMS ac=detail&wd= returns vod_play_url directly, so we can
+  // drop results without a real m3u8/mp4 stream at zero extra cost.
+  const isPlayableItem = (v: any) =>
+    !!(v.vod_play_url && /\.(m3u8|mp4)/i.test(v.vod_play_url));
+
+  const exitSearch = () => {
+    setSearchResults(null);
+    setSearchProgress({ done: 0, total: 0 });
   };
 
-  // Load Video Detail
-  const loadVideoDetail = async (vod_id: string) => {
-    if (!activeSite) return;
+  const handleSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const kw = searchKeyword.trim();
+    if (!kw) return;
+    // Live site active: filter channels locally instead of global VOD search
+    if (activeSite?.live) {
+      const k = kw.toLowerCase();
+      exitSearch();
+      setVideos(liveChannels
+        .map((c, i) => ({ ...c, idx: i }))
+        .filter(c => c.name.toLowerCase().includes(k))
+        .map(c => ({ vod_id: String(c.idx), vod_name: c.name, vod_pic: c.logo, vod_remarks: c.group })));
+      return;
+    }
+    const vodSites = sites.filter(s => !s.live);
+    if (vodSites.length === 0) return;
+    setActiveCategory('');
+    setActiveVideo(null);
+    setSearchResults([]);
+    setSearchProgress({ done: 0, total: vodSites.length });
+    const seen = new Set<string>();
+    vodSites.forEach(site => {
+      (async () => {
+        try {
+          const url = buildApiUrl(site.api, { ac: 'detail', wd: kw });
+          const data = await fetchWithProxy(url);
+          const items: SearchItem[] = (data.list || [])
+            .filter((v: any) => isPlayableItem(v))
+            .filter((v: any) => {
+              // Dedupe same-title results across sites (keep the fastest responding source)
+              const name = String(v.vod_name || '').trim();
+              if (!name || seen.has(name)) return false;
+              seen.add(name);
+              return true;
+            })
+            .map((v: any) => ({ ...v, site }));
+          if (searchKeyword.trim() === kw) {
+            setSearchResults(prev => [...(prev || []), ...items]);
+          }
+        } catch (err) {
+          console.warn('线路搜索失败:', site.name, err);
+        } finally {
+          if (searchKeyword.trim() === kw) {
+            setSearchProgress(p => ({ ...p, done: p.done + 1 }));
+          }
+        }
+      })();
+    });
+  };
+
+  // Load Video Detail (siteOverride: search results come from their own site)
+  const loadVideoDetail = async (vod_id: string, siteOverride?: Site) => {
+    const site = siteOverride || activeSite;
+    if (!site) return;
+    setActiveSite(site);
     setLoading(true);
     try {
-      if (activeSite.live) {
+      if (site.live) {
         // Live channel: play directly, no detail API needed
         const ch = liveChannels[Number(vod_id)];
         if (ch) {
@@ -393,11 +441,17 @@ function App() {
         setLoading(false);
         return;
       }
-      const url = buildApiUrl(activeSite.api, { ac: 'detail', ids: vod_id });
+      const url = buildApiUrl(site.api, { ac: 'detail', ids: vod_id });
       const data = await fetchWithProxy(url);
       if (data.list && data.list.length > 0) {
-        setActiveVideo(data.list[0]);
-        const urls = data.list[0].vod_play_url;
+        const detail: VideoDetail = data.list[0];
+        if (!isPlayableItem(detail)) {
+          alert('该影片在此线路没有可直接播放的视频流，试试搜索结果里的其他来源。');
+          setLoading(false);
+          return;
+        }
+        setActiveVideo(detail);
+        const urls = detail.vod_play_url;
         if (urls) {
           // Prefer a directly playable stream (m3u8/mp4); share-page URLs cannot play in browser
           let fallback = '';
@@ -602,21 +656,21 @@ function App() {
               {/* Search Bar */}
               <div style={{ padding: '16px', borderBottom: '1px solid var(--glass-border)' }}>
                 <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px' }}>
-                  <input 
-                    className="input" 
+                  <input
+                    className="input"
                     value={searchKeyword}
                     onChange={(e) => setSearchKeyword(e.target.value)}
-                    placeholder="在此线路中搜索视频..."
+                    placeholder="搜索全部线路（输入关键词，聚合所有资源）..."
                     style={{ flex: 1 }}
                   />
                   <button type="submit" className="btn primary" disabled={loading || !searchKeyword.trim()}>
-                    <Search size={16} /> 搜索
+                    <Search size={16} /> 全局搜索
                   </button>
                 </form>
               </div>
 
-              {/* Categories */}
-              {categories.length > 0 && (
+              {/* Categories (hidden during global search) */}
+              {categories.length > 0 && searchResults === null && (
                 <div style={{ padding: '16px', borderBottom: '1px solid var(--glass-border)', display: 'flex', gap: '8px', overflowX: 'auto', whiteSpace: 'nowrap' }}>
                   {categories.map(cat => (
                     <button 
@@ -633,50 +687,79 @@ function App() {
               
               {/* Grid */}
               <div className="video-grid" style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px', alignContent: 'start' }}>
-                {videos.map(video => (
-                  <div 
-                    key={video.vod_id} 
-                    className="animate-fade-in"
-                    onClick={() => loadVideoDetail(video.vod_id)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '8px', overflow: 'hidden', position: 'relative', marginBottom: '8px' }}>
-                      <img
-                        src={video.vod_pic}
-                        alt={video.vod_name}
-                        referrerPolicy="no-referrer"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s', background: 'var(--glass-border)' }}
-                        onError={(e) => {
-                          // Retry via proxy (bypasses hotlink/referer checks), then hide gracefully
-                          const img = e.currentTarget;
-                          if (!img.dataset.fb && video.vod_pic) {
-                            img.dataset.fb = '1';
-                            img.src = '/proxy?url=' + encodeURIComponent(video.vod_pic);
-                          } else {
-                            img.style.visibility = 'hidden';
-                          }
-                        }}
-                      />
-                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '8px', background: 'linear-gradient(transparent, rgba(0,0,0,0.8))', fontSize: '12px', color: '#fff' }}>
-                        {video.vod_remarks}
-                      </div>
-                    </div>
-                    <div style={{ fontSize: '14px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {video.vod_name}
-                    </div>
-                  </div>
-                ))}
-                
-                {loading && (
-                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                    加载中...
-                  </div>
-                )}
-                {!loading && videos.length === 0 && activeSite && (
-                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                    暂无数据
-                  </div>
-                )}
+                {(() => {
+                  const isSearch = searchResults !== null;
+                  const items: (Video & { site?: Site })[] = isSearch ? searchResults! : videos;
+                  const showLoading = loading && !isSearch;
+                  const showEmpty = !loading && items.length === 0 && (isSearch || !!activeSite);
+                  return (
+                    <>
+                      {isSearch && (
+                        <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+                            🔍 全局搜索「{searchKeyword.trim()}」：{items.length} 个可播放结果
+                            {searchProgress.done < searchProgress.total && `（已搜索 ${searchProgress.done}/${searchProgress.total} 条线路...）`}
+                          </span>
+                          <button className="btn" onClick={exitSearch}>退出搜索</button>
+                        </div>
+                      )}
+                      {items.map(video => (
+                        <div
+                          key={(video.site?.key || '') + video.vod_id}
+                          className="animate-fade-in"
+                          onClick={() => video.site ? loadVideoDetail(video.vod_id, video.site) : loadVideoDetail(video.vod_id)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '8px', overflow: 'hidden', position: 'relative', marginBottom: '8px' }}>
+                            <img
+                              src={video.vod_pic}
+                              alt={video.vod_name}
+                              referrerPolicy="no-referrer"
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s', background: 'var(--glass-border)' }}
+                              onError={(e) => {
+                                // Retry via proxy (bypasses hotlink/referer checks), then hide gracefully
+                                const img = e.currentTarget;
+                                if (!img.dataset.fb && video.vod_pic) {
+                                  img.dataset.fb = '1';
+                                  img.src = '/proxy?url=' + encodeURIComponent(video.vod_pic);
+                                } else {
+                                  img.style.visibility = 'hidden';
+                                }
+                              }}
+                            />
+                            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '8px', background: 'linear-gradient(transparent, rgba(0,0,0,0.8))', fontSize: '12px', color: '#fff' }}>
+                              {video.vod_remarks}
+                            </div>
+                            {video.site && (
+                              <div style={{ position: 'absolute', top: 0, right: 0, padding: '3px 8px', background: 'rgba(59,130,246,0.9)', fontSize: '11px', color: '#fff', borderBottomLeftRadius: '8px' }}>
+                                {video.site.name}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '14px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {video.vod_name}
+                          </div>
+                        </div>
+                      ))}
+                      {showLoading && (
+                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                          加载中...
+                        </div>
+                      )}
+                      {showEmpty && (isSearch ? (
+                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                          {searchProgress.done < searchProgress.total
+                            ? `正在搜索 ${searchProgress.done}/${searchProgress.total} 条线路...`
+                            : '没有找到可播放的结果（无播放流的来源已自动过滤）'}
+                        </div>
+                      ) : (
+                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                          暂无数据
+                        </div>
+                      ))}
+                    </>
+                  );
+                })()}
               </div>
             </>
           )}
