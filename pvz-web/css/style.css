@@ -144,6 +144,9 @@ body {
     background-size: cover;
     padding: 5px 10px;
     border-radius: 5px;
+    /* v3.64.0：物品栏黑圈正解（用户澄清）——黑圈围在"选植物的种子栏"外围一圈，
+       而非只圈在单张卡上；经典/融合/砸罐子共用此栏，一处生效 */
+    box-shadow: 0 0 0 2px #000;
 }
 /* Custom scrollbar for seed bank */
 #seed-bank::-webkit-scrollbar {
