@@ -316,7 +316,7 @@ body {
     background-position: top;
     cursor: pointer;
     border-radius: 5px;
-    border: 2px solid transparent;
+    border: 2px solid #000; /* v3.75.0：选卡页所有植物统一黑边框（用户要求） */
     transition: transform 0.1s;
 }
 .chooser-card:hover {
