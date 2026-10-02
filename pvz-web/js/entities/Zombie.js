@@ -141,7 +141,7 @@ class Zombie extends Entity {
             this.attackSrc = 'assets/images/Zombies/BucketheadZombie/BucketheadZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
             this._ironStage = 2; // 2=双桶 1=仅里层桶 0=无
-            this._spawnAcc({ src: 'assets/images/Zombies/BucketheadZombie/BucketheadZombie.gif', cw: 166, ch: 144, x1: 52, y1: 2, x2: 104, y2: 52, w: 52, dx: -5, dy: -73 });
+            this._spawnAcc({ src: 'assets/images/Zombies/BucketheadZombie/BucketheadZombie.gif', cw: 166, ch: 144, x1: 52, y1: 2, x2: 104, y2: 52, w: 52, dx: -5, dy: -72, flip: true });
         } else if (type === 'madpaper') {
             // ===== v3.74.0 疯狂读报僵尸（读报+撑杆 融合）=====
             // v3.79.0（用户：跟读报僵尸没什么区别，要有特色）——出场就用"丢报纸狂暴"形态
@@ -164,7 +164,8 @@ class Zombie extends Entity {
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
             // v3.79.0（用户：火把不能杵在地上，要像锤子僵尸那样拿在手上）——
             // 挂件锚点改到手上（同 _spawnHammer 的 x-6, y+12），火炬树桩顶部火焰当"火把"
-            this._spawnAcc({ src: 'assets/images/Plants/Torchwood/Torchwood.gif', cw: 73, ch: 87, x1: 0, y1: 0, x2: 73, y2: 42, w: 26, dx: -6, dy: 10 });
+            // v3.79.1：整只火炬树桩拿在手上（同锤子僵尸手位锚点，用户：火把要在手上不能着地）
+            this._spawnAcc({ src: 'assets/images/Plants/Torchwood/Torchwood.gif', cw: 73, ch: 87, x1: 0, y1: 0, x2: 73, y2: 87, w: 26, dx: -12, dy: 6 });
         } else if (type === 'garliczombie') {
             // ===== v3.74.0 大蒜僵尸（僵尸+大蒜 融合）=====
             // v3.79.0：改植物头式（用户：样子要和普通融合植物僵尸一样）——身体隐藏，
@@ -461,9 +462,13 @@ class Zombie extends Entity {
             'z-index:' + (Math.floor(this.y) + 2) + ';';
         const img = document.createElement('img');
         img.src = cfg.src;
+        // flip=true：垂直镜像（双盔外层桶倒扣——桶口朝下扣在里层桶上，实心朝上无空洞）
+        // 镜像后源图 y 行出现在 (ch - y)*scale 处：要在框内显示 y1..y2 需把 top 改为 -(ch-y2)*scale
+        const flipTop = cfg.flip ? (-(cfg.ch - cfg.y2) * scale) : (-cfg.y1 * scale);
         img.style.cssText = 'position:absolute;max-width:none;' +
-            'left:' + (-cfg.x1 * scale).toFixed(1) + 'px;top:' + (-cfg.y1 * scale).toFixed(1) + 'px;' +
-            'width:' + (cfg.cw * scale).toFixed(1) + 'px;';
+            'left:' + (-cfg.x1 * scale).toFixed(1) + 'px;top:' + flipTop.toFixed(1) + 'px;' +
+            'width:' + (cfg.cw * scale).toFixed(1) + 'px;' +
+            (cfg.flip ? 'transform:scaleY(-1);' : '');
         el.appendChild(img);
         this._accEl = el;
         this.game.entityLayer.appendChild(el);

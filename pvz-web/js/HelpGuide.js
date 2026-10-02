@@ -202,12 +202,12 @@
             // v3.79.0 外观重做：双盔=铁桶上再叠一顶铁桶；疯狂读报=出场即无报纸狂暴相；
             // 火把=拿在手上；大蒜=改植物头式（与植物头家族一致）
             { n: '双盔僵尸', img: ZB + 'BucketheadZombie/BucketheadZombie.gif', h: 70,
-              acc: { src: ZB + 'BucketheadZombie/BucketheadZombie.gif', cw: 166, ch: 144, x1: 52, y1: 2, x2: 104, y2: 52, w: 25, ox: -2.5, by: 58 },
-              hp: 1500, t: '路障+铁桶 融合（紫罐困难/地狱低频·金罐）：一只铁桶僵尸，头上再披一顶铁桶——两顶帽子重叠。外层桶先打掉露出里层桶，再打掉才变普通僵尸' },
+              acc: { src: ZB + 'BucketheadZombie/BucketheadZombie.gif', cw: 166, ch: 144, x1: 52, y1: 2, x2: 104, y2: 52, w: 24, ox: -2.5, by: 58, flip: true },
+              hp: 1500, t: '路障+铁桶 融合（紫罐困难/地狱低频·金罐）：一只铁桶僵尸，头上再倒扣一顶铁桶——两顶帽子重叠。外层桶先打掉露出里层桶，再打掉才变普通僵尸' },
             { n: '疯狂读报僵尸', img: ZB + 'NewspaperZombie/LostNewspaper.gif', h: 70, hp: 340,
               t: '读报+撑杆 融合（紫罐困难/地狱低频·金罐）：出场就是怒目举拳的疯狂相（没有报纸），高速冲来跳过遇到的第一株植物；被打到狂暴线还会再度加速' },
             { n: '火把僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70,
-              acc: { src: PL + 'Torchwood/Torchwood.gif', cw: 73, ch: 87, x1: 0, y1: 0, x2: 73, y2: 42, w: 13, ox: -3, by: 20 },
+              acc: { src: PL + 'Torchwood/Torchwood.gif', cw: 73, ch: 87, x1: 0, y1: 0, x2: 73, y2: 87, w: 15, ox: -4, by: 14 },
               hp: 400, t: '僵尸+火炬树桩 融合（紫罐困难/地狱低频·金罐）：手里举着燃烧的火把，啃植物时每秒额外烧 40——防线被它啃得特别快' },
             { n: '大蒜僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70,
               head: { src: PL + 'Garlic/Garlic.gif', cw: 60, ch: 59, keepTop: 1.0, w: 38, y: 2, ox: 10 },
@@ -440,8 +440,9 @@
                 'width:' + boxW.toFixed(1) + 'px;height:' + boxH.toFixed(1) + 'px;' +
                 'left:calc(50% + ' + (cx - boxW / 2).toFixed(1) + 'px);bottom:' + (2 + by).toFixed(1) + 'px;z-index:3;">' +
                 '<img src="' + a.src + V + '" style="position:absolute;max-width:none;' +
-                'left:' + (-a.x1 * sc).toFixed(1) + 'px;top:' + (-a.y1 * sc).toFixed(1) + 'px;' +
-                'width:' + (a.cw * sc).toFixed(1) + 'px;"></div>';
+                'left:' + (-a.x1 * sc).toFixed(1) + 'px;top:' + (a.flip ? (-(a.ch - a.y2) * sc) : (-a.y1 * sc)).toFixed(1) + 'px;' +
+                'width:' + (a.cw * sc).toFixed(1) + 'px;' +
+                (a.flip ? 'transform:scaleY(-1);' : '') + '"></div>';
         }
         return art;
     }
@@ -537,9 +538,13 @@
             const tagCls = i === 1 ? 'hg-orange' : (i >= 2 ? 'hg-red' : '');
             return groupBar(g.title, tagCls) +
                 '<div class="hg-grid">' + g.list.map((z, j) => {
-                    const key = (i >= 3 ? 'a' : 'z') + i + '_' + j;
-                    DETAILS[key] = i >= 3 ? propDetail(z) : zombieDetail(z, g.title);
-                    return i >= 3 ? propTile(z, key) : zombieTile(z, key);
+                    // v3.79.1：按条目本身分流（ih/crop=道具配饰走 propArt，僵尸走 zombieArt）——
+                    // 旧版按组序号 i>=3 分流，v3.79.0 删掉「掉落物」组后植物头组序号前移被误当道具，
+                    // 头顶植物全部消失（用户实测回归）
+                    const isProp = z.ih !== undefined || !!z.crop;
+                    const key = (isProp ? 'a' : 'z') + i + '_' + j;
+                    DETAILS[key] = isProp ? propDetail(z) : zombieDetail(z, g.title);
+                    return isProp ? propTile(z, key) : zombieTile(z, key);
                 }).join('') + '</div>';
         }).join('');
     }
