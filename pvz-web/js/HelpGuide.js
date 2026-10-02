@@ -164,7 +164,7 @@
     // img=贴图 h=显示高度（按真实体型比例：普通僵尸=70） head=头顶植物 accNote=护甲说明
     const Z_GROUPS = [
         { title: '经典冒险', list: [
-            { n: '巨尸 Boss', img: ZB + 'LGBOSS/1.gif', h: 84, hp: 5000, t: '关底 Boss，血量与压迫感都是 Boss 级' },
+            { n: '巨尸 Boss', img: ZB + 'LGBOSS/1.gif', h: 84, hp: 1000, t: '极后期（15 分钟后）才罕见登场的大型僵尸，血量不厚，当它是个稀客就好' },
             { n: '巨人僵尸', img: ZB + 'Zombie/Zombie.gif', h: 104, dark: true, hp: 4000, t: '2 倍体型重锤砸扁植物，过半血掷出小鬼' },
             { n: '冰车僵尸', img: ZB + 'Zomboni/1.gif', h: 90, ice: true, hp: 1300, t: '体型巨大的冰车，碾压植物不留啃痕，驶过之处留下冰道（冰面无法种植，30 秒融化，火爆辣椒可烧毁）；只有地刺能扎爆它' },
             { n: '橄榄球僵尸', img: ZB + 'FootballZombie/FootballZombie.gif', h: 72, hp: 2240, t: '速度 40 的重装骑兵，头盔 1400 护甲；v3.56.0 血量按 4 倍路障上调' },

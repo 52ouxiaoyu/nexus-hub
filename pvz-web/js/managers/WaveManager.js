@@ -81,7 +81,9 @@ class WaveManager {
         if (this.timeElapsed > 540) ladderChance = Math.min(0.1, (this.timeElapsed - 540) / 500);
         if (this.timeElapsed > 600) impChance = Math.min(0.1, (this.timeElapsed - 600) / 500);
         if (this.timeElapsed > 600) gargantuarChance = Math.min(0.05, (this.timeElapsed - 600) / 800);
-        if (this.timeElapsed > 600) bossChance = Math.min(0.05, (this.timeElapsed - 600) / 1000); // Rare boss spawn
+        // v3.80.0：Boss 极后期才解锁（900s，比巨人晚一半场），概率上限 0.05→0.02、爬坡更慢——
+        // （用户：boss 出现频率低一点，只有后期才能出现）
+        if (this.timeElapsed > 900) bossChance = Math.min(0.02, (this.timeElapsed - 900) / 1500);
         
         // 植物头僵尸（peahead/nuthead/sunhead/snowpeahead）：
         // 头顶基础植物的"僵尸改造体"。

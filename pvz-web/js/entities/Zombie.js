@@ -282,7 +282,9 @@ class Zombie extends Entity {
             this.attackSrc = 'assets/images/Zombies/Zomboni/1.gif'; // crushes, doesn't attack
             this.dieSrc = 'assets/images/Zombies/Zomboni/BoomDie.gif';
         } else if (type === 'lgboss') {
-            this.hp = 5000; this.maxHp = 5000;
+            // v3.80.0（用户：boss 巨弱爆了没攻击力，血量却跟巨人没区别）——
+            // 血量 5000→1000（不再当血牛），刷出移到极后期且低频（WaveManager 900s/2%）
+            this.hp = 1000; this.maxHp = 1000;
             this.speed = 10;
             this.element.src = 'assets/images/Zombies/LGBOSS/1.gif';
             this.walkSrc = 'assets/images/Zombies/LGBOSS/1.gif';
