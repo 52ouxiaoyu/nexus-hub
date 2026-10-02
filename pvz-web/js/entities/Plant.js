@@ -154,33 +154,33 @@ class Plant extends Entity {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790940504';
+            stat.src = 'assets/images/Plants/MelonPult/MelonPult.png?v=1790944905';
         } else if (type === 'wintermelon') {
             stat.hp = 300;
             stat.fireRate = 1.0;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790940504';
+            stat.src = 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1790944905';
         } else if (type === 'cabbagepult') {
             // 卷心菜投手（v3.10.0）：PVZ1 原版数值——100 阳光 / 40 伤害 / 抛射。
             // 投掷物可"破甲"：越过路障·铁桶·报纸·铁门直接打僵尸本体，护甲不脱落。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790940504';
+            stat.src = 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1790944905';
         } else if (type === 'kernelpult') {
             // 玉米投手（v3.10.0）：100 阳光 / 玉米粒 20 伤害；20% 概率改投黄油（40 伤害 + 定身 3 秒）。
             // 与卷心菜投手同享破甲规则。
             stat.hp = 300;
             stat.fireRate = 1.4;
             stat.fireTimer = 0;
-            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790940504';
+            stat.src = 'assets/images/Plants/KernelPult/KernelPult.png?v=1790944905';
             stat.butterChance = 0.2;
         } else if (type === 'cobcannon') {
             // 玉米加农炮（v3.24.0）：PVZ1 原版 Cob Cannon——三株玉米投手合体，占两格。
             // 平时嘴里没有炮；充能 25s 结束后嘴里出现玉米炮弹；
             // 点击它出现瞄准镜（跟随鼠标），按 M 键向准星位置发射（见 GameLoop.enterCobAim）。
             stat.hp = 600;
-            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790940504';
+            stat.src = 'assets/images/Plants/CobCannon/CobCannon.png?v=1790944905';
             // v3.24.2 立绘 148×85（炮口已用叶壳封住），显示宽 132——两格 160px 内留边，
             // 修"看起来占三格"；+15 补偿缩小后轮子离地
             stat.yOffset = 15;
@@ -210,7 +210,7 @@ class Plant extends Entity {
             // 不攻击、不产太阳，仅在种植瞬间触发 lightUpNeighbors 照亮周围一圈罐子。
             // 0.gif 250×237 透明大画布，比 Plantern.gif 20 帧夜版更适合白天场地。
             stat.hp = 300;
-            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790940504';
+            stat.src = 'assets/images/Plants/Plantern/0.gif?v=1790944905';
             stat.yOffset = 0;
         }
 
@@ -250,12 +250,7 @@ class Plant extends Entity {
             else if (type === 'fusion_firerepeater') { p1 = 'repeater'; p2 = 'torchwood'; }     // 火焰双发：双发射手+火炬树桩
             else if (type === 'fusion_quadsun') { p1 = 'twinsunflower'; p2 = 'twinsunflower'; } // 四头向日葵：双子×2
             else if (type === 'fusion_firetallnut') { p1 = 'jalapeno'; p2 = 'tallnut'; }        // 辣椒高坚果：高坚果+火爆辣椒（坚果+辣椒=火炬已占用）
-            // ===== v3.74.0 掉落物融合（防具+植物，只能由掉落物种出）=====
-            else if (type === 'fusion_cone_peashooter') { p1 = 'peashooter'; p2 = 'peashooter'; }   // 路障豌豆：豌豆+路障(掉落)
-            else if (type === 'fusion_bucket_peashooter') { p1 = 'peashooter'; p2 = 'peashooter'; } // 铁桶豌豆：豌豆+铁桶(掉落)
-            else if (type === 'fusion_flag_sunflower') { p1 = 'sunflower'; p2 = 'sunflower'; }      // 旗帜向日葵：向日葵+旗帜(掉落)
-            else if (type === 'fusion_door_wallnut') { p1 = 'wallnut'; p2 = 'wallnut'; }            // 铁门坚果：坚果+铁门(掉落)
-            else if (type === 'fusion_paper_fume') { p1 = 'fumeshroom'; p2 = 'fumeshroom'; }        // 狂暴大喷菇：大喷菇+报纸(掉落)
+            // v3.74.0 掉落物融合五株 —— v3.80.3 整体删除（用户：太难看）
             else {
                 const parts = type.split('_');
                 p1 = parts[1];
@@ -537,13 +532,8 @@ class Plant extends Entity {
         // 融合特调（兜底）：南瓜壳=PVZ"南瓜(4000)+高坚果(8000)叠放"等效总护甲 12000。
         // 正常游戏里南瓜壳由手套融合"套"在已有植物上（不会作为独立 Plant 出现），此兜底仅防御异常路径。
         if (type === 'fusion_pumpkinhead') this.hp = 12000;
-        // ===== v3.74.0 掉落物融合数值（防具血量叠加在宿主上）=====
-        if (type === 'fusion_cone_peashooter') this.hp = 660;    // 豌豆 300 + 路障 360
-        if (type === 'fusion_bucket_peashooter') this.hp = 1400; // 豌豆 300 + 铁桶 1100
-        if (type === 'fusion_door_wallnut') this.hp = 5200;      // 坚果 4000 + 铁门 1200
-        if (type === 'fusion_paper_fume') this.hp = 450;         // 大喷菇 300 + 报纸 150
-        if (type === 'fusion_flag_sunflower') this.sunRate = 15; // 旗帜加速：24s → 15s 一产
-        
+        // v3.74.0 掉落物融合数值 —— v3.80.3 整体删除
+
         this.maxHp = this.hp;
         
         // 自动引爆标记：樱桃炸弹/火爆辣椒/寒冰菇/毁灭菇与寒冰炸弹（融合炸弹）种下后
@@ -1249,7 +1239,7 @@ class Plant extends Entity {
             if (!this._cobShellEl) {
                 const el = document.createElement('img');
                 // v3.24.1：装填玉米用原版图鉴里抠出的整根玉米（带根部），从炮口探出
-                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790940504';
+                el.src = 'assets/images/Plants/CobCannon/CobLoaded.png?v=1790944905';
                 // 裸 img 必须自带 translate(-50%,-50%) 居中基准（与 fusionOverlay 同一教训）
                 // v3.24.2 尺寸随立绘缩放同步：43×48（0.892×）
                 el.style.cssText = 'position:absolute;width:43px;height:48px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);';
@@ -1460,9 +1450,7 @@ class Plant extends Entity {
             
             if (!skipShooting) {
                 this.fireTimer += deltaTime;
-            // v3.74.0：狂暴大喷菇——血量跌破 150（报纸没了）攻击间隔减半
-            const effFireRate = (this.type === 'fusion_paper_fume' && this.hp < 150) ? this.fireRate / 2 : this.fireRate;
-            if (this.fireTimer >= effFireRate) {
+            if (this.fireTimer >= this.fireRate) {
                 const maxRange = (this.hasTrait('puffshroom') || this.hasTrait('fumeshroom')) ? 300 : 9999;
                 
                 let hasZombieAhead = this.game.entities.some(e => {

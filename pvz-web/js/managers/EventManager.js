@@ -99,8 +99,10 @@ class EventManager {
                 g.gameSpeed = 4; setTimeout(() => g.gameSpeed = 1, 4000);
             }},
             { msg: '🐢 迟缓：时间泥沼！', color: '#4444ff', exec: g => {
-                const z = g.entities.filter(e => e instanceof Zombie); z.forEach(e => e.setSlow(10));
-                setTimeout(() => z.forEach(e => e.thaw()), 6000);
+                // v3.80.3 根因修复：旧版 setSlow(10) 后用 setTimeout(thaw,6000) 强制解冻——
+                // ① 6 秒后把期间被冰西瓜等新打上的减速一并抹掉；② 真实时间计时与游戏暂停/重开错位；
+                // ③ 僵尸引用过期后 thaw 会操作已回收对象。现改为直接减速 6 秒自然到期，无残留副作用。
+                g.entities.filter(e => e instanceof Zombie).forEach(z => z.setSlow(6));
             }},
             { msg: '💖 治愈：僵尸医疗！', color: '#ffaaaa', minScore: 200, exec: g => {
                 g.entities.filter(e => e instanceof Zombie).forEach(z => z.hp += 200);

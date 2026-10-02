@@ -43,7 +43,9 @@ class CollisionManager {
                             if (p.type === 'snowpea' || p.type === 'wintermelon' || p.type === 'icecabbage' || p.type === 'icekernel') { // v3.57.0：冰雾大喷菇已删，_iceFume 移除
                                 z.setSlow(10.0);
                             } else if (p.type === 'firepea') {
-                                z.thaw(); // Fire thaws out zombies
+                                // v3.80.3 根因修复：火豌豆命中只解除"绝对冰冻"，不再 thaw() 抹掉寒冰减速
+                                //（旧版：火冰混防时冰西瓜刚上的减速立刻被火豆清掉 → "一段时间没冰冻"）
+                                z.thawFreeze();
                             } else if (p.type === 'butter') {
                                 z.freezeButter(3.0); // 玉米投手 20% 黄油：定身 3 秒
                             }

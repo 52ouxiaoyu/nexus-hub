@@ -607,7 +607,22 @@ class Zombie extends Entity {
         if (this.element) this.element.style.filter = '';
         if (this.headEl) this.headEl.style.filter = '';
     }
-    
+
+    // v3.80.3：火焰命中专用——只解除"绝对冰冻"（原版火能化冰），不再顺带抹掉寒冰减速。
+    // 根因修复（用户：冰西瓜有一段时间没冰冻效果）：旧版火豌豆命中调 thaw() 把减速一并清空，
+    // 火冰混防时冰西瓜刚打上的减速立刻被火豆解掉，表现为"一段时间没冰冻"。
+    thawFreeze() {
+        if (this.freezeTimer > 0) {
+            this.freezeTimer = 0;
+            this._removeIceSpike();
+        }
+        // 重算滤镜：仍被减速则回到冰蓝色，无状态则清空
+        const f = this._statusFilter();
+        if (this.element) this.element.style.filter = f;
+        if (this.headEl) this.headEl.style.filter = f;
+        this._tintedByStatus = !!f;
+    }
+
     // 被魅惑菇策反：调头向右，为玩家而战（PVZ 原版机制：满血转化）
     hypnotize() {
         // v3.23.0：寒冰头僵尸免疫魅惑
@@ -865,8 +880,7 @@ class Zombie extends Entity {
             }
             // v3.23.0：盲盒僵尸被击杀 → 开出一只随机僵尸
             if (this.type === 'mysterybox' && !this.hypnotized) this._openMysteryBox();
-            // v3.74.0：装甲僵尸死亡按概率掉下身上物品（路障/铁桶/旗帜/铁门/报纸）
-            if (!this.hypnotized && this.game._dropZombieLoot) this.game._dropZombieLoot(this);
+            // v3.74.0 防具掉落 —— v3.80.3 整体删除（用户：掉落物太难看）
             setTimeout(() => { this.isDead = true; }, 2000); 
         }
         
