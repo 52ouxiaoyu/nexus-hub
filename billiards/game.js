@@ -1889,7 +1889,10 @@ function aiChooseShot() {
     // ---- 斯诺克：全难度脑内模拟搜索（v2.7.5 起不再用一步几何，用户反馈 AI 太弱） ----
     if (gameMode === 'snooker') {
         const on = snookerTargets();
-        const aims = cands.slice(0, aiLevel === 2 ? 10 : aiLevel === 1 ? 7 : 4);
+        const isEasy = aiLevel === 0;
+        // v2.7.6：简单档太准（用户反馈"根本打不过"）——只挑较直的球位打 + 候选减到 3 个
+        const aims = cands.filter(c => !isEasy || c.cosCut >= 0.45)
+                          .slice(0, aiLevel === 2 ? 10 : aiLevel === 1 ? 7 : 3);
         const powers = aiLevel === 2 ? [0.30, 0.50, 0.75, 0.92] : aiLevel === 1 ? [0.35, 0.60, 0.85] : [0.50, 0.85];
         const noise = aiLevel === 2 ? 0.5 : aiLevel === 1 ? 1.6 : 4.5;
         let bestPlan = null, bestVal = -Infinity;
@@ -1920,6 +1923,12 @@ function aiChooseShot() {
             }
         }
         if (!bestPlan) return aiDefense(targets, sigma);
+        // v2.7.6：简单档不做事后噪声择优（那会无限贴近理想线、弹无虚发）——
+        // 保留"会挑球/会算力度"的脑子，但出杆直接带满档噪声，该打丢就打丢
+        if (isEasy) {
+            const a = Math.atan2(bestPlan.dir.z, bestPlan.dir.x) + gauss() * sigma;
+            return { dir: { x: Math.cos(a), z: Math.sin(a) }, power: clamp(bestPlan.power, 0.10, 0.95), vert: 0 };
+        }
         // 噪声复验：从理想线 + 3 个噪声样本里选模拟实测最优的方向
         const vert = bestPlan.vert || 0;
         let bdir = bestPlan.dir;
