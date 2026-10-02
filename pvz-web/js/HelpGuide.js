@@ -199,25 +199,19 @@
         ]},
         { title: '融合僵尸', list: [
             // v3.74.0 用户点名新增：两两融合而来，难度温和；禁用巨人/冰车/橄榄球/舞王/Boss 系
-            { n: '双盔僵尸', img: ZB + 'ConeheadZombie/ConeheadZombie.gif', h: 70,
-              acc: { src: ZB + 'BucketheadZombie/BucketheadZombie.gif', cw: 166, ch: 144, x1: 52, y1: 2, x2: 104, y2: 52, w: 34, ox: 2, by: 44 },
-              hp: 1500, t: '路障+铁桶 融合（紫罐困难/地狱低频·金罐）：路障套在铁桶外面——路障 360 先掉，露出铁桶再扛 940，全部打掉才变普通僵尸' },
-            { n: '疯狂读报僵尸', img: ZB + 'NewspaperZombie/HeadWalk1.gif', h: 70, hp: 340,
-              t: '读报+撑杆 融合（紫罐困难/地狱低频·金罐）：举着报纸高速冲来，跳过遇到的第一株植物；报纸被打碎后再度狂暴加速' },
+            // v3.79.0 外观重做：双盔=铁桶上再叠一顶铁桶；疯狂读报=出场即无报纸狂暴相；
+            // 火把=拿在手上；大蒜=改植物头式（与植物头家族一致）
+            { n: '双盔僵尸', img: ZB + 'BucketheadZombie/BucketheadZombie.gif', h: 70,
+              acc: { src: ZB + 'BucketheadZombie/BucketheadZombie.gif', cw: 166, ch: 144, x1: 52, y1: 2, x2: 104, y2: 52, w: 25, ox: -2.5, by: 58 },
+              hp: 1500, t: '路障+铁桶 融合（紫罐困难/地狱低频·金罐）：一只铁桶僵尸，头上再披一顶铁桶——两顶帽子重叠。外层桶先打掉露出里层桶，再打掉才变普通僵尸' },
+            { n: '疯狂读报僵尸', img: ZB + 'NewspaperZombie/LostNewspaper.gif', h: 70, hp: 340,
+              t: '读报+撑杆 融合（紫罐困难/地狱低频·金罐）：出场就是怒目举拳的疯狂相（没有报纸），高速冲来跳过遇到的第一株植物；被打到狂暴线还会再度加速' },
             { n: '火把僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70,
-              acc: { src: PL + 'Torchwood/Torchwood.gif', cw: 73, ch: 87, x1: 0, y1: 0, x2: 73, y2: 42, w: 22, ox: -16, by: 10 },
-              hp: 400, t: '僵尸+火炬树桩 融合（紫罐困难/地狱低频·金罐）：手持燃烧火把，啃植物时每秒额外烧 40——防线被它啃得特别快' },
+              acc: { src: PL + 'Torchwood/Torchwood.gif', cw: 73, ch: 87, x1: 0, y1: 0, x2: 73, y2: 42, w: 13, ox: -3, by: 20 },
+              hp: 400, t: '僵尸+火炬树桩 融合（紫罐困难/地狱低频·金罐）：手里举着燃烧的火把，啃植物时每秒额外烧 40——防线被它啃得特别快' },
             { n: '大蒜僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70,
-              acc: { src: PL + 'Garlic/Garlic.gif', cw: 60, ch: 59, x1: 0, y1: 0, x2: 60, y2: 59, w: 24, ox: -8, by: 12 },
-              hp: 300, t: '僵尸+大蒜 融合（紫罐困难/地狱低频·金罐）：胸前挂着大蒜，每被打 4 次就被辣得跳到相邻一行——火力要重新瞄准' },
-        ]},
-        { title: '掉落物 · 可融合防具', list: [
-            // v3.74.0：装甲僵尸死亡概率掉落；把"配方植物"种到物品所在格即融合（crop=从僵尸 gif 裁出防具区域）
-            { n: '路障', img: ZB + 'ConeheadZombie/ConeheadZombie.gif', ih: 46, crop: { cw: 166, ch: 144, x1: 60, y1: 0, x2: 102, y2: 32, w: 36 }, t: '路障僵尸死亡 10% 掉落。和豌豆射手种在同一格 → 路障豌豆（660 耐久）' },
-            { n: '铁桶', img: ZB + 'BucketheadZombie/BucketheadZombie.gif', ih: 46, crop: { cw: 166, ch: 144, x1: 52, y1: 2, x2: 104, y2: 52, w: 36 }, t: '铁桶僵尸死亡 8% 掉落。和豌豆射手种在同一格 → 铁桶豌豆（1400 耐久）' },
-            { n: '旗帜', img: ZB + 'FlagZombie/FlagZombie.gif', ih: 46, crop: { cw: 166, ch: 144, x1: 34, y1: 0, x2: 84, y2: 62, w: 36 }, t: '旗帜僵尸死亡 2% 掉落。和向日葵种在同一格 → 旗帜向日葵（15 秒一产阳光）' },
-            { n: '铁门', img: ZB + 'ScreenDoorZombie/ScreenDoorZombie.gif', ih: 46, crop: { cw: 166, ch: 157, x1: 24, y1: 36, x2: 90, y2: 150, w: 40 }, t: '铁门僵尸死亡 5% 掉落。和坚果墙种在同一格 → 铁门坚果（5200 耐久）' },
-            { n: '报纸', img: ZB + 'NewspaperZombie/HeadWalk1.gif', ih: 46, crop: { cw: 216, ch: 164, x1: 26, y1: 90, x2: 110, y2: 144, w: 40 }, t: '读报僵尸死亡 6% 掉落。和大喷菇种在同一格 → 狂暴大喷菇（450 耐久，血量跌破 150 攻速翻倍）' },
+              head: { src: PL + 'Garlic/Garlic.gif', cw: 60, ch: 59, keepTop: 1.0, w: 38, y: 2, ox: 10 },
+              hp: 300, t: '僵尸+大蒜 融合（紫罐困难/地狱低频·金罐）：和植物头僵尸同款融合相——身体埋进土里，场上只见一颗大蒜头；每被打 4 次就被辣得跳到相邻一行，火力要重新瞄准' },
         ]},
         { title: '植物头 · 金罐特殊僵尸', list: [
             { n: '高坚果头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 74, head: { src: PL + 'TallNut/TallNut.gif', cw: 83, ch: 119, keepTop: 1.0, w: 40, y: 0, ox: 10 }, hp: 5200, t: '高坚果罩在身上，全游戏最厚血量之一' },

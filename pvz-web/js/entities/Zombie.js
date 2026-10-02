@@ -11,6 +11,8 @@ class Zombie extends Entity {
         jalapenohead:{ src: 'assets/images/Plants/Jalapeno/Jalapeno.gif',     cw: 68, ch: 89, keepTop: 1.0,  w: 50 },
         machinegunhead: { src: 'assets/images/Plants/GatlingPea/GatlingPea.gif', cw: 88, ch: 84, keepTop: 0.51, w: 96 }, // v3.43.0 0.74→0.51：茎干底座全部裁掉
         tallnuthead: { src: 'assets/images/Plants/TallNut/TallNut.gif',       cw: 83, ch: 119, keepTop: 1.0, w: 64, topOff: -72 },
+        // v3.79.0：大蒜僵尸改植物头式（用户：样子要和普通融合植物僵尸一样）——身体隐藏、场上只见大蒜头
+        garliczombie: { src: 'assets/images/Plants/Garlic/Garlic.gif',        cw: 60, ch: 59, keepTop: 1.0, w: 58 },
         // v3.35.0：礼盒重画为宽幅构图(192x140，四角完整)，显示宽度同步放宽——
         // 旧图 129x179 竖高构图被压到 42px 宽，又瘪又缺角（用户反馈）
         // v3.50.0：盲盒位置对齐头部（用户：盲盒应该在脑袋那部分）——topOff 与射手头统一 -72
@@ -129,24 +131,28 @@ class Zombie extends Entity {
             this.attackSrc = 'assets/images/Zombies/BucketheadZombie/BucketheadZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
         } else if (type === 'ironcone') {
-            // ===== v3.74.0 双盔僵尸（路障+铁桶 融合）：路障在外、铁桶在里 =====
-            // 血量 1500：路障 360 先掉（回到铁桶外观），铁桶 940 再掉（变普通僵尸）。
+            // ===== v3.74.0 双盔僵尸（路障+铁桶 融合）=====
+            // v3.79.0 重做外观（用户：就是一只铁桶僵尸，再把一顶铁桶帽子披上去——两顶帽子重叠）：
+            // 底图=铁桶僵尸，另裁一顶铁桶帽沿原桶位置向上叠放（深叠 26px）。
+            // 血量 1500：外层桶先掉（露出里层桶=底图），里层桶再掉（变普通僵尸）。
             this.hp = 1500; this.maxHp = 1500;
-            this.element.src = 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif';
-            this.walkSrc = 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif';
-            this.attackSrc = 'assets/images/Zombies/ConeheadZombie/ConeheadZombieAttack.gif';
+            this.element.src = 'assets/images/Zombies/BucketheadZombie/BucketheadZombie.gif';
+            this.walkSrc = 'assets/images/Zombies/BucketheadZombie/BucketheadZombie.gif';
+            this.attackSrc = 'assets/images/Zombies/BucketheadZombie/BucketheadZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
-            this._ironStage = 2; // 2=双盔 1=仅铁桶 0=无
-            this._spawnAcc({ src: 'assets/images/Zombies/BucketheadZombie/BucketheadZombie.gif', cw: 166, ch: 144, x1: 52, y1: 2, x2: 104, y2: 52, w: 34, dx: 2, dy: -30 });
+            this._ironStage = 2; // 2=双桶 1=仅里层桶 0=无
+            this._spawnAcc({ src: 'assets/images/Zombies/BucketheadZombie/BucketheadZombie.gif', cw: 166, ch: 144, x1: 52, y1: 2, x2: 104, y2: 52, w: 52, dx: -5, dy: -73 });
         } else if (type === 'madpaper') {
             // ===== v3.74.0 疯狂读报僵尸（读报+撑杆 融合）=====
-            // 高速冲来跳过第一株植物（撑杆），报纸被打碎后再度狂暴加速（读报）。
+            // v3.79.0（用户：跟读报僵尸没什么区别，要有特色）——出场就用"丢报纸狂暴"形态
+            //（LostNewspaper 怒目举拳、无报纸），与举着报纸的读报僵尸一眼区分；
+            // 高速冲来跳过第一株植物（撑杆），被打到狂暴线再度加速（读报）。
             this.hp = 340; this.maxHp = 340;
             this.speed = 45;
             this.hasVaulted = false;
-            this.element.src = 'assets/images/Zombies/NewspaperZombie/HeadWalk1.gif';
-            this.walkSrc = 'assets/images/Zombies/NewspaperZombie/HeadWalk1.gif';
-            this.attackSrc = 'assets/images/Zombies/NewspaperZombie/HeadAttack1.gif';
+            this.element.src = 'assets/images/Zombies/NewspaperZombie/LostNewspaper.gif';
+            this.walkSrc = 'assets/images/Zombies/NewspaperZombie/LostNewspaper.gif';
+            this.attackSrc = 'assets/images/Zombies/NewspaperZombie/LostHeadAttack0.gif';
             this.dieSrc = 'assets/images/Zombies/NewspaperZombie/Die.gif';
         } else if (type === 'torchzombie') {
             // ===== v3.74.0 火把僵尸（僵尸+火炬树桩 融合）=====
@@ -156,16 +162,21 @@ class Zombie extends Entity {
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
-            this._spawnAcc({ src: 'assets/images/Plants/Torchwood/Torchwood.gif', cw: 73, ch: 87, x1: 0, y1: 0, x2: 73, y2: 42, w: 22, dx: -15, dy: -2 });
+            // v3.79.0（用户：火把不能杵在地上，要像锤子僵尸那样拿在手上）——
+            // 挂件锚点改到手上（同 _spawnHammer 的 x-6, y+12），火炬树桩顶部火焰当"火把"
+            this._spawnAcc({ src: 'assets/images/Plants/Torchwood/Torchwood.gif', cw: 73, ch: 87, x1: 0, y1: 0, x2: 73, y2: 42, w: 26, dx: -6, dy: 10 });
         } else if (type === 'garliczombie') {
             // ===== v3.74.0 大蒜僵尸（僵尸+大蒜 融合）=====
-            // 胸前挂大蒜：每被打 4 次就被辣得跳到相邻一行（大蒜机制的僵尸版）。
+            // v3.79.0：改植物头式（用户：样子要和普通融合植物僵尸一样）——身体隐藏，
+            // 场上只见头顶大蒜头（坐地面）；被打 4 次辣得跳到相邻一行的机制保留。
             this.hp = 300; this.maxHp = 300;
             this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
-            this._spawnAcc({ src: 'assets/images/Plants/Garlic/Garlic.gif', cw: 60, ch: 59, x1: 0, y1: 0, x2: 60, y2: 59, w: 24, dx: -8, dy: 8 });
+            this.hideBody = true;
+            this.element.style.display = 'none';
+            this.createPlantHead(Zombie.PLANT_HEAD_CFG.garliczombie);
         } else if (type === 'polevaulting') {
             this.hp = 500; this.maxHp = 500;
             this.speed = 45; // Fast initially
@@ -386,9 +397,16 @@ class Zombie extends Entity {
         const h = this.headEl;
         this.headEl = null;
         this.hasPlantHead = false;
-        h.style.transition = 'transform 0.5s ease-in, opacity 0.5s ease-in';
-        h.style.transform = 'translateY(30px) rotate(40deg)';
-        h.style.opacity = '0';
+        // v3.79.0：身体隐藏的植物头僵尸（含大蒜僵尸）——没有身体可"随倒"，
+        // 翻滚飞落会变成"一颗头凭空悬空打转"（用户实测怪异）→ 改原地快速淡出
+        if (this.hideBody) {
+            h.style.transition = 'opacity 0.45s ease-in';
+            h.style.opacity = '0';
+        } else {
+            h.style.transition = 'transform 0.5s ease-in, opacity 0.5s ease-in';
+            h.style.transform = 'translateY(30px) rotate(40deg)';
+            h.style.opacity = '0';
+        }
         setTimeout(() => { if (h.parentNode) h.parentNode.removeChild(h); }, 550);
     }
 
@@ -749,14 +767,11 @@ class Zombie extends Entity {
             this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
         }
 
-        // ===== v3.74.0 双盔僵尸：路障先掉（回铁桶外观）→ 铁桶再掉（变普通）=====
+        // ===== v3.74.0 双盔僵尸：外层桶先掉（露出里层桶=底图）→ 里层桶再掉（变普通）=====
         if (this.type === 'ironcone' && this.state !== 'DYING') {
             if (this._ironStage === 2 && this.armorHp <= 1140 * armorMul) {
-                // 路障脱落：底图切铁桶僵尸，摘掉铁桶挂件（桶已并入底图）
+                // v3.79.0：外层铁桶帽被打落 —— 摘掉挂件，底图本来就是铁桶僵尸（还剩一顶桶）
                 this._ironStage = 1;
-                this.walkSrc = 'assets/images/Zombies/BucketheadZombie/BucketheadZombie.gif';
-                this.attackSrc = 'assets/images/Zombies/BucketheadZombie/BucketheadZombieAttack.gif';
-                this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
                 this._removeAcc();
             } else if (this._ironStage === 1 && this.armorHp <= 200 * armorMul) {
                 this.type = 'normal';
@@ -770,9 +785,12 @@ class Zombie extends Entity {
         if ((this.type === 'newspaper' || this.type === 'madpaper') && this.armorHp <= 150 * armorMul && !this.hasLostNewspaper && this.state !== 'DYING') {
             this.hasLostNewspaper = true;
             this.speed = 45; // Gets very angry and fast
-            this.walkSrc = 'assets/images/Zombies/NewspaperZombie/HeadWalk0.gif';
-            this.attackSrc = 'assets/images/Zombies/NewspaperZombie/HeadAttack0.gif';
-            this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
+            // v3.79.0：疯狂读报出场就是无报纸狂暴相，不换装（换回报纸外观反而画蛇添足）
+            if (this.type === 'newspaper') {
+                this.walkSrc = 'assets/images/Zombies/NewspaperZombie/HeadWalk0.gif';
+                this.attackSrc = 'assets/images/Zombies/NewspaperZombie/HeadAttack0.gif';
+                this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
+            }
         }
 
         // 植物头僵尸的头顶植物是纯外观：不提供装甲/不掉落，随僵尸一起行动直到死亡。
