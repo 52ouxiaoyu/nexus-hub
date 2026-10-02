@@ -5,6 +5,16 @@ const https = require('https');
 const dgram = require('dgram');
 const os = require('os');
 
+// Keep-alive agents: reuse TCP/TLS connections for CDN segment fetches.
+// New-connection-per-segment costs a full TCP+TLS handshake each time and
+// starves the TV's buffer; pooling cuts per-segment latency dramatically.
+const KEEPALIVE_HTTP = new http.Agent({ keepAlive: true, maxSockets: 8, keepAliveMsecs: 30000 });
+const KEEPALIVE_HTTPS = new https.Agent({ keepAlive: true, maxSockets: 8, keepAliveMsecs: 30000 });
+const agentFor = (u) => u.startsWith('https') ? KEEPALIVE_HTTPS : KEEPALIVE_HTTP;
+
+// Relay stats: lets us verify the TV actually streams through the relay
+const RELAY_STATS = { playlists: 0, segments: 0, bytes: 0, startedAt: Date.now() };
+
 const PORT = 8080;
 const PUBLIC_DIR = __dirname;
 
@@ -188,6 +198,12 @@ const server = http.createServer((req, res) => {
     return res.end(JSON.stringify({ base: ip ? ('http://' + ip + ':' + PORT) : ('http://localhost:' + PORT) }));
   }
 
+  // Relay stats (debugging: confirm TV traffic flows through the relay)
+  if (req.url === '/api/dlna/relay-stats' && req.method === 'GET') {
+    res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ ...RELAY_STATS, mb: +(RELAY_STATS.bytes / 1048576).toFixed(1), uptimeMin: +((Date.now() - RELAY_STATS.startedAt) / 60000).toFixed(1) }));
+  }
+
   if (req.url.startsWith('/api/dlna/stream?url=') && req.method === 'GET') {
     const target = new URL(req.url, `http://${req.headers.host}`).searchParams.get('url');
     if (!target) { res.writeHead(400); return res.end('Missing url'); }
@@ -206,7 +222,7 @@ const server = http.createServer((req, res) => {
     }).join('\n');
     const fetchUpstream = (u, redirs) => {
       const client = u.startsWith('https') ? https : http;
-      client.get(u, { headers: { 'User-Agent': 'okhttp/4.12.0' } }, (up) => {
+      client.get(u, { agent: agentFor(u), headers: { 'User-Agent': 'okhttp/4.12.0' } }, (up) => {
         if ([301, 302, 303, 307, 308].includes(up.statusCode) && up.headers.location && redirs < 5) {
           up.resume();
           return fetchUpstream(new URL(up.headers.location, u).toString(), redirs + 1);
@@ -223,11 +239,14 @@ const server = http.createServer((req, res) => {
               res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Content-Type': ctype || 'application/octet-stream' });
               return res.end(body);
             }
+            RELAY_STATS.playlists++;
             res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/vnd.apple.mpegurl' });
             res.end(rewritePlaylist(body, u));
           });
           return;
         }
+        RELAY_STATS.segments++;
+        up.on('data', c => { RELAY_STATS.bytes += c.length; });
         res.writeHead(up.statusCode || 200, {
           'Access-Control-Allow-Origin': '*',
           'Content-Type': ctype || 'application/octet-stream'
