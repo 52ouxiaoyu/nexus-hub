@@ -11,7 +11,8 @@ class Zombie extends Entity {
         jalapenohead:{ src: 'assets/images/Plants/Jalapeno/Jalapeno.gif',     cw: 68, ch: 89, keepTop: 1.0,  w: 50 },
         machinegunhead: { src: 'assets/images/Plants/GatlingPea/GatlingPea.gif', cw: 88, ch: 84, keepTop: 0.51, w: 96 }, // v3.43.0 0.74→0.51：茎干底座全部裁掉
         tallnuthead: { src: 'assets/images/Plants/TallNut/TallNut.gif',       cw: 83, ch: 119, keepTop: 1.0, w: 64, topOff: -72 },
-        // v3.79.0：大蒜僵尸改植物头式（用户：样子要和普通融合植物僵尸一样）——身体隐藏、场上只见大蒜头
+        // v3.79.0：大蒜僵尸改植物头式（用户：样子要和普通融合植物僵尸一样）——
+        // 完整僵尸头顶大蒜头；被打 4 次辣得跳到相邻一行的机制保留。
         garliczombie: { src: 'assets/images/Plants/Garlic/Garlic.gif',        cw: 60, ch: 59, keepTop: 1.0, w: 58 },
         // v3.35.0：礼盒重画为宽幅构图(192x140，四角完整)，显示宽度同步放宽——
         // 旧图 129x179 竖高构图被压到 42px 宽，又瘪又缺角（用户反馈）
@@ -80,11 +81,9 @@ class Zombie extends Entity {
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
-            // v3.78.0：本体身体整体隐藏（用户：植物头僵尸只露一个植物头，埋的身体不该全露出来）
-            // —— 行走/吃脑/受击逻辑全部照旧（碰撞按坐标结算，不依赖 DOM），场上只见头顶植物头
-            this.hideBody = true;
-            this.element.style.display = 'none';
-            this.createPlantHead(headCfg); // 头顶植物头（裁剪+放大；hideBody 时直接坐地面）
+            // v3.79.2：撤回 v3.78.0 的"隐藏身体"——用户澄清：僵尸头、僵尸的身体都要出现，
+            // 只露一颗植物头坐在地上太丑。恢复完整僵尸（行走/吃脑/受击逻辑照旧），植物头只顶在头上
+            this.createPlantHead(headCfg); // 头顶植物头（裁剪+放大，罩住僵尸自己的灰头）
             if (type === 'jalapenohead') {
                 // v3.22.0 火爆辣椒植物僵尸（融合进化后期专属）：精锐血量保证走到植物跟前，
                 // 连续吃掉 2 株植物 → 引爆整排（见 _jalapenoRowBoom）
@@ -168,15 +167,13 @@ class Zombie extends Entity {
             this._spawnAcc({ src: 'assets/images/Plants/Torchwood/Torchwood.gif', cw: 73, ch: 87, x1: 0, y1: 0, x2: 73, y2: 87, w: 26, dx: -12, dy: 6 });
         } else if (type === 'garliczombie') {
             // ===== v3.74.0 大蒜僵尸（僵尸+大蒜 融合）=====
-            // v3.79.0：改植物头式（用户：样子要和普通融合植物僵尸一样）——身体隐藏，
-            // 场上只见头顶大蒜头（坐地面）；被打 4 次辣得跳到相邻一行的机制保留。
+            // v3.79.0：改植物头式（用户：样子要和普通融合植物僵尸一样）——完整僵尸头顶大蒜头；
+            // 被打 4 次辣得跳到相邻一行的机制保留。v3.79.2 撤回隐藏身体（同植物头家族）。
             this.hp = 300; this.maxHp = 300;
             this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
-            this.hideBody = true;
-            this.element.style.display = 'none';
             this.createPlantHead(Zombie.PLANT_HEAD_CFG.garliczombie);
         } else if (type === 'polevaulting') {
             this.hp = 500; this.maxHp = 500;
@@ -333,10 +330,8 @@ class Zombie extends Entity {
         this.headSize = cfg.w;
         // v3.50.0：头顶锚点统一上移到僵尸头顶（-72）——旧值 -48 会把植物头压在下巴/胸口，
         // 僵尸自己的灰头露在上面，看起来"植物头躲在僵尸头后面"（用户反馈）
-        // v3.78.0：身体隐藏（埋进土里）时植物头改坐地面——头底边贴脚底线（y+yOffset+72），
-        // 不再悬在半空，看起来像"埋着身体只露一颗头"
-        this.headTopOff = this.hideBody ? (72 - headH)
-            : ((cfg.topOff !== undefined) ? cfg.topOff : -72);
+        // v3.79.2：撤回 v3.78.0 的"坐地面"特判——植物头僵尸恢复完整身体，头一律顶在头顶
+        this.headTopOff = (cfg.topOff !== undefined) ? cfg.topOff : -72;
         this.hasPlantHead = true;
         this.game.entityLayer.appendChild(wrap);
         this.syncPlantHead();
@@ -398,16 +393,10 @@ class Zombie extends Entity {
         const h = this.headEl;
         this.headEl = null;
         this.hasPlantHead = false;
-        // v3.79.0：身体隐藏的植物头僵尸（含大蒜僵尸）——没有身体可"随倒"，
-        // 翻滚飞落会变成"一颗头凭空悬空打转"（用户实测怪异）→ 改原地快速淡出
-        if (this.hideBody) {
-            h.style.transition = 'opacity 0.45s ease-in';
-            h.style.opacity = '0';
-        } else {
-            h.style.transition = 'transform 0.5s ease-in, opacity 0.5s ease-in';
-            h.style.transform = 'translateY(30px) rotate(40deg)';
-            h.style.opacity = '0';
-        }
+        // v3.79.2：撤回"原地淡出"特判——身体恢复显示后，植物头随僵尸一起翻滚飞落（同旧版）
+        h.style.transition = 'transform 0.5s ease-in, opacity 0.5s ease-in';
+        h.style.transform = 'translateY(30px) rotate(40deg)';
+        h.style.opacity = '0';
         setTimeout(() => { if (h.parentNode) h.parentNode.removeChild(h); }, 550);
     }
 
