@@ -171,7 +171,9 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (req.url.startsWith('/api/proxy?url=')) {
+  // Accept both /api/proxy and /proxy (CF Pages style wrapper used by site configs)
+  const isProxyReq = req.url.startsWith('/api/proxy?url=') || req.url.startsWith('/proxy?url=');
+  if (isProxyReq) {
     const targetUrl = new URL(req.url, `http://${req.headers.host}`).searchParams.get('url');
     if (!targetUrl) {
       res.writeHead(400);
