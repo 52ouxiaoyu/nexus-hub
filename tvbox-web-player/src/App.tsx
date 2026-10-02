@@ -949,10 +949,18 @@ function App() {
         device = devices[Number(pick) - 1];
         if (!device) { alert('编号无效'); return; }
       }
+      // Prefer relaying the stream through this Mac: the TV pulls over LAN
+      // (fast, stable) while the Mac pulls from the CDN — avoids TV stutter.
+      let castUrl = playingUrl;
+      try {
+        const rb = await fetchWithTimeout(base + '/api/dlna/relay-base', {}, 3000);
+        const { base: relayBase } = await rb.json();
+        if (relayBase) castUrl = `${relayBase}/api/dlna/stream?url=${encodeURIComponent(playingUrl)}`;
+      } catch { /* relay info unavailable — cast the direct URL instead */ }
       await fetchWithTimeout(base + '/api/dlna/play', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ controlURL: device.controlURL, url: playingUrl, title: activeVideo.vod_name })
+        body: JSON.stringify({ controlURL: device.controlURL, url: castUrl, title: activeVideo.vod_name })
       }, 10000);
       alert(`已推送「${activeVideo.vod_name}」到「${device.name}」，请在电视上确认播放。`);
     } catch {

@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const dgram = require('dgram');
+const os = require('os');
 
 const PORT = 8080;
 const PUBLIC_DIR = __dirname;
@@ -168,6 +169,75 @@ const server = http.createServer((req, res) => {
         res.end('Bad JSON');
       }
     });
+    return;
+  }
+
+  // ---------------- LAN stream relay for DLNA casting ----------------
+  // TV pulls the stream from this Mac over LAN (fast, stable) while this Mac
+  // pulls from the CDN — avoids TV-side stutter from slow/UA-hostile CDNs.
+
+  // Tell the web page which LAN base URL the TV should use
+  if (req.url === '/api/dlna/relay-base' && req.method === 'GET') {
+    let ip = '';
+    for (const name of Object.keys(os.networkInterfaces())) {
+      for (const it of os.networkInterfaces()[name] || []) {
+        if (it.family === 'IPv4' && !it.internal && !ip) ip = it.address;
+      }
+    }
+    res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ base: ip ? ('http://' + ip + ':' + PORT) : ('http://localhost:' + PORT) }));
+  }
+
+  if (req.url.startsWith('/api/dlna/stream?url=') && req.method === 'GET') {
+    const target = new URL(req.url, `http://${req.headers.host}`).searchParams.get('url');
+    if (!target) { res.writeHead(400); return res.end('Missing url'); }
+    const rewriteUri = (u, srcUrl) => {
+      try {
+        return 'http://' + req.headers.host + '/api/dlna/stream?url=' + encodeURIComponent(new URL(u, srcUrl).toString());
+      } catch { return u; }
+    };
+    // Rewrite every playlist entry (segments / sub-playlists / key URIs) to
+    // route back through this relay, resolved against the request host
+    const rewritePlaylist = (text, srcUrl) => text.split('\n').map(line => {
+      const t = line.trim();
+      if (!t) return line;
+      if (t.startsWith('#')) return line.replace(/URI="([^"]+)"/g, (m, u) => 'URI="' + rewriteUri(u, srcUrl) + '"');
+      return rewriteUri(t, srcUrl);
+    }).join('\n');
+    const fetchUpstream = (u, redirs) => {
+      const client = u.startsWith('https') ? https : http;
+      client.get(u, { headers: { 'User-Agent': 'okhttp/4.12.0' } }, (up) => {
+        if ([301, 302, 303, 307, 308].includes(up.statusCode) && up.headers.location && redirs < 5) {
+          up.resume();
+          return fetchUpstream(new URL(up.headers.location, u).toString(), redirs + 1);
+        }
+        const ctype = up.headers['content-type'] || '';
+        const maybePlaylist = /\.m3u8(\?|$)/i.test(u) || /mpegurl/i.test(ctype);
+        if (maybePlaylist) {
+          let body = '';
+          up.setEncoding('utf8');
+          up.on('data', c => { body += c; });
+          up.on('end', () => {
+            if (!/^\s*#EXTM3U/.test(body)) {
+              // Not actually HLS (e.g. JSON error or direct file) — pass through
+              res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Content-Type': ctype || 'application/octet-stream' });
+              return res.end(body);
+            }
+            res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/vnd.apple.mpegurl' });
+            res.end(rewritePlaylist(body, u));
+          });
+          return;
+        }
+        res.writeHead(up.statusCode || 200, {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': ctype || 'application/octet-stream'
+        });
+        up.pipe(res);
+      }).on('error', (err) => {
+        if (!res.headersSent) { res.writeHead(502); res.end(err.message); } else res.end();
+      });
+    };
+    fetchUpstream(target, 0);
     return;
   }
 
