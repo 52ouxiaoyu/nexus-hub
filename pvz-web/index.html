@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1791007949">
+    <link rel="stylesheet" href="css/style.css?v=1791009477">
 </head>
 <body>
     <div id="game-container">
@@ -104,17 +104,29 @@
             }
             /* ===== 模式卡（种子包样式）：v3.7.0 起 4 卡一行 ===== */
             .menu-cards { position: relative; z-index: 2; display: flex; gap: 18px; margin-top: 34px; flex-wrap: wrap; justify-content: center; max-width: 920px; }
-            /* ===== v3.81.0 双人对战入口：主页右下角长方形按钮 ===== */
+            /* ===== v3.81.1 双人对战：第五张模式卡（与四卡同款种子包样式）=====
+               宽 = 砸罐子卡 + 间距 + 我是僵尸卡（208+18+208=434px）；
+               高 = 第一行卡片下方的剩余空间（flex:1 撑满）；矮宽卡用左图右文横排 */
             #btn-vs {
-                position: absolute; right: 26px; bottom: 68px; z-index: 3;
-                padding: 12px 26px; font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', serif;
-                font-size: 22px; font-weight: 900; letter-spacing: 2px; color: #ffe9a8;
-                background: linear-gradient(180deg, #6b4a2b 0%, #4a3018 100%);
-                border: 3px solid #2c1c0a; border-radius: 10px; cursor: pointer;
-                text-shadow: 1px 1px 0 #000; box-shadow: 0 4px 10px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,235,170,0.35);
+                width: 434px; flex: 1 1 0; height: auto; min-height: 110px;
+                margin-top: 0px; margin-bottom: 14px;
+                position: relative; z-index: 3;
+                padding: 10px 16px;
+                flex-direction: row; align-items: center; gap: 16px;
             }
-            #btn-vs:hover { filter: brightness(1.3); transform: translateY(-2px); }
-            #btn-vs:active { transform: translateY(0); }
+            #btn-vs .pkt-art { flex: 0 0 158px; width: 158px; height: auto; align-self: stretch; }
+            #btn-vs .pkt-art img { height: 56px; }
+            #btn-vs .vs-duel { display: flex; align-items: center; gap: 8px; }
+            #btn-vs .vs-badge {
+                font-family: Impact, 'Arial Black', sans-serif; font-size: 24px; font-weight: 900;
+                color: #c0211e; text-shadow: 2px 2px 0 #fff, 3px 3px 0 rgba(0,0,0,0.3);
+                transform: rotate(-6deg); animation: vs-pulse 1.6s ease-in-out infinite;
+            }
+            #btn-vs .vs-text { flex: 1; display: flex; flex-direction: column; align-items: center; }
+            #btn-vs .pkt-name { font-size: 25px; letter-spacing: 6px; margin-top: 0; }
+            #btn-vs .pkt-tag { font-size: 11px; margin-top: 3px; letter-spacing: 3px; padding: 1px 8px; }
+            #btn-vs .pkt-sub { font-size: 12px; margin-top: 5px; line-height: 1.5; }
+            @keyframes vs-pulse { 0%,100% { transform: rotate(-6deg) scale(1); } 50% { transform: rotate(-6deg) scale(1.12); } }
             /* ===== v3.81.0 僵尸方选卡（双人对战第二步）===== */
             .vz-card {
                 width: 96px; padding: 6px 4px; border-radius: 10px; cursor: pointer;
@@ -275,6 +287,22 @@
                         <div class="pkt-sub">这次换你当僵尸 · 指挥僵尸大军<br>啃穿植物防线 · 吃掉脑子即可通关</div>
                     </button>
                 </div>
+
+                <!-- v3.81.1 双人对战：第五张模式卡（宽版，在场景流内填充第一行卡片下方剩余空间） -->
+                <button id="btn-vs" class="mode-card" title="双人对战：一人带植物 · 一人带僵尸，同屏实时对战">
+                    <div class="pkt-art">
+                        <div class="vs-duel">
+                            <img src="assets/images/Plants/Peashooter/0.gif" alt="植物方" style="image-rendering: pixelated;">
+                            <span class="vs-badge">VS</span>
+                            <img src="assets/images/Zombies/Zombie/0.gif" alt="僵尸方" style="image-rendering: pixelated;">
+                        </div>
+                    </div>
+                    <div class="vs-text">
+                        <div class="pkt-name">双人对战</div>
+                        <div class="pkt-tag">VERSUS</div>
+                        <div class="pkt-sub">一人指挥植物防线 · 一人统率僵尸大军<br>双阳光池经济 · 吃植物杀僵尸互赚阳光 · 同屏决胜</div>
+                    </div>
+                </button>
             </div>
 
             <div class="menu-footer">
@@ -284,9 +312,6 @@
                 </div>
                 <div class="ver" id="start-version">加载版本号...</div>
             </div>
-
-            <!-- v3.81.0 双人对战：主页右下角长方形入口按钮 -->
-            <button id="btn-vs" title="双人对战：一人植物 · 一人僵尸">⚔ 双人对战</button>
         </div>
 
         <!-- v3.81.0 双人对战：玩法选择（普通=无融合 / 融合=局内有手套+融合图鉴） -->
@@ -419,17 +444,17 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1791007949"></script>
-    <script src="js/Board.js?v=1791007949"></script>
-    <script src="js/entities/Entity.js?v=1791007949"></script>
-    <script src="js/entities/Plant.js?v=1791007949"></script>
-    <script src="js/entities/Zombie.js?v=1791007949"></script>
-    <script src="js/entities/Projectile.js?v=1791007949"></script>
-    <script src="js/entities/Sun.js?v=1791007949"></script>
-    <script src="js/managers/WaveManager.js?v=1791007949"></script>
-    <script src="js/managers/CollisionManager.js?v=1791007949"></script>
-    <script src="js/managers/EventManager.js?v=1791007949"></script>
-    <script src="js/GameLoop.js?v=1791007949"></script>
-    <script src="js/HelpGuide.js?v=1791007949"></script>
+    <script src="js/InputManager.js?v=1791009477"></script>
+    <script src="js/Board.js?v=1791009477"></script>
+    <script src="js/entities/Entity.js?v=1791009477"></script>
+    <script src="js/entities/Plant.js?v=1791009477"></script>
+    <script src="js/entities/Zombie.js?v=1791009477"></script>
+    <script src="js/entities/Projectile.js?v=1791009477"></script>
+    <script src="js/entities/Sun.js?v=1791009477"></script>
+    <script src="js/managers/WaveManager.js?v=1791009477"></script>
+    <script src="js/managers/CollisionManager.js?v=1791009477"></script>
+    <script src="js/managers/EventManager.js?v=1791009477"></script>
+    <script src="js/GameLoop.js?v=1791009477"></script>
+    <script src="js/HelpGuide.js?v=1791009477"></script>
 </body>
 </html>
