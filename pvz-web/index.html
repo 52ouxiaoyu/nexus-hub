@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1791009477">
+    <link rel="stylesheet" href="css/style.css?v=1791010495">
 </head>
 <body>
     <div id="game-container">
@@ -67,6 +67,7 @@
                 </div>
                 <div style="display: flex; justify-content: center; gap: 20px;">
                     <button id="btn-back" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 30px; font-size: 18px; font-family: monospace; font-weight: bold; color: white; cursor: pointer; border-radius: 10px; text-shadow: 1px 1px 2px black;">Return</button>
+                    <button id="vs-plant-menu" class="vs-menu-back" style="display:none;">返回主菜单</button>
                     <button id="btn-lets-rock" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 40px; font-size: 20px; font-family: monospace; font-weight: bold; color: white; cursor: pointer; border-radius: 10px; opacity: 0.5; text-shadow: 1px 1px 2px black;" disabled>Let's Rock!</button>
                 </div>
             </div>
@@ -135,7 +136,8 @@
             }
             .vz-card img { width: 56px; height: 56px; object-fit: contain; }
             .vz-card .vz-name { font: 12px monospace; color: #efe6ff; }
-            .vz-card .vz-cost { font: bold 12px monospace; color: #ffd54a; }
+            .vz-card .vz-cost { font: bold 12px monospace; color: #ff9ed2; }
+            .vz-card .vz-power { font: 10px monospace; color: #9a8ab5; }
             .vz-card.picked { border-color: #9dff5e; background: rgba(157,255,94,0.16); filter: brightness(1.15); }
             .vz-card:hover { background: rgba(255,255,255,0.18); }
             .mode-card {
@@ -323,7 +325,7 @@
                     <button id="vs-normal" class="diff-btn diff-easy">
                         <span class="diff-name">普通对战</span>
                         <span class="diff-en">NORMAL</span>
-                        <span class="diff-desc">纯攻防 · 不存在融合<br>植物 ☀150 · 僵尸 ☀400 起步</span>
+                        <span class="diff-desc">纯攻防 · 不存在融合<br>植物 ☀150 · 僵尸 🧠400 起步</span>
                     </button>
                     <button id="vs-fusion" class="diff-btn diff-hard">
                         <span class="diff-name">融合对战</span>
@@ -341,10 +343,11 @@
         <div id="vz-chooser" style="position:absolute; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.8); z-index:1500; flex-direction:column; align-items:center; justify-content:center; display:none;">
             <div style="background-color:#4a3a5a; padding:25px; border-radius:15px; border:4px solid #241a30; box-shadow:inset 0 0 20px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.8); width:650px;">
                 <h2 style="color:#e8d9ff; text-align:center; margin-bottom:8px; text-shadow:2px 2px 2px black; font-family:monospace; font-size:24px;">僵尸方选卡（<span id="vz-count">0</span>/8）</h2>
-                <div style="color:#bfa8e0; text-align:center; font-size:13px; margin-bottom:12px; font-family:monospace;">全部僵尸里选 8 只 · 向日葵头僵尸（产阳光）最多带 1 只</div>
-                <div id="vz-grid" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:20px; max-height:330px; overflow-y:auto; background-color:rgba(0,0,0,0.3); padding:12px; border-radius:10px; box-shadow:inset 0 0 10px black;"></div>
+                <div style="color:#bfa8e0; text-align:center; font-size:13px; margin-bottom:12px; font-family:monospace;">全部 25 种僵尸里选 8 只 · 向日葵头僵尸（产脑子）最多带 1 只 · 战力越强所需脑子越多</div>
+                <div id="vz-grid" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:20px; max-height:380px; overflow-y:auto; background-color:rgba(0,0,0,0.3); padding:12px; border-radius:10px; box-shadow:inset 0 0 10px black;"></div>
                 <div style="display:flex; justify-content:center; gap:20px;">
                     <button id="vz-back" style="background-image:url('assets/images/interface/ShovelBack.png'); background-size:100% 100%; border:none; padding:10px 30px; font-size:18px; font-family:monospace; font-weight:bold; color:white; cursor:pointer; border-radius:10px; text-shadow:1px 1px 2px black;">上一页</button>
+                    <button id="vz-menu" class="vs-menu-back">返回主菜单</button>
                     <button id="vz-rock" style="background-image:url('assets/images/interface/ShovelBack.png'); background-size:100% 100%; border:none; padding:10px 40px; font-size:20px; font-family:monospace; font-weight:bold; color:white; cursor:pointer; border-radius:10px; opacity:0.5; text-shadow:1px 1px 2px black;" disabled>开战！</button>
                 </div>
             </div>
@@ -444,17 +447,17 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1791009477"></script>
-    <script src="js/Board.js?v=1791009477"></script>
-    <script src="js/entities/Entity.js?v=1791009477"></script>
-    <script src="js/entities/Plant.js?v=1791009477"></script>
-    <script src="js/entities/Zombie.js?v=1791009477"></script>
-    <script src="js/entities/Projectile.js?v=1791009477"></script>
-    <script src="js/entities/Sun.js?v=1791009477"></script>
-    <script src="js/managers/WaveManager.js?v=1791009477"></script>
-    <script src="js/managers/CollisionManager.js?v=1791009477"></script>
-    <script src="js/managers/EventManager.js?v=1791009477"></script>
-    <script src="js/GameLoop.js?v=1791009477"></script>
-    <script src="js/HelpGuide.js?v=1791009477"></script>
+    <script src="js/InputManager.js?v=1791010495"></script>
+    <script src="js/Board.js?v=1791010495"></script>
+    <script src="js/entities/Entity.js?v=1791010495"></script>
+    <script src="js/entities/Plant.js?v=1791010495"></script>
+    <script src="js/entities/Zombie.js?v=1791010495"></script>
+    <script src="js/entities/Projectile.js?v=1791010495"></script>
+    <script src="js/entities/Sun.js?v=1791010495"></script>
+    <script src="js/managers/WaveManager.js?v=1791010495"></script>
+    <script src="js/managers/CollisionManager.js?v=1791010495"></script>
+    <script src="js/managers/EventManager.js?v=1791010495"></script>
+    <script src="js/GameLoop.js?v=1791010495"></script>
+    <script src="js/HelpGuide.js?v=1791010495"></script>
 </body>
 </html>

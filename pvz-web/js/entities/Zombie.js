@@ -938,8 +938,8 @@ class Zombie extends Entity {
                     }
                 }
             }
-            // v3.81.0 双人对战：向日葵头僵尸 = 僵尸方产阳光单位 —— 在场存活越久单次产量越高
-            // （基产 25 / 7s，每存活满 30s 单次 +10；阳光直接进僵尸方池，无需点击）
+            // v3.81.0 双人对战：向日葵头僵尸 = 僵尸方产脑子单位 —— 在场存活越久单次产量越高
+            // （基产 25 / 7s，每存活满 30s 单次 +10；脑子直接进僵尸方池，无需点击）
             if (this.type === 'sunhead' && this.game.vsMode && !this.hypnotized) {
                 this._vsAlive = (this._vsAlive || 0) + deltaTime;
                 this._vsSunTimer = (this._vsSunTimer === undefined ? 5 : this._vsSunTimer) - deltaTime;
@@ -948,7 +948,7 @@ class Zombie extends Entity {
                     const amount = 25 + 10 * Math.floor(this._vsAlive / 30);
                     this.game.zombieSun += amount;
                     this.game._refreshVsZombieBar();
-                    this.game._vsFloatText(this.x, this.y - 60, `☀+${amount}`, '#ffd54a');
+                    this.game._vsFloatText(this.x, this.y - 60, `🧠+${amount}`, '#ff9ed2');
                 }
             }
             // 同排附近出现被魅惑的友方僵尸 → 停下与它搏斗（僵尸之间唯一的敌对交互）
