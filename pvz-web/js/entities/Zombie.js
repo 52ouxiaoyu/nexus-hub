@@ -1000,7 +1000,7 @@ class Zombie extends Entity {
             }
 
             const bigZ = (this.type === 'zomboni' || this.type === 'gargantuar' || this.type === 'lgboss');
-            const plant = this.game.entities.find(e =>
+            const plant = this._dormRetreating ? null : this.game.entities.find(e =>
                 e instanceof Plant &&
                 // v3.14.0：地刺/钢地刺都不可啃 —— 所有僵尸直接从上面走过
                 // v3.27.0：只有"纯地面刺"（本体无实体）才整株豁免；地刺坚果/高坚果钢地刺

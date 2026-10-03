@@ -215,13 +215,22 @@ class InputManager {
                 this.isShovelSelected = false;
                 this.dragGhost.style.display = 'none';
             } else {
-                // 普通点击：优先砸罐子（vaseMode），再引爆已种下的炸弹
+                // 普通点击：宿舍模式升级/浇水，优先砸罐子（vaseMode），再引爆已种下的炸弹
                 const rect = this.container.getBoundingClientRect();
                 const scale = window.gameScale || 1;
                 const mouseX = (e.clientX - rect.left) / scale;
                 const mouseY = (e.clientY - rect.top) / scale;
                 const gridPos = this.game.board.getGridPos(mouseX, mouseY);
                 if (gridPos) {
+                    // ===== 宿舍模式：浇水与升级互动 =====
+                    if (this.game.dormMode) {
+                        const p = this.game.board.grid[gridPos.row][gridPos.col];
+                        if (p) {
+                            this.game.interactDormPlant(p);
+                            return;
+                        }
+                    }
+
                     // 砸罐子模式：点击未砸罐子 → smashVase（不消耗阳光也不引爆炸弹）
                     if (this.game.vaseMode && this.game.vases && this.game.vases.length) {
                         const v = this.game.vases.find(x => !x.smashed && x.row === gridPos.row && x.col === gridPos.col);
@@ -320,7 +329,7 @@ class InputManager {
             // v3.26.0 植物盲盒：拖拽图改回"盲盒图案"（红丝带礼盒）——用户明确盲盒≠问号罐
             // v3.35.0：礼盒重画为宽幅构图，拖拽幽灵同步改宽尺寸
             if (type === 'plantbox') {
-                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1791028804')";
+                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1791037869')";
                 this.dragGhost.style.width = '68px';
                 this.dragGhost.style.height = '50px';
                 this.dragGhost.style.backgroundSize = 'contain';
@@ -332,8 +341,8 @@ class InputManager {
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1791028804`
-                : `assets/images/Plants/${imgName}.gif?v=1791028804`;
+                ? `assets/images/Plants/${imgName}.png?v=1791037869`
+                : `assets/images/Plants/${imgName}.gif?v=1791037869`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
 
             // v3.20.0：倭瓜立绘画布 100×226（身体只占底部 68×82），60×60 contain 后
