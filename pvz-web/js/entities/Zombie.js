@@ -869,11 +869,6 @@ class Zombie extends Entity {
             this.state = 'DYING';
             if (this.headEl) this.dropPlantHead(); // 头顶植物随僵尸倒地（纯外观）
             this.element.src = this.dieSrc;
-            // 友方（被魅惑）僵尸战死/离场不计分
-            if (!this.hypnotized && this.game.score !== undefined) {
-                this.game.score += 10;
-                this.game.updateScore();
-            }
             // v3.81.0 双人对战：植物方打死僵尸 → 得该僵尸对应的阳光价
             // （只有僵尸方真实花钱买断入场的僵尸带 _vsPaid；舞王伴舞/盲盒召唤物不算钱）
             if (!this.hypnotized && this.game.vsOnZombieKilled) this.game.vsOnZombieKilled(this);

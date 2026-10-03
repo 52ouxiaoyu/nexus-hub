@@ -2,7 +2,7 @@ class EventManager {
     constructor(game) {
         this.game = game;
         this.events = [
-            { msg: '⚠️ 警告：天降陨石！', color: '#ff4444', minScore: 300, exec: g => {
+            { msg: '⚠️ 警告：天降陨石！', color: '#ff4444', minTime: 210, exec: g => { // v3.81.6 门槛=游戏进行秒数（原 minScore，分数已移除）
                 const r = Math.floor(Math.random() * g.board.rows);
                 const c = 2 + Math.floor(Math.random() * 6);
                 const x = g.board.offsetX + c * g.board.cellWidth + g.board.cellWidth/2;
@@ -41,7 +41,7 @@ class EventManager {
             { msg: '✨ 奇迹：阳光普照！', color: '#ffd700', exec: g => {
                 for(let i=0; i<15; i++) setTimeout(() => g.entities.push(new Sun(g, 100+Math.random()*700, 0)), i*200);
             }},
-            { msg: '🧟 突袭：地道僵尸！', color: '#88ff88', minScore: 200, exec: g => {
+            { msg: '🧟 突袭：地道僵尸！', color: '#88ff88', minTime: 150, exec: g => { // v3.81.6 门槛=游戏进行秒数（原 minScore，分数已移除）
                 for(let i=0; i<4; i++) setTimeout(() => {
                     const z = new Zombie(g, Math.floor(Math.random()*g.board.rows), 'normal');
                     z.x = 400 + Math.random()*300; z.element.style.clipPath = 'inset(100% 0 0 0)'; z.element.style.transition = 'clip-path 1s';
@@ -52,7 +52,7 @@ class EventManager {
                 for(let k in g.cooldowns) g.cooldowns[k] = 0; g.updateUI();
             }},
             { msg: '💰 暴富：天降横财！', color: '#ffd700', exec: g => { g.sunCount += 300; g.updateUI(); }},
-            { msg: '📉 破产：阳光税！', color: '#ffaaaa', minScore: 100, exec: g => { g.sunCount = Math.max(0, g.sunCount - 200); g.updateUI(); }},
+            { msg: '📉 破产：阳光税！', color: '#ffaaaa', minTime: 90, exec: g => { g.sunCount = Math.max(0, g.sunCount - 200); g.updateUI(); }}, // v3.81.6 门槛=游戏进行秒数（原 minScore，分数已移除）
             { msg: '🌍 震动：超级地震！', color: '#ff8800', exec: g => {
                 g.container.style.animation = 'shake 0.5s infinite';
                 if(!document.getElementById('shake-style')) {
@@ -79,17 +79,17 @@ class EventManager {
                 // 冲掉 .entity 的 translate(-50%,-50%) → 僵尸整体右下偏移半个贴图
                 g.entities.filter(e => e instanceof Zombie).forEach(z => { z.addTransform('scale(0.5)'); z.hp = Math.max(1, z.hp/2); });
             }},
-            { msg: '🦖 巨化：变异僵尸！', color: '#ff4444', minScore: 500, exec: g => {
+            { msg: '🦖 巨化：变异僵尸！', color: '#ff4444', minTime: 300, exec: g => { // v3.81.6 门槛=游戏进行秒数（原 minScore，分数已移除）
                 const z = g.entities.find(e => e instanceof Zombie && !e.isDead);
                 if(z) { z.addTransform('scale(1.8)'); z.hp *= 3; z.damage *= 2; }
             }},
-            { msg: '🌑 黑暗：断电了！', color: '#555555', minScore: 150, exec: g => {
+            { msg: '🌑 黑暗：断电了！', color: '#555555', minTime: 120, exec: g => { // v3.81.6 门槛=游戏进行秒数（原 minScore，分数已移除）
                 const overlay = document.createElement('div');
                 overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:black;z-index:4000;opacity:0.95;pointer-events:none;transition:opacity 0.5s;';
                 g.container.appendChild(overlay);
                 setTimeout(() => { overlay.style.opacity = '0'; setTimeout(()=>overlay.remove(), 500); }, 3500);
             }},
-            { msg: '☁️ 迷雾：视线受阻！', color: '#dddddd', minScore: 100, exec: g => {
+            { msg: '☁️ 迷雾：视线受阻！', color: '#dddddd', minTime: 90, exec: g => { // v3.81.6 门槛=游戏进行秒数（原 minScore，分数已移除）
                 const overlay = document.createElement('div');
                 overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:white;z-index:4000;opacity:0.8;pointer-events:none;transition:opacity 1s;';
                 g.container.appendChild(overlay);
@@ -104,13 +104,13 @@ class EventManager {
                 // ③ 僵尸引用过期后 thaw 会操作已回收对象。现改为直接减速 6 秒自然到期，无残留副作用。
                 g.entities.filter(e => e instanceof Zombie).forEach(z => z.setSlow(6));
             }},
-            { msg: '💖 治愈：僵尸医疗！', color: '#ffaaaa', minScore: 200, exec: g => {
+            { msg: '💖 治愈：僵尸医疗！', color: '#ffaaaa', minTime: 150, exec: g => { // v3.81.6 门槛=游戏进行秒数（原 minScore，分数已移除）
                 g.entities.filter(e => e instanceof Zombie).forEach(z => z.hp += 200);
             }},
             { msg: '🍀 生机：植物逢春！', color: '#aaffaa', exec: g => {
                 g.entities.filter(e => e instanceof Plant).forEach(p => p.hp += 300);
             }},
-            { msg: '👻 灵异：隐身术！', color: '#aaaaaa', minScore: 200, exec: g => {
+            { msg: '👻 灵异：隐身术！', color: '#aaaaaa', minTime: 150, exec: g => { // v3.81.6 门槛=游戏进行秒数（原 minScore，分数已移除）
                 const z = g.entities.filter(e => e instanceof Zombie); z.forEach(e => e.element.style.opacity = '0.15');
                 setTimeout(() => z.forEach(e => {if(e.element) e.element.style.opacity = '1'}), 5000);
             }},
@@ -135,13 +135,13 @@ class EventManager {
             { msg: '🌧️ 腐蚀：酸雨降临！', color: '#44ff44', exec: g => {
                 g.entities.filter(e => e instanceof Zombie).forEach(z => z.hp -= 100);
             }},
-            { msg: '🔥 旱灾：阳光蒸发！', color: '#ff6622', minScore: 100, exec: g => {
+            { msg: '🔥 旱灾：阳光蒸发！', color: '#ff6622', minTime: 90, exec: g => { // v3.81.6 门槛=游戏进行秒数（原 minScore，分数已移除）
                 g.entities.filter(e => e instanceof Sun).forEach(s => s.hp = 0);
             }},
             { msg: '🌦️ 太阳雨：疯狂掉落！', color: '#ffff44', exec: g => {
                 for(let i=0; i<30; i++) setTimeout(() => g.entities.push(new Sun(g, 100+Math.random()*700, 0)), i*100);
             }},
-            { msg: '👿 空投：小鬼雨！', color: '#884488', minScore: 300, exec: g => {
+            { msg: '👿 空投：小鬼雨！', color: '#884488', minTime: 210, exec: g => { // v3.81.6 门槛=游戏进行秒数（原 minScore，分数已移除）
                 for(let i=0; i<3; i++) setTimeout(() => {
                     const z = new Zombie(g, Math.floor(Math.random()*g.board.rows), 'imp');
                     z.x = 200 + Math.random()*400; z.yOffset = -500;
@@ -171,7 +171,7 @@ class EventManager {
                 setTimeout(() => z.forEach((e,i) => { e.speed = oldSpeeds[i]||20; e.element.style.filter=''; }), 4000);
             }},
             { msg: '🙏 戴夫的恩赐！', color: '#ffffff', exec: g => {
-                g.score += 500; g.updateScore(); g.sunCount += 100; g.updateUI();
+                g.sunCount += 100; g.updateUI(); // v3.81.6 分数已移除
             }},
             { msg: '🍄 孢子：天降蘑菇！', color: '#aa44aa', exec: g => {
                 const r = Math.floor(Math.random()*g.board.rows); const c = Math.floor(Math.random()*g.board.cols);
@@ -180,13 +180,13 @@ class EventManager {
                     g.board.addPlant(p, r, c);
                 }
             }},
-            { msg: '🚀 闪现：前锋突进！', color: '#ff8844', minScore: 300, exec: g => {
+            { msg: '🚀 闪现：前锋突进！', color: '#ff8844', minTime: 210, exec: g => { // v3.81.6 门槛=游戏进行秒数（原 minScore，分数已移除）
                 g.entities.filter(e => e instanceof Zombie).forEach(z => { z.x = Math.max(100, z.x - 150); });
             }},
             { msg: '🍃 一阵寂寞的风吹过...', color: '#666666', exec: g => {
                 // Troll event, nothing happens
             }},
-            { msg: '🔄 乾坤大挪移！', color: '#ff00ff', minScore: 200, exec: g => {
+            { msg: '🔄 乾坤大挪移！', color: '#ff00ff', minTime: 150, exec: g => { // v3.81.6 门槛=游戏进行秒数（原 minScore，分数已移除）
                 const z = g.entities.filter(e => e instanceof Zombie && !e.isDead);
                 if(z.length >= 2) {
                     const z1 = z[Math.floor(Math.random()*z.length)];
@@ -201,7 +201,7 @@ class EventManager {
     }
     
     trigger() {
-        const validEvents = this.events.filter(ev => !ev.minScore || this.game.score >= ev.minScore);
+        const validEvents = this.events.filter(ev => !ev.minTime || this.game.playTime >= ev.minTime);
         const ev = validEvents[Math.floor(Math.random() * validEvents.length)];
         this.game.showAnnouncement(ev.msg, ev.color);
         try { ev.exec(this.game); } catch(e) { console.error('Event Error:', e); }

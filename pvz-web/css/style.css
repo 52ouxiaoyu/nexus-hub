@@ -101,34 +101,13 @@ body {
     margin-left: 24px;
 }
 
-/* 右侧双行仪表：上行太阳 / 下行分数 */
+/* v3.81.6 分数系统整体移除：右侧仪表只剩太阳数量 */
 #meta-bank {
     margin-left: auto;
     display: flex;
     flex-direction: column;
     gap: 4px;
     align-self: center;
-}
-
-#score-bank {
-    width: 116px;
-    height: 21px;
-    background: rgba(0,0,0,0.55);
-    border: 1px solid #8b5a2b;
-    border-radius: 10px;
-    color: #fff;
-    font-family: monospace;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    box-sizing: border-box;
-}
-
-#score-count {
-    font-weight: bold;
-    color: #ffd700;
 }
 
 #seed-bank {
@@ -276,7 +255,7 @@ body {
 /* v3.33.0 右上角常驻 HUD：难度角标 + 速度按钮脱离顶栏（顶栏整行让给种子物品栏）。
    不吃 top-bar 的 scale(0.7)，直接钉在画面最右上角；难度角标由 JS 动态插入本容器。
    v3.34.0：改竖排 —— Speed 在上、难度角标贴其正下方（用户指定），下方顶栏的
-   阳光/分数/融合图鉴不再被角标盖住 */
+   阳光/融合图鉴不再被角标盖住 */
 #corner-hud {
     position: absolute;
     top: 6px;
@@ -386,6 +365,24 @@ body {
     text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.6);
 }
 #top-bar .diff-chip .diff-chip-en { font-size: 10px; }
+
+/* v3.81.6 我是僵尸：顶栏整体 scale(0.7) 导致 Speed 按钮与难度角标过小（用户反馈）——
+   放大基准尺寸抵消缩放，视觉大小对齐其它模式的 corner-hud 版本 */
+#top-bar #btn-speed {
+    font-size: 24px;
+    padding: 7px 18px;
+    border-radius: 22px;
+    border-width: 3px;
+}
+#top-bar #zombie-diff-chip {
+    font-size: 24px;
+    padding: 6px 18px;
+    border-radius: 18px;
+    border-width: 3px;
+    gap: 9px;
+    letter-spacing: 3px;
+}
+#top-bar #zombie-diff-chip .diff-chip-en { font-size: 16px; }
 
 /* —— 难度选择弹窗 —— */
 .diff-panel {
@@ -552,17 +549,6 @@ body {
     border-radius: 10px;
     padding: 1px 12px;
     vertical-align: middle;
-}
-.vase-win-score {
-    margin-top: 14px;
-    font-size: 22px;
-    font-weight: bold;
-    color: #4a2f0c;
-}
-.vase-win-score b {
-    font-size: 34px;
-    color: #7e3d00;
-    margin-left: 6px;
 }
 .vase-win-btns {
     margin-top: 22px;
