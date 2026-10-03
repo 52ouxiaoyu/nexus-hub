@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>植物大战僵尸：大地图联机模式</title>
+    <style>
+        body { margin: 0; padding: 0; background: #000; overflow: hidden; display: flex; font-family: 'Arial Black', sans-serif; }
+        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; }
+        
+        /* 左右分屏 */
+        .viewport { flex: 1; position: relative; overflow: hidden; border-right: 4px solid #1a1a1a; background: #111; }
+        .viewport:last-child { border-right: none; }
+        .world { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+        
+        /* 地图元素 */
+        .tile { position: absolute; width: 80px; height: 80px; box-sizing: border-box; }
+        .tile.grass { background: url('assets/images/interface/background1.jpg') -200px -100px; border-radius: 4px; opacity: 0.8; }
+        .tile.wall { background: #5c431d; border: 4px solid #3c2a12; border-radius: 8px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5), 0 10px 20px rgba(0,0,0,0.5); }
+        .tile.center { background: rgba(50, 255, 50, 0.2); border: 2px dashed #0f0; border-radius: 50%; }
+        
+        /* 实体 */
+        .entity { position: absolute; transform: translate(-50%, -50%); transition: left 0.05s linear, top 0.05s linear; pointer-events: none; }
+        .avatar { width: 60px; height: 60px; z-index: 100; filter: drop-shadow(0 10px 5px rgba(0,0,0,0.5)); }
+        .avatar img { width: 100%; height: 100%; object-fit: contain; }
+        
+        /* UI 层 */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1000; }
+        .player-hud { position: absolute; top: 20px; padding: 12px 20px; background: rgba(0,0,0,0.8); color: white; border: 3px solid #6b4a22; border-radius: 12px; font-size: 18px; text-shadow: 2px 2px 0 #000; }
+        #hud-p1 { left: 20px; border-color: #4da6ff; }
+        #hud-p2 { right: 20px; border-color: #ff4d4d; }
+        .sun-text { color: #ffeb3b; font-size: 24px; }
+        
+        .back-btn { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); pointer-events: auto; padding: 10px 24px; font-size: 18px; font-weight: bold; background: linear-gradient(180deg, #d32f2f, #9a0007); color: white; border: 3px solid #ffcccc; cursor: pointer; border-radius: 12px; text-shadow: 1px 1px 2px #000; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .back-btn:hover { filter: brightness(1.2); transform: translateX(-50%) translateY(-2px); }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- P1 视角 -->
+        <div id="vp1" class="viewport">
+            <div id="world1" class="world"></div>
+        </div>
+        <!-- P2 视角 -->
+        <div id="vp2" class="viewport">
+            <div id="world2" class="world"></div>
+        </div>
+        
+        <!-- 全局 UI -->
+        <div id="ui-layer">
+            <div id="hud-p1" class="player-hud">
+                <div style="color:#4da6ff; margin-bottom: 4px;">P1 (WASD移动)</div>
+                阳光: <span id="sun1" class="sun-text">0</span>
+            </div>
+            <button class="back-btn" onclick="location.href='index.html'">返回主菜单</button>
+            <div id="hud-p2" class="player-hud">
+                <div style="color:#ff4d4d; margin-bottom: 4px;">P2 (方向键移动)</div>
+                阳光: <span id="sun2" class="sun-text">0</span>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/HauntedDorm.js"></script>
+</body>
+</html>

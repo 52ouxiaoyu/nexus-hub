@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1791038357">
+    <link rel="stylesheet" href="css/style.css?v=1791038949">
 </head>
 <body>
     <div id="game-container">
@@ -316,13 +316,13 @@
                 <!-- v3.81.3：套一个与 .menu-cards 行同宽(886px)的容器，内部 justify-content:flex-end
                      → 对战卡右缘=我是僵尸卡右缘，正好落在「砸罐子+我是僵尸」两列正下方 -->
                 <div id="vs-row">
-                <button id="btn-dorm" class="mode-card" title="宿舍模式：单间生存，浇水升级（测试中）">
+                <button id="btn-dorm" class="mode-card" title="多房间联机：10个房间的开放大地图大逃杀！" onclick="location.href='haunted-dorm.html'" style="margin-right: 20px;">
                     <div class="pkt-art">
                         <img src="assets/images/Plants/SunShroom/0.gif" alt="阳光菇" style="image-rendering: pixelated; transform: scale(1.3);">
                     </div>
-                    <div class="pkt-name" style="color: #c0211e;">宿舍模式</div>
-                    <div class="pkt-tag">HAUNTED DORM</div>
-                    <div class="pkt-sub">单间生存 · 种菇打铁<br>浇水产阳 · 升门杀怪 (测试)</div>
+                    <div class="pkt-name" style="color: #c0211e;">大地图模式</div>
+                    <div class="pkt-tag">MULTIPLAYER DORM</div>
+                    <div class="pkt-sub">全新俯视角大地图 · 双屏同框<br>自由寻房 · 升级防御</div>
                 </button>
                 <button id="btn-vs" class="mode-card" title="双人对战：一人带植物 · 一人带僵尸，同屏实时对战">
                     <div class="pkt-art">
@@ -480,17 +480,17 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1791038357"></script>
-    <script src="js/Board.js?v=1791038357"></script>
-    <script src="js/entities/Entity.js?v=1791038357"></script>
-    <script src="js/entities/Plant.js?v=1791038357"></script>
-    <script src="js/entities/Zombie.js?v=1791038357"></script>
-    <script src="js/entities/Projectile.js?v=1791038357"></script>
-    <script src="js/entities/Sun.js?v=1791038357"></script>
-    <script src="js/managers/WaveManager.js?v=1791038357"></script>
-    <script src="js/managers/CollisionManager.js?v=1791038357"></script>
-    <script src="js/managers/EventManager.js?v=1791038357"></script>
-    <script src="js/GameLoop.js?v=1791038357"></script>
-    <script src="js/HelpGuide.js?v=1791038357"></script>
+    <script src="js/InputManager.js?v=1791038949"></script>
+    <script src="js/Board.js?v=1791038949"></script>
+    <script src="js/entities/Entity.js?v=1791038949"></script>
+    <script src="js/entities/Plant.js?v=1791038949"></script>
+    <script src="js/entities/Zombie.js?v=1791038949"></script>
+    <script src="js/entities/Projectile.js?v=1791038949"></script>
+    <script src="js/entities/Sun.js?v=1791038949"></script>
+    <script src="js/managers/WaveManager.js?v=1791038949"></script>
+    <script src="js/managers/CollisionManager.js?v=1791038949"></script>
+    <script src="js/managers/EventManager.js?v=1791038949"></script>
+    <script src="js/GameLoop.js?v=1791038949"></script>
+    <script src="js/HelpGuide.js?v=1791038949"></script>
 </body>
 </html>
