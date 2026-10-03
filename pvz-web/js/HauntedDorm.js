@@ -9,21 +9,23 @@ class HauntedDorm {
         const cx = this.worldWidth / 2;
         const cy = this.worldHeight / 2;
         
-        // 更改为通用人物图标（戴夫和僵尸头像代表两方）
         this.players = [
-            { id: 1, x: cx - 40, y: cy, sun: 200, icon: 'assets/images/interface/Dave.gif', selectedSeed: null },
-            { id: 2, x: cx + 40, y: cy, sun: 200, icon: 'assets/images/Zombies/Zombie/ZombieHead.gif', selectedSeed: null }
+            { id: 1, x: cx - 40, y: cy, sun: 200, hp: 100, icon: 'assets/images/interface/Dave.gif', selectedSeed: null },
+            { id: 2, x: cx + 40, y: cy, sun: 200, hp: 100, icon: 'assets/images/Zombies/Zombie/ZombieHead.gif', selectedSeed: null }
         ];
         
         this.keys = {};
         this.walls = new Set();
         this.plants = [];
+        this.zombies = [];
+        this.zombiesSpawned = false;
         
         this.initDOM();
         this.generateMap();
         this.bindInput();
         
-        this.lastTime = performance.now();
+        this.startTime = performance.now();
+        this.lastTime = this.startTime;
         requestAnimationFrame(t => this.loop(t));
     }
     
@@ -62,21 +64,18 @@ class HauntedDorm {
         
         this.rooms = [];
         
-        // 生成 10 个互不相交的房间
         for (let i = 0; i < 10; i++) {
             let rw, rh, rx, ry, valid = false;
             let attempts = 0;
             while (!valid && attempts < 1000) {
                 attempts++;
-                rw = Math.floor(Math.random() * 2) + 4; // 4 to 5 width
-                rh = Math.floor(Math.random() * 2) + 4; // 4 to 5 height
+                rw = Math.floor(Math.random() * 2) + 4;
+                rh = Math.floor(Math.random() * 2) + 4;
                 rx = Math.floor(Math.random() * (this.cols - rw - 4)) + 2;
                 ry = Math.floor(Math.random() * (this.rows - rh - 4)) + 2;
                 
-                // 避开中心区域
                 if (Math.abs(rx - this.cols/2) < 6 && Math.abs(ry - this.rows/2) < 6) continue;
                 
-                // 检查是否与其他房间重叠（留出至少 2 格的过道）
                 valid = true;
                 for (const rm of this.rooms) {
                     if (!(rx + rw + 2 < rm.x || rx - 2 > rm.x + rm.w ||
@@ -89,12 +88,15 @@ class HauntedDorm {
             if (valid) this.rooms.push({x: rx, y: ry, w: rw, h: rh});
         }
         
-        // 渲染房间与初始化内容
         for (const rm of this.rooms) {
             for (let wr = -1; wr <= rm.h; wr++) {
                 for (let wc = -1; wc <= rm.w; wc++) {
                     if (wr === -1 || wr === rm.h || wc === -1 || wc === rm.w) {
-                        if (wr === rm.h && wc === Math.floor(rm.w/2)) continue; // 门在正下方中间
+                        if (wr === rm.h && wc === Math.floor(rm.w/2)) {
+                            // 门在正下方中间，初始生成坚果墙
+                            this.spawnPlant(rm.x + wc, rm.y + wr, 'wallnut');
+                            continue;
+                        }
                         
                         const key = `${rm.x + wc},${rm.y + wr}`;
                         this.walls.add(key);
@@ -109,16 +111,10 @@ class HauntedDorm {
                 }
             }
             
-            // 在房间中间自动生成一个阳光菇
+            // 房间内自动生成阳光菇
             const cx = rm.x + Math.floor(rm.w/2);
             const cy = rm.y + Math.floor(rm.h/2) - 1;
             this.spawnPlant(cx, cy, 'sunshroom');
-        }
-        
-        // 渲染野生僵尸（初始生成在中央附近，这里放一个测试僵尸）
-        this.zombies = [];
-        for(let z=0; z<3; z++) {
-            this.spawnZombie(this.worldWidth/2 + (Math.random()-0.5)*200, this.worldHeight/2 + (Math.random()-0.5)*200);
         }
     }
     
@@ -126,26 +122,30 @@ class HauntedDorm {
         if (this.plants.some(pl => pl.c === col && pl.r === row)) return;
         
         const pTypes = {
-            'sunshroom': 'assets/images/Plants/SunShroom/0.gif',
-            'wallnut': 'assets/images/Plants/WallNut/0.gif',
-            'puffshroom': 'assets/images/Plants/PuffShroom/0.gif'
+            'sunshroom': { src: 'assets/images/Plants/SunShroom/0.gif', hp: 300 },
+            'wallnut': { src: 'assets/images/Plants/WallNut/0.gif', hp: 4000 },
+            'puffshroom': { src: 'assets/images/Plants/PuffShroom/0.gif', hp: 300 }
         };
         
-        const pt = { r: row, c: col, type: type };
-        this.plants.push(pt);
+        const pt = { r: row, c: col, type: type, hp: pTypes[type].hp };
         
         const el1 = document.createElement('div');
         el1.className = 'tile';
         el1.style.left = (col * this.gridSize) + 'px';
         el1.style.top = (row * this.gridSize) + 'px';
-        el1.innerHTML = `<img src="${pTypes[pt.type]}" style="width:100%; height:100%; object-fit:contain; transform: scale(1.2) translateY(-10px);">`;
+        el1.innerHTML = `<img src="${pTypes[type].src}" style="width:100%; height:100%; object-fit:contain; transform: scale(1.2) translateY(-10px);">`;
         
         this.world1.appendChild(el1);
-        this.world2.appendChild(el1.cloneNode(true));
+        const el2 = el1.cloneNode(true);
+        this.world2.appendChild(el2);
+        
+        pt.el1 = el1;
+        pt.el2 = el2;
+        this.plants.push(pt);
     }
     
     spawnZombie(x, y) {
-        const zb = { x, y, hp: 100, vx: 0, vy: 0 };
+        const zb = { x, y, hp: 200, vx: 0, vy: 0 };
         this.zombies.push(zb);
         
         const zEl1 = document.createElement('div');
@@ -165,7 +165,6 @@ class HauntedDorm {
         const p = this.players[pid - 1];
         if (p.sun >= cost) {
             p.selectedSeed = { type, cost };
-            // 高亮UI
             document.querySelectorAll(`#hud-p${pid} .seeds img`).forEach(img => img.style.borderColor = '#000');
             event.target.style.borderColor = '#0f0';
         }
@@ -178,44 +177,21 @@ class HauntedDorm {
         const vp = pid === 1 ? this.vp1 : this.vp2;
         const rect = vp.getBoundingClientRect();
         
-        // 计算世界坐标
-        const camX = p.camX || 0;
-        const camY = p.camY || 0;
-        const worldX = mouseX - rect.left + camX;
-        const worldY = mouseY - rect.top + camY;
+        const worldX = mouseX - rect.left + (p.camX || 0);
+        const worldY = mouseY - rect.top + (p.camY || 0);
         
         const col = Math.floor(worldX / this.gridSize);
         const row = Math.floor(worldY / this.gridSize);
         
         if (col < 0 || col >= this.cols || row < 0 || row >= this.rows) return;
-        
-        // 检查墙壁和现有植物
         if (this.walls.has(`${col},${row}`)) return;
         if (this.plants.some(pl => pl.c === col && pl.r === row)) return;
         
-        // 种下
         p.sun -= p.selectedSeed.cost;
         document.getElementById(`sun${pid}`).innerText = p.sun;
         
-        const pTypes = {
-            'sunshroom': 'assets/images/Plants/SunShroom/0.gif',
-            'wallnut': 'assets/images/Plants/WallNut/0.gif',
-            'puffshroom': 'assets/images/Plants/PuffShroom/0.gif'
-        };
+        this.spawnPlant(col, row, p.selectedSeed.type);
         
-        const pt = { r: row, c: col, type: p.selectedSeed.type };
-        this.plants.push(pt);
-        
-        const el1 = document.createElement('div');
-        el1.className = 'tile';
-        el1.style.left = (col * this.gridSize) + 'px';
-        el1.style.top = (row * this.gridSize) + 'px';
-        el1.innerHTML = `<img src="${pTypes[pt.type]}" style="width:100%; height:100%; object-fit:contain; transform: scale(1.2) translateY(-10px);">`;
-        
-        this.world1.appendChild(el1);
-        this.world2.appendChild(el1.cloneNode(true));
-        
-        // 取消选择
         p.selectedSeed = null;
         document.querySelectorAll(`#hud-p${pid} .seeds img`).forEach(img => img.style.borderColor = '#000');
     }
@@ -229,7 +205,7 @@ class HauntedDorm {
     }
     
     checkCollision(x, y) {
-        const r = 20; // 碰撞半径
+        const r = 20;
         const corners = [
             { c: Math.floor((x-r)/this.gridSize), r: Math.floor((y-r)/this.gridSize) },
             { c: Math.floor((x+r)/this.gridSize), r: Math.floor((y-r)/this.gridSize) },
@@ -239,9 +215,29 @@ class HauntedDorm {
         return corners.some(p => this.walls.has(`${p.c},${p.r}`));
     }
     
+    getPlantAt(x, y) {
+        const c = Math.floor(x / this.gridSize);
+        const r = Math.floor(y / this.gridSize);
+        return this.plants.find(pl => pl.c === c && pl.r === r);
+    }
+    
     loop(time) {
         const dt = Math.min((time - this.lastTime) / 1000, 0.1);
         this.lastTime = time;
+        
+        // 10秒后生成僵尸
+        if (!this.zombiesSpawned && time - this.startTime > 10000) {
+            this.zombiesSpawned = true;
+            for(let z=0; z<3; z++) {
+                this.spawnZombie(this.worldWidth/2 + (Math.random()-0.5)*200, this.worldHeight/2 + (Math.random()-0.5)*200);
+            }
+            // 简单的文字提示
+            const msg = document.createElement('div');
+            msg.style = "position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:red; font-size:40px; font-weight:bold; text-shadow:2px 2px 0 #000; z-index:9999;";
+            msg.innerText = "猛鬼出笼！";
+            document.body.appendChild(msg);
+            setTimeout(() => msg.remove(), 3000);
+        }
         
         const speed = 400;
         
@@ -255,7 +251,6 @@ class HauntedDorm {
             if (ny > 30 && ny < this.worldHeight - 10 && !this.checkCollision(nx, ny)) p.y = ny;
         };
         
-        // P1
         let vx1 = 0, vy1 = 0;
         if (this.keys['a']) vx1 -= speed;
         if (this.keys['d']) vx1 += speed;
@@ -263,7 +258,6 @@ class HauntedDorm {
         if (this.keys['s']) vy1 += speed;
         movePlayer(this.players[0], vx1, vy1);
         
-        // P2
         let vx2 = 0, vy2 = 0;
         if (this.keys['arrowleft']) vx2 -= speed;
         if (this.keys['arrowright']) vx2 += speed;
@@ -271,32 +265,56 @@ class HauntedDorm {
         if (this.keys['arrowdown']) vy2 += speed;
         movePlayer(this.players[1], vx2, vy2);
         
-        // 更新僵尸 (简易随机漫步)
+        // 僵尸AI (追踪最近玩家并攻击障碍)
+        const zSpeed = 80;
         this.zombies.forEach(zb => {
-            if (Math.random() < 0.02) {
-                zb.vx = (Math.random() - 0.5) * 100;
-                zb.vy = (Math.random() - 0.5) * 100;
-            }
-            const nx = zb.x + zb.vx * dt;
-            const ny = zb.y + zb.vy * dt;
-            if (!this.checkCollision(nx, ny)) {
-                zb.x = nx;
-                zb.y = ny;
-            } else {
-                zb.vx *= -1; zb.vy *= -1; // 撞墙反弹
+            // 找最近玩家
+            let target = this.players[0];
+            let dist = Math.hypot(target.x - zb.x, target.y - zb.y);
+            const dist2 = Math.hypot(this.players[1].x - zb.x, this.players[1].y - zb.y);
+            if (dist2 < dist) { target = this.players[1]; dist = dist2; }
+            
+            // 计算方向
+            let dx = target.x - zb.x;
+            let dy = target.y - zb.y;
+            let len = Math.hypot(dx, dy);
+            
+            if (len > 0) {
+                let nx = zb.x + (dx/len) * zSpeed * dt;
+                let ny = zb.y + (dy/len) * zSpeed * dt;
+                
+                // 检查是否撞到植物 (比如坚果墙)
+                const hitPlant = this.getPlantAt(nx, ny);
+                if (hitPlant) {
+                    // 攻击植物
+                    hitPlant.hp -= 20 * dt;
+                    if (hitPlant.hp <= 0) {
+                        hitPlant.el1.remove();
+                        hitPlant.el2.remove();
+                        this.plants = this.plants.filter(p => p !== hitPlant);
+                    }
+                } else {
+                    // 滑动碰撞移动
+                    if (!this.checkCollision(nx, zb.y)) zb.x = nx;
+                    if (!this.checkCollision(zb.x, ny)) zb.y = ny;
+                }
+                
+                // 如果靠得太近，造成玩家伤害（简单闪烁效果，暂不计算死）
+                if (dist < 40) {
+                    target.el1.style.filter = "brightness(0) invert(1)";
+                    setTimeout(() => target.el1.style.filter = "drop-shadow(0 10px 5px rgba(0,0,0,0.5))", 100);
+                }
             }
             
             zb.el1.style.left = zb.x + 'px'; zb.el1.style.top = zb.y + 'px';
             zb.el2.style.left = zb.x + 'px'; zb.el2.style.top = zb.y + 'px';
         });
         
-        // 渲染坐标
         this.players.forEach(p => {
             p.el1.style.left = p.x + 'px'; p.el1.style.top = p.y + 'px';
             p.el2.style.left = p.x + 'px'; p.el2.style.top = p.y + 'px';
         });
         
-        // 渲染双摄相机
         const vpw = this.vp1.clientWidth;
         const vph = this.vp1.clientHeight;
         
