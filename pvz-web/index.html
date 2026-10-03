@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1791013090">
+    <link rel="stylesheet" href="css/style.css?v=1791015453">
 </head>
 <body>
     <div id="game-container">
@@ -135,15 +135,17 @@
             #btn-vs .pkt-sub { font-size: 12px; margin-top: 5px; line-height: 1.5; }
             @keyframes vs-pulse { 0%,100% { transform: rotate(-6deg) scale(1); } 50% { transform: rotate(-6deg) scale(1.12); } }
             /* ===== v3.81.0 僵尸方选卡（双人对战第二步）===== */
+            /* v3.81.9：25 只僵尸改 12 列网格 = 两排多一个（12+12+1）；卡片收窄适配 64px 格 */
             .vz-card {
-                width: 96px; padding: 6px 4px; border-radius: 10px; cursor: pointer;
+                width: auto; padding: 4px 2px; border-radius: 10px; cursor: pointer;
                 background: rgba(255,255,255,0.08); border: 2px solid transparent;
                 display: flex; flex-direction: column; align-items: center; gap: 2px;
+                overflow: hidden;
             }
-            .vz-card img { width: 56px; height: 56px; object-fit: contain; }
-            .vz-card .vz-name { font: 12px monospace; color: #efe6ff; }
-            .vz-card .vz-cost { font: bold 12px monospace; color: #ff9ed2; }
-            .vz-card .vz-power { font: 10px monospace; color: #9a8ab5; }
+            .vz-card img { width: 46px; height: 46px; object-fit: contain; }
+            .vz-card .vz-name { font: 9px monospace; color: #efe6ff; white-space: nowrap; }
+            .vz-card .vz-cost { font: bold 10px monospace; color: #ff9ed2; }
+            .vz-card .vz-power { font: 9px monospace; color: #9a8ab5; white-space: nowrap; }
             .vz-card.picked { border-color: #9dff5e; background: rgba(157,255,94,0.16); filter: brightness(1.15); }
             .vz-card:hover { background: rgba(255,255,255,0.18); }
             .mode-card {
@@ -351,10 +353,10 @@
 
         <!-- v3.81.0 双人对战：僵尸方选卡（8 只，向日葵头僵尸最多 1 只） -->
         <div id="vz-chooser" style="position:absolute; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.8); z-index:1500; flex-direction:column; align-items:center; justify-content:center; display:none;">
-            <div style="background-color:#4a3a5a; padding:25px; border-radius:15px; border:4px solid #241a30; box-shadow:inset 0 0 20px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.8); width:650px;">
+            <div style="background-color:#4a3a5a; padding:16px 16px; border-radius:15px; border:4px solid #241a30; box-shadow:inset 0 0 20px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.8); width:856px;">
                 <h2 style="color:#e8d9ff; text-align:center; margin-bottom:8px; text-shadow:2px 2px 2px black; font-family:monospace; font-size:24px;">僵尸方选卡（<span id="vz-count">0</span>/8）</h2>
                 <div style="color:#bfa8e0; text-align:center; font-size:13px; margin-bottom:12px; font-family:monospace;">全部 25 种僵尸里选 8 只 · 向日葵头僵尸（产脑子）最多带 1 只 · 战力越强所需脑子越多</div>
-                <div id="vz-grid" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:20px; max-height:380px; overflow-y:auto; background-color:rgba(0,0,0,0.3); padding:12px; border-radius:10px; box-shadow:inset 0 0 10px black;"></div>
+                <div id="vz-grid" style="display:grid; grid-template-columns:repeat(12, 62px); gap:5px; justify-content:center; margin-bottom:16px; background-color:rgba(0,0,0,0.3); padding:12px 6px; border-radius:10px; box-shadow:inset 0 0 10px black;"></div>
                 <div style="display:flex; justify-content:center; gap:20px;">
                     <button id="vz-back" style="background-image:url('assets/images/interface/ShovelBack.png'); background-size:100% 100%; border:none; padding:10px 30px; font-size:18px; font-family:monospace; font-weight:bold; color:white; cursor:pointer; border-radius:10px; text-shadow:1px 1px 2px black;">上一页</button>
                     <button id="vz-rock" style="background-image:url('assets/images/interface/ShovelBack.png'); background-size:100% 100%; border:none; padding:10px 40px; font-size:20px; font-family:monospace; font-weight:bold; color:white; cursor:pointer; border-radius:10px; opacity:0.5; text-shadow:1px 1px 2px black;" disabled>开战！</button>
@@ -456,17 +458,17 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1791013090"></script>
-    <script src="js/Board.js?v=1791013090"></script>
-    <script src="js/entities/Entity.js?v=1791013090"></script>
-    <script src="js/entities/Plant.js?v=1791013090"></script>
-    <script src="js/entities/Zombie.js?v=1791013090"></script>
-    <script src="js/entities/Projectile.js?v=1791013090"></script>
-    <script src="js/entities/Sun.js?v=1791013090"></script>
-    <script src="js/managers/WaveManager.js?v=1791013090"></script>
-    <script src="js/managers/CollisionManager.js?v=1791013090"></script>
-    <script src="js/managers/EventManager.js?v=1791013090"></script>
-    <script src="js/GameLoop.js?v=1791013090"></script>
-    <script src="js/HelpGuide.js?v=1791013090"></script>
+    <script src="js/InputManager.js?v=1791015453"></script>
+    <script src="js/Board.js?v=1791015453"></script>
+    <script src="js/entities/Entity.js?v=1791015453"></script>
+    <script src="js/entities/Plant.js?v=1791015453"></script>
+    <script src="js/entities/Zombie.js?v=1791015453"></script>
+    <script src="js/entities/Projectile.js?v=1791015453"></script>
+    <script src="js/entities/Sun.js?v=1791015453"></script>
+    <script src="js/managers/WaveManager.js?v=1791015453"></script>
+    <script src="js/managers/CollisionManager.js?v=1791015453"></script>
+    <script src="js/managers/EventManager.js?v=1791015453"></script>
+    <script src="js/GameLoop.js?v=1791015453"></script>
+    <script src="js/HelpGuide.js?v=1791015453"></script>
 </body>
 </html>
