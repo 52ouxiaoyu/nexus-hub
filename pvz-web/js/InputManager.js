@@ -49,9 +49,8 @@ class InputManager {
                 const card = e.target.closest('.zcard');
                 if (!card || card.classList.contains('disabled')) return;
                 if (!this.game.vsMode) return;
-                this.game.pendingZombie = (this.game.pendingZombie === card.dataset.type) ? null : card.dataset.type;
-                this.game._refreshVsZombieBar();
-                this.game.audioManager.play('btn');
+                // v3.82.0：点击僵尸卡 = 直接召唤到"亮起行"（行由 ↑↓ 方向键选择），不再两段式点草坪
+                this.game.deployZombie(card.dataset.type, this.game.vsSpawnRow);
                 this.dragGhost.style.display = 'none';
             });
         }
@@ -74,6 +73,10 @@ class InputManager {
         document.addEventListener('keydown', (e) => {
             if (e.repeat) return;
             if (!this.game.vsMode || this.game.state !== 'PLAYING' || this.game.paused) return;
+            // v3.82.0：↑↓ 移动亮起行；按 0 = 僵尸方投降（植物方胜）
+            if (e.code === 'ArrowUp') { this.game.vsMoveRow(-1); e.preventDefault(); return; }
+            if (e.code === 'ArrowDown') { this.game.vsMoveRow(1); e.preventDefault(); return; }
+            if (e.code === 'Digit0' || e.code === 'Numpad0') { this.game.vsZombieSurrender(); e.preventDefault(); return; }
             const m = /^(Digit|Numpad)([1-8])$/.exec(e.code);
             if (!m) return;
             if (m[1] === 'Digit') {
@@ -84,9 +87,8 @@ class InputManager {
             } else {
                 const card = document.querySelectorAll('#vs-bottom-bar .zcard')[Number(m[2]) - 1];
                 if (!card || card.classList.contains('disabled')) return;
-                this.game.pendingZombie = (this.game.pendingZombie === card.dataset.type) ? null : card.dataset.type;
-                this.game._refreshVsZombieBar();
-                this.game.audioManager.play('btn');
+                // v3.82.0：小键盘数字 = 直接召唤对应僵尸到亮起行
+                this.game.deployZombie(card.dataset.type, this.game.vsSpawnRow);
                 this.dragGhost.style.display = 'none';
                 e.preventDefault();
             }
@@ -318,7 +320,7 @@ class InputManager {
             // v3.26.0 植物盲盒：拖拽图改回"盲盒图案"（红丝带礼盒）——用户明确盲盒≠问号罐
             // v3.35.0：礼盒重画为宽幅构图，拖拽幽灵同步改宽尺寸
             if (type === 'plantbox') {
-                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1791015453')";
+                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1791016017')";
                 this.dragGhost.style.width = '68px';
                 this.dragGhost.style.height = '50px';
                 this.dragGhost.style.backgroundSize = 'contain';
@@ -330,8 +332,8 @@ class InputManager {
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1791015453`
-                : `assets/images/Plants/${imgName}.gif?v=1791015453`;
+                ? `assets/images/Plants/${imgName}.png?v=1791016017`
+                : `assets/images/Plants/${imgName}.gif?v=1791016017`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
 
             // v3.20.0：倭瓜立绘画布 100×226（身体只占底部 68×82），60×60 contain 后

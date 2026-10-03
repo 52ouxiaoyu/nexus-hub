@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1791015453">
+    <link rel="stylesheet" href="css/style.css?v=1791016017">
 </head>
 <body>
     <div id="game-container">
@@ -44,7 +44,9 @@
                 <button id="btn-speed">Speed: 1x</button>
             </div>
             <!-- v3.81.0 双人对战：底部僵尸方栏（僵尸卡带 + 僵尸阳光），与顶部植物栏上下分治 -->
-            <div id="vs-bottom-bar" style="display:none; position:absolute; left:0; right:0; bottom:4px; margin:0 auto; width:fit-content; z-index:600; display:none; align-items:center; gap:6px; padding:4px 10px; background:rgba(20,12,40,0.72); border:2px solid #4a3a6a; border-radius:10px; max-width:880px; flex-wrap:wrap; justify-content:center;"></div>
+            <div id="vs-bottom-bar" style="display:none; position:absolute; right:5px; top:85px; left:auto; bottom:auto; margin:0; width:fit-content; z-index:600; display:none; flex-direction:column; align-items:center; gap:5px; padding:6px 5px; background:rgba(20,12,40,0.72); border:2px solid #4a3a6a; border-radius:10px;"></div>
+            <!-- v3.82.0 右下角投降：鼠标点=植物方投降（僵尸方胜）；僵尸方按键盘 0 投降（植物方胜） -->
+            <button id="vs-surrender" title="植物方投降（僵尸方获胜）· 僵尸方按键盘 0 投降" style="display:none; position:absolute; right:8px; bottom:8px; z-index:700; font-family:'Kaiti SC','STKaiti','楷体',serif; font-size:16px; font-weight:bold; letter-spacing:3px; color:#ffd9d9; background:#7a2030; border:3px solid #3a0e16; border-radius:10px; padding:7px 20px; cursor:pointer; box-shadow:0 4px 0 #2c0a10, 0 6px 12px rgba(0,0,0,0.4);">投 降</button>
         <!-- Recipe Modal -->
         <div id="recipe-modal" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; background: #c69c6d; border: 4px solid #4a3018; border-radius: 10px; z-index: 3000; padding: 20px; box-shadow: 0 0 20px #000; pointer-events: auto;">
             <h2 style="text-align: center; color: #fff; text-shadow: 2px 2px 0 #000; margin-top: 0;">融合配方大全</h2>
@@ -458,17 +460,17 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1791015453"></script>
-    <script src="js/Board.js?v=1791015453"></script>
-    <script src="js/entities/Entity.js?v=1791015453"></script>
-    <script src="js/entities/Plant.js?v=1791015453"></script>
-    <script src="js/entities/Zombie.js?v=1791015453"></script>
-    <script src="js/entities/Projectile.js?v=1791015453"></script>
-    <script src="js/entities/Sun.js?v=1791015453"></script>
-    <script src="js/managers/WaveManager.js?v=1791015453"></script>
-    <script src="js/managers/CollisionManager.js?v=1791015453"></script>
-    <script src="js/managers/EventManager.js?v=1791015453"></script>
-    <script src="js/GameLoop.js?v=1791015453"></script>
-    <script src="js/HelpGuide.js?v=1791015453"></script>
+    <script src="js/InputManager.js?v=1791016017"></script>
+    <script src="js/Board.js?v=1791016017"></script>
+    <script src="js/entities/Entity.js?v=1791016017"></script>
+    <script src="js/entities/Plant.js?v=1791016017"></script>
+    <script src="js/entities/Zombie.js?v=1791016017"></script>
+    <script src="js/entities/Projectile.js?v=1791016017"></script>
+    <script src="js/entities/Sun.js?v=1791016017"></script>
+    <script src="js/managers/WaveManager.js?v=1791016017"></script>
+    <script src="js/managers/CollisionManager.js?v=1791016017"></script>
+    <script src="js/managers/EventManager.js?v=1791016017"></script>
+    <script src="js/GameLoop.js?v=1791016017"></script>
+    <script src="js/HelpGuide.js?v=1791016017"></script>
 </body>
 </html>

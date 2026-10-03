@@ -615,10 +615,13 @@ body {
 }
 .zcard.disabled { filter: brightness(45%); cursor: not-allowed; }
 
-/* v3.81.0 双人对战底部僵尸栏：卡片收紧保证 8 卡 + 阳光芯片单行放下，少占草坪 */
+/* v3.81.0 双人对战僵尸栏（v3.82.0 移到右侧草坪外空地，竖排：脑子芯片 + 8 张僵尸卡） */
 /* v3.81.4 修复：ui-layer 是 pointer-events:none（点击穿透到草坪），底栏必须显式 auto——
    否则继承 none，物理点击全部穿透底栏，僵尸卡点不中=僵尸放不出去 */
-#vs-bottom-bar { z-index: 600; max-width: 880px; pointer-events: auto; }
+#vs-bottom-bar { z-index: 600; pointer-events: auto; }
+#vs-surrender { pointer-events: auto; transition: filter 0.1s ease, transform 0.1s ease; } /* ui-layer 内必须显式 auto，否则继承 none 被穿透（v3.81.4 同款坑） */
+#vs-surrender:hover { filter: brightness(1.25); }
+#vs-surrender:active { transform: translateY(2px); box-shadow: 0 1px 0 #2c0a10; }
 #vs-bottom-bar .zcard { width: 74px; height: 44px; flex: none; }
 #vs-bottom-bar .zcard img { height: 34px; }
 #vs-bottom-bar .zcard .z-name { font-size: 9px; }
