@@ -10,6 +10,23 @@ class InputManager {
         this.bindEvents();
     }
     
+    // v3.81.3：选中一张种子卡（鼠标点击 / 双人对战键盘数字键两条路共用）
+    // mx/my 有值=跟随鼠标出拖拽图；无值（键盘选卡）=不出图，等 mousemove 再补
+    pickSeedCard(card, mx, my) {
+        const type = card.dataset.type;
+        const cost = parseInt(card.dataset.cost);
+        if (this.game.sunCount < cost) return;
+        this.selectedSeed = type;
+        this.isShovelSelected = false;
+        this.game.isGloveActive = false;
+        if(document.getElementById('glove-bank')) document.getElementById('glove-bank').style.background = 'rgba(0,0,0,0.5)';
+        if(this.game.gloveSource) { this.game.gloveSource.gloveRestore(); this.game.isGloveDragging = false; this.game.gloveSource = null; }
+        this.game.container.style.cursor = 'default';
+        if (mx !== undefined) this.updateDragGhost(mx, my, type);
+        else this.dragGhost.style.display = 'none';
+        this.game.audioManager.play('btn');
+    }
+
     bindEvents() {
         // 我是僵尸模式（v3.7.0）：点僵尸卡选中 → 点草坪任意行释放（该行最右进场）
         // v3.81.0：双人对战底部僵尸栏同一套交互（点卡选中/取消 → 点行部署）
@@ -48,19 +65,30 @@ class InputManager {
             }
             const card = e.target.closest('.seed-card');
             if (card && !card.classList.contains('disabled')) {
-                const type = card.dataset.type;
-                const cost = parseInt(card.dataset.cost);
-                
-                if (this.game.sunCount >= cost) {
-                    this.selectedSeed = type;
-                    this.isShovelSelected = false;
-                    this.game.isGloveActive = false;
-                    if(document.getElementById('glove-bank')) document.getElementById('glove-bank').style.background = 'rgba(0,0,0,0.5)';
-                    if(this.game.gloveSource) { this.game.gloveSource.gloveRestore(); this.game.isGloveDragging = false; this.game.gloveSource = null; }
-                    this.game.container.style.cursor = 'default';
-                    this.updateDragGhost(e.clientX, e.clientY, type);
-                    this.game.audioManager.play('btn');
-                }
+                this.pickSeedCard(card, e.clientX, e.clientY);
+            }
+        });
+
+        // v3.81.3 双人对战键盘选卡：两人共用一个鼠标——
+        // 植物方按主键盘数字 1~8 选中第 1~8 张植物卡，僵尸方按小键盘数字 1~8 选中第 1~8 张僵尸卡（再按一次取消）
+        document.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
+            if (!this.game.vsMode || this.game.state !== 'PLAYING' || this.game.paused) return;
+            const m = /^(Digit|Numpad)([1-8])$/.exec(e.code);
+            if (!m) return;
+            if (m[1] === 'Digit') {
+                const card = document.querySelectorAll('#seed-bank .seed-card')[Number(m[2]) - 1];
+                if (!card || card.classList.contains('disabled')) return;
+                this.pickSeedCard(card); // 键盘选卡：不出跟随图，鼠标一动 mousemove 自动补上
+                e.preventDefault();
+            } else {
+                const card = document.querySelectorAll('#vs-bottom-bar .zcard')[Number(m[2]) - 1];
+                if (!card || card.classList.contains('disabled')) return;
+                this.game.pendingZombie = (this.game.pendingZombie === card.dataset.type) ? null : card.dataset.type;
+                this.game._refreshVsZombieBar();
+                this.game.audioManager.play('btn');
+                this.dragGhost.style.display = 'none';
+                e.preventDefault();
             }
         });
         
@@ -290,7 +318,7 @@ class InputManager {
             // v3.26.0 植物盲盒：拖拽图改回"盲盒图案"（红丝带礼盒）——用户明确盲盒≠问号罐
             // v3.35.0：礼盒重画为宽幅构图，拖拽幽灵同步改宽尺寸
             if (type === 'plantbox') {
-                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1791010495')";
+                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1791011171')";
                 this.dragGhost.style.width = '68px';
                 this.dragGhost.style.height = '50px';
                 this.dragGhost.style.backgroundSize = 'contain';
@@ -302,8 +330,8 @@ class InputManager {
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1791010495`
-                : `assets/images/Plants/${imgName}.gif?v=1791010495`;
+                ? `assets/images/Plants/${imgName}.png?v=1791011171`
+                : `assets/images/Plants/${imgName}.gif?v=1791011171`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
 
             // v3.20.0：倭瓜立绘画布 100×226（身体只占底部 68×82），60×60 contain 后

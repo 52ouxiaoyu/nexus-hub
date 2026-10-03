@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1791010495">
+    <link rel="stylesheet" href="css/style.css?v=1791011171">
 </head>
 <body>
     <div id="game-container">
@@ -107,9 +107,17 @@
             .menu-cards { position: relative; z-index: 2; display: flex; gap: 18px; margin-top: 34px; flex-wrap: wrap; justify-content: center; max-width: 920px; }
             /* ===== v3.81.1 双人对战：第五张模式卡（与四卡同款种子包样式）=====
                宽 = 砸罐子卡 + 间距 + 我是僵尸卡（208+18+208=434px）；
-               高 = 第一行卡片下方的剩余空间（flex:1 撑满）；矮宽卡用左图右文横排 */
+               高 = 第一行卡片下方的剩余空间（flex:1 撑满）；矮宽卡用左图右文横排
+               v3.81.3：位置改到「砸罐子+我是僵尸」两列正下方——#vs-row 与卡片行同宽(886px)居中，
+               内部 justify-content:flex-end → 对战卡右缘=我是僵尸卡右缘 */
+            #vs-row {
+                position: relative; z-index: 2;
+                display: flex; justify-content: flex-end; align-items: stretch;
+                width: 886px; max-width: 100%;
+                flex: 1 1 0; min-height: 0;
+            }
             #btn-vs {
-                width: 434px; flex: 1 1 0; height: auto; min-height: 110px;
+                width: 434px; flex: 0 0 434px; height: auto; min-height: 110px;
                 margin-top: 0px; margin-bottom: 14px;
                 position: relative; z-index: 3;
                 padding: 10px 16px;
@@ -290,7 +298,10 @@
                     </button>
                 </div>
 
-                <!-- v3.81.1 双人对战：第五张模式卡（宽版，在场景流内填充第一行卡片下方剩余空间） -->
+                <!-- v3.81.1 双人对战：第五张模式卡（宽版） -->
+                <!-- v3.81.3：套一个与 .menu-cards 行同宽(886px)的容器，内部 justify-content:flex-end
+                     → 对战卡右缘=我是僵尸卡右缘，正好落在「砸罐子+我是僵尸」两列正下方 -->
+                <div id="vs-row">
                 <button id="btn-vs" class="mode-card" title="双人对战：一人带植物 · 一人带僵尸，同屏实时对战">
                     <div class="pkt-art">
                         <div class="vs-duel">
@@ -305,6 +316,7 @@
                         <div class="pkt-sub">一人指挥植物防线 · 一人统率僵尸大军<br>双阳光池经济 · 吃植物杀僵尸互赚阳光 · 同屏决胜</div>
                     </div>
                 </button>
+                </div>
             </div>
 
             <div class="menu-footer">
@@ -447,17 +459,17 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1791010495"></script>
-    <script src="js/Board.js?v=1791010495"></script>
-    <script src="js/entities/Entity.js?v=1791010495"></script>
-    <script src="js/entities/Plant.js?v=1791010495"></script>
-    <script src="js/entities/Zombie.js?v=1791010495"></script>
-    <script src="js/entities/Projectile.js?v=1791010495"></script>
-    <script src="js/entities/Sun.js?v=1791010495"></script>
-    <script src="js/managers/WaveManager.js?v=1791010495"></script>
-    <script src="js/managers/CollisionManager.js?v=1791010495"></script>
-    <script src="js/managers/EventManager.js?v=1791010495"></script>
-    <script src="js/GameLoop.js?v=1791010495"></script>
-    <script src="js/HelpGuide.js?v=1791010495"></script>
+    <script src="js/InputManager.js?v=1791011171"></script>
+    <script src="js/Board.js?v=1791011171"></script>
+    <script src="js/entities/Entity.js?v=1791011171"></script>
+    <script src="js/entities/Plant.js?v=1791011171"></script>
+    <script src="js/entities/Zombie.js?v=1791011171"></script>
+    <script src="js/entities/Projectile.js?v=1791011171"></script>
+    <script src="js/entities/Sun.js?v=1791011171"></script>
+    <script src="js/managers/WaveManager.js?v=1791011171"></script>
+    <script src="js/managers/CollisionManager.js?v=1791011171"></script>
+    <script src="js/managers/EventManager.js?v=1791011171"></script>
+    <script src="js/GameLoop.js?v=1791011171"></script>
+    <script src="js/HelpGuide.js?v=1791011171"></script>
 </body>
 </html>
