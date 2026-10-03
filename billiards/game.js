@@ -1394,9 +1394,9 @@ function switchPlayer(quiet) {
 // 免得玩家打完球不知道自己的花色为什么还没定
 function aimHint() {
     if (state === 'ballinhand') return gameMode === 'snooker'
-        ? (isBreak ? '开球：点击 D 区（弧线内）放置母球 · 注意避开黄/绿/棕的线路' 
-                   : '自由球：点击 D 区（弧线内）放置母球')
-        : '自由球：移动鼠标选择位置，点击台面放置母球';
+        ? (isBreak ? '开球：在 D 区（弧线内）放母球 · 鼠标点击或方向键移动+空格/回车放置'
+                   : '自由球：在 D 区（弧线内）放母球 · 鼠标点击或方向键移动+空格/回车放置')
+        : '自由球：鼠标点击放置 · 或方向键移动母球后按 空格/回车 放置';
     if (gameMode === 'snooker') {
         const on = snookerTargets();
         if (on.category === 'red') return '目标：红球（1 分）· 进球后下一杆任选彩球';
@@ -1406,7 +1406,7 @@ function aimHint() {
     const P = players[current];
     if (openTable) return '台面开放（花色未定）：可先打任意球（黑 8 除外）· 下一杆合法进球即定花色';
     if (P.group && groupRemaining(P.group) === 0) return '已清台：瞄准黑 8 收尾（打进即胜，母球落袋判负）';
-    return '移动鼠标瞄准 · 按住蓄力 · 松开出杆';
+    return '鼠标瞄准按住蓄力松开 · 或键盘：左右瞄准、上下高低杆、空格/回车蓄力';
 }
 
 function legalTargetBalls() {
@@ -1511,10 +1511,18 @@ function setRules() {
 function startBallInHand() {
     state = 'ballinhand';
     setHint(gameMode === 'snooker'
-        ? '自由球：点击 D 区（弧线内）放置母球'
-        : '自由球：移动鼠标选择位置，点击台面放置母球');
+        ? '自由球：在 D 区（弧线内）放母球 · 鼠标点击或方向键移动+空格/回车放置'
+        : '自由球：鼠标点击放置 · 或方向键移动母球后按 空格/回车 放置');
     setRules();
     ghostCue.visible = true;
+    // v2.8.0：键盘玩家没有鼠标 hover，ghost 必须一开始就落在合法点上
+    // （母球原位优先；母球落袋时斯诺克放 D 区经典位、八球放台心）
+    const cue = cueBall();
+    let gx, gz;
+    if (!cue.potted && validCuePos(cue.x, cue.z)) { gx = cue.x; gz = cue.z; }
+    else { gx = gameMode === 'snooker' ? SNK.baulkX - 0.06 : 0; gz = 0; }
+    ghostCue.position.set(gx, CFG.R, gz);
+    ghostCue.material.color.setHex(validCuePos(gx, gz) ? 0xffffff : 0xff5f56);
 }
 
 function validCuePos(x, z) {
@@ -2185,7 +2193,103 @@ function updateAimFromPointer(e) {
 }
 
 function humanCanAim() {
-    return !players[current].isAI && (state === 'aim' || state === 'charge' || state === 'ballinhand');
+    return !tossActive && !players[current].isAI && (state === 'aim' || state === 'charge' || state === 'ballinhand');
+}
+
+// ---------------- 双人键盘控制（v2.8.0） ----------------
+// P1（先手方）= WASD + 空格；P2（后手方）= 方向键 + 回车。
+// 左右 = 瞄准旋转，上下 = 高/低杆；手中球状态下方向键移动母球、空格/回车放置。
+// 人机模式人类永远是 P1，两组键对 P1 通用（保留旧版方向键瞄准习惯）。
+let tossActive = false;     // 掷硬币动画期间锁操作
+let tossTimers = [];
+
+function kbOwner() {        // 当前键盘操作者：0/1，无人可用 = -1
+    if (tossActive || !players.length) return -1;
+    if (players[current].isAI) return -1;
+    if (state !== 'aim' && state !== 'charge' && state !== 'ballinhand') return -1;
+    return current;
+}
+
+function kbShootDown(owner) {   // 空格(P1)/回车(P2) 按下：开始蓄力 或 放置母球
+    if (kbOwner() !== owner) return;
+    if (state === 'aim') {
+        SFX.unlock();
+        state = 'charge';
+        chargeStart = performance.now();
+    } else if (state === 'ballinhand' && ghostCue.visible) {
+        const x = ghostCue.position.x, z = ghostCue.position.z;
+        if (!tryPlaceCue(x, z)) showMsg('此处无法放置', 1200);
+        else refreshHUD();
+    }
+}
+
+function kbShootUp() {          // 松开：用屏幕上显示的当前力度出杆（所见即所得）
+    if (tossActive) return;
+    if (state === 'charge' && !players[current].isAI) shoot(clamp(power, 0.05, 1));
+}
+
+function kbUpdate(dt) {         // 每帧：按住的方向键持续旋转瞄准 / 移动母球
+    const o = kbOwner();
+    if (o < 0) return;
+    const speed = keyHeld.shift ? 0.35 : 1.6;   // rad/s，Shift 细调
+    // 该操作者手上的键位映射（P1=A/D/W/S；P2=方向键；人机模式 P1 两者通用）
+    const rotL = o === 0 ? (keyHeld.a || (vsAI && keyHeld.left)) : keyHeld.left;
+    const rotR = o === 0 ? (keyHeld.d || (vsAI && keyHeld.right)) : keyHeld.right;
+    const upK   = o === 0 ? (keyHeld.w || (vsAI && keyHeld.up))   : keyHeld.up;
+    const downK = o === 0 ? (keyHeld.s || (vsAI && keyHeld.down)) : keyHeld.down;
+
+    if (state === 'aim' || state === 'charge') {
+        if (rotL || rotR) {
+            const a = Math.atan2(aimDir.z, aimDir.x) + ((rotR ? 1 : 0) - (rotL ? 1 : 0)) * speed * dt;
+            aimDir = { x: Math.cos(a), z: Math.sin(a) };
+        }
+        if (upK || downK) {
+            spin.y = clamp(spin.y + ((upK ? 1 : 0) - (downK ? 1 : 0)) * 1.1 * dt, -0.82, 0.82);
+            updateSpinWidget();
+        }
+    }
+
+    // 手中球：方向键移动幽灵母球（俯视下 x=右、z=下），落点合法性即时着色
+    if (state === 'ballinhand' && ghostCue.visible) {
+        const dx = (rotR ? 1 : 0) - (rotL ? 1 : 0);
+        const dz = (downK ? 1 : 0) - (upK ? 1 : 0);
+        if (dx || dz) {
+            const sp = 0.7, R = CFG.R;
+            const nx = clamp(ghostCue.position.x + dx * sp * dt, -CFG.W / 2 + R, CFG.W / 2 - R);
+            const nz = clamp(ghostCue.position.z + dz * sp * dt, -CFG.H / 2 + R, CFG.H / 2 - R);
+            ghostCue.position.set(nx, CFG.R, nz);
+            ghostCue.material.color.setHex(validCuePos(nx, nz) ? 0xffffff : 0xff5f56);
+        }
+    }
+}
+
+// ---------------- 掷硬币（双人开局抽签决定先手，v2.8.0） ----------------
+function beginCoinToss() {
+    tossTimers.forEach(clearTimeout);
+    const ov = $('toss-overlay'), coin = $('toss-coin'), face = $('toss-face'), res = $('toss-result');
+    ov.classList.remove('hidden');
+    coin.classList.remove('flip');
+    face.textContent = '?';
+    res.innerHTML = '&nbsp;';
+    tossActive = true;
+    const winner = Math.random() < 0.5 ? 0 : 1;
+    void coin.offsetWidth;              // 强制 reflow，保证 flip 动画每次都重放
+    coin.classList.add('flip');
+    tossTimers = [
+        setTimeout(() => {              // 硬币落定：亮出正/反面并锁定先手
+            face.textContent = winner === 0 ? 'P1' : 'P2';
+            res.textContent = (winner === 0 ? '正面 · ' : '反面 · ') + players[winner].name + ' 先开球';
+            current = winner;
+            refreshHUD();
+            setHint(aimHint());
+        }, 1600),
+        setTimeout(() => {              // 收起弹窗，比赛开始
+            ov.classList.add('hidden');
+            tossActive = false;
+            showMsg('🪙 ' + players[winner].name + ' 掷赢硬币，先开球！', 3200);
+            setHint(aimHint());
+        }, 3100),
+    ];
 }
 
 function initInput() {
@@ -2244,22 +2348,25 @@ function initInput() {
 
     window.addEventListener('keydown', (e) => {
         if (state === 'menu' || state === 'over') return;   // 菜单/结算界面 players 可能未初始化
-        if (players[current].isAI) return;
-        if (e.key === 'Escape' && state === 'charge') {
+        if (tossActive) return;                             // 掷硬币动画期间锁键盘
+        if (e.key === 'Escape' && state === 'charge' && !players[current].isAI) {
             state = 'aim';
             hidePower();
         }
-        if (state === 'aim' || state === 'charge') {
-            const step = e.shiftKey ? 0.0016 : 0.006;
-            if (e.key === 'ArrowLeft') {
-                const a = Math.atan2(aimDir.z, aimDir.x) - step;
-                aimDir = { x: Math.cos(a), z: Math.sin(a) };
-                e.preventDefault();
-            } else if (e.key === 'ArrowRight') {
-                const a = Math.atan2(aimDir.z, aimDir.x) + step;
-                aimDir = { x: Math.cos(a), z: Math.sin(a) };
-                e.preventDefault();
-            }
+        // 方向键/WASD 的持续旋转在 kbUpdate（rAF）里做，这里只登记按住状态
+        if (e.key === 'ArrowLeft')  { keyHeld.left = true;  e.preventDefault(); }
+        if (e.key === 'ArrowRight') { keyHeld.right = true; e.preventDefault(); }
+        if (e.key === 'ArrowUp')    { keyHeld.up = true;    e.preventDefault(); }
+        if (e.key === 'ArrowDown')  { keyHeld.down = true;  e.preventDefault(); }
+        if (e.key === 'a' || e.key === 'A') keyHeld.a = true;
+        if (e.key === 'd' || e.key === 'D') keyHeld.d = true;
+        if (e.key === 'w' || e.key === 'W') keyHeld.w = true;
+        if (e.key === 's' || e.key === 'S') keyHeld.s = true;
+        if (e.key === 'Shift') keyHeld.shift = true;
+        // P1=空格 / P2=回车：按下开始蓄力（或手中球放母球）；e.repeat 防长按连触
+        if ((e.code === 'Space' || e.key === 'Enter') && !e.repeat) {
+            e.preventDefault();
+            kbShootDown(e.code === 'Space' ? 0 : 1);
         }
         if (e.key === 'v' || e.key === 'V') cycleView();
     });
@@ -2272,9 +2379,21 @@ function initInput() {
     window.addEventListener('keyup', (e) => {
         if (e.key === 'q' || e.key === 'Q') keyHeld.q = false;
         if (e.key === 'e' || e.key === 'E') keyHeld.e = false;
+        if (e.key === 'ArrowLeft')  keyHeld.left = false;
+        if (e.key === 'ArrowRight') keyHeld.right = false;
+        if (e.key === 'ArrowUp')    keyHeld.up = false;
+        if (e.key === 'ArrowDown')  keyHeld.down = false;
+        if (e.key === 'a' || e.key === 'A') keyHeld.a = false;
+        if (e.key === 'd' || e.key === 'D') keyHeld.d = false;
+        if (e.key === 'w' || e.key === 'W') keyHeld.w = false;
+        if (e.key === 's' || e.key === 'S') keyHeld.s = false;
+        if (e.key === 'Shift') keyHeld.shift = false;
+        if (e.code === 'Space' || e.key === 'Enter') kbShootUp();
     });
     // 切走时清理按键状态，避免切回后还在"按住"
-    window.addEventListener('blur', () => { keyHeld.q = false; keyHeld.e = false; });
+    window.addEventListener('blur', () => {
+        Object.keys(keyHeld).forEach(k => { keyHeld[k] = false; });
+    });
 
     // 杆法小部件
     const spinBall = $('spin-ball');
@@ -2329,7 +2448,8 @@ const WALK_VIEW = {
 // 全局状态：环桌走位的当前角度
 let camAngle   = 0;       // 绕桌面中心的方位角（rad）
 let camWalkT   = 0;       // 仍在 lerp 收尾时使用，给提示
-const keyHeld  = { q: false, e: false };
+const keyHeld  = { q: false, e: false, a: false, d: false, w: false, s: false,
+                   left: false, right: false, up: false, down: false, shift: false };
 
 function updateCamera(dt) {
     // 环桌走位：按 Q/E 持续转动 camAngle
@@ -2390,6 +2510,9 @@ function animate(now) {
         power = chargePowerAt(now);
         $('power-fill').style.width = (power * 100).toFixed(1) + '%';
     }
+
+    // 双人键盘：按住方向键持续瞄准 / 移动母球（v2.8.0）
+    kbUpdate(dt);
 
     // 物理
     if (state === 'shooting') {
@@ -2475,6 +2598,8 @@ function startGame(_vsAI, level, mode) {
         // （旧版写死在棕球正后方，直打红球堆的线路被棕球挡死，先碰棕球即犯规）
         state = 'ballinhand';
         ghostCue.visible = true;
+        restoreCueD();   // v2.8.0：母球先落 D 区经典位，ghost 同点起步（键盘玩家可直接空格/回车确认）
+        ghostCue.position.set(cueBall().x, CFG.R, cueBall().z);
     } else {
         state = 'aim';
         ghostCue.visible = false;
@@ -2489,6 +2614,8 @@ function startGame(_vsAI, level, mode) {
         ? '斯诺克开球！' + players[0].name + ' 先手 · 先打红球（1 分），红彩交替积累分数'
         : '开球！' + players[0].name + ' 先手 · 台面开放，任意球可先打（黑 8 除外）', 3200);
     refreshHUD();
+    // v2.8.0：双人模式掷硬币抽签决定先手（斯诺克官方用敲球比远，这里用掷硬币等价抽签）
+    if (!vsAI) beginCoinToss();
 }
 
 function initMenu() {
@@ -2580,6 +2707,7 @@ window.POOL = {
     set isBreak(v) { isBreak = v; },
     get gameMode() { return gameMode; },
     get snooker() { return snooker; },
+    get ghost() { return ghostCue; },   // 调试：自由球幽灵母球（键盘放置测试用）
     get power() { return power; },
     chargePowerAt, maybeRunAI, aiChooseShot, simulateShot, scoreSim,
     startGame, shoot, aimDir, setRules, ruleHint,

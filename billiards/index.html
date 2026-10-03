@@ -53,7 +53,7 @@
             </div>
         </div>
 
-        <div id="version" data-page-node-id="gNATpM4uP3C0C5yFv9gcw0">v2.7.6</div>
+        <div id="version" data-page-node-id="gNATpM4uP3C0C5yFv9gcw0">v2.8.0</div>
 
         <!-- 开始菜单 -->
         <div id="overlay" data-page-node-id="TPooyKJfFOd2JGmsISYSQm">
@@ -83,7 +83,10 @@
                     · 移动鼠标瞄准，按住左键蓄力（力度升满会回落、往返循环），松手即出杆<br data-page-node-id="AjdWIL1FRQ46D81hFCchTV">
                     · 小部件上设置高杆 / 低杆 / 左右塞，影响母球走位<br data-page-node-id="agwDX0rblhee39VQegsf22">
                     · 犯规（母球落袋、首触非法）后对方获自由球，点击台面放置<br data-page-node-id="hGsun3EfhuGCK04Kk7apwC">
-                    · 快捷键：←/→ 微调角度 · V 切换视角 · 右键/Esc 取消蓄力<br data-page-node-id="kPHscdIF8i05c1O28xUZRW">
+                    · 快捷键：V 切换视角 · 右键/Esc 取消蓄力 · Q/E 环桌走位<br data-page-node-id="kPHscdIF8i05c1O28xUZRW">
+                    · <b>双人键盘对战</b>：P1 = WASD（左右瞄准 / 上下调高低杆）+ 空格蓄力击球；
+                      P2 = 方向键 + 回车蓄力击球（人机模式两组键通用）<br data-page-node-id="kPHscdIF8i05c1O28xUZRW">
+                    · 自由球：用各自方向键移动母球，空格 / 回车放置（鼠标点击始终可用）<br data-page-node-id="kPHscdIF8i05c1O28xUZRW">
                     · 开球：进球且未犯规才继续；没进球就换对方（官方规则）<br data-page-node-id="vGvwdCwnRcAWW4Vnpun5pp">
                     · 花色要等开球之后的第一次合法进球才确定，之前叫「台面开放」<br data-page-node-id="t5aANnSEYxb1LnqOgUqO3r">
                     · 先打完己方花色再打进黑 8 获胜；提前打进黑 8 判负<br>
@@ -103,6 +106,19 @@
                 <div class="menu-row" data-page-node-id="YDMW8hkneQd2hgUJXijEZK">
                     <button id="btn-again" data-page-node-id="IuHwAHz89zcdFNs00ilKQq">再来一局</button>
                     <button id="btn-menu" data-page-node-id="c2Bqo6DdpWxq7J6oElNknk">返回菜单</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 掷硬币（双人开局抽签决定先手） -->
+        <div id="toss-overlay" class="hidden">
+            <div id="toss-card">
+                <div class="toss-title">🪙 掷硬币 · 决定开球权</div>
+                <div id="toss-coin"><span id="toss-face">?</span></div>
+                <div id="toss-result">&nbsp;</div>
+                <div class="toss-note">
+                    双人键盘：P1 = WASD + 空格 ｜ P2 = 方向键 + 回车<br>
+                    自由球用各自方向键移动母球、空格/回车放置 · 鼠标操作始终可用
                 </div>
             </div>
         </div>
