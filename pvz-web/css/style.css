@@ -472,6 +472,8 @@ body {
 .diff-btn.diff-hard .diff-name { color: #9a4a10; text-shadow: 1px 1px 0 rgba(255,255,255,0.8); }
 .diff-btn.diff-hell { border-color: #6a2038; background: linear-gradient(180deg, #efdde2 0%, #dcbcc7 70%, #c79aa9 100%); }
 .diff-btn.diff-hell .diff-name { color: #7e1030; text-shadow: 1px 1px 0 rgba(255,255,255,0.7); }
+/* v3.81.4 双人对战玩法弹窗：四字按钮名（普通对战/融合对战）缩小字号，单行正好放下 */
+#vs-modal .diff-btn .diff-name { font-size: 34px; letter-spacing: 6px; }
 .diff-btn.diff-hell .diff-desc { color: rgba(70, 10, 30, 0.78); }
 .diff-foot { margin-top: 20px; }
 /* v3.81.2 双人对战选卡页的「返回主菜单」——与砸罐子/我是僵尸难度弹窗的同款木牌按钮 */
@@ -620,7 +622,9 @@ body {
 .zcard.disabled { filter: brightness(45%); cursor: not-allowed; }
 
 /* v3.81.0 双人对战底部僵尸栏：卡片收紧保证 8 卡 + 阳光芯片单行放下，少占草坪 */
-#vs-bottom-bar { z-index: 600; max-width: 880px; }
+/* v3.81.4 修复：ui-layer 是 pointer-events:none（点击穿透到草坪），底栏必须显式 auto——
+   否则继承 none，物理点击全部穿透底栏，僵尸卡点不中=僵尸放不出去 */
+#vs-bottom-bar { z-index: 600; max-width: 880px; pointer-events: auto; }
 #vs-bottom-bar .zcard { width: 74px; height: 44px; flex: none; }
 #vs-bottom-bar .zcard img { height: 34px; }
 #vs-bottom-bar .zcard .z-name { font-size: 9px; }
