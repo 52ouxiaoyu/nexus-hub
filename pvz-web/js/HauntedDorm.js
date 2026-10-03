@@ -52,7 +52,6 @@ class HauntedDorm {
     }
     
     generateMap() {
-        // 由于 CSS 已去掉了草坪网格，只保留中心点和墙壁
         const center1 = document.createElement('div');
         center1.className = 'tile center';
         center1.style.left = (this.worldWidth / 2 - 120) + 'px';
@@ -61,35 +60,105 @@ class HauntedDorm {
         this.world1.appendChild(center1);
         this.world2.appendChild(center1.cloneNode(true));
         
-        // 随机生成 10 个房间（带墙体）
+        this.rooms = [];
+        
+        // 生成 10 个互不相交的房间
         for (let i = 0; i < 10; i++) {
-            const rw = Math.floor(Math.random() * 3) + 3;
-            const rh = Math.floor(Math.random() * 3) + 3;
-            
-            let rx, ry;
-            do {
-                rx = Math.floor(Math.random() * (this.cols - rw - 2)) + 1;
-                ry = Math.floor(Math.random() * (this.rows - rh - 2)) + 1;
-            } while (Math.abs(rx - this.cols/2) < 5 && Math.abs(ry - this.rows/2) < 5);
-            
-            for (let wr = -1; wr <= rh; wr++) {
-                for (let wc = -1; wc <= rw; wc++) {
-                    if (wr === -1 || wr === rh || wc === -1 || wc === rw) {
-                        if (wr === rh && wc === Math.floor(rw/2)) continue; // 门
+            let rw, rh, rx, ry, valid = false;
+            let attempts = 0;
+            while (!valid && attempts < 1000) {
+                attempts++;
+                rw = Math.floor(Math.random() * 2) + 4; // 4 to 5 width
+                rh = Math.floor(Math.random() * 2) + 4; // 4 to 5 height
+                rx = Math.floor(Math.random() * (this.cols - rw - 4)) + 2;
+                ry = Math.floor(Math.random() * (this.rows - rh - 4)) + 2;
+                
+                // 避开中心区域
+                if (Math.abs(rx - this.cols/2) < 6 && Math.abs(ry - this.rows/2) < 6) continue;
+                
+                // 检查是否与其他房间重叠（留出至少 2 格的过道）
+                valid = true;
+                for (const rm of this.rooms) {
+                    if (!(rx + rw + 2 < rm.x || rx - 2 > rm.x + rm.w ||
+                          ry + rh + 2 < rm.y || ry - 2 > rm.y + rm.h)) {
+                        valid = false;
+                        break;
+                    }
+                }
+            }
+            if (valid) this.rooms.push({x: rx, y: ry, w: rw, h: rh});
+        }
+        
+        // 渲染房间与初始化内容
+        for (const rm of this.rooms) {
+            for (let wr = -1; wr <= rm.h; wr++) {
+                for (let wc = -1; wc <= rm.w; wc++) {
+                    if (wr === -1 || wr === rm.h || wc === -1 || wc === rm.w) {
+                        if (wr === rm.h && wc === Math.floor(rm.w/2)) continue; // 门在正下方中间
                         
-                        const key = `${rx + wc},${ry + wr}`;
+                        const key = `${rm.x + wc},${rm.y + wr}`;
                         this.walls.add(key);
                         
                         const wall1 = document.createElement('div');
                         wall1.className = 'tile wall';
-                        wall1.style.left = ((rx + wc) * this.gridSize) + 'px';
-                        wall1.style.top = ((ry + wr) * this.gridSize) + 'px';
+                        wall1.style.left = ((rm.x + wc) * this.gridSize) + 'px';
+                        wall1.style.top = ((rm.y + wr) * this.gridSize) + 'px';
                         this.world1.appendChild(wall1);
                         this.world2.appendChild(wall1.cloneNode(true));
                     }
                 }
             }
+            
+            // 在房间中间自动生成一个阳光菇
+            const cx = rm.x + Math.floor(rm.w/2);
+            const cy = rm.y + Math.floor(rm.h/2) - 1;
+            this.spawnPlant(cx, cy, 'sunshroom');
         }
+        
+        // 渲染野生僵尸（初始生成在中央附近，这里放一个测试僵尸）
+        this.zombies = [];
+        for(let z=0; z<3; z++) {
+            this.spawnZombie(this.worldWidth/2 + (Math.random()-0.5)*200, this.worldHeight/2 + (Math.random()-0.5)*200);
+        }
+    }
+    
+    spawnPlant(col, row, type) {
+        if (this.plants.some(pl => pl.c === col && pl.r === row)) return;
+        
+        const pTypes = {
+            'sunshroom': 'assets/images/Plants/SunShroom/0.gif',
+            'wallnut': 'assets/images/Plants/WallNut/0.gif',
+            'puffshroom': 'assets/images/Plants/PuffShroom/0.gif'
+        };
+        
+        const pt = { r: row, c: col, type: type };
+        this.plants.push(pt);
+        
+        const el1 = document.createElement('div');
+        el1.className = 'tile';
+        el1.style.left = (col * this.gridSize) + 'px';
+        el1.style.top = (row * this.gridSize) + 'px';
+        el1.innerHTML = `<img src="${pTypes[pt.type]}" style="width:100%; height:100%; object-fit:contain; transform: scale(1.2) translateY(-10px);">`;
+        
+        this.world1.appendChild(el1);
+        this.world2.appendChild(el1.cloneNode(true));
+    }
+    
+    spawnZombie(x, y) {
+        const zb = { x, y, hp: 100, vx: 0, vy: 0 };
+        this.zombies.push(zb);
+        
+        const zEl1 = document.createElement('div');
+        zEl1.className = 'entity avatar';
+        zEl1.innerHTML = `<img src="assets/images/Zombies/Zombie/Zombie.gif" style="width:150%; height:150%; transform:translate(-20%, -30%);">`;
+        this.world1.appendChild(zEl1);
+        zb.el1 = zEl1;
+        
+        const zEl2 = document.createElement('div');
+        zEl2.className = 'entity avatar';
+        zEl2.innerHTML = `<img src="assets/images/Zombies/Zombie/Zombie.gif" style="width:150%; height:150%; transform:translate(-20%, -30%);">`;
+        this.world2.appendChild(zEl2);
+        zb.el2 = zEl2;
     }
     
     selectSeed(pid, type, cost, event) {
@@ -201,6 +270,25 @@ class HauntedDorm {
         if (this.keys['arrowup']) vy2 -= speed;
         if (this.keys['arrowdown']) vy2 += speed;
         movePlayer(this.players[1], vx2, vy2);
+        
+        // 更新僵尸 (简易随机漫步)
+        this.zombies.forEach(zb => {
+            if (Math.random() < 0.02) {
+                zb.vx = (Math.random() - 0.5) * 100;
+                zb.vy = (Math.random() - 0.5) * 100;
+            }
+            const nx = zb.x + zb.vx * dt;
+            const ny = zb.y + zb.vy * dt;
+            if (!this.checkCollision(nx, ny)) {
+                zb.x = nx;
+                zb.y = ny;
+            } else {
+                zb.vx *= -1; zb.vy *= -1; // 撞墙反弹
+            }
+            
+            zb.el1.style.left = zb.x + 'px'; zb.el1.style.top = zb.y + 'px';
+            zb.el2.style.left = zb.x + 'px'; zb.el2.style.top = zb.y + 'px';
+        });
         
         // 渲染坐标
         this.players.forEach(p => {
