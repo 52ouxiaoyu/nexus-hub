@@ -915,6 +915,18 @@ class Zombie extends Entity {
         }
 
 
+        if (this.type === 'sunhead' && this.game.vsMode && !this.hypnotized) {
+            this._vsAlive = (this._vsAlive || 0) + deltaTime;
+            this._vsSunTimer = (this._vsSunTimer === undefined ? 5 : this._vsSunTimer) - deltaTime;
+            if (this._vsSunTimer <= 0) {
+                this._vsSunTimer = 7;
+                const amount = 25 + 10 * Math.floor(this._vsAlive / 30);
+                this.game.zombieSun += amount;
+                this.game._refreshVsZombieBar();
+                this.game._vsFloatText(this.x, this.y - 60, `🧠+${amount}`, '#ff9ed2');
+            }
+        }
+
         if (this.state === 'WALKING') {
             // v3.23.0：豌豆头/机枪头僵尸边走边向植物防线射击（zpea 只打植物，见 CollisionManager）
             if ((this.type === 'peahead' || this.type === 'machinegunhead') && !this.hypnotized && !this.game.zombieMode) {
@@ -931,19 +943,6 @@ class Zombie extends Entity {
                             if (this.game.audioManager && this.game.audioManager.playFx) this.game.audioManager.playFx('pea_pop');
                         }, i * 160);
                     }
-                }
-            }
-            // v3.81.0 双人对战：向日葵头僵尸 = 僵尸方产脑子单位 —— 在场存活越久单次产量越高
-            // （基产 25 / 7s，每存活满 30s 单次 +10；脑子直接进僵尸方池，无需点击）
-            if (this.type === 'sunhead' && this.game.vsMode && !this.hypnotized) {
-                this._vsAlive = (this._vsAlive || 0) + deltaTime;
-                this._vsSunTimer = (this._vsSunTimer === undefined ? 5 : this._vsSunTimer) - deltaTime;
-                if (this._vsSunTimer <= 0) {
-                    this._vsSunTimer = 7;
-                    const amount = 25 + 10 * Math.floor(this._vsAlive / 30);
-                    this.game.zombieSun += amount;
-                    this.game._refreshVsZombieBar();
-                    this.game._vsFloatText(this.x, this.y - 60, `🧠+${amount}`, '#ff9ed2');
                 }
             }
             // 同排附近出现被魅惑的友方僵尸 → 停下与它搏斗（僵尸之间唯一的敌对交互）
