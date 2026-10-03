@@ -2198,7 +2198,7 @@ function humanCanAim() {
 
 // ---------------- 双人键盘控制（v2.8.0） ----------------
 // P1（先手方）= WASD + 空格；P2（后手方）= 方向键 + 回车。
-// 左右 = 瞄准旋转，上下 = 高/低杆；手中球状态下方向键移动母球、空格/回车放置。
+// 左右 = 瞄准旋转（v2.8.1 软启动斜坡：轻点微调、长按快转），上下 = 高/低杆；手中球状态下方向键移动母球、空格/回车放置。
 // 人机模式人类永远是 P1，两组键对 P1 通用（保留旧版方向键瞄准习惯）。
 let tossActive = false;     // 掷硬币动画期间锁操作
 let tossTimers = [];
@@ -2228,15 +2228,30 @@ function kbShootUp() {          // 松开：用屏幕上显示的当前力度出
     if (state === 'charge' && !players[current].isAI) shoot(clamp(power, 0.05, 1));
 }
 
-function kbUpdate(dt) {         // 每帧：按住的方向键持续旋转瞄准 / 移动母球
+// 软启动斜坡：刚按下时极慢起步（轻点=微调），按住约 0.9s 平滑加速到全速（长按=快转）
+const KB_ROT = { min: 0.15, max: 1.6, ramp: 0.9 };   // rad/s 与加速时长
+let kbRotSince = -1;    // 旋转键开始按住的时刻（performance.now ms），未按住 = -1
+
+function kbUpdate(dt) {         // 每帧：按住的方向键持续旋转瞄准 / 移动母球（v2.8.1 软启动手感）
     const o = kbOwner();
     if (o < 0) return;
-    const speed = keyHeld.shift ? 0.35 : 1.6;   // rad/s，Shift 细调
     // 该操作者手上的键位映射（P1=A/D/W/S；P2=方向键；人机模式 P1 两者通用）
     const rotL = o === 0 ? (keyHeld.a || (vsAI && keyHeld.left)) : keyHeld.left;
     const rotR = o === 0 ? (keyHeld.d || (vsAI && keyHeld.right)) : keyHeld.right;
     const upK   = o === 0 ? (keyHeld.w || (vsAI && keyHeld.up))   : keyHeld.up;
     const downK = o === 0 ? (keyHeld.s || (vsAI && keyHeld.down)) : keyHeld.down;
+
+    let speed;
+    if (!(rotL || rotR)) {
+        kbRotSince = -1;
+        speed = 0;
+    } else if (keyHeld.shift) {
+        speed = 0.35;                                   // Shift 细调：固定慢速
+    } else {
+        if (kbRotSince < 0) kbRotSince = performance.now();
+        const t = Math.min(1, (performance.now() - kbRotSince) / 1000 / KB_ROT.ramp);
+        speed = KB_ROT.min + (KB_ROT.max - KB_ROT.min) * t * t;   // ease-in 二次缓动
+    }
 
     if (state === 'aim' || state === 'charge') {
         if (rotL || rotR) {
