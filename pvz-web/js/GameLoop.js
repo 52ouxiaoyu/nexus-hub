@@ -598,7 +598,7 @@ class Game {
             snowpeahead: 'assets/images/Plants/SnowPea/SnowPea.gif',
             jalapenohead: 'assets/images/Plants/Jalapeno/Jalapeno.gif',
             mysterybox: 'assets/images/Plants/PlantBox/GiftBox.png',
-            gargantuar: 'assets/images/Zombies/LGBOSS/1.gif', // v3.81.2：改用图鉴同款巨人立绘
+            gargantuar: 'assets/images/Zombies/Zombie/Zombie.gif', // v3.82.1：巨人=巨型普通僵尸（战场同款，弃用 LGBOSS 巨尸立绘）；zombieIconEl 里叠加放大+暗色滤镜体现"巨型"
             sunhead: 'assets/images/Plants/SunFlower/SunFlower1.gif',
             // v3.81.2 双人对战新入池
             flag: 'assets/images/Zombies/FlagZombie/FlagZombie.gif',
@@ -621,7 +621,14 @@ class Game {
     zombieIconEl(type, k = 1) {
         const img = document.createElement('img');
         const cfg = (typeof Zombie !== 'undefined' && Zombie.PLANT_HEAD_CFG) ? Zombie.PLANT_HEAD_CFG[type] : null;
-        if (!cfg) { img.src = this.zombieImg(type); return img; }
+        if (!cfg) {
+            img.src = this.zombieImg(type);
+            if (type === 'gargantuar') { // v3.82.1：巨型普通僵尸——战场 scale(2)+暗色同款，卡面上体现"巨型"
+                img.style.transform = 'scale(1.35)';
+                img.style.filter = 'brightness(0.8) contrast(1.2)';
+            }
+            return img;
+        }
         const wrap = document.createElement('div');
         wrap.className = 'zcard-fusion';
         const BODY_H = Math.round(52 * k);            // 僵尸身体显示高（战场 144 的微缩）
@@ -649,45 +656,47 @@ class Game {
         hi.style.width = headW + 'px';
         hi.style.transform = 'scaleX(-1)'; // 植物原图朝右，僵尸面朝左
         head.appendChild(hi);
-        wrap.appendChild(head);
         wrap.appendChild(body);
+        wrap.appendChild(head); // v3.82.1：植物头必须在身体之上——两者都 absolute 且无 z-index，DOM 靠后者在上层；
+                                // 旧顺序身体图顶部的僵尸灰头会盖住植物头（战场是独立层级压住本体，卡面须复刻该遮挡关系）
         return wrap;
     }
 
     // ===== v3.81.2 双人对战僵尸花名册：全部 25 种僵尸 + 战力值 =====
     // 战力值越强，所需脑子越多（脑子价 = 战力值）；与《我是僵尸》的 zombiePrice 价目互不影响。
     static get VS_ZOMBIE_ROSTER() {
-        // v3.81.8 战力值公式（用户指定）：总战力 = 移速 + 咬速 + 血量总和。
-        // 咬速全员一致（每秒 1 口 × 50 伤害 = 50）；以普通僵尸（移速20+咬速50+血量200=270）= 50 脑子校准：
-        //   power = Math.round((移速 + 血量 + 50) × 50 / 270)
-        // 血量取对战模式实际值（铁门 5200 / 橄榄球 2240，非我是僵尸档）。
-        const S = (speed, hp) => Math.round((speed + hp + 50) * 50 / 270);
+        // v3.82.1 综合战力重定（用户反馈：纯血量堆出的天价不合理）——
+        // 基础分 = 移速 + 咬速(50) + 血量（普僵 20+50+200=270 → 50 脑子校准，即 S(speed,hp)），
+        // 再按【技能价值】上下调整；肉盾类血量打折（防守价值 < 进攻价值）：
+        //   · 有输出/控制/召唤技能的加价：机枪头(4连发齐射)/舞王(召唤伴舞)/寒冰头(减速)/豌豆头(远程)/大蒜头(跳行)…
+        //   · 纯血肉盾打折：坚果头/高坚果头/铁门不再按血量线性定价
+        //   · 撑杆虽快但有跳跃技能加成，仍须低于舞王（用户指定）
         return [
-            ['screendoor', S(20, 5200)],   // 铁门僵尸：5200 血铁门挡正面弹道
-            ['tallnuthead', S(20, 5200)],  // 高坚果头僵尸：5200 血超厚肉盾
-            ['gargantuar', S(10, 4000)],   // 巨人僵尸：4000 血 · 巨锤秒杀植物 · 半血扔小鬼
-            ['nuthead', S(20, 2600)],      // 坚果头僵尸：2600 血肉盾
-            ['football', S(40, 2240)],     // 橄榄球僵尸：2240 血 · 高速冲锋
-            ['ironcone', S(20, 1500)],     // 双盔僵尸：1500 血双层铁桶
-            ['buckethead', S(20, 1300)],   // 铁桶僵尸：1300 血
-            ['zomboni', S(15, 1300)],      // 冰车僵尸：1300 血 · 碾过植物 · 留冰道
-            ['jalapenohead', S(20, 600)],  // 火爆辣椒头僵尸：600 血 · 被啃死时同归于尽
-            ['conehead', S(20, 560)],      // 路障僵尸：560 血
-            ['polevaulting', S(45, 500)],  // 撑杆僵尸：高速 · 跳过第一株植物
-            ['dancing', S(20, 500)],       // 舞王僵尸：定期召唤免费伴舞
-            ['torchzombie', S(20, 400)],   // 火把僵尸：啃食附带灼烧
-            ['madpaper', S(45, 340)],      // 疯狂读报僵尸：高速冲来 · 跳过第一株 · 狂暴
-            ['newspaper', S(20, 300)],     // 读报僵尸：报纸被打掉后狂暴加速
-            ['garliczombie', S(20, 300)],  // 大蒜僵尸：被打 4 次辣得跳到相邻一行
-            ['machinegunhead', S(20, 200)],// 机枪头僵尸：4 连发豌豆齐射
-            ['snowpeahead', S(20, 200)],   // 寒冰头僵尸：冰弹减速
-            ['peahead', S(20, 200)],       // 豌豆僵尸：边走边射豌豆
-            ['sunhead', S(20, 200)],       // 向日葵头僵尸：产脑子单位（限带 1）
-            ['flag', S(20, 200)],          // 旗帜僵尸：大波冲锋的排头兵
-            ['backup', S(20, 200)],        // 伴舞僵尸：舞王的伴舞
-            ['mysterybox', S(20, 200)],    // 盲盒僵尸：开出随机僵尸的赌局
-            ['normal', S(20, 200)],        // 普通僵尸 = 50（公式校准基准）
-            ['imp', S(35, 100)]            // 小鬼僵尸：个头小 · 速度快 · 100 血
+            ['gargantuar', 500],           // 巨人僵尸：4000 血 · 巨锤秒杀植物 · 半血扔小鬼（最强单体）
+            ['zomboni', 380],              // 冰车僵尸：1300 血 · 碾过植物 · 留冰道（无视防线的战略技能）
+            ['tallnuthead', 350],          // 高坚果头僵尸：5200 血肉盾（纯血防守打折，976→350）
+            ['screendoor', 320],           // 铁门僵尸：5200 血铁门挡正面弹道（976→320）
+            ['football', 300],             // 橄榄球僵尸：2240 血 · 高速冲锋（攻防一体）
+            ['ironcone', 270],             // 双盔僵尸：1500 血双层铁桶
+            ['nuthead', 230],              // 坚果头僵尸：2600 血肉盾（打折）
+            ['dancing', 220],              // 舞王僵尸：定期召唤免费伴舞（技能价值 > 撑杆）
+            ['machinegunhead', 200],       // 机枪头僵尸：4 连发豌豆齐射（输出技能加价）
+            ['buckethead', 185],           // 铁桶僵尸：1300 血
+            ['jalapenohead', 180],         // 火爆辣椒头僵尸：600 血 · 被啃死时同归于尽炸整行
+            ['snowpeahead', 140],          // 寒冰头僵尸：冰弹减速（控制技能加价）
+            ['polevaulting', 125],         // 撑杆僵尸：高速 · 跳过第一株植物（须低于舞王）
+            ['torchzombie', 120],          // 火把僵尸：啃食附带灼烧
+            ['madpaper', 115],             // 疯狂读报僵尸：高速冲来 · 跳过第一株 · 狂暴
+            ['conehead', 110],             // 路障僵尸：560 血
+            ['garliczombie', 105],         // 大蒜僵尸：被打 4 次辣得跳到相邻一行（保命技能加价）
+            ['peahead', 100],              // 豌豆僵尸：边走边射豌豆（远程技能加价）
+            ['mysterybox', 100],           // 盲盒僵尸：开出随机僵尸的赌局
+            ['newspaper', 85],             // 读报僵尸：报纸被打掉后狂暴加速
+            ['sunhead', 75],               // 向日葵头僵尸：产脑子单位（限带 1）
+            ['flag', 50],                  // 旗帜僵尸：大波冲锋的排头兵（无技能）
+            ['backup', 50],                // 伴舞僵尸：舞王的伴舞（无技能）
+            ['normal', 50],                // 普通僵尸 = 50（校准基准）
+            ['imp', 40]                    // 小鬼僵尸：个头小 · 速度快 · 100 血
         ];
     }
     vsZombieCost() {
@@ -1914,46 +1923,46 @@ class Game {
     initUI() {
         // Just define the seeds, don't populate the top bar yet
         this.seeds = [
-            { type: 'sunflower', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/SunFlower.png?v=1791016017' },
-            { type: 'twinsunflower', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/TwinSunflower.png?v=1791016017' },
-            { type: 'sunshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/SunShroom.png?v=1791016017' },
-            { type: 'peashooter', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Peashooter.png?v=1791016017' },
-            { type: 'repeater', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/Repeater.png?v=1791016017' },
-            { type: 'threepeater', cost: 325, cooldown: 7.5, img: 'assets/images/Card/Plants/Threepeater.png?v=1791016017' },
-            { type: 'gatlingpea', cost: 550, cooldown: 50, img: 'assets/images/Card/Plants/GatlingPea.png?v=1791016017' },
-            { type: 'snowpea', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/SnowPea.png?v=1791016017' },
-            { type: 'splitpea', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/SplitPea.png?v=1791016017' },
-            { type: 'torchwood', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/Torchwood.png?v=1791016017' },
-            { type: 'wallnut', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/WallNut.png?v=1791016017' },
-            { type: 'cherrybomb', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/CherryBomb.png?v=1791016017' },            { type: 'squash', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/Squash.png?v=1791016017' },
-            { type: 'jalapeno', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/Jalapeno.png?v=1791016017' },
-            { type: 'potatomine', cost: 25, cooldown: 30, img: 'assets/images/Card/Plants/PotatoMine.png?v=1791016017' },
-            { type: 'chomper', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/Chomper.png?v=1791016017' },
-            { type: 'tallnut', cost: 125, cooldown: 30, img: 'assets/images/Card/Plants/TallNut.png?v=1791016017' },
-            { type: 'puffshroom', cost: 0, cooldown: 7.5, img: 'assets/images/Card/Plants/PuffShroom.png?v=1791016017' },
-            { type: 'fumeshroom', cost: 75, cooldown: 7.5, img: 'assets/images/Card/Plants/FumeShroom.png?v=1791016017' },
-            { type: 'scaredyshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/ScaredyShroom.png?v=1791016017' },
-            { type: 'gloomshroom', cost: 225, cooldown: 7.5, img: 'assets/images/Card/Plants/GloomShroom.png?v=1791016017' },
-            { type: 'spikerock', cost: 225, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikerock.png?v=1791016017' },
-            { type: 'cattail', cost: 275, cooldown: 7.5, img: 'assets/images/Card/Plants/Cattail.png?v=1791016017' },
-            { type: 'melonpult', cost: 500, cooldown: 7.5, img: 'assets/images/Card/Plants/MelonPult.png?v=1791016017' },{ type: 'iceshroom', cost: 75, cooldown: 50, img: 'assets/images/Card/Plants/IceShroom.png?v=1791016017' },
-            { type: 'doomshroom', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/DoomShroom.png?v=1791016017' },
-            { type: 'spikeweed', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikeweed.png?v=1791016017' },
-            { type: 'garlic', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/Garlic.png?v=1791016017' },
+            { type: 'sunflower', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/SunFlower.png?v=1791016920' },
+            { type: 'twinsunflower', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/TwinSunflower.png?v=1791016920' },
+            { type: 'sunshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/SunShroom.png?v=1791016920' },
+            { type: 'peashooter', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Peashooter.png?v=1791016920' },
+            { type: 'repeater', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/Repeater.png?v=1791016920' },
+            { type: 'threepeater', cost: 325, cooldown: 7.5, img: 'assets/images/Card/Plants/Threepeater.png?v=1791016920' },
+            { type: 'gatlingpea', cost: 550, cooldown: 50, img: 'assets/images/Card/Plants/GatlingPea.png?v=1791016920' },
+            { type: 'snowpea', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/SnowPea.png?v=1791016920' },
+            { type: 'splitpea', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/SplitPea.png?v=1791016920' },
+            { type: 'torchwood', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/Torchwood.png?v=1791016920' },
+            { type: 'wallnut', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/WallNut.png?v=1791016920' },
+            { type: 'cherrybomb', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/CherryBomb.png?v=1791016920' },            { type: 'squash', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/Squash.png?v=1791016920' },
+            { type: 'jalapeno', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/Jalapeno.png?v=1791016920' },
+            { type: 'potatomine', cost: 25, cooldown: 30, img: 'assets/images/Card/Plants/PotatoMine.png?v=1791016920' },
+            { type: 'chomper', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/Chomper.png?v=1791016920' },
+            { type: 'tallnut', cost: 125, cooldown: 30, img: 'assets/images/Card/Plants/TallNut.png?v=1791016920' },
+            { type: 'puffshroom', cost: 0, cooldown: 7.5, img: 'assets/images/Card/Plants/PuffShroom.png?v=1791016920' },
+            { type: 'fumeshroom', cost: 75, cooldown: 7.5, img: 'assets/images/Card/Plants/FumeShroom.png?v=1791016920' },
+            { type: 'scaredyshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/ScaredyShroom.png?v=1791016920' },
+            { type: 'gloomshroom', cost: 225, cooldown: 7.5, img: 'assets/images/Card/Plants/GloomShroom.png?v=1791016920' },
+            { type: 'spikerock', cost: 225, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikerock.png?v=1791016920' },
+            { type: 'cattail', cost: 275, cooldown: 7.5, img: 'assets/images/Card/Plants/Cattail.png?v=1791016920' },
+            { type: 'melonpult', cost: 500, cooldown: 7.5, img: 'assets/images/Card/Plants/MelonPult.png?v=1791016920' },{ type: 'iceshroom', cost: 75, cooldown: 50, img: 'assets/images/Card/Plants/IceShroom.png?v=1791016920' },
+            { type: 'doomshroom', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/DoomShroom.png?v=1791016920' },
+            { type: 'spikeweed', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikeweed.png?v=1791016920' },
+            { type: 'garlic', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/Garlic.png?v=1791016920' },
             // ===== v3.6.0 经典模式新增 4 植物（数值取 PVZ1 原版；融合模式选卡仍过滤为 15 基础牌，不受影响）=====
-            { type: 'wintermelon', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/WinterMelon.png?v=1791016017' },
-            { type: 'starfruit', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/Starfruit.png?v=1791016017' },
-            { type: 'hypnoshroom', cost: 75, cooldown: 30, img: 'assets/images/Card/Plants/HypnoShroom.png?v=1791016017' },
-            { type: 'pumpkinhead', cost: 125, cooldown: 30, img: 'assets/images/Card/Plants/PumpkinHead.png?v=1791016017' },
+            { type: 'wintermelon', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/WinterMelon.png?v=1791016920' },
+            { type: 'starfruit', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/Starfruit.png?v=1791016920' },
+            { type: 'hypnoshroom', cost: 75, cooldown: 30, img: 'assets/images/Card/Plants/HypnoShroom.png?v=1791016920' },
+            { type: 'pumpkinhead', cost: 125, cooldown: 30, img: 'assets/images/Card/Plants/PumpkinHead.png?v=1791016920' },
             // ===== v3.10.0 投手两兄弟，v3.11.0 调价（破甲 + 黄油定身很值钱，不再按原版 100 阳光卖）=====
             // 抛射物可破甲：越过路障/铁桶/报纸/铁门直接打僵尸本体，护甲不脱落。
             // 玉米投手另有 20% 概率投出黄油（定身 3 秒）。
-            { type: 'cabbagepult', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/CabbagePult.png?v=1791016017' },
-            { type: 'kernelpult', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/KernelPult.png?v=1791016017' },
+            { type: 'cabbagepult', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/CabbagePult.png?v=1791016920' },
+            { type: 'kernelpult', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/KernelPult.png?v=1791016920' },
             // ===== v3.65.0 玉米加农炮入经典（原为三玉米投手融合专属）：500 阳光直接种植，占两格 =====
-            { type: 'cobcannon', cost: 500, cooldown: 50, img: 'assets/images/Card/Plants/CobCannon.png?v=1791016017' },
+            { type: 'cobcannon', cost: 500, cooldown: 50, img: 'assets/images/Card/Plants/CobCannon.png?v=1791016920' },
             // ===== v3.24.0 植物盲盒：500 阳光，种下随机开出"经典冒险+融合进化"全植物池中的一株 =====
-            { type: 'plantbox', cost: 500, cooldown: 5, img: 'assets/images/Card/Plants/PlantBox.png?v=1791016017' }
+            { type: 'plantbox', cost: 500, cooldown: 5, img: 'assets/images/Card/Plants/PlantBox.png?v=1791016920' }
         ];
         // The top bar will be populated in startGame() after selection
     }
@@ -1994,7 +2003,7 @@ class Game {
             { a: 'snowpea', b: 'wallnut', result: '寒冰坚果', img: 'assets/images/Plants/WallNut/WallNut.gif', filter: 'hue-rotate(180deg) saturate(1.5) brightness(1.2)', css: false },
             { a: 'peashooter', b: 'cherrybomb', result: '樱桃射手', img: 'assets/images/Plants/Peashooter/Peashooter.gif', filter: 'hue-rotate(-45deg) saturate(2.0)', css: false },
             { a: 'sunflower', b: 'doomshroom', result: '毁灭向日葵', img: 'assets/images/Plants/SunFlower/SunFlower1.gif', filter: 'grayscale(0.8) brightness(0.6) sepia(1) hue-rotate(240deg) saturate(3)', css: false },
-            { a: 'melonpult', b: 'iceshroom', result: '冰西瓜投手', img: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1791016017', css: false },
+            { a: 'melonpult', b: 'iceshroom', result: '冰西瓜投手', img: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1791016920', css: false },
             { a: 'repeater', b: 'spikeweed', result: '猫尾草', img: 'assets/images/Plants/Cattail/Cattail.gif', css: false },
             { a: 'fumeshroom', b: 'fumeshroom', result: '忧郁菇', img: 'assets/images/Plants/GloomShroom/GloomShroom.gif', css: false },
             { a: 'spikeweed', b: 'spikeweed', result: '钢地刺', img: 'assets/images/Plants/Spikerock/Spikerock.gif', css: false },
@@ -2004,16 +2013,16 @@ class Game {
             { a: 'splitpea', b: 'sunflower', result: '杨桃', img: 'assets/images/Plants/Starfruit/Starfruit.gif', css: false },
             { a: 'puffshroom', b: 'garlic', result: '魅惑菇', img: 'assets/images/Plants/HypnoShroom/HypnoShroom.gif', css: false },
             { a: 'wallnut', b: 'tallnut', result: '南瓜壳（可套在任意植物上）', img: 'assets/images/Plants/PumpkinHead/PumpkinHead.gif', css: false },
-            { a: 'melonpult', b: 'cattail', result: '西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/MelonPult/MelonPult.png?v=1791016017', overTransform: 'translate(-5px, -30px) scale(0.7)' },
-            { a: 'wintermelon', b: 'cattail', result: '冰西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1791016017', overTransform: 'translate(-5px, -30px) scale(0.7)' },
+            { a: 'melonpult', b: 'cattail', result: '西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/MelonPult/MelonPult.png?v=1791016920', overTransform: 'translate(-5px, -30px) scale(0.7)' },
+            { a: 'wintermelon', b: 'cattail', result: '冰西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1791016920', overTransform: 'translate(-5px, -30px) scale(0.7)' },
             // ===== v3.10.0 以卷心菜投手 / 玉米投手为基础的新融合 =====
             // v3.11.0：下面两条的 overClip / overTransform 与 Plant.js 内的实机分支**完全同步**
             // （此前图鉴写的是旧的"左上角对齐 + 整块上移"版本，与实机不是同一套，图鉴和游戏里长得不一样）
-            { a: 'cabbagepult', b: 'kernelpult', result: '双料投手（3/4 投卷心菜、1/4 投黄油定身 3 秒）', base: 'assets/images/Plants/KernelPult/KernelPult.png?v=1791016017', over: 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1791016017', overClip: 'polygon(0 0, 48% 0, 48% 50%, 0 50%)', overTransform: 'translate(37px, 8px)' },
-            { a: 'cabbagepult', b: 'wallnut', result: '卷心菜堡垒（坚果肉盾 + 继续投掷，4000 耐久）', base: 'assets/images/Plants/WallNut/WallNut.gif', over: 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1791016017', overClip: 'polygon(0 0, 46% 0, 46% 46%, 0 46%)', overTransform: 'translate(26px, -4px)' },
-            { a: 'cabbagepult', b: 'iceshroom', result: '寒冰卷心菜（破甲 + 命中减速 10 秒）', img: 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1791016017', filter: 'brightness(112%) hue-rotate(120deg) saturate(1.7)', css: false },
-            { a: 'kernelpult', b: 'jalapeno', result: '爆米花投手（破甲 + 命中 3×3 溅射）', img: 'assets/images/Plants/KernelPult/KernelPult.png?v=1791016017', filter: 'hue-rotate(-18deg) saturate(1.9) brightness(1.18)', css: false },
-            { a: 'kernelpult', b: 'kernelpult', result: '玉米加农炮（需两株横向相邻 + 第三株融合；占两格，充能后点击开镜、按 M 发射）', img: 'assets/images/Plants/CobCannon/CobCannon.png?v=1791016017', css: false },
+            { a: 'cabbagepult', b: 'kernelpult', result: '双料投手（3/4 投卷心菜、1/4 投黄油定身 3 秒）', base: 'assets/images/Plants/KernelPult/KernelPult.png?v=1791016920', over: 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1791016920', overClip: 'polygon(0 0, 48% 0, 48% 50%, 0 50%)', overTransform: 'translate(37px, 8px)' },
+            { a: 'cabbagepult', b: 'wallnut', result: '卷心菜堡垒（坚果肉盾 + 继续投掷，4000 耐久）', base: 'assets/images/Plants/WallNut/WallNut.gif', over: 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1791016920', overClip: 'polygon(0 0, 46% 0, 46% 46%, 0 46%)', overTransform: 'translate(26px, -4px)' },
+            { a: 'cabbagepult', b: 'iceshroom', result: '寒冰卷心菜（破甲 + 命中减速 10 秒）', img: 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1791016920', filter: 'brightness(112%) hue-rotate(120deg) saturate(1.7)', css: false },
+            { a: 'kernelpult', b: 'jalapeno', result: '爆米花投手（破甲 + 命中 3×3 溅射）', img: 'assets/images/Plants/KernelPult/KernelPult.png?v=1791016920', filter: 'hue-rotate(-18deg) saturate(1.9) brightness(1.18)', css: false },
+            { a: 'kernelpult', b: 'kernelpult', result: '玉米加农炮（需两株横向相邻 + 第三株融合；占两格，充能后点击开镜、按 M 发射）', img: 'assets/images/Plants/CobCannon/CobCannon.png?v=1791016920', css: false },
             // ===== v3.36.0 新增融合 =====
             // ===== v3.37.0：删除 v3.36.0 的「坚果×2=高坚果 / 小喷菇+大喷菇=忧郁菇 / 樱桃+寒冰菇=寒冰炸弹」——
             // 与已有配方/直选重复（忧郁菇=大喷菇×2 已有、寒冰炸弹=寒冰射手+樱桃已有、高坚果本就可直选），
@@ -2027,7 +2036,7 @@ class Game {
             { a: 'starfruit', b: 'starfruit', result: '十芒杨桃（十方向齐射星光，每颗 40）', img: 'assets/images/Plants/Starfruit/Starfruit.gif', filter: 'saturate(1.6) brightness(1.2) hue-rotate(15deg)', css: false },
             { a: 'potatomine', b: 'jalapeno', result: '烈焰地雷（布好后触发整行 1800 烈焰）', img: 'assets/images/Plants/PotatoMine/PotatoMine.gif', filter: 'hue-rotate(-30deg) saturate(2.2) brightness(1.15)', css: false },
             { a: 'squash', b: 'cherrybomb', result: '爆炸弹跳（跃起压扁，落点 3×3 爆炸）', base: 'assets/images/Plants/Squash/Squash.gif', baseTransform: 'scale(1.18) translate(0px, -72px)', baseFilter: 'hue-rotate(-35deg) saturate(1.9)' },
-            { a: 'kernelpult', b: 'snowpea', result: '冰玉米投手（玉米粒减速，黄油定身保留）', img: 'assets/images/Plants/KernelPult/KernelPult.png?v=1791016017', filter: 'brightness(1.15) hue-rotate(160deg) saturate(1.8)', css: false },
+            { a: 'kernelpult', b: 'snowpea', result: '冰玉米投手（玉米粒减速，黄油定身保留）', img: 'assets/images/Plants/KernelPult/KernelPult.png?v=1791016920', filter: 'brightness(1.15) hue-rotate(160deg) saturate(1.8)', css: false },
             { a: 'spikeweed', b: 'torchwood', result: '火焰地刺（灼烧刺 80/0.75s；僵尸啃不到只有冰车能碾，镇守行不结冰）', img: 'assets/images/Plants/Spikeweed/Spikeweed.gif', filter: 'sepia(1) saturate(3) hue-rotate(-25deg) brightness(1.15)', css: false },
             { a: 'repeater', b: 'torchwood', result: '火焰双发（2 连发火焰豌豆 40×2；每第 4 轮过热爆发 6 连发 60×6）', img: 'assets/images/Plants/Repeater/Repeater.gif', filter: 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.12)', css: false },
             { a: 'twinsunflower', b: 'twinsunflower', result: '四头向日葵（每轮 100 阳光；每 60 秒全场降阳光雨 6 颗）', base: 'assets/images/Plants/TwinSunflower/TwinSunflower1.gif', baseTransform: 'scale(1.3)', baseFilter: 'saturate(1.35) brightness(1.12)', over: 'assets/images/Plants/TwinSunflower/TwinSunflower1.gif', overTransform: 'translate(10px, 6px) scaleX(-1) scale(1.3)' },
@@ -2073,8 +2082,8 @@ class Game {
                     'fumeshroom': 'assets/images/Plants/FumeShroom/FumeShroom.gif',
                     'spikeweed': 'assets/images/Plants/Spikeweed/Spikeweed.gif',
                     'tallnut': 'assets/images/Plants/TallNut/TallNut.gif',
-                    'melonpult': 'assets/images/Plants/MelonPult/MelonPult.png?v=1791016017',
-                    'wintermelon': 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1791016017',
+                    'melonpult': 'assets/images/Plants/MelonPult/MelonPult.png?v=1791016920',
+                    'wintermelon': 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1791016920',
                     'cattail': 'assets/images/Plants/Cattail/Cattail.gif',
                     'gloomshroom': 'assets/images/Plants/GloomShroom/GloomShroom.gif',
                     'spikerock': 'assets/images/Plants/Spikerock/Spikerock.gif',
@@ -2084,8 +2093,8 @@ class Game {
                     'starfruit': 'assets/images/Plants/Starfruit/Starfruit.gif',
                     'hypnoshroom': 'assets/images/Plants/HypnoShroom/HypnoShroom.gif',
                     'pumpkinhead': 'assets/images/Plants/PumpkinHead/PumpkinHead.gif',
-                    'cabbagepult': 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1791016017',
-                    'kernelpult': 'assets/images/Plants/KernelPult/KernelPult.png?v=1791016017',
+                    'cabbagepult': 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1791016920',
+                    'kernelpult': 'assets/images/Plants/KernelPult/KernelPult.png?v=1791016920',
                     // v3.59.0：补齐缺失的 5 类材料缩略图（此前这 16 条配方在配方书里材料格是空白）
                     'torchwood': 'assets/images/Plants/Torchwood/Torchwood.gif',
                     'gatlingpea': 'assets/images/Plants/GatlingPea/GatlingPea.gif',
@@ -3533,7 +3542,7 @@ class Game {
                           : vType === 'zombie' ? 'Vase_Zombie.png'
                           : 'Vase_Question.png';
             const img = document.createElement('img');
-            img.src = 'assets/images/Vase/' + sprite + '?v=1791016017'; // v= 占位,bump_version 替换为新 cache-buster
+            img.src = 'assets/images/Vase/' + sprite + '?v=1791016920'; // v= 占位,bump_version 替换为新 cache-buster
             img.className = 'entity vase-entity';
             img.style.pointerEvents = 'none';
             if (isGolden) img.style.filter = 'drop-shadow(0 0 7px rgba(255, 210, 60, 0.95))'; // 金罐常驻金光
@@ -3670,7 +3679,7 @@ class Game {
                     v.pumpkinHp = 4000;
                     v.pumpkinMaxHp = 4000;
                     const ov = document.createElement('img');
-                    ov.src = 'assets/images/Plants/PumpkinHead/shield_full.png?v=1791016017'; // v= 占位,bump_version 替换
+                    ov.src = 'assets/images/Plants/PumpkinHead/shield_full.png?v=1791016920'; // v= 占位,bump_version 替换
                     ov.className = 'entity vase-pumpkin';
                     ov.style.pointerEvents = 'none';
                     ov.style.width = '97px';
@@ -3687,7 +3696,7 @@ class Game {
                     v.pumpkinEl = ov;
                     // v3.13.2：背壁层画在罐子身后，壳顶洞口里看到的是南瓜内壁而非草地
                     const back = document.createElement('img');
-                    back.src = 'assets/images/Plants/PumpkinHead/Pumpkin_back.gif?v=1791016017'; // v= 占位,bump_version 替换
+                    back.src = 'assets/images/Plants/PumpkinHead/Pumpkin_back.gif?v=1791016920'; // v= 占位,bump_version 替换
                     back.className = 'entity vase-pumpkin-back';
                     back.style.pointerEvents = 'none';
                     back.style.width = '97px';
