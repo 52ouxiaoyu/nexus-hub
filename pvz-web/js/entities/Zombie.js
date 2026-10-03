@@ -874,6 +874,9 @@ class Zombie extends Entity {
                 this.game.score += 10;
                 this.game.updateScore();
             }
+            // v3.81.0 双人对战：植物方打死僵尸 → 得该僵尸对应的阳光价
+            // （只有僵尸方真实花钱买断入场的僵尸带 _vsPaid；舞王伴舞/盲盒召唤物不算钱）
+            if (!this.hypnotized && this.game.vsOnZombieKilled) this.game.vsOnZombieKilled(this);
             // v3.23.0：向日葵头僵尸被击杀 → 掉落随机阳光（25~150，25 一档；魅惑后阵亡不发）
             if (this.type === 'sunhead' && !this.hypnotized && this.game.addSun) {
                 this.game.addSun(25 * (1 + Math.floor(Math.random() * 6)));
@@ -935,6 +938,19 @@ class Zombie extends Entity {
                     }
                 }
             }
+            // v3.81.0 双人对战：向日葵头僵尸 = 僵尸方产阳光单位 —— 在场存活越久单次产量越高
+            // （基产 25 / 7s，每存活满 30s 单次 +10；阳光直接进僵尸方池，无需点击）
+            if (this.type === 'sunhead' && this.game.vsMode && !this.hypnotized) {
+                this._vsAlive = (this._vsAlive || 0) + deltaTime;
+                this._vsSunTimer = (this._vsSunTimer === undefined ? 5 : this._vsSunTimer) - deltaTime;
+                if (this._vsSunTimer <= 0) {
+                    this._vsSunTimer = 7;
+                    const amount = 25 + 10 * Math.floor(this._vsAlive / 30);
+                    this.game.zombieSun += amount;
+                    this.game._refreshVsZombieBar();
+                    this.game._vsFloatText(this.x, this.y - 60, `☀+${amount}`, '#ffd54a');
+                }
+            }
             // 同排附近出现被魅惑的友方僵尸 → 停下与它搏斗（僵尸之间唯一的敌对交互）
             const hypnoFoe = this.game.entities.find(e =>
                 e instanceof Zombie && !e.isDead && e.state !== 'DYING' && e.hypnotized &&
@@ -965,6 +981,9 @@ class Zombie extends Entity {
                 // 非僵尸模式保持原逻辑：僵尸进入房子 → 玩家(植物方)失败
                 if (this.game.zombieMode && this.game.zombieEatBrain) {
                     this.game.zombieEatBrain(this.row, this);
+                } else if (this.game.vsMode) {
+                    // v3.81.0 双人对战：僵尸进屋 = 僵尸方获胜
+                    if (!this.hypnotized) this.game.vsZombieWin();
                 } else {
                     this.game.gameOver();
                 }

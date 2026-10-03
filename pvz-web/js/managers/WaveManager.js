@@ -19,6 +19,7 @@ class WaveManager {
     update(deltaTime) {
         if (this.game.vaseMode) return; // 砸罐子模式：所有僵尸来自罐子，waveManager 不刷怪
         if (this.game.zombieMode) return; // 我是僵尸模式：僵尸全部由玩家购买释放，waveManager 不刷怪
+        if (this.game.vsMode) return; // v3.81.0 双人对战：僵尸全部由僵尸方玩家购买释放，不自然刷怪
         this.timeElapsed += deltaTime;
 
         if (this.timeElapsed >= this.nextSpawnTime) {

@@ -12,6 +12,7 @@ class InputManager {
     
     bindEvents() {
         // 我是僵尸模式（v3.7.0）：点僵尸卡选中 → 点草坪任意行释放（该行最右进场）
+        // v3.81.0：双人对战底部僵尸栏同一套交互（点卡选中/取消 → 点行部署）
         const zombieBank = document.getElementById('zombie-bank');
         if (zombieBank) {
             zombieBank.addEventListener('mousedown', (e) => {
@@ -21,6 +22,18 @@ class InputManager {
                 // 再点同一张卡 = 取消选中
                 this.game.pendingZombie = (this.game.pendingZombie === card.dataset.type) ? null : card.dataset.type;
                 this.game._refreshZombieBank();
+                this.game.audioManager.play('btn');
+                this.dragGhost.style.display = 'none';
+            });
+        }
+        const vsBar = document.getElementById('vs-bottom-bar');
+        if (vsBar) {
+            vsBar.addEventListener('mousedown', (e) => {
+                const card = e.target.closest('.zcard');
+                if (!card || card.classList.contains('disabled')) return;
+                if (!this.game.vsMode) return;
+                this.game.pendingZombie = (this.game.pendingZombie === card.dataset.type) ? null : card.dataset.type;
+                this.game._refreshVsZombieBar();
                 this.game.audioManager.play('btn');
                 this.dragGhost.style.display = 'none';
             });
@@ -106,7 +119,22 @@ class InputManager {
                 return !!el && el.style.display !== 'none' && el.style.display !== '';
             };
             if (overlayOpen('seed-chooser') || overlayOpen('start-menu') || overlayOpen('recipe-modal')) return;
+            // v3.81.0：点在双人对战底栏上一律不落到草坪（底栏压着草坪底行，防误种植/误部署）
+            if (e.target.closest && e.target.closest('#vs-bottom-bar')) return;
             // ===== 我是僵尸模式：点草坪行 = 在该行最右释放选中的僵尸（v3.7.0）=====
+            // ===== v3.81.0 双人对战：僵尸方卡选中时点行同理；未选卡则继续走植物方逻辑 =====
+            if (this.game.vsMode && this.game.pendingZombie) {
+                const rect = this.container.getBoundingClientRect();
+                const scale = window.gameScale || 1;
+                const gridPos = this.game.board.getGridPos(
+                    (e.clientX - rect.left) / scale, (e.clientY - rect.top) / scale
+                );
+                if (gridPos) {
+                    this.game.deployZombie(this.game.pendingZombie, gridPos.row);
+                }
+                this.dragGhost.style.display = 'none';
+                return;
+            }
             if (this.game.zombieMode) {
                 const rect = this.container.getBoundingClientRect();
                 const scale = window.gameScale || 1;
@@ -262,7 +290,7 @@ class InputManager {
             // v3.26.0 植物盲盒：拖拽图改回"盲盒图案"（红丝带礼盒）——用户明确盲盒≠问号罐
             // v3.35.0：礼盒重画为宽幅构图，拖拽幽灵同步改宽尺寸
             if (type === 'plantbox') {
-                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1790944905')";
+                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1791007949')";
                 this.dragGhost.style.width = '68px';
                 this.dragGhost.style.height = '50px';
                 this.dragGhost.style.backgroundSize = 'contain';
@@ -274,8 +302,8 @@ class InputManager {
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1790944905`
-                : `assets/images/Plants/${imgName}.gif?v=1790944905`;
+                ? `assets/images/Plants/${imgName}.png?v=1791007949`
+                : `assets/images/Plants/${imgName}.gif?v=1791007949`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
 
             // v3.20.0：倭瓜立绘画布 100×226（身体只占底部 68×82），60×60 contain 后

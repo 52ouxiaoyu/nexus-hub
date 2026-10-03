@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1790944905">
+    <link rel="stylesheet" href="css/style.css?v=1791007949">
 </head>
 <body>
     <div id="game-container">
@@ -44,6 +44,8 @@
             <div id="corner-hud">
                 <button id="btn-speed">Speed: 1x</button>
             </div>
+            <!-- v3.81.0 双人对战：底部僵尸方栏（僵尸卡带 + 僵尸阳光），与顶部植物栏上下分治 -->
+            <div id="vs-bottom-bar" style="display:none; position:absolute; left:0; right:0; bottom:4px; margin:0 auto; width:fit-content; z-index:600; display:none; align-items:center; gap:6px; padding:4px 10px; background:rgba(20,12,40,0.72); border:2px solid #4a3a6a; border-radius:10px; max-width:880px; flex-wrap:wrap; justify-content:center;"></div>
         <!-- Recipe Modal -->
         <div id="recipe-modal" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; background: #c69c6d; border: 4px solid #4a3018; border-radius: 10px; z-index: 3000; padding: 20px; box-shadow: 0 0 20px #000; pointer-events: auto;">
             <h2 style="text-align: center; color: #fff; text-shadow: 2px 2px 0 #000; margin-top: 0;">融合配方大全</h2>
@@ -102,6 +104,28 @@
             }
             /* ===== 模式卡（种子包样式）：v3.7.0 起 4 卡一行 ===== */
             .menu-cards { position: relative; z-index: 2; display: flex; gap: 18px; margin-top: 34px; flex-wrap: wrap; justify-content: center; max-width: 920px; }
+            /* ===== v3.81.0 双人对战入口：主页右下角长方形按钮 ===== */
+            #btn-vs {
+                position: absolute; right: 26px; bottom: 68px; z-index: 3;
+                padding: 12px 26px; font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', serif;
+                font-size: 22px; font-weight: 900; letter-spacing: 2px; color: #ffe9a8;
+                background: linear-gradient(180deg, #6b4a2b 0%, #4a3018 100%);
+                border: 3px solid #2c1c0a; border-radius: 10px; cursor: pointer;
+                text-shadow: 1px 1px 0 #000; box-shadow: 0 4px 10px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,235,170,0.35);
+            }
+            #btn-vs:hover { filter: brightness(1.3); transform: translateY(-2px); }
+            #btn-vs:active { transform: translateY(0); }
+            /* ===== v3.81.0 僵尸方选卡（双人对战第二步）===== */
+            .vz-card {
+                width: 96px; padding: 6px 4px; border-radius: 10px; cursor: pointer;
+                background: rgba(255,255,255,0.08); border: 2px solid transparent;
+                display: flex; flex-direction: column; align-items: center; gap: 2px;
+            }
+            .vz-card img { width: 56px; height: 56px; object-fit: contain; }
+            .vz-card .vz-name { font: 12px monospace; color: #efe6ff; }
+            .vz-card .vz-cost { font: bold 12px monospace; color: #ffd54a; }
+            .vz-card.picked { border-color: #9dff5e; background: rgba(157,255,94,0.16); filter: brightness(1.15); }
+            .vz-card:hover { background: rgba(255,255,255,0.18); }
             .mode-card {
                 width: 208px; height: 282px;
                 background: linear-gradient(180deg, #fdf3d0 0%, #f3e2ab 78%, #e6cf8c 100%);
@@ -260,6 +284,45 @@
                 </div>
                 <div class="ver" id="start-version">加载版本号...</div>
             </div>
+
+            <!-- v3.81.0 双人对战：主页右下角长方形入口按钮 -->
+            <button id="btn-vs" title="双人对战：一人植物 · 一人僵尸">⚔ 双人对战</button>
+        </div>
+
+        <!-- v3.81.0 双人对战：玩法选择（普通=无融合 / 融合=局内有手套+融合图鉴） -->
+        <div id="vs-modal" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.78); z-index:2400; align-items:center; justify-content:center; flex-direction:column;">
+            <div class="diff-panel">
+                <div class="diff-title">双人对战<span>VERSUS · 玩法选择</span></div>
+                <div class="diff-sub">一人带植物 · 一人带僵尸，同屏实时对战</div>
+                <div class="diff-row">
+                    <button id="vs-normal" class="diff-btn diff-easy">
+                        <span class="diff-name">普通对战</span>
+                        <span class="diff-en">NORMAL</span>
+                        <span class="diff-desc">纯攻防 · 不存在融合<br>植物 ☀150 · 僵尸 ☀400 起步</span>
+                    </button>
+                    <button id="vs-fusion" class="diff-btn diff-hard">
+                        <span class="diff-name">融合对战</span>
+                        <span class="diff-en">FUSION</span>
+                        <span class="diff-desc">植物方局内有手套+融合图鉴<br>场上两株相邻植物可合二为一</span>
+                    </button>
+                </div>
+                <div class="diff-foot">
+                    <button id="vs-back">返回主菜单</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- v3.81.0 双人对战：僵尸方选卡（8 只，向日葵头僵尸最多 1 只） -->
+        <div id="vz-chooser" style="position:absolute; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.8); z-index:1500; flex-direction:column; align-items:center; justify-content:center; display:none;">
+            <div style="background-color:#4a3a5a; padding:25px; border-radius:15px; border:4px solid #241a30; box-shadow:inset 0 0 20px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.8); width:650px;">
+                <h2 style="color:#e8d9ff; text-align:center; margin-bottom:8px; text-shadow:2px 2px 2px black; font-family:monospace; font-size:24px;">僵尸方选卡（<span id="vz-count">0</span>/8）</h2>
+                <div style="color:#bfa8e0; text-align:center; font-size:13px; margin-bottom:12px; font-family:monospace;">全部僵尸里选 8 只 · 向日葵头僵尸（产阳光）最多带 1 只</div>
+                <div id="vz-grid" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:20px; max-height:330px; overflow-y:auto; background-color:rgba(0,0,0,0.3); padding:12px; border-radius:10px; box-shadow:inset 0 0 10px black;"></div>
+                <div style="display:flex; justify-content:center; gap:20px;">
+                    <button id="vz-back" style="background-image:url('assets/images/interface/ShovelBack.png'); background-size:100% 100%; border:none; padding:10px 30px; font-size:18px; font-family:monospace; font-weight:bold; color:white; cursor:pointer; border-radius:10px; text-shadow:1px 1px 2px black;">上一页</button>
+                    <button id="vz-rock" style="background-image:url('assets/images/interface/ShovelBack.png'); background-size:100% 100%; border:none; padding:10px 40px; font-size:20px; font-family:monospace; font-weight:bold; color:white; cursor:pointer; border-radius:10px; opacity:0.5; text-shadow:1px 1px 2px black;" disabled>开战！</button>
+                </div>
+            </div>
         </div>
 
         <!-- 砸罐子难度选择（v3.5.0：简单 / 困难 / 地狱） -->
@@ -356,17 +419,17 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1790944905"></script>
-    <script src="js/Board.js?v=1790944905"></script>
-    <script src="js/entities/Entity.js?v=1790944905"></script>
-    <script src="js/entities/Plant.js?v=1790944905"></script>
-    <script src="js/entities/Zombie.js?v=1790944905"></script>
-    <script src="js/entities/Projectile.js?v=1790944905"></script>
-    <script src="js/entities/Sun.js?v=1790944905"></script>
-    <script src="js/managers/WaveManager.js?v=1790944905"></script>
-    <script src="js/managers/CollisionManager.js?v=1790944905"></script>
-    <script src="js/managers/EventManager.js?v=1790944905"></script>
-    <script src="js/GameLoop.js?v=1790944905"></script>
-    <script src="js/HelpGuide.js?v=1790944905"></script>
+    <script src="js/InputManager.js?v=1791007949"></script>
+    <script src="js/Board.js?v=1791007949"></script>
+    <script src="js/entities/Entity.js?v=1791007949"></script>
+    <script src="js/entities/Plant.js?v=1791007949"></script>
+    <script src="js/entities/Zombie.js?v=1791007949"></script>
+    <script src="js/entities/Projectile.js?v=1791007949"></script>
+    <script src="js/entities/Sun.js?v=1791007949"></script>
+    <script src="js/managers/WaveManager.js?v=1791007949"></script>
+    <script src="js/managers/CollisionManager.js?v=1791007949"></script>
+    <script src="js/managers/EventManager.js?v=1791007949"></script>
+    <script src="js/GameLoop.js?v=1791007949"></script>
+    <script src="js/HelpGuide.js?v=1791007949"></script>
 </body>
 </html>

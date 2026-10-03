@@ -618,6 +618,14 @@ body {
 }
 .zcard.disabled { filter: brightness(45%); cursor: not-allowed; }
 
+/* v3.81.0 双人对战底部僵尸栏：卡片收紧保证 8 卡 + 阳光芯片单行放下，少占草坪 */
+#vs-bottom-bar { z-index: 600; max-width: 880px; }
+#vs-bottom-bar .zcard { width: 74px; height: 44px; flex: none; }
+#vs-bottom-bar .zcard img { height: 34px; }
+#vs-bottom-bar .zcard .z-name { font-size: 9px; }
+#vs-bottom-bar .zcard .z-cost { font-size: 11px; }
+#vs-bottom-bar #vs-zombie-sun { font-size: 14px !important; padding: 3px 8px !important; }
+
 /* 战场左端（房子侧）每行的脑子：僵尸啃到即通关 */
 .z-brain {
     position: absolute;
