@@ -8,15 +8,14 @@
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; }
         
         /* 左右分屏 */
-        .viewport { flex: 1; position: relative; overflow: hidden; border-right: 4px solid #1a1a1a; background: #111; }
+        .viewport { flex: 1; position: relative; overflow: hidden; border-right: 4px solid #1a1a1a; background: #228b22; } /* 默认草地绿 */
         .viewport:last-child { border-right: none; }
-        .world { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+        .world { position: absolute; top: 0; left: 0; transform-origin: 0 0; background: url('assets/images/interface/background1.jpg') left top; opacity: 0.9; }
         
         /* 地图元素 */
         .tile { position: absolute; width: 80px; height: 80px; box-sizing: border-box; }
-        .tile.grass { background: url('assets/images/interface/background1.jpg') -200px -100px; border-radius: 4px; opacity: 0.8; }
-        .tile.wall { background: #5c431d; border: 4px solid #3c2a12; border-radius: 8px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5), 0 10px 20px rgba(0,0,0,0.5); }
-        .tile.center { background: rgba(50, 255, 50, 0.2); border: 2px dashed #0f0; border-radius: 50%; }
+        .tile.wall { background: #6b4a22; border-radius: 4px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+        .tile.center { background: rgba(255, 255, 255, 0.2); border: 2px dashed #fff; border-radius: 50%; }
         
         /* 实体 */
         .entity { position: absolute; transform: translate(-50%, -50%); transition: left 0.05s linear, top 0.05s linear; pointer-events: none; }
@@ -48,13 +47,23 @@
         <!-- 全局 UI -->
         <div id="ui-layer">
             <div id="hud-p1" class="player-hud">
-                <div style="color:#4da6ff; margin-bottom: 4px;">P1 (WASD移动)</div>
-                阳光: <span id="sun1" class="sun-text">0</span>
+                <div style="color:#4da6ff; margin-bottom: 4px;">P1 (WASD移动 | 鼠标点击种下)</div>
+                阳光: <span id="sun1" class="sun-text">200</span>
+                <div class="seeds" style="margin-top: 10px; display: flex; gap: 10px;">
+                    <img src="assets/images/Card/Plants/SunShroom.png" width="50" onclick="window.game.selectSeed(1, 'sunshroom', 25, event)" style="cursor:pointer; border:2px solid #000; border-radius:4px;">
+                    <img src="assets/images/Card/Plants/WallNut.png" width="50" onclick="window.game.selectSeed(1, 'wallnut', 50, event)" style="cursor:pointer; border:2px solid #000; border-radius:4px;">
+                    <img src="assets/images/Card/Plants/PuffShroom.png" width="50" onclick="window.game.selectSeed(1, 'puffshroom', 0, event)" style="cursor:pointer; border:2px solid #000; border-radius:4px;">
+                </div>
             </div>
             <button class="back-btn" onclick="location.href='index.html'">返回主菜单</button>
             <div id="hud-p2" class="player-hud">
-                <div style="color:#ff4d4d; margin-bottom: 4px;">P2 (方向键移动)</div>
-                阳光: <span id="sun2" class="sun-text">0</span>
+                <div style="color:#ff4d4d; margin-bottom: 4px;">P2 (方向键移动 | 鼠标点击种下)</div>
+                阳光: <span id="sun2" class="sun-text">200</span>
+                <div class="seeds" style="margin-top: 10px; display: flex; gap: 10px;">
+                    <img src="assets/images/Card/Plants/SunShroom.png" width="50" onclick="window.game.selectSeed(2, 'sunshroom', 25, event)" style="cursor:pointer; border:2px solid #000; border-radius:4px;">
+                    <img src="assets/images/Card/Plants/WallNut.png" width="50" onclick="window.game.selectSeed(2, 'wallnut', 50, event)" style="cursor:pointer; border:2px solid #000; border-radius:4px;">
+                    <img src="assets/images/Card/Plants/PuffShroom.png" width="50" onclick="window.game.selectSeed(2, 'puffshroom', 0, event)" style="cursor:pointer; border:2px solid #000; border-radius:4px;">
+                </div>
             </div>
         </div>
     </div>

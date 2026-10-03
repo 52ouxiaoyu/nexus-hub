@@ -1,22 +1,24 @@
 class HauntedDorm {
     constructor() {
-        // 地图大小：大概相当于 10 个标准 PVZ 屏幕（标准是 9x5=45格。这里设为 40x30=1200格，极其巨大）
         this.cols = 40;
         this.rows = 30;
         this.gridSize = 80;
         this.worldWidth = this.cols * this.gridSize;
         this.worldHeight = this.rows * this.gridSize;
         
-        // 初始生成在地图正中间
         const cx = this.worldWidth / 2;
         const cy = this.worldHeight / 2;
         
+        // 更改为通用人物图标（戴夫和僵尸头像代表两方）
         this.players = [
-            { id: 1, x: cx - 40, y: cy, color: 'blue', sun: 0, icon: 'assets/images/Plants/Peashooter/0.gif' },
-            { id: 2, x: cx + 40, y: cy, color: 'red', sun: 0, icon: 'assets/images/Plants/SunFlower/0.gif' }
+            { id: 1, x: cx - 40, y: cy, sun: 200, icon: 'assets/images/interface/Dave.gif', selectedSeed: null },
+            { id: 2, x: cx + 40, y: cy, sun: 200, icon: 'assets/images/Zombies/Zombie/ZombieHead.gif', selectedSeed: null }
         ];
         
         this.keys = {};
+        this.walls = new Set();
+        this.plants = [];
+        
         this.initDOM();
         this.generateMap();
         this.bindInput();
@@ -34,17 +36,14 @@ class HauntedDorm {
         this.world1.style.width = this.worldWidth + 'px';
         this.world1.style.height = this.worldHeight + 'px';
         this.world2.style.width = this.worldWidth + 'px';
-        this.world2.style.height = this.worldWidth + 'px';
+        this.world2.style.height = this.worldHeight + 'px';
         
-        // 玩家实体
         this.players.forEach(p => {
-            // P1 视角的实体
             p.el1 = document.createElement('div');
             p.el1.className = 'entity avatar';
             p.el1.innerHTML = `<img src="${p.icon}">`;
             this.world1.appendChild(p.el1);
             
-            // P2 视角的实体
             p.el2 = document.createElement('div');
             p.el2.className = 'entity avatar';
             p.el2.innerHTML = `<img src="${p.icon}">`;
@@ -53,21 +52,7 @@ class HauntedDorm {
     }
     
     generateMap() {
-        // 生成铺满全图的草地
-        for (let r = 0; r < this.rows; r+=3) {
-            for (let c = 0; c < this.cols; c+=3) {
-                const bg1 = document.createElement('div');
-                bg1.className = 'tile grass';
-                bg1.style.left = (c * this.gridSize) + 'px';
-                bg1.style.top = (r * this.gridSize) + 'px';
-                bg1.style.width = (3 * this.gridSize) + 'px';
-                bg1.style.height = (3 * this.gridSize) + 'px';
-                this.world1.appendChild(bg1);
-                this.world2.appendChild(bg1.cloneNode(true));
-            }
-        }
-        
-        // 生成出生点标记
+        // 由于 CSS 已去掉了草坪网格，只保留中心点和墙壁
         const center1 = document.createElement('div');
         center1.className = 'tile center';
         center1.style.left = (this.worldWidth / 2 - 120) + 'px';
@@ -78,24 +63,22 @@ class HauntedDorm {
         
         // 随机生成 10 个房间（带墙体）
         for (let i = 0; i < 10; i++) {
-            // 随机房间大小 3x3 到 5x5
             const rw = Math.floor(Math.random() * 3) + 3;
             const rh = Math.floor(Math.random() * 3) + 3;
             
-            // 避开中心区域
             let rx, ry;
             do {
                 rx = Math.floor(Math.random() * (this.cols - rw - 2)) + 1;
                 ry = Math.floor(Math.random() * (this.rows - rh - 2)) + 1;
             } while (Math.abs(rx - this.cols/2) < 5 && Math.abs(ry - this.rows/2) < 5);
             
-            // 生成墙壁（墙体占 1 格宽）
             for (let wr = -1; wr <= rh; wr++) {
                 for (let wc = -1; wc <= rw; wc++) {
-                    // 如果是边缘，则是墙
                     if (wr === -1 || wr === rh || wc === -1 || wc === rw) {
-                        // 留一个门（假设下墙正中间是门）
-                        if (wr === rh && wc === Math.floor(rw/2)) continue;
+                        if (wr === rh && wc === Math.floor(rw/2)) continue; // 门
+                        
+                        const key = `${rx + wc},${ry + wr}`;
+                        this.walls.add(key);
                         
                         const wall1 = document.createElement('div');
                         wall1.className = 'tile wall';
@@ -109,58 +92,134 @@ class HauntedDorm {
         }
     }
     
+    selectSeed(pid, type, cost, event) {
+        const p = this.players[pid - 1];
+        if (p.sun >= cost) {
+            p.selectedSeed = { type, cost };
+            // 高亮UI
+            document.querySelectorAll(`#hud-p${pid} .seeds img`).forEach(img => img.style.borderColor = '#000');
+            event.target.style.borderColor = '#0f0';
+        }
+    }
+    
+    tryPlanting(pid, mouseX, mouseY) {
+        const p = this.players[pid - 1];
+        if (!p.selectedSeed) return;
+        
+        const vp = pid === 1 ? this.vp1 : this.vp2;
+        const rect = vp.getBoundingClientRect();
+        
+        // 计算世界坐标
+        const camX = p.camX || 0;
+        const camY = p.camY || 0;
+        const worldX = mouseX - rect.left + camX;
+        const worldY = mouseY - rect.top + camY;
+        
+        const col = Math.floor(worldX / this.gridSize);
+        const row = Math.floor(worldY / this.gridSize);
+        
+        if (col < 0 || col >= this.cols || row < 0 || row >= this.rows) return;
+        
+        // 检查墙壁和现有植物
+        if (this.walls.has(`${col},${row}`)) return;
+        if (this.plants.some(pl => pl.c === col && pl.r === row)) return;
+        
+        // 种下
+        p.sun -= p.selectedSeed.cost;
+        document.getElementById(`sun${pid}`).innerText = p.sun;
+        
+        const pTypes = {
+            'sunshroom': 'assets/images/Plants/SunShroom/0.gif',
+            'wallnut': 'assets/images/Plants/WallNut/0.gif',
+            'puffshroom': 'assets/images/Plants/PuffShroom/0.gif'
+        };
+        
+        const pt = { r: row, c: col, type: p.selectedSeed.type };
+        this.plants.push(pt);
+        
+        const el1 = document.createElement('div');
+        el1.className = 'tile';
+        el1.style.left = (col * this.gridSize) + 'px';
+        el1.style.top = (row * this.gridSize) + 'px';
+        el1.innerHTML = `<img src="${pTypes[pt.type]}" style="width:100%; height:100%; object-fit:contain; transform: scale(1.2) translateY(-10px);">`;
+        
+        this.world1.appendChild(el1);
+        this.world2.appendChild(el1.cloneNode(true));
+        
+        // 取消选择
+        p.selectedSeed = null;
+        document.querySelectorAll(`#hud-p${pid} .seeds img`).forEach(img => img.style.borderColor = '#000');
+    }
+    
     bindInput() {
         window.addEventListener('keydown', e => this.keys[e.key.toLowerCase()] = true);
         window.addEventListener('keyup', e => this.keys[e.key.toLowerCase()] = false);
+        
+        this.vp1.addEventListener('mousedown', e => this.tryPlanting(1, e.clientX, e.clientY));
+        this.vp2.addEventListener('mousedown', e => this.tryPlanting(2, e.clientX, e.clientY));
+    }
+    
+    checkCollision(x, y) {
+        const r = 20; // 碰撞半径
+        const corners = [
+            { c: Math.floor((x-r)/this.gridSize), r: Math.floor((y-r)/this.gridSize) },
+            { c: Math.floor((x+r)/this.gridSize), r: Math.floor((y-r)/this.gridSize) },
+            { c: Math.floor((x-r)/this.gridSize), r: Math.floor((y+r)/this.gridSize) },
+            { c: Math.floor((x+r)/this.gridSize), r: Math.floor((y+r)/this.gridSize) }
+        ];
+        return corners.some(p => this.walls.has(`${p.c},${p.r}`));
     }
     
     loop(time) {
-        const dt = Math.min((time - this.lastTime) / 1000, 0.1); // max 100ms dt to prevent huge jumps
+        const dt = Math.min((time - this.lastTime) / 1000, 0.1);
         this.lastTime = time;
         
-        const speed = 400; // 移速
+        const speed = 400;
         
-        // P1 (WASD)
+        const movePlayer = (p, vx, vy) => {
+            let nx = p.x + vx * dt;
+            let ny = p.y;
+            if (nx > 20 && nx < this.worldWidth - 20 && !this.checkCollision(nx, ny)) p.x = nx;
+            
+            nx = p.x;
+            ny = p.y + vy * dt;
+            if (ny > 30 && ny < this.worldHeight - 10 && !this.checkCollision(nx, ny)) p.y = ny;
+        };
+        
+        // P1
         let vx1 = 0, vy1 = 0;
         if (this.keys['a']) vx1 -= speed;
         if (this.keys['d']) vx1 += speed;
         if (this.keys['w']) vy1 -= speed;
         if (this.keys['s']) vy1 += speed;
+        movePlayer(this.players[0], vx1, vy1);
         
-        this.players[0].x = Math.max(0, Math.min(this.worldWidth, this.players[0].x + vx1 * dt));
-        this.players[0].y = Math.max(0, Math.min(this.worldHeight, this.players[0].y + vy1 * dt));
-        
-        // P2 (Arrows)
+        // P2
         let vx2 = 0, vy2 = 0;
         if (this.keys['arrowleft']) vx2 -= speed;
         if (this.keys['arrowright']) vx2 += speed;
         if (this.keys['arrowup']) vy2 -= speed;
         if (this.keys['arrowdown']) vy2 += speed;
-        
-        this.players[1].x = Math.max(0, Math.min(this.worldWidth, this.players[1].x + vx2 * dt));
-        this.players[1].y = Math.max(0, Math.min(this.worldHeight, this.players[1].y + vy2 * dt));
+        movePlayer(this.players[1], vx2, vy2);
         
         // 渲染坐标
         this.players.forEach(p => {
-            if (vx1 !== 0 || vy1 !== 0 || vx2 !== 0 || vy2 !== 0) {
-                p.el1.style.left = p.x + 'px'; p.el1.style.top = p.y + 'px';
-                p.el2.style.left = p.x + 'px'; p.el2.style.top = p.y + 'px';
-            }
+            p.el1.style.left = p.x + 'px'; p.el1.style.top = p.y + 'px';
+            p.el2.style.left = p.x + 'px'; p.el2.style.top = p.y + 'px';
         });
         
-        // 渲染双摄相机 (跟随玩家)
+        // 渲染双摄相机
         const vpw = this.vp1.clientWidth;
         const vph = this.vp1.clientHeight;
         
-        // P1 相机
-        const cx1 = Math.max(0, Math.min(this.worldWidth - vpw, this.players[0].x - vpw / 2));
-        const cy1 = Math.max(0, Math.min(this.worldHeight - vph, this.players[0].y - vph / 2));
-        this.world1.style.transform = `translate(${-cx1}px, ${-cy1}px)`;
-        
-        // P2 相机
-        const cx2 = Math.max(0, Math.min(this.worldWidth - vpw, this.players[1].x - vpw / 2));
-        const cy2 = Math.max(0, Math.min(this.worldHeight - vph, this.players[1].y - vph / 2));
-        this.world2.style.transform = `translate(${-cx2}px, ${-cy2}px)`;
+        this.players.forEach((p, idx) => {
+            const cx = Math.max(0, Math.min(this.worldWidth - vpw, p.x - vpw / 2));
+            const cy = Math.max(0, Math.min(this.worldHeight - vph, p.y - vph / 2));
+            p.camX = cx; p.camY = cy;
+            
+            const world = idx === 0 ? this.world1 : this.world2;
+            world.style.transform = `translate(${-cx}px, ${-cy}px)`;
+        });
         
         requestAnimationFrame(t => this.loop(t));
     }
