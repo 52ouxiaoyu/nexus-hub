@@ -1,4 +1,7 @@
 // ===== 守屋大作战（大地图模式）House Guard =====
+// v3.92.0 浇水开关化：空格按一下开启持续浇水（头顶 🚿 标志，不用按住），再按一下停止；
+//   浇水间隔 1s → 0.2s（用户选定），+1 ☀/次、催熟同步提速 5 倍；飘字节流到约 1 秒一飘防刷屏。
+// v3.91.0 改名「守屋大作战」（原猛鬼宿舍）+ 植物只能种在房间里面。
 // v3.90.0 货币与啃咬修正：
 //   向日葵链（阳光菇→大阳光菇→向日葵→双子）与坚果链（坚果→…→南瓜壳）升级改耗普通阳光 ☀（25/75/200、40/100/160/260/400）；
 //   孢子 🦠 只管蘑菇特殊植物（地刺/眩晕菇/毁灭菇）与豌豆射手分支——用户澄清：门和向日葵用的都是普通阳光
@@ -124,6 +127,7 @@ class HauntedDorm {
         this.lastFlashAt = 0;
 
         this.lastWaterTime = 0;
+        this.waterOn = false;   // v3.92.0：开关式浇水状态
         this.menuOpen = false;
         this.menuCol = -1;
         this.menuRow = -1;
@@ -149,6 +153,13 @@ class HauntedDorm {
         this.player.el1 = document.createElement('div');
         this.player.el1.className = 'entity avatar';
         this.player.el1.innerHTML = `<img src="${this.player.icon}">`;
+        // v3.92.0：浇水开启时头顶显示 🚿 标志（跟随玩家移动）
+        const wb = document.createElement('div');
+        wb.id = 'water-badge';
+        wb.className = 'water-badge';
+        wb.innerText = '🚿';
+        wb.style.display = 'none';
+        this.player.el1.appendChild(wb);
         this.world1.appendChild(this.player.el1);
 
         this.plantMenu = document.getElementById('plant-menu');
@@ -384,7 +395,7 @@ class HauntedDorm {
         this.ppTitle.innerText = def.name + (pl.isDoor ? '（门板）' : '');
         if (def.feed) {
             this.ppFeed.style.display = 'block';
-            this.ppFeed.innerText = `浇水 ${Math.min(pl.fed, def.feed.goal)}/${def.feed.goal}（站旁边按空格）`;
+            this.ppFeed.innerText = `浇水 ${Math.min(pl.fed, def.feed.goal)}/${def.feed.goal}（站旁边开浇水）`;
         } else if (def.up) {
             // v3.89.0：升级收益预览——血量/产阳光/弹数的具体提升，让升级看得见好处
             const nd = HauntedDorm.DEFS[def.up.to];
@@ -593,6 +604,7 @@ class HauntedDorm {
     gameOver(win) {
         if (this.over) return;
         this.over = true;
+        this.setWatering(false); // v3.92.0：结算时关掉浇水标志
         document.getElementById('wave-announce')?.remove(); // 结算时移除残留的播报字
         this.playSfx(win ? 'winmusic.mp3' : 'losemusic.mp3', 0.6);
         this._closePopup();
@@ -666,6 +678,8 @@ class HauntedDorm {
     bindInput() {
         window.addEventListener('keydown', e => {
             this.keys[e.key.toLowerCase()] = true;
+            // v3.92.0：空格开关式浇水——按一下开启持续浇水，再按一下停止（过滤按住触发的 auto-repeat）
+            if (e.key === ' ' && !e.repeat && this.role !== 'zombie') this.setWatering(!this.waterOn);
         });
         window.addEventListener('keyup', e => this.keys[e.key.toLowerCase()] = false);
 
@@ -706,7 +720,18 @@ class HauntedDorm {
                 }
             }
         }
-        this._flyText(this.player.x, this.player.y - 20, fedAny ? '+1 ☀·浇水' : '+1 ☀', '#ffe14a');
+        // v3.92.0：0.2 秒一浇，飘字节流到约 1 秒一飘（+1 ☀），避免 5 个飘字叠成一柱
+        this._waterTick = (this._waterTick || 0) + 1;
+        if (this._waterTick % 5 === 1) {
+            this._flyText(this.player.x, this.player.y - 20, fedAny ? '+1 ☀·浇水' : '+1 ☀', '#ffe14a');
+        }
+    }
+
+    // v3.92.0：空格开关式浇水——按一下开启持续浇水（头顶 🚿 标志），再按一下停止
+    setWatering(on) {
+        this.waterOn = !!on;
+        const badge = document.getElementById('water-badge');
+        if (badge) badge.style.display = this.waterOn ? 'block' : 'none';
     }
 
     checkCollision(x, y) {
@@ -1056,7 +1081,8 @@ class HauntedDorm {
         if (ny > 30 && ny < this.worldHeight - 10 && !this.checkCollision(nx, ny)) this.player.y = ny;
 
         // 浇水（v3.89.0：1 秒才能浇一次——按再快也只按时间间隔计，杜绝拼手速；+1 阳光 / 催熟身边蘑菇）
-        if (this.keys[' '] && time - this.lastWaterTime > 1000) {
+        // 浇水（v3.92.0：空格开关式——按一下持续浇水不用按住，0.2 秒一次；+1 阳光 / 催熟身边蘑菇）
+        if (this.waterOn && !this.over && time - this.lastWaterTime > 200) {
             this.lastWaterTime = time;
             this._water();
         }

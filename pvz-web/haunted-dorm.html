@@ -38,6 +38,9 @@
         /* 僵尸等级角标 */
         .lv-badge { position: absolute; top: -26px; left: 50%; transform: translateX(-50%); background: rgba(90,0,0,0.85); color: #ffd54a; font-size: 13px; font-weight: bold; padding: 2px 8px; border-radius: 8px; border: 1px solid #ff5252; white-space: nowrap; z-index: 12; }
 
+        /* v3.92.0 浇水开启标志（跟随玩家头顶） */
+        .water-badge { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); font-size: 20px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6)); pointer-events: none; z-index: 15; }
+
         /* 实体 */
         .entity { position: absolute; transform: translate(-50%, -50%); transition: left 0.05s linear, top 0.05s linear; pointer-events: none; }
         .avatar { width: 100px; height: 100px; z-index: 100; filter: drop-shadow(0 10px 5px rgba(0,0,0,0.5)); }
@@ -110,7 +113,7 @@
         <!-- 全局 UI -->
         <div id="ui-layer">
             <div id="hud-p1" class="player-hud">
-                <div style="color:#4da6ff; margin-bottom: 4px;">移动: WASD | 浇水: 空格(+1☀·1秒1次·催熟蘑菇) | 点击植物: 升级/拆除</div>
+                <div style="color:#4da6ff; margin-bottom: 4px;">移动: WASD | 浇水: 空格开关(0.2秒1次·+1☀·催熟蘑菇) | 点击植物: 升级/拆除</div>
                 <div style="display:flex; gap:18px; align-items:center;">
                     <span>阳光: <span id="sun1" class="sun-text">0</span></span>
                     <span>孢子: <span id="spore1" class="sun-text" style="color:#c79aff;">0</span></span>
@@ -146,7 +149,7 @@
                 <div style="max-width:640px; max-height:82vh; overflow:auto; background:rgba(30,16,8,0.96); border:3px solid #8c6a4d; border-radius:14px; padding:24px 30px; color:#f5e6c8; font-family:'Kaiti SC',serif; font-size:15px; line-height:1.9;">
                     <div style="text-align:center; font-size:26px; letter-spacing:4px; margin-bottom:12px;">🏠 守屋大作战 · 玩法说明</div>
                     <b style="color:#ffe14a;">基础操作</b><br>
-                    · WASD 移动 · <b>空格浇水</b>：每次 +1 阳光，<b>1 秒才能浇一次</b>（按得再快也没用）——开局 0 阳光，找到房间开始浇水才有收入；站在蘑菇旁边浇水可以<b>同时催熟</b>小喷菇<br>
+                    · WASD 移动 · <b>空格开关浇水</b>：<b>按一下空格开启自动浇水</b>（头顶出现 🚿 标志，不用按住），再按一下停止；每 <b>0.2 秒浇一次</b>：+1 阳光并催熟身边的小喷菇——开局 0 阳光，找到房间开始浇水才有收入<br>
                     · 点击空地 = 种植菜单（<b>植物只能种在房间里面</b>，房间外的草地不能种）；<b>点击植物 = 弹出「升级 / 拆除」面板</b>，面板上会写出升级收益（血量/产出）：<b>向日葵链和坚果链升级花普通阳光 ☀</b>（阳光菇只在你在旁边时才产阳光），<b style="color:#c79aff;">🦠孢子</b>用来买高级孢子植物和豌豆分支升级；拆除直接移除植物<br><br>
                     <b style="color:#ffe14a;">成长配方（唯一，不撞衫）</b><br>
                     · 阳光菇 <span style="color:#9dff6b;">→(☀25)→ 大阳光菇 →(☀75)→ 向日葵 →(☀200)→ 双子向日葵</span>，逐级变大、产阳光更多（阳光菇要你在旁边才产）<br>
@@ -184,6 +187,6 @@
         </div>
     </div>
 
-    <script src="js/HauntedDorm.js?v=1791105619"></script>
+    <script src="js/HauntedDorm.js?v=1791106255"></script>
 </body>
 </html>
