@@ -1,12 +1,12 @@
-// ===== 猛鬼宿舍（大地图模式）Haunted Dorm =====
+// ===== 守屋大作战（大地图模式）House Guard =====
 // v3.90.0 货币与啃咬修正：
 //   向日葵链（阳光菇→大阳光菇→向日葵→双子）与坚果链（坚果→…→南瓜壳）升级改耗普通阳光 ☀（25/75/200、40/100/160/260/400）；
 //   孢子 🦠 只管蘑菇特殊植物（地刺/眩晕菇/毁灭菇）与豌豆射手分支——用户澄清：门和向日葵用的都是普通阳光
 //   阳光菇只在玩家 300px 内才产阳光（原先全场每间房的床铺菇同时产出 ≈2.5 ☀/秒，远超浇水 1 秒 1 阳光）
-//   猛鬼啃咬改离散慢咬：站定每 2.4s 一口、每口 15+12×(等级-1) 伤害（开局非常慢，升级既涨血量也涨实际战力）
+//   僵尸啃咬改离散慢咬：站定每 2.4s 一口、每口 15+12×(等级-1) 伤害（开局非常慢，升级既涨血量也涨实际战力）
 // v3.89.0 阳光经济重构版：删除包子系统、开局 0 阳光、浇水 1 秒 1 次防手速、喂大 40/80/160、
 //   升级收益预览、门板血量按图鉴 30% 折算随升级成长、坚果链逐级变大。
-// 保留：单猛鬼六级成长（普通→路障→铁桶→橄榄球→铁门→冰车）、跟踪弹、河道木桥、棋盘草地、小地图、音效、胜负结算。
+// 保留：单僵尸六级成长（普通→路障→铁桶→橄榄球→铁门→冰车）、跟踪弹、河道木桥、棋盘草地、小地图、音效、胜负结算。
 class HauntedDorm {
     // ===== 植物图鉴（配方唯一，绝不撞衫）=====
     static get DEFS() {
@@ -73,7 +73,7 @@ class HauntedDorm {
         return ['puffshroom', 'peashooter', 'wallnut', 'potatomine', 'spikeweed', 'iceshroom', 'doomshroom'];
     }
 
-    // ===== 猛鬼升级链（全场唯一一只，按战力逐级成长，最终形态=冰车）=====
+    // ===== 僵尸升级链（全场唯一一只，按战力逐级成长，最终形态=冰车）=====
     static get GHOST_LEVELS() {
         return [
             { name: '普通僵尸',   img: 'Zombies/Zombie/Zombie.gif',                    hp: 300,  speed: 85 },
@@ -108,11 +108,11 @@ class HauntedDorm {
         this.keys = {};
         this.walls = new Set();
         this.plants = [];
-        this.zombies = [];   // 永远最多 1 只（单猛鬼体系）
+        this.zombies = [];   // 永远最多 1 只（单僵尸体系）
         this.peas = [];      // 各类弹道
-        this.suns = [];      // 猛鬼掉落的阳光袋
+        this.suns = [];      // 僵尸掉落的阳光袋
 
-        // ===== 单猛鬼导演系统 =====
+        // ===== 单僵尸导演系统 =====
         this.ghostSpawned = false;
         this.ghostSpawnAt = 20000;        // 开局 20s 出笼
         this.ghostLevel = 1;              // 当前等级 1..6
@@ -283,7 +283,7 @@ class HauntedDorm {
                     if (isInside(r-1, c) || isInside(r+1, c) || isInside(r, c-1) || isInside(r, c+1) ||
                         isInside(r-1, c-1) || isInside(r-1, c+1) || isInside(r+1, c-1) || isInside(r+1, c+1)) {
 
-                        // 生成门（木桥 + 坚果门板：玩家自由穿行，猛鬼要啃门）
+                        // 生成门（木桥 + 坚果门板：玩家自由穿行，僵尸要啃门）
                         if (r === rm.tpl.door.r && c === rm.tpl.door.c) {
                             const bridge = document.createElement('div');
                             bridge.className = 'tile bridge';
@@ -433,7 +433,7 @@ class HauntedDorm {
         this.spawnPlant(col, row, to, isDoor);
     }
 
-    // ===== 单猛鬼：出场 / 升级 / 重生 导演 =====
+    // ===== 单僵尸：出场 / 升级 / 重生 导演 =====
     _ghostSpawnPoint() {
         for (let tries = 0; tries < 30; tries++) {
             const rm = this.rooms[Math.floor(Math.random() * this.rooms.length)];
@@ -470,11 +470,11 @@ class HauntedDorm {
             if (time >= this.ghostSpawnAt) {
                 this.ghostSpawned = true;
                 this._spawnGhost();
-                this._announce('👻 猛鬼出笼！', 'evillaugh.mp3');
+                this._announce('👻 僵尸出笼！', 'evillaugh.mp3');
             }
             return;
         }
-        // 升级（时间驱动，死亡也不停——猛鬼一直在成长）
+        // 升级（时间驱动，死亡也不停——僵尸一直在成长）
         if (this.ghostLevel < HauntedDorm.GHOST_MAX_LV && time >= this.ghostNextLvAt) {
             this.ghostLevel++;
             this.ghostNextLvAt += this.ghostLvEvery;
@@ -486,16 +486,16 @@ class HauntedDorm {
                 const im = zb.el1.querySelector('img');
                 if (im) im.src = 'assets/images/' + cfg.img;
                 if (zb.hpBg) zb.hpBg.style.display = 'none'; // 满血先藏血条
-                this._announce(`👻 猛鬼升级为【${cfg.name}】！`, 'finalwave.mp3');
+                this._announce(`👻 僵尸升级为【${cfg.name}】！`, 'finalwave.mp3');
             } else {
-                this._announce(`👻 猛鬼成长为【${cfg.name}】…`, 'finalwave.mp3');
+                this._announce(`👻 僵尸成长为【${cfg.name}】…`, 'finalwave.mp3');
             }
         }
         // 重生（打倒 8s 后同级再来）
         if (this.ghostRespawnAt > 0 && time >= this.ghostRespawnAt) {
             this.ghostRespawnAt = 0;
             this._spawnGhost();
-            this._announce('👻 猛鬼又来了！', 'evillaugh.mp3');
+            this._announce('👻 僵尸又来了！', 'evillaugh.mp3');
         }
     }
 
@@ -524,9 +524,9 @@ class HauntedDorm {
         if (!chip) return;
         const now = performance.now();
         if (!this.ghostSpawned) {
-            chip.innerText = `👻 猛鬼出笼还有 ${Math.max(0, Math.ceil((this.ghostSpawnAt - now) / 1000))}s`;
+            chip.innerText = `👻 僵尸出笼还有 ${Math.max(0, Math.ceil((this.ghostSpawnAt - now) / 1000))}s`;
         } else if (this.ghostRespawnAt > 0) {
-            chip.innerText = `👻 猛鬼重生还有 ${Math.max(0, Math.ceil((this.ghostRespawnAt - now) / 1000))}s · 击杀 ${this.kills}`;
+            chip.innerText = `👻 僵尸重生还有 ${Math.max(0, Math.ceil((this.ghostRespawnAt - now) / 1000))}s · 击杀 ${this.kills}`;
         } else {
             const cfg = HauntedDorm.GHOST_LEVELS[this.ghostLevel - 1];
             const lvTxt = this.ghostLevel >= HauntedDorm.GHOST_MAX_LV
@@ -597,7 +597,7 @@ class HauntedDorm {
         this.playSfx(win ? 'winmusic.mp3' : 'losemusic.mp3', 0.6);
         this._closePopup();
         const secs = Math.floor((performance.now() - this.startTime) / 1000);
-        document.getElementById('ov-title').innerText = win ? '🏆 猛鬼被击倒了！' : '💀 被猛鬼抓住了…';
+        document.getElementById('ov-title').innerText = win ? '🏆 僵尸被击倒了！' : '💀 被僵尸抓住了…';
         document.getElementById('ov-title').style.color = win ? '#ffd54a' : '#ff6b6b';
         document.getElementById('ov-time').innerText = `${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}`;
         document.getElementById('ov-kills').innerText = this.kills;
@@ -618,6 +618,11 @@ class HauntedDorm {
         if (col < 0 || col >= this.cols || row < 0 || row >= this.rows) return;
         if (this.walls.has(`${col},${row}`)) return;
         if (this.plants.some(pl => pl.c === col && pl.r === row)) return;
+        // v3.91.0：植物只能种在房间里——房间外的草地不允许种植
+        if (!this._insideRoom(col, row)) {
+            this._flyText(col * this.gridSize + 40, row * this.gridSize, '只能种在房间里', '#ff8a8a');
+            return;
+        }
 
         this.menuCol = col;
         this.menuRow = row;
@@ -631,6 +636,15 @@ class HauntedDorm {
     _closePlantMenu() {
         this.plantMenu.style.display = 'none';
         this.menuOpen = false;
+    }
+
+    // v3.91.0：判定某格是否在某个房间内部（房间模板 grid=1 的地面）
+    _insideRoom(col, row) {
+        for (const rm of this.rooms) {
+            if (col >= rm.x && col < rm.x + rm.w && row >= rm.y && row < rm.y + rm.h &&
+                rm.tpl.grid[row - rm.y][col - rm.x] === 1) return true;
+        }
+        return false;
     }
 
     doPlant(type) {
@@ -725,7 +739,7 @@ class HauntedDorm {
             x: px, y: py, vx: Math.cos(angle) * sp, vy: Math.sin(angle) * sp,
             el, life: (opts.range || 320) / sp + 0.3, dmg: dmg,
             slow: !!opts.slow, aoe: opts.aoe || 0,
-            homing: !!opts.homing, homeR: 260  // 跟踪区：260px 内追踪猛鬼，出了区域变直线
+            homing: !!opts.homing, homeR: 260  // 跟踪区：260px 内追踪僵尸，出了区域变直线
         });
     }
 
@@ -773,7 +787,7 @@ class HauntedDorm {
 
     _updatePeas(dt) {
         for (const pea of this.peas) {
-            // 跟踪弹：260px 内有活猛鬼 → 弹道转向追击；出了区域保持直线
+            // 跟踪弹：260px 内有活僵尸 → 弹道转向追击；出了区域保持直线
             if (pea.homing && pea.life > 0) {
                 let best = null, bd = pea.homeR;
                 for (const zb of this.zombies) {
@@ -967,7 +981,7 @@ class HauntedDorm {
         }
     }
 
-    // 土豆雷：猛鬼踩上引爆
+    // 土豆雷：僵尸踩上引爆
     _updateMines() {
         for (const pl of [...this.plants]) {
             if (pl.def.mine === undefined) continue;
@@ -1006,7 +1020,7 @@ class HauntedDorm {
         // 阳光袋
         ctx.fillStyle = '#ffe14a';
         for (const s of this.suns) ctx.fillRect(s.x * sx - 1.5, s.y * sy - 1.5, 3, 3);
-        // 猛鬼
+        // 僵尸
         ctx.fillStyle = '#ff5252';
         for (const zb of this.zombies) ctx.fillRect(zb.x * sx - 2, zb.y * sy - 2, 4, 4);
         // 玩家
@@ -1021,7 +1035,7 @@ class HauntedDorm {
         const dt = Math.min((time - this.lastTime) / 1000, 0.1);
         this.lastTime = time;
 
-        // 单猛鬼导演：出笼 → 定时升级 → 打倒重生
+        // 单僵尸导演：出笼 → 定时升级 → 打倒重生
         this._updateGhostDirector(time);
         if (Math.floor(time / 500) !== Math.floor((time - dt * 1000) / 500)) this._updateGhostChip(); // 0.5s 刷一次信息牌
 
@@ -1063,11 +1077,11 @@ class HauntedDorm {
         this._updateDoomshroom(dt);
         this._updateMines();
 
-        // 猛鬼AI：追踪玩家，啃食沿途植物，接触玩家掉血；撞墙自动切向绕行
+        // 僵尸AI：追踪玩家，啃食沿途植物，接触玩家掉血；撞墙自动切向绕行
         // v3.90.0：啃咬改离散慢咬——站在植物上一口一口啃（2.4s/口），不再逐帧持续扣血（用户：开局啃门要非常慢）；
         //          咬力随等级上涨（升级既涨血量也涨实际战力）
         const lv = this.ghostLevel;
-        const biteDmg = 15 + 12 * (lv - 1);      // 每口伤害（随猛鬼等级成长）
+        const biteDmg = 15 + 12 * (lv - 1);      // 每口伤害（随僵尸等级成长）
         const BITE_CD = 2.4;                     // 每口间隔（秒）
         const touchDps = 12 + 3 * (lv - 1);      // 接触玩家
         let playerHurt = 0;

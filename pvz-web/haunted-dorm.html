@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>植物大战僵尸：猛鬼宿舍（大地图）</title>
+    <title>植物大战僵尸：守屋大作战（大地图）</title>
     <style>
         body { margin: 0; padding: 0; background: #000; overflow: hidden; display: flex; font-family: 'Arial Black', sans-serif; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; }
@@ -35,7 +35,7 @@
         }
         .tile.center { background: rgba(255, 255, 255, 0.2); border: 2px dashed #fff; border-radius: 50%; }
 
-        /* 猛鬼等级角标 */
+        /* 僵尸等级角标 */
         .lv-badge { position: absolute; top: -26px; left: 50%; transform: translateX(-50%); background: rgba(90,0,0,0.85); color: #ffd54a; font-size: 13px; font-weight: bold; padding: 2px 8px; border-radius: 8px; border: 1px solid #ff5252; white-space: nowrap; z-index: 12; }
 
         /* 实体 */
@@ -51,7 +51,7 @@
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1000; }
         .player-hud { position: absolute; top: 20px; padding: 12px 20px; background: rgba(0,0,0,0.8); color: white; border: 3px solid #4da6ff; border-radius: 12px; font-size: 18px; text-shadow: 2px 2px 0 #000; left: 20px; pointer-events: auto; }
         .sun-text { color: #ffeb3b; font-size: 24px; }
-        /* v3.86.0 玩家 HP 条常显 + 波次/击杀信息（猛鬼宿舍主题红牌） */
+        /* v3.86.0 玩家 HP 条常显 + 波次/击杀信息（红牌主题） */
         #hp-row { margin-top: 8px; display: flex; align-items: center; gap: 8px; }
         #hp-row .hp-label { color: #ff8a80; font-size: 14px; }
         #hp-track { flex: 1; height: 14px; background: rgba(0,0,0,0.6); border: 2px solid #000; border-radius: 7px; overflow: hidden; min-width: 160px; }
@@ -144,24 +144,24 @@
             <!-- 玩法说明（配方表 + 道具） -->
             <div id="dorm-help" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2900; align-items:center; justify-content:center; pointer-events:auto;">
                 <div style="max-width:640px; max-height:82vh; overflow:auto; background:rgba(30,16,8,0.96); border:3px solid #8c6a4d; border-radius:14px; padding:24px 30px; color:#f5e6c8; font-family:'Kaiti SC',serif; font-size:15px; line-height:1.9;">
-                    <div style="text-align:center; font-size:26px; letter-spacing:4px; margin-bottom:12px;">👻 猛鬼宿舍 · 玩法说明</div>
+                    <div style="text-align:center; font-size:26px; letter-spacing:4px; margin-bottom:12px;">🏠 守屋大作战 · 玩法说明</div>
                     <b style="color:#ffe14a;">基础操作</b><br>
                     · WASD 移动 · <b>空格浇水</b>：每次 +1 阳光，<b>1 秒才能浇一次</b>（按得再快也没用）——开局 0 阳光，找到房间开始浇水才有收入；站在蘑菇旁边浇水可以<b>同时催熟</b>小喷菇<br>
-                    · 点击空地 = 种植菜单；<b>点击植物 = 弹出「升级 / 拆除」面板</b>，面板上会写出升级收益（血量/产出）：<b>向日葵链和坚果链升级花普通阳光 ☀</b>（阳光菇只在你在旁边时才产阳光），<b style="color:#c79aff;">🦠孢子</b>用来买高级孢子植物和豌豆分支升级；拆除直接移除植物<br><br>
+                    · 点击空地 = 种植菜单（<b>植物只能种在房间里面</b>，房间外的草地不能种）；<b>点击植物 = 弹出「升级 / 拆除」面板</b>，面板上会写出升级收益（血量/产出）：<b>向日葵链和坚果链升级花普通阳光 ☀</b>（阳光菇只在你在旁边时才产阳光），<b style="color:#c79aff;">🦠孢子</b>用来买高级孢子植物和豌豆分支升级；拆除直接移除植物<br><br>
                     <b style="color:#ffe14a;">成长配方（唯一，不撞衫）</b><br>
                     · 阳光菇 <span style="color:#9dff6b;">→(☀25)→ 大阳光菇 →(☀75)→ 向日葵 →(☀200)→ 双子向日葵</span>，逐级变大、产阳光更多（阳光菇要你在旁边才产）<br>
                     · 小喷菇(☀200 购买) 靠浇水喂大：<span style="color:#9dff6b;">浇水 40 → 胆小菇(产孢子×2) → 浇水 80 → 大喷菇(会喷射) → 浇水 160 → 忧郁菇(强范围喷射)</span><br>
                     · 坚果 <span style="color:#9dff6b;">→(☀40)→ 豌豆坚果(子弹跟踪·血量5000) →(☀100)→ 射手坚果(跟踪·双发·血量6500) →(☀160)→ 卷心菜坚果(投掷·血量8000) →(☀260)→ 高坚果(血量10000) →(☀400)→ 南瓜壳(血量15000)</span>，逐级变大变硬<br>
                     · 豌豆射手三选一分支：<span style="color:#9dff6b;">双发射手→(🦠60)→机枪射手</span> / <span style="color:#9dff6b;">寒冰射手→(🦠40)→冰雪双发(减速)</span> / <span style="color:#9dff6b;">双向射手→(🦠50)→三线射手(扇形)</span><br>
-                    · <b>跟踪弹规则</b>：豌豆坚果线的子弹在 <b>260px 内自动追踪猛鬼</b>，超出追踪区就变直线飞<br><br>
+                    · <b>跟踪弹规则</b>：豌豆坚果线的子弹在 <b>260px 内自动追踪僵尸</b>，超出追踪区就变直线飞<br><br>
                     <b style="color:#c79aff;">🦠 孢子高级植物</b>（蘑菇系随时间产出孢子）<br>
-                    · <b>地刺(🦠50)</b>：贴地陷阱，猛鬼站上持续掉血，不会被啃<br>
-                    · <b>眩晕菇(🦠100)</b>：每 6 秒冰冻猛鬼 2 秒<br>
-                    · <b>毁灭菇(🦠200)</b>：超高攻击——猛鬼靠近即核爆（一次性）<br><br>
-                    <b style="color:#ff8a8a;">👻 猛鬼规则</b>：全场<b>只有一只猛鬼</b>，开局 20 秒出笼，每 45 秒升级：<br>
+                    · <b>地刺(🦠50)</b>：贴地陷阱，僵尸站上持续掉血，不会被啃<br>
+                    · <b>眩晕菇(🦠100)</b>：每 6 秒冰冻僵尸 2 秒<br>
+                    · <b>毁灭菇(🦠200)</b>：超高攻击——僵尸靠近即核爆（一次性）<br><br>
+                    <b style="color:#ff8a8a;">👻 僵尸规则</b>：全场<b>只有一只僵尸</b>，开局 20 秒出笼，每 45 秒升级：<br>
                     <span style="color:#ff9e9e;">普通僵尸 → 路障 → 铁桶 → 橄榄球 → 铁门 → 冰车（最终形态）</span><br>
-                    · 打倒猛鬼 8 秒后同级重生（升级不会停）；<b>击倒最终形态冰车僵尸 = 胜利</b>；HP 归零 = 失败<br>
-                    · 房间四周是<b>河道</b>，门口搭着<b>木桥 + 坚果门板</b>：你可以自由过桥，猛鬼得把门板啃穿（门板血量随坚果升级一起变硬）
+                    · 打倒僵尸 8 秒后同级重生（升级不会停）；<b>击倒最终形态冰车僵尸 = 胜利</b>；HP 归零 = 失败<br>
+                    · 房间四周是<b>河道</b>，门口搭着<b>木桥 + 坚果门板</b>：你可以自由过桥，僵尸得把门板啃穿（门板血量随坚果升级一起变硬）
                     <div style="text-align:center; margin-top:16px;"><button class="back-btn" style="position:static;" onclick="document.getElementById('dorm-help').style.display='none'">知道了</button></div>
                 </div>
             </div>
@@ -174,8 +174,8 @@
             <div class="ov-title" id="ov-title">你活下来了！</div>
             <div class="ov-stats">
                 <div class="ov-stat">坚持时间<b id="ov-time">0:00</b></div>
-                <div class="ov-stat">击杀猛鬼<b id="ov-kills">0</b></div>
-                <div class="ov-stat">猛鬼等级<b id="ov-waves">0</b></div>
+                <div class="ov-stat">击杀僵尸<b id="ov-kills">0</b></div>
+                <div class="ov-stat">僵尸等级<b id="ov-waves">0</b></div>
             </div>
             <div class="ov-btns">
                 <button class="ov-btn" id="ov-retry" onclick="location.reload()">再来一局</button>
@@ -184,6 +184,6 @@
         </div>
     </div>
 
-    <script src="js/HauntedDorm.js?v=1791104981"></script>
+    <script src="js/HauntedDorm.js?v=1791105619"></script>
 </body>
 </html>
