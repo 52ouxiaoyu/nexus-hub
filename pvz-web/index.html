@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1791103639">
+    <link rel="stylesheet" href="css/style.css?v=1791104337">
 </head>
 <body>
     <div id="game-container">
@@ -344,7 +344,7 @@
             <div class="menu-footer">
                 <div style="display:flex; align-items:flex-end;">
                     <div class="player" id="player-name">区耀丁<small>PLAYER</small></div>
-                    <button id="btn-back-gc" onclick="location.href='../games.html'">返回</button>
+                    <button id="btn-back-gc">返回</button>
                 </div>
                 <div class="ver" id="start-version">加载版本号...</div>
             </div>
@@ -493,6 +493,21 @@
             // 僵尸阵营（dorm-zombie）开发中：置灰不可点
         })();
 
+        // ===== v3.89.1 返回按钮防白屏：../games.html（hub 门户）只在"整个 hub 为站点根"时存在；
+        // pvz-web 单独发布成整站时该路径 404（部分静态服务器 404 响应体为空 = 纯白屏）。
+        // http(s) 下先 HEAD 探测：门户存在才跳，不存在就留在主页；file:// 下 fetch 受 CORS 限制，保持原样直接跳。
+        (function bindBackGc() {
+            const btn = document.getElementById('btn-back-gc');
+            if (!btn) return;
+            const goPortal = () => { location.href = '../games.html'; };
+            btn.addEventListener('click', () => {
+                if (location.protocol === 'file:') { goPortal(); return; }
+                fetch('../games.html', { method: 'HEAD' })
+                    .then(r => { if (r.ok) goPortal(); else location.reload(); })
+                    .catch(goPortal);
+            });
+        })();
+
         // ===== 加载版本号：仅开始菜单左下角展示（游戏内 HUD 不再显示）=====
         (function loadVersion() {
             const sv = document.getElementById('start-version');
@@ -515,17 +530,17 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1791103639"></script>
-    <script src="js/Board.js?v=1791103639"></script>
-    <script src="js/entities/Entity.js?v=1791103639"></script>
-    <script src="js/entities/Plant.js?v=1791103639"></script>
-    <script src="js/entities/Zombie.js?v=1791103639"></script>
-    <script src="js/entities/Projectile.js?v=1791103639"></script>
-    <script src="js/entities/Sun.js?v=1791103639"></script>
-    <script src="js/managers/WaveManager.js?v=1791103639"></script>
-    <script src="js/managers/CollisionManager.js?v=1791103639"></script>
-    <script src="js/managers/EventManager.js?v=1791103639"></script>
-    <script src="js/GameLoop.js?v=1791103639"></script>
-    <script src="js/HelpGuide.js?v=1791103639"></script>
+    <script src="js/InputManager.js?v=1791104337"></script>
+    <script src="js/Board.js?v=1791104337"></script>
+    <script src="js/entities/Entity.js?v=1791104337"></script>
+    <script src="js/entities/Plant.js?v=1791104337"></script>
+    <script src="js/entities/Zombie.js?v=1791104337"></script>
+    <script src="js/entities/Projectile.js?v=1791104337"></script>
+    <script src="js/entities/Sun.js?v=1791104337"></script>
+    <script src="js/managers/WaveManager.js?v=1791104337"></script>
+    <script src="js/managers/CollisionManager.js?v=1791104337"></script>
+    <script src="js/managers/EventManager.js?v=1791104337"></script>
+    <script src="js/GameLoop.js?v=1791104337"></script>
+    <script src="js/HelpGuide.js?v=1791104337"></script>
 </body>
 </html>
