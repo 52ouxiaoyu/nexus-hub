@@ -9,16 +9,25 @@ class HauntedDorm {
         const cx = this.worldWidth / 2;
         const cy = this.worldHeight / 2;
         
-        this.players = [
-            { id: 1, x: cx - 40, y: cy, sun: 200, hp: 100, icon: 'assets/images/interface/Dave.gif', selectedSeed: null },
-            { id: 2, x: cx + 40, y: cy, sun: 200, hp: 100, icon: 'assets/images/Zombies/Zombie/ZombieHead.gif', selectedSeed: null }
-        ];
+        const urlParams = new URLSearchParams(window.location.search);
+        this.role = urlParams.get('role') || 'plant';
+        
+        this.player = { 
+            x: cx, y: cy, sun: 50, hp: 100, 
+            icon: this.role === 'zombie' ? 'assets/images/Zombies/Zombie/0.gif' : 'assets/images/Plants/Peashooter/0.gif',
+            camX: 0, camY: 0
+        };
         
         this.keys = {};
         this.walls = new Set();
         this.plants = [];
         this.zombies = [];
         this.zombiesSpawned = false;
+        
+        this.lastWaterTime = 0;
+        this.menuOpen = false;
+        this.menuCol = -1;
+        this.menuRow = -1;
         
         this.initDOM();
         this.generateMap();
@@ -31,26 +40,17 @@ class HauntedDorm {
     
     initDOM() {
         this.world1 = document.getElementById('world1');
-        this.world2 = document.getElementById('world2');
         this.vp1 = document.getElementById('vp1');
-        this.vp2 = document.getElementById('vp2');
         
         this.world1.style.width = this.worldWidth + 'px';
         this.world1.style.height = this.worldHeight + 'px';
-        this.world2.style.width = this.worldWidth + 'px';
-        this.world2.style.height = this.worldHeight + 'px';
         
-        this.players.forEach(p => {
-            p.el1 = document.createElement('div');
-            p.el1.className = 'entity avatar';
-            p.el1.innerHTML = `<img src="${p.icon}">`;
-            this.world1.appendChild(p.el1);
-            
-            p.el2 = document.createElement('div');
-            p.el2.className = 'entity avatar';
-            p.el2.innerHTML = `<img src="${p.icon}">`;
-            this.world2.appendChild(p.el2);
-        });
+        this.player.el1 = document.createElement('div');
+        this.player.el1.className = 'entity avatar';
+        this.player.el1.innerHTML = `<img src="${this.player.icon}">`;
+        this.world1.appendChild(this.player.el1);
+        
+        this.plantMenu = document.getElementById('plant-menu');
     }
     
     generateMap() {
@@ -60,17 +60,38 @@ class HauntedDorm {
         center1.style.top = (this.worldHeight / 2 - 120) + 'px';
         center1.style.width = '240px'; center1.style.height = '240px';
         this.world1.appendChild(center1);
-        this.world2.appendChild(center1.cloneNode(true));
         
         this.rooms = [];
         
+        // 房间形状模板 (1=地面)
+        const templates = [
+            { // 4x4 矩形
+                grid: [[1,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1]],
+                door: {r: 4, c: 2}, bed: {r: 1, c: 2}
+            },
+            { // L型
+                grid: [[1,1,0,0],[1,1,0,0],[1,1,1,1],[1,1,1,1]],
+                door: {r: 4, c: 1}, bed: {r: 1, c: 0}
+            },
+            { // 凹型
+                grid: [[1,1,0,1,1],[1,1,0,1,1],[1,1,1,1,1],[1,1,1,1,1]],
+                door: {r: 4, c: 2}, bed: {r: 2, c: 2}
+            },
+            { // 长条型
+                grid: [[1,1,1],[1,1,1],[1,1,1],[1,1,1],[1,1,1]],
+                door: {r: 5, c: 1}, bed: {r: 1, c: 1}
+            }
+        ];
+        
         for (let i = 0; i < 10; i++) {
-            let rw, rh, rx, ry, valid = false;
+            let tpl, rx, ry, valid = false;
             let attempts = 0;
             while (!valid && attempts < 1000) {
                 attempts++;
-                rw = Math.floor(Math.random() * 2) + 4;
-                rh = Math.floor(Math.random() * 2) + 4;
+                tpl = templates[Math.floor(Math.random() * templates.length)];
+                const rw = tpl.grid[0].length;
+                const rh = tpl.grid.length;
+                
                 rx = Math.floor(Math.random() * (this.cols - rw - 4)) + 2;
                 ry = Math.floor(Math.random() * (this.rows - rh - 4)) + 2;
                 
@@ -85,36 +106,43 @@ class HauntedDorm {
                     }
                 }
             }
-            if (valid) this.rooms.push({x: rx, y: ry, w: rw, h: rh});
+            if (valid) {
+                this.rooms.push({ x: rx, y: ry, w: tpl.grid[0].length, h: tpl.grid.length, tpl: tpl });
+            }
         }
         
+        // 渲染墙体
         for (const rm of this.rooms) {
-            for (let wr = -1; wr <= rm.h; wr++) {
-                for (let wc = -1; wc <= rm.w; wc++) {
-                    if (wr === -1 || wr === rm.h || wc === -1 || wc === rm.w) {
-                        if (wr === rm.h && wc === Math.floor(rm.w/2)) {
-                            // 门在正下方中间，初始生成坚果墙
-                            this.spawnPlant(rm.x + wc, rm.y + wr, 'wallnut');
+            const isInside = (r, c) => r>=0 && r<rm.h && c>=0 && c<rm.w && rm.tpl.grid[r][c] === 1;
+            for (let r = -1; r <= rm.h; r++) {
+                for (let c = -1; c <= rm.w; c++) {
+                    if (isInside(r, c)) continue;
+                    
+                    if (isInside(r-1, c) || isInside(r+1, c) || isInside(r, c-1) || isInside(r, c+1) ||
+                        isInside(r-1, c-1) || isInside(r-1, c+1) || isInside(r+1, c-1) || isInside(r+1, c+1)) {
+                        
+                        // 生成门
+                        if (r === rm.tpl.door.r && c === rm.tpl.door.c) {
+                            this.spawnPlant(rm.x + c, rm.y + r, 'wallnut');
+                            rm.doorCol = rm.x + c;
+                            rm.doorRow = rm.y + r;
                             continue;
                         }
                         
-                        const key = `${rm.x + wc},${rm.y + wr}`;
+                        const key = `${rm.x + c},${rm.y + r}`;
                         this.walls.add(key);
                         
                         const wall1 = document.createElement('div');
                         wall1.className = 'tile wall';
-                        wall1.style.left = ((rm.x + wc) * this.gridSize) + 'px';
-                        wall1.style.top = ((rm.y + wr) * this.gridSize) + 'px';
+                        wall1.style.left = ((rm.x + c) * this.gridSize) + 'px';
+                        wall1.style.top = ((rm.y + r) * this.gridSize) + 'px';
                         this.world1.appendChild(wall1);
-                        this.world2.appendChild(wall1.cloneNode(true));
                     }
                 }
             }
             
-            // 房间内自动生成阳光菇
-            const cx = rm.x + Math.floor(rm.w/2);
-            const cy = rm.y + Math.floor(rm.h/2) - 1;
-            this.spawnPlant(cx, cy, 'sunshroom');
+            // 生成床(阳光菇)
+            this.spawnPlant(rm.x + rm.tpl.bed.c, rm.y + rm.tpl.bed.r, 'sunshroom');
         }
     }
     
@@ -124,28 +152,40 @@ class HauntedDorm {
         const pTypes = {
             'sunshroom': { src: 'assets/images/Plants/SunShroom/0.gif', hp: 300 },
             'wallnut': { src: 'assets/images/Plants/WallNut/0.gif', hp: 4000 },
-            'puffshroom': { src: 'assets/images/Plants/PuffShroom/0.gif', hp: 300 }
+            'puffshroom': { src: 'assets/images/Plants/PuffShroom/0.gif', hp: 300 },
+            'peashooter': { src: 'assets/images/Plants/Peashooter/0.gif', hp: 300 },
+            'potatomine': { src: 'assets/images/Plants/PotatoMine/0.gif', hp: 300 }
         };
         
-        const pt = { r: row, c: col, type: type, hp: pTypes[type].hp };
+        const maxHp = pTypes[type].hp;
+        const pt = { r: row, c: col, type: type, hp: maxHp, maxHp: maxHp };
         
         const el1 = document.createElement('div');
         el1.className = 'tile';
         el1.style.left = (col * this.gridSize) + 'px';
         el1.style.top = (row * this.gridSize) + 'px';
-        el1.innerHTML = `<img src="${pTypes[type].src}" style="width:100%; height:100%; object-fit:contain; transform: scale(1.2) translateY(-10px);">`;
         
+        const img = `<img src="${pTypes[type].src}" style="width:100%; height:100%; object-fit:contain; transform: scale(1.2) translateY(-10px);">`;
+        
+        // 血条 (只要受伤就会显示)
+        const hpBar = `<div class="hp-bar-bg"><div class="hp-bar-fg" style="width:100%;"></div></div>`;
+        
+        el1.innerHTML = hpBar + img;
         this.world1.appendChild(el1);
-        const el2 = el1.cloneNode(true);
-        this.world2.appendChild(el2);
-        
         pt.el1 = el1;
-        pt.el2 = el2;
         this.plants.push(pt);
+        
+        if (type === 'sunshroom') {
+            const txt = document.createElement('div');
+            txt.className = 'float-text';
+            txt.innerText = '浇水 (空格)';
+            el1.appendChild(txt);
+            pt.txtEl = txt;
+        }
     }
     
     spawnZombie(x, y) {
-        const zb = { x, y, hp: 200, vx: 0, vy: 0 };
+        const zb = { x, y, hp: 300, vx: 0, vy: 0 };
         this.zombies.push(zb);
         
         const zEl1 = document.createElement('div');
@@ -153,32 +193,14 @@ class HauntedDorm {
         zEl1.innerHTML = `<img src="assets/images/Zombies/Zombie/Zombie.gif" style="width:150%; height:150%; transform:translate(-20%, -30%);">`;
         this.world1.appendChild(zEl1);
         zb.el1 = zEl1;
-        
-        const zEl2 = document.createElement('div');
-        zEl2.className = 'entity avatar';
-        zEl2.innerHTML = `<img src="assets/images/Zombies/Zombie/Zombie.gif" style="width:150%; height:150%; transform:translate(-20%, -30%);">`;
-        this.world2.appendChild(zEl2);
-        zb.el2 = zEl2;
     }
     
-    selectSeed(pid, type, cost, event) {
-        const p = this.players[pid - 1];
-        if (p.sun >= cost) {
-            p.selectedSeed = { type, cost };
-            document.querySelectorAll(`#hud-p${pid} .seeds img`).forEach(img => img.style.borderColor = '#000');
-            event.target.style.borderColor = '#0f0';
-        }
-    }
-    
-    tryPlanting(pid, mouseX, mouseY) {
-        const p = this.players[pid - 1];
-        if (!p.selectedSeed) return;
+    openPlantMenu(mouseX, mouseY) {
+        if (this.role === 'zombie') return;
         
-        const vp = pid === 1 ? this.vp1 : this.vp2;
-        const rect = vp.getBoundingClientRect();
-        
-        const worldX = mouseX - rect.left + (p.camX || 0);
-        const worldY = mouseY - rect.top + (p.camY || 0);
+        const rect = this.vp1.getBoundingClientRect();
+        const worldX = mouseX - rect.left + this.player.camX;
+        const worldY = mouseY - rect.top + this.player.camY;
         
         const col = Math.floor(worldX / this.gridSize);
         const row = Math.floor(worldY / this.gridSize);
@@ -187,25 +209,43 @@ class HauntedDorm {
         if (this.walls.has(`${col},${row}`)) return;
         if (this.plants.some(pl => pl.c === col && pl.r === row)) return;
         
-        p.sun -= p.selectedSeed.cost;
-        document.getElementById(`sun${pid}`).innerText = p.sun;
+        this.menuCol = col;
+        this.menuRow = row;
+        this.menuOpen = true;
         
-        this.spawnPlant(col, row, p.selectedSeed.type);
+        this.plantMenu.style.display = 'flex';
+        this.plantMenu.style.left = (mouseX + 20) + 'px';
+        this.plantMenu.style.top = (mouseY - 20) + 'px';
+    }
+    
+    doPlant(type, cost) {
+        this.plantMenu.style.display = 'none';
+        this.menuOpen = false;
         
-        p.selectedSeed = null;
-        document.querySelectorAll(`#hud-p${pid} .seeds img`).forEach(img => img.style.borderColor = '#000');
+        if (this.player.sun >= cost) {
+            this.player.sun -= cost;
+            document.getElementById('sun1').innerText = this.player.sun;
+            this.spawnPlant(this.menuCol, this.menuRow, type);
+        }
     }
     
     bindInput() {
         window.addEventListener('keydown', e => this.keys[e.key.toLowerCase()] = true);
         window.addEventListener('keyup', e => this.keys[e.key.toLowerCase()] = false);
         
-        this.vp1.addEventListener('mousedown', e => this.tryPlanting(1, e.clientX, e.clientY));
-        this.vp2.addEventListener('mousedown', e => this.tryPlanting(2, e.clientX, e.clientY));
+        this.vp1.addEventListener('mousedown', e => {
+            if (e.target.closest('#plant-menu')) return;
+            if (this.menuOpen) {
+                this.plantMenu.style.display = 'none';
+                this.menuOpen = false;
+                return;
+            }
+            this.openPlantMenu(e.clientX, e.clientY);
+        });
     }
     
     checkCollision(x, y) {
-        const r = 20;
+        const r = 25; 
         const corners = [
             { c: Math.floor((x-r)/this.gridSize), r: Math.floor((y-r)/this.gridSize) },
             { c: Math.floor((x+r)/this.gridSize), r: Math.floor((y-r)/this.gridSize) },
@@ -225,13 +265,11 @@ class HauntedDorm {
         const dt = Math.min((time - this.lastTime) / 1000, 0.1);
         this.lastTime = time;
         
-        // 10秒后生成僵尸
-        if (!this.zombiesSpawned && time - this.startTime > 10000) {
+        if (!this.zombiesSpawned && time - this.startTime > 20000) {
             this.zombiesSpawned = true;
             for(let z=0; z<3; z++) {
                 this.spawnZombie(this.worldWidth/2 + (Math.random()-0.5)*200, this.worldHeight/2 + (Math.random()-0.5)*200);
             }
-            // 简单的文字提示
             const msg = document.createElement('div');
             msg.style = "position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:red; font-size:40px; font-weight:bold; text-shadow:2px 2px 0 #000; z-index:9999;";
             msg.innerText = "猛鬼出笼！";
@@ -241,91 +279,102 @@ class HauntedDorm {
         
         const speed = 400;
         
-        const movePlayer = (p, vx, vy) => {
-            let nx = p.x + vx * dt;
-            let ny = p.y;
-            if (nx > 20 && nx < this.worldWidth - 20 && !this.checkCollision(nx, ny)) p.x = nx;
-            
-            nx = p.x;
-            ny = p.y + vy * dt;
-            if (ny > 30 && ny < this.worldHeight - 10 && !this.checkCollision(nx, ny)) p.y = ny;
-        };
-        
         let vx1 = 0, vy1 = 0;
-        if (this.keys['a']) vx1 -= speed;
-        if (this.keys['d']) vx1 += speed;
-        if (this.keys['w']) vy1 -= speed;
-        if (this.keys['s']) vy1 += speed;
-        movePlayer(this.players[0], vx1, vy1);
+        if (this.keys['a'] || this.keys['arrowleft']) vx1 -= speed;
+        if (this.keys['d'] || this.keys['arrowright']) vx1 += speed;
+        if (this.keys['w'] || this.keys['arrowup']) vy1 -= speed;
+        if (this.keys['s'] || this.keys['arrowdown']) vy1 += speed;
         
-        let vx2 = 0, vy2 = 0;
-        if (this.keys['arrowleft']) vx2 -= speed;
-        if (this.keys['arrowright']) vx2 += speed;
-        if (this.keys['arrowup']) vy2 -= speed;
-        if (this.keys['arrowdown']) vy2 += speed;
-        movePlayer(this.players[1], vx2, vy2);
+        let nx = this.player.x + vx1 * dt;
+        let ny = this.player.y;
+        if (nx > 20 && nx < this.worldWidth - 20 && !this.checkCollision(nx, ny)) this.player.x = nx;
+        
+        nx = this.player.x;
+        ny = this.player.y + vy1 * dt;
+        if (ny > 30 && ny < this.worldHeight - 10 && !this.checkCollision(nx, ny)) this.player.y = ny;
+        
+        // 浇水逻辑
+        let nearShroom = null;
+        for (const pl of this.plants) {
+            if (pl.type === 'sunshroom') {
+                pl.txtEl.style.opacity = 0;
+                const px = pl.c * this.gridSize + 40;
+                const py = pl.r * this.gridSize + 40;
+                if (Math.hypot(this.player.x - px, this.player.y - py) < 120) {
+                    nearShroom = pl;
+                }
+            }
+        }
+        if (nearShroom) {
+            nearShroom.txtEl.style.opacity = 1;
+            if (this.keys[' '] && time - this.lastWaterTime > 1000) {
+                this.lastWaterTime = time;
+                this.player.sun += 25;
+                document.getElementById('sun1').innerText = this.player.sun;
+                // 飘字特效
+                const fly = document.createElement('div');
+                fly.innerText = '+25';
+                fly.style = `position:absolute; color:yellow; font-weight:bold; font-size:24px; left:${nearShroom.c * this.gridSize + 40}px; top:${nearShroom.r * this.gridSize}px; transition:all 1s; pointer-events:none; z-index:500; text-shadow:1px 1px 2px #000;`;
+                this.world1.appendChild(fly);
+                setTimeout(() => { fly.style.top = (nearShroom.r * this.gridSize - 50) + 'px'; fly.style.opacity = 0; }, 50);
+                setTimeout(() => fly.remove(), 1050);
+            }
+        }
         
         // 僵尸AI (追踪最近玩家并攻击障碍)
         const zSpeed = 80;
         this.zombies.forEach(zb => {
-            // 找最近玩家
-            let target = this.players[0];
-            let dist = Math.hypot(target.x - zb.x, target.y - zb.y);
-            const dist2 = Math.hypot(this.players[1].x - zb.x, this.players[1].y - zb.y);
-            if (dist2 < dist) { target = this.players[1]; dist = dist2; }
+            // 首先判断玩家所在的房间
+            let targetX = this.player.x;
+            let targetY = this.player.y;
             
-            // 计算方向
-            let dx = target.x - zb.x;
-            let dy = target.y - zb.y;
+            // 简单寻路：判断是否与玩家隔着门
+            const hitPlant = this.getPlantAt(zb.x + (targetX-zb.x > 0 ? 30 : -30), zb.y + (targetY-zb.y > 0 ? 30 : -30));
+            
+            let dx = targetX - zb.x;
+            let dy = targetY - zb.y;
             let len = Math.hypot(dx, dy);
             
             if (len > 0) {
-                let nx = zb.x + (dx/len) * zSpeed * dt;
-                let ny = zb.y + (dy/len) * zSpeed * dt;
+                let nzx = zb.x + (dx/len) * zSpeed * dt;
+                let nzy = zb.y + (dy/len) * zSpeed * dt;
                 
-                // 检查是否撞到植物 (比如坚果墙)
-                const hitPlant = this.getPlantAt(nx, ny);
-                if (hitPlant) {
-                    // 攻击植物
-                    hitPlant.hp -= 20 * dt;
-                    if (hitPlant.hp <= 0) {
-                        hitPlant.el1.remove();
-                        hitPlant.el2.remove();
-                        this.plants = this.plants.filter(p => p !== hitPlant);
+                const atkPlant = this.getPlantAt(nzx, nzy);
+                if (atkPlant) {
+                    atkPlant.hp -= 30 * dt; // 攻击植物
+                    const bg = atkPlant.el1.querySelector('.hp-bar-bg');
+                    const fg = atkPlant.el1.querySelector('.hp-bar-fg');
+                    if (bg) {
+                        bg.style.display = 'block';
+                        fg.style.width = Math.max(0, (atkPlant.hp / atkPlant.maxHp) * 100) + '%';
+                    }
+                    if (atkPlant.hp <= 0) {
+                        atkPlant.el1.remove();
+                        this.plants = this.plants.filter(p => p !== atkPlant);
                     }
                 } else {
-                    // 滑动碰撞移动
-                    if (!this.checkCollision(nx, zb.y)) zb.x = nx;
-                    if (!this.checkCollision(zb.x, ny)) zb.y = ny;
+                    if (!this.checkCollision(nzx, zb.y)) zb.x = nzx;
+                    if (!this.checkCollision(zb.x, nzy)) zb.y = nzy;
                 }
                 
-                // 如果靠得太近，造成玩家伤害（简单闪烁效果，暂不计算死）
-                if (dist < 40) {
-                    target.el1.style.filter = "brightness(0) invert(1)";
-                    setTimeout(() => target.el1.style.filter = "drop-shadow(0 10px 5px rgba(0,0,0,0.5))", 100);
+                if (len < 40) {
+                    this.player.el1.style.filter = "brightness(0) invert(1)";
+                    setTimeout(() => this.player.el1.style.filter = "drop-shadow(0 10px 5px rgba(0,0,0,0.5))", 100);
                 }
             }
-            
             zb.el1.style.left = zb.x + 'px'; zb.el1.style.top = zb.y + 'px';
-            zb.el2.style.left = zb.x + 'px'; zb.el2.style.top = zb.y + 'px';
         });
         
-        this.players.forEach(p => {
-            p.el1.style.left = p.x + 'px'; p.el1.style.top = p.y + 'px';
-            p.el2.style.left = p.x + 'px'; p.el2.style.top = p.y + 'px';
-        });
+        this.player.el1.style.left = this.player.x + 'px'; 
+        this.player.el1.style.top = this.player.y + 'px';
         
         const vpw = this.vp1.clientWidth;
         const vph = this.vp1.clientHeight;
         
-        this.players.forEach((p, idx) => {
-            const cx = Math.max(0, Math.min(this.worldWidth - vpw, p.x - vpw / 2));
-            const cy = Math.max(0, Math.min(this.worldHeight - vph, p.y - vph / 2));
-            p.camX = cx; p.camY = cy;
-            
-            const world = idx === 0 ? this.world1 : this.world2;
-            world.style.transform = `translate(${-cx}px, ${-cy}px)`;
-        });
+        const cx = Math.max(0, Math.min(this.worldWidth - vpw, this.player.x - vpw / 2));
+        const cy = Math.max(0, Math.min(this.worldHeight - vph, this.player.y - vph / 2));
+        this.player.camX = cx; this.player.camY = cy;
+        this.world1.style.transform = `translate(${-cx}px, ${-cy}px)`;
         
         requestAnimationFrame(t => this.loop(t));
     }
