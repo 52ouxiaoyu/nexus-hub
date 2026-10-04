@@ -1,12 +1,12 @@
 // ===== 猛鬼宿舍（大地图模式）Haunted Dorm =====
-// v3.88.0 单猛鬼成长版：
-//   全场永远只有一只猛鬼：普通僵尸 → 路障 → 铁桶 → 橄榄球 → 铁门 → 冰车（最终形态），每 45s 按战力升一级
-//   打倒猛鬼 8s 后同级重生；击倒最终形态（冰车僵尸）= 胜利
-//   点击植物弹出「升级 / 拆除」面板：升级统一消耗 🦠孢子（蘑菇系产出，全场唯一货币），拆除直接移除
-//   豌豆坚果 / 射手坚果的子弹会跟踪猛鬼（260px 追踪区外失效变直线）
-//   墙面改成蓝色河道（房间四周环水），门口铺木桥 + 坚果门板（玩家可自由穿行，猛鬼要啃门）
-//   草地加棋盘格纹路；修复豌豆坚果/射手坚果裂图（Fusions 实际在 Plants/Fusions/ 下）
-// 保留：浇水+1阳光并催熟蘑菇、蘑菇喂大链、包子/孢子、小地图、音效、胜负结算。
+// v3.89.0 阳光经济重构版：
+//   彻底删除「包子」系统（用户从未要求过这个道具）：DEFS 产出字段 / E键投掷 / 拾取 / HUD 全部移除
+//   开局阳光 0——找到房间浇水才有第一笔收入；浇水 1 秒一次（按再快也没用，杜绝拼手速）
+//   喂大目标相应缩小 10 倍：40 / 80 / 160 次浇水
+//   升级收益看得见：弹窗显示血量/产阳光/弹数预览，升级成功飘字带血量变化
+//   门板血量改为图鉴血量 30% 折算——升级门板坚果血量跟着涨（原先固定 1200 不涨）
+//   坚果链逐级变大（scale 1.0→1.35）
+// 保留：单猛鬼六级成长（普通→路障→铁桶→橄榄球→铁门→冰车）、孢子、跟踪弹、河道木桥、棋盘草地。
 class HauntedDorm {
     // ===== 植物图鉴（配方唯一，绝不撞衫）=====
     static get DEFS() {
@@ -20,16 +20,16 @@ class HauntedDorm {
                              produce: { sun: 5, every: 7 },  up: { cost: 40, to: 'twinsunflower' } },
             twinsunflower: { name: '双子向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 450,  cost: 0,   scale: 1.2,
                              produce: { sun: 10, every: 7 } },
-            // —— 蘑菇系（浇水喂大，产阳光+包子+孢子）——
+            // —— 蘑菇系（浇水喂大，产孢子）——
             puffshroom:    { name: '小喷菇', img: 'Plants/PuffShroom/0.gif',     card: 'PuffShroom.png',     hp: 300, cost: 200, scale: 0.9,
-                             bao: { n: 1, every: 20 }, spore: { n: 1, every: 12 }, feed: { goal: 400, to: 'scaredyshroom' } },
+                             spore: { n: 1, every: 12 }, feed: { goal: 40, to: 'scaredyshroom' } },
             scaredyshroom: { name: '胆小菇', img: 'Plants/ScaredyShroom/0.gif',  card: 'ScaredyShroom.png',  hp: 400, cost: 0,   scale: 1.0,
-                             bao: { n: 2, every: 20 }, spore: { n: 2, every: 12 }, feed: { goal: 800, to: 'fumeshroom' } },
+                             spore: { n: 2, every: 12 }, feed: { goal: 80, to: 'fumeshroom' } },
             fumeshroom:    { name: '大喷菇', img: 'Plants/FumeShroom/0.gif',     card: 'FumeShroom.png',     hp: 500, cost: 0,   scale: 1.15,
-                             bao: { n: 2, every: 18 }, spore: { n: 3, every: 12 }, shoot: { dmg: 25, cd: 1.6, n: 1, range: 240, img: 'Plants/ShroomBullet.gif' },
-                             feed: { goal: 1600, to: 'gloomshroom' } },
+                             spore: { n: 3, every: 12 }, shoot: { dmg: 25, cd: 1.6, n: 1, range: 240, img: 'Plants/ShroomBullet.gif' },
+                             feed: { goal: 160, to: 'gloomshroom' } },
             gloomshroom:   { name: '忧郁菇', img: 'Plants/GloomShroom/0.gif',    card: 'GloomShroom.png',    hp: 600, cost: 0,   scale: 1.25,
-                             bao: { n: 4, every: 18 }, spore: { n: 4, every: 10 }, shoot: { dmg: 30, cd: 1.4, n: 3, range: 210, img: 'Plants/ShroomBullet.gif', fan: 0.5 } },
+                             spore: { n: 4, every: 10 }, shoot: { dmg: 30, cd: 1.4, n: 3, range: 210, img: 'Plants/ShroomBullet.gif', fan: 0.5 } },
             // —— 豌豆系（攻击，分支三选一，配方唯一）——
             peashooter:    { name: '豌豆射手', img: 'Plants/Peashooter/0.gif',   card: 'Peashooter.png',  hp: 300, cost: 100,
                              shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, up: { cost: 20, to: 'repeater' } },
@@ -45,18 +45,18 @@ class HauntedDorm {
                              shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif', back: true }, up: { cost: 50, to: 'threepeater' } },
             threepeater:   { name: '三线射手', img: 'Plants/Threepeater/0.gif',  card: 'Threepeater.png', hp: 450, cost: 0,   scale: 1.15,
                              shoot: { dmg: 20, cd: 1.5, n: 3, range: 320, img: 'Plants/PB00.gif', fan: 0.35 } },
-            // —— 坚果系（肉盾→攻防一体；豌豆坚果线子弹跟踪）——
+            // —— 坚果系（肉盾→攻防一体；升级血量逐级上涨 + 体型逐级变大；豌豆坚果线子弹跟踪）——
             wallnut:       { name: '坚果',       img: 'Plants/WallNut/0.gif',       card: 'WallNut.png',     hp: 4000,  cost: 50,
                              up: { cost: 10, to: 'nutshooter' } },
-            nutshooter:    { name: '豌豆坚果',   img: 'Plants/Fusions/nutshooter.png', card: 'WallNut.png',  hp: 5000,  cost: 0, blend: true,
+            nutshooter:    { name: '豌豆坚果',   img: 'Plants/Fusions/nutshooter.png', card: 'WallNut.png',  hp: 5000,  cost: 0, scale: 1.05, blend: true,
                              shoot: { dmg: 20, cd: 1.6, n: 1, range: 320, img: 'Plants/PB00.gif', homing: true }, up: { cost: 25, to: 'nutgunner' } },
-            nutgunner:     { name: '射手坚果',   img: 'Plants/Fusions/nutshooter.png', card: 'WallNut.png',  hp: 6500,  cost: 0, tint: 'saturate(1.4) brightness(1.12)', blend: true,
+            nutgunner:     { name: '射手坚果',   img: 'Plants/Fusions/nutshooter.png', card: 'WallNut.png',  hp: 6500,  cost: 0, scale: 1.1, tint: 'saturate(1.4) brightness(1.12)', blend: true,
                              shoot: { dmg: 20, cd: 1.3, n: 2, range: 320, img: 'Plants/PB00.gif', homing: true }, up: { cost: 40, to: 'cabbagenut' } },
-            cabbagenut:    { name: '卷心菜坚果', img: 'Plants/WallNut/0.gif',       card: 'CabbagePult.png', hp: 8000,  cost: 0, hat: 'Plants/CabbagePult/Cabbage.png',
+            cabbagenut:    { name: '卷心菜坚果', img: 'Plants/WallNut/0.gif',       card: 'CabbagePult.png', hp: 8000,  cost: 0, scale: 1.15, hat: 'Plants/CabbagePult/Cabbage.png',
                              lob: { dmg: 45, cd: 2.2, range: 420, aoe: 70, img: 'Plants/CabbagePult/Cabbage.png' }, up: { cost: 60, to: 'tallnut' } },
-            tallnut:       { name: '高坚果',     img: 'Plants/TallNut/0.gif',       card: 'TallNut.png',     hp: 10000, cost: 0,
+            tallnut:       { name: '高坚果',     img: 'Plants/TallNut/0.gif',       card: 'TallNut.png',     hp: 10000, cost: 0, scale: 1.25,
                              up: { cost: 100, to: 'pumpkin' } },
-            pumpkin:       { name: '南瓜壳',     img: 'Plants/PumpkinHead/0.gif',   card: 'PumpkinHead.png', hp: 15000, cost: 0 },
+            pumpkin:       { name: '南瓜壳',     img: 'Plants/PumpkinHead/0.gif',   card: 'PumpkinHead.png', hp: 15000, cost: 0, scale: 1.35 },
             // —— 特殊 ——
             potatomine:    { name: '土豆雷', img: 'Plants/PotatoMine/0.gif', card: 'PotatoMine.png', hp: 300, cost: 25, mine: true },
             spikeweed:     { name: '地刺',   img: 'Plants/Spikeweed/0.gif',  card: 'Spikeweed.png',  hp: 99999, cost: 50, sporeCost: 50, ground: true,
@@ -100,7 +100,7 @@ class HauntedDorm {
         this.role = urlParams.get('role') || 'plant';
 
         this.player = {
-            x: cx, y: cy, sun: 50, spore: 0, bao: 0, hp: 100, maxHp: 100,
+            x: cx, y: cy, sun: 0, spore: 0, hp: 100, maxHp: 100,
             icon: this.role === 'zombie' ? 'assets/images/Zombies/Zombie/0.gif' : 'assets/images/Plants/Peashooter/0.gif',
             camX: 0, camY: 0
         };
@@ -111,7 +111,6 @@ class HauntedDorm {
         this.zombies = [];   // 永远最多 1 只（单猛鬼体系）
         this.peas = [];      // 各类弹道
         this.suns = [];      // 猛鬼掉落的阳光袋
-        this.baos = [];      // 地上的包子
 
         // ===== 单猛鬼导演系统 =====
         this.ghostSpawned = false;
@@ -125,7 +124,6 @@ class HauntedDorm {
         this.lastFlashAt = 0;
 
         this.lastWaterTime = 0;
-        this.lastBaoTime = 0;
         this.menuOpen = false;
         this.menuCol = -1;
         this.menuRow = -1;
@@ -195,10 +193,13 @@ class HauntedDorm {
                 return;
             }
             const to = pl.def.up.to;
+            const nd = HauntedDorm.DEFS[to];
+            const fac = pl.isDoor ? 0.3 : 1;
             this._closePopup();
             this.addSpore(-cost);
             this.playSfx('readysetplant.mp3', 0.5);
-            this._flyText(pl.c * 80 + 40, pl.r * 80, `${pl.def.name} → ${HauntedDorm.DEFS[to].name}！`, '#9dff6b');
+            this._flyText(pl.c * 80 + 40, pl.r * 80,
+                `${pl.def.name} → ${nd.name}！（血量 ${Math.round(pl.def.hp * fac)}→${Math.round(nd.hp * fac)}）`, '#9dff6b');
             this._evolve(pl, to);
         };
     }
@@ -317,10 +318,11 @@ class HauntedDorm {
         const def = defs[type];
         if (!def) return;
 
-        // 门板坚果血量单独调低（猛鬼约 30s 啃穿，不至于卡死门口两分钟）
-        const maxHp = isDoor ? 1200 : def.hp;
+        // 门板血量按图鉴血量的 30% 折算（v3.89.0：跟随升级成长——原先是固定 1200，升级坚果后门板血量不涨，
+        // 玩家看不出升级收益；现在墙坚果门板 1200，豌豆坚果门板 1500……逐级变硬）
+        const maxHp = isDoor ? Math.round(def.hp * 0.3) : def.hp;
         const pl = { r: row, c: col, type: type, def: def, hp: maxHp, maxHp: maxHp, isDoor: isDoor,
-                     shootCd: 1.5, prodT: 0, baoT: 0, sporeT: 0, fed: 0, freezeT: 0 };
+                     shootCd: 1.5, prodT: 0, sporeT: 0, fed: 0, freezeT: 0 };
 
         const el1 = document.createElement('div');
         el1.className = 'tile';
@@ -381,6 +383,20 @@ class HauntedDorm {
         if (def.feed) {
             this.ppFeed.style.display = 'block';
             this.ppFeed.innerText = `浇水 ${Math.min(pl.fed, def.feed.goal)}/${def.feed.goal}（站旁边按空格）`;
+        } else if (def.up) {
+            // v3.89.0：升级收益预览——血量/产阳光/弹数的具体提升，让升级看得见好处
+            const nd = HauntedDorm.DEFS[def.up.to];
+            const fac = pl.isDoor ? 0.3 : 1;
+            const bits = [];
+            if (nd.hp > def.hp) bits.push(`血量 ${Math.round(def.hp * fac)}→${Math.round(nd.hp * fac)}`);
+            if (nd.produce) bits.push(`产阳光 ${nd.produce.sun}/每${nd.produce.every}秒`);
+            if (nd.shoot && nd.shoot.homing && !(def.shoot && def.shoot.homing)) bits.push('子弹跟踪');
+            if (nd.shoot && def.shoot && nd.shoot.n > def.shoot.n) bits.push(`${def.shoot.n}连发→${nd.shoot.n}连发`);
+            if (nd.shoot && !def.shoot) bits.push('会喷射攻击');
+            if (nd.lob) bits.push('投掷爆炸卷心菜');
+            if (nd.shoot && nd.shoot.slow && !(def.shoot && def.shoot.slow)) bits.push('子弹减速');
+            this.ppFeed.style.display = 'block';
+            this.ppFeed.innerText = bits.length ? bits.join('，') : '全面强化';
         } else {
             this.ppFeed.style.display = 'none';
         }
@@ -526,18 +542,15 @@ class HauntedDorm {
         this.player.spore = Math.max(0, this.player.spore + n);
         const el = document.getElementById('spore1');
         if (el) el.innerText = this.player.spore;
-    }
-
-    addBao(n) {
-        this.player.bao = Math.max(0, this.player.bao + n);
-        const el = document.getElementById('bao1');
-        if (el) el.innerText = this.player.bao;
+        // v3.89.0：弹窗开着时孢子变动 → 实时刷新升级按钮的置灰状态（原先只在打开瞬间判断一次）
+        if (this.popup && this.popup.style.display === 'block' && this.popupPlant && this.popupPlant.def.up) {
+            this.ppUp.classList.toggle('pp-disabled', this.player.spore < this.popupPlant.def.up.cost);
+        }
     }
 
     _refreshHud() {
         document.getElementById('sun1').innerText = this.player.sun;
         document.getElementById('spore1').innerText = this.player.spore;
-        document.getElementById('bao1').innerText = this.player.bao;
     }
 
     setHp() {
@@ -629,7 +642,6 @@ class HauntedDorm {
     bindInput() {
         window.addEventListener('keydown', e => {
             this.keys[e.key.toLowerCase()] = true;
-            if (e.key.toLowerCase() === 'e') this.throwBao();
         });
         window.addEventListener('keyup', e => this.keys[e.key.toLowerCase()] = false);
 
@@ -671,34 +683,6 @@ class HauntedDorm {
             }
         }
         this._flyText(this.player.x, this.player.y - 20, fedAny ? '+1 ☀·浇水' : '+1 ☀', '#ffe14a');
-    }
-
-    // ===== 包子：按 E 扔向猛鬼（35 伤 + 眩晕 1.5s）=====
-    throwBao() {
-        if (this.over || this.role === 'zombie') return;
-        const now = performance.now();
-        if (now - this.lastBaoTime < 500) return;
-        if (this.player.bao <= 0) { this._flyText(this.player.x, this.player.y - 20, '没有包子', '#ff8a8a'); return; }
-        let best = null, bestD = 520;
-        for (const zb of this.zombies) {
-            if (zb.dead) continue;
-            const d = Math.hypot(zb.x - this.player.x, zb.y - this.player.y);
-            if (d < bestD) { bestD = d; best = zb; }
-        }
-        this.lastBaoTime = now;
-        if (!best) { this._flyText(this.player.x, this.player.y - 20, '附近没有猛鬼', '#ff8a8a'); return; }
-        this.addBao(-1);
-        best.hp -= 35;
-        best.stunT = Math.max(best.stunT, 1.5);
-        best.el1.querySelector('img').style.filter = 'grayscale(0.5) brightness(1.4)';
-        setTimeout(() => { if (best.el1) best.el1.querySelector('img').style.filter = ''; }, 1200);
-        if (best.hpBg) {
-            best.hpBg.style.display = 'block';
-            best.hpFg.style.width = Math.max(0, best.hp / best.maxHp * 100) + '%';
-        }
-        this._flyText(best.x, best.y, '🥟 砸中！', '#ffd54a');
-        this.playSfx('bowlingimpact2.mp3', 0.45);
-        if (best.hp <= 0) this._killZombie(best);
     }
 
     checkCollision(x, y) {
@@ -880,7 +864,7 @@ class HauntedDorm {
         });
     }
 
-    // ===== 植物产出：阳光 / 包子 / 孢子 =====
+    // ===== 植物产出：阳光 / 孢子 =====
     _updateProduce(dt) {
         for (const pl of this.plants) {
             const def = pl.def;
@@ -893,23 +877,6 @@ class HauntedDorm {
                     this.playSfx('points.mp3', 0.25);
                 }
             }
-            if (def.bao) {
-                pl.baoT += dt;
-                if (pl.baoT >= def.bao.every) {
-                    pl.baoT = 0;
-                    for (let i = 0; i < def.bao.n; i++) {
-                        const el = document.createElement('div');
-                        el.className = 'entity';
-                        el.style.cssText = 'width:40px;height:40px;z-index:80;font-size:34px;text-align:center;line-height:40px;text-shadow:0 2px 3px #000;';
-                        el.innerText = '🥟';
-                        const bx = pl.c * 80 + 40 + (Math.random() - 0.5) * 50;
-                        const by = pl.r * 80 + 40 + (Math.random() - 0.5) * 50;
-                        el.style.left = bx + 'px'; el.style.top = by + 'px';
-                        this.world1.appendChild(el);
-                        this.baos.push({ x: bx, y: by, el });
-                    }
-                }
-            }
             if (def.spore) {
                 pl.sporeT += dt;
                 if (pl.sporeT >= def.spore.every) {
@@ -919,19 +886,6 @@ class HauntedDorm {
                 }
             }
         }
-    }
-
-    _updateBaos() {
-        this.baos = this.baos.filter(b => {
-            if (Math.hypot(b.x - this.player.x, b.y - this.player.y) < 55) {
-                b.el.remove();
-                this.addBao(1);
-                this._flyText(b.x, b.y, '🥟 +1', '#ffd54a');
-                this.playSfx('points.mp3', 0.3);
-                return false;
-            }
-            return true;
-        });
     }
 
     // ===== 高级植物（孢子系）=====
@@ -1034,7 +988,7 @@ class HauntedDorm {
         for (const rm of this.rooms) {
             ctx.strokeRect(rm.x * this.gridSize * sx, rm.y * this.gridSize * sy, rm.w * this.gridSize * sx, rm.h * this.gridSize * sy);
         }
-        // 阳光袋 / 包子
+        // 阳光袋
         ctx.fillStyle = '#ffe14a';
         for (const s of this.suns) ctx.fillRect(s.x * sx - 1.5, s.y * sy - 1.5, 3, 3);
         // 猛鬼
@@ -1072,8 +1026,8 @@ class HauntedDorm {
         ny = this.player.y + vy1 * dt;
         if (ny > 30 && ny < this.worldHeight - 10 && !this.checkCollision(nx, ny)) this.player.y = ny;
 
-        // 浇水（按住空格连浇，每 0.15s 一次）：+1 阳光 / 催熟身边蘑菇
-        if (this.keys[' '] && time - this.lastWaterTime > 150) {
+        // 浇水（v3.89.0：1 秒才能浇一次——按再快也只按时间间隔计，杜绝拼手速；+1 阳光 / 催熟身边蘑菇）
+        if (this.keys[' '] && time - this.lastWaterTime > 1000) {
             this.lastWaterTime = time;
             this._water();
         }
@@ -1088,7 +1042,6 @@ class HauntedDorm {
         this._updateShooting(dt);
         this._updatePeas(dt);
         this._updateSuns();
-        this._updateBaos();
         this._updateProduce(dt);
         this._updateSpike(dt);
         this._updateIceshroom(dt);
@@ -1103,7 +1056,7 @@ class HauntedDorm {
         for (const zb of [...this.zombies]) {
             if (zb.dead) continue;
 
-            // 眩晕（包子/眩晕菇）：停住不动、不咬人
+            // 眩晕（眩晕菇）：停住不动、不咬人
             if (zb.stunT > 0) {
                 zb.stunT -= dt;
                 zb.el1.style.left = zb.x + 'px'; zb.el1.style.top = zb.y + 'px';

@@ -110,11 +110,10 @@
         <!-- 全局 UI -->
         <div id="ui-layer">
             <div id="hud-p1" class="player-hud">
-                <div style="color:#4da6ff; margin-bottom: 4px;">移动: WASD | 浇水: 空格(+1☀·催熟蘑菇) | 点击植物: 升级/拆除 | E: 扔包子</div>
+                <div style="color:#4da6ff; margin-bottom: 4px;">移动: WASD | 浇水: 空格(+1☀·1秒1次·催熟蘑菇) | 点击植物: 升级/拆除</div>
                 <div style="display:flex; gap:18px; align-items:center;">
-                    <span>阳光: <span id="sun1" class="sun-text">50</span></span>
+                    <span>阳光: <span id="sun1" class="sun-text">0</span></span>
                     <span>孢子: <span id="spore1" class="sun-text" style="color:#c79aff;">0</span></span>
-                    <span>包子: <span id="bao1" class="sun-text" style="color:#ffd54a;">0</span></span>
                 </div>
                 <div id="hp-row">
                     <span class="hp-label">HP</span>
@@ -147,24 +146,22 @@
                 <div style="max-width:640px; max-height:82vh; overflow:auto; background:rgba(30,16,8,0.96); border:3px solid #8c6a4d; border-radius:14px; padding:24px 30px; color:#f5e6c8; font-family:'Kaiti SC',serif; font-size:15px; line-height:1.9;">
                     <div style="text-align:center; font-size:26px; letter-spacing:4px; margin-bottom:12px;">👻 猛鬼宿舍 · 玩法说明</div>
                     <b style="color:#ffe14a;">基础操作</b><br>
-                    · WASD 移动 · <b>空格浇水</b>：每次 +1 阳光，按住连浇；站在蘑菇旁边浇水可以<b>同时催熟</b>阳光菇和小喷菇<br>
-                    · 点击空地 = 种植菜单；<b>点击植物 = 弹出「升级 / 拆除」面板</b>，升级统一消耗 <b style="color:#c79aff;">🦠孢子</b>（蘑菇系产出），拆除直接移除植物<br>
-                    · <b>E 键扔包子</b>：砸向猛鬼，造成伤害并眩晕 1.5 秒<br><br>
+                    · WASD 移动 · <b>空格浇水</b>：每次 +1 阳光，<b>1 秒才能浇一次</b>（按得再快也没用）——开局 0 阳光，找到房间开始浇水才有收入；站在蘑菇旁边浇水可以<b>同时催熟</b>小喷菇<br>
+                    · 点击空地 = 种植菜单；<b>点击植物 = 弹出「升级 / 拆除」面板</b>，面板上会写出升级收益（血量/产出），升级统一消耗 <b style="color:#c79aff;">🦠孢子</b>（蘑菇系产出），拆除直接移除植物<br><br>
                     <b style="color:#ffe14a;">成长配方（唯一，不撞衫）</b><br>
                     · 阳光菇 <span style="color:#9dff6b;">→(🦠5)→ 大阳光菇 →(🦠15)→ 向日葵 →(🦠40)→ 双子向日葵</span>，逐级变大、产阳光更多<br>
-                    · 小喷菇(☀200 购买) 靠浇水喂大：<span style="color:#9dff6b;">浇水 400 → 胆小菇(产出×2) → 浇水 800 → 大喷菇(会喷射) → 浇水 1600 → 忧郁菇(强范围喷射)</span><br>
-                    · 坚果 <span style="color:#9dff6b;">→(🦠10)→ 豌豆坚果(子弹跟踪) →(🦠25)→ 射手坚果(跟踪·双发) →(🦠40)→ 卷心菜坚果(投掷) →(🦠60)→ 高坚果 →(🦠100)→ 南瓜壳</span><br>
+                    · 小喷菇(☀200 购买) 靠浇水喂大：<span style="color:#9dff6b;">浇水 40 → 胆小菇(产孢子×2) → 浇水 80 → 大喷菇(会喷射) → 浇水 160 → 忧郁菇(强范围喷射)</span><br>
+                    · 坚果 <span style="color:#9dff6b;">→(🦠10)→ 豌豆坚果(子弹跟踪·血量5000) →(🦠25)→ 射手坚果(跟踪·双发·血量6500) →(🦠40)→ 卷心菜坚果(投掷·血量8000) →(🦠60)→ 高坚果(血量10000) →(🦠100)→ 南瓜壳(血量15000)</span>，逐级变大变硬<br>
                     · 豌豆射手三选一分支：<span style="color:#9dff6b;">双发射手→(🦠60)→机枪射手</span> / <span style="color:#9dff6b;">寒冰射手→(🦠40)→冰雪双发(减速)</span> / <span style="color:#9dff6b;">双向射手→(🦠50)→三线射手(扇形)</span><br>
                     · <b>跟踪弹规则</b>：豌豆坚果线的子弹在 <b>260px 内自动追踪猛鬼</b>，超出追踪区就变直线飞<br><br>
                     <b style="color:#c79aff;">🦠 孢子高级植物</b>（蘑菇系随时间产出孢子）<br>
                     · <b>地刺(🦠50)</b>：贴地陷阱，猛鬼站上持续掉血，不会被啃<br>
                     · <b>眩晕菇(🦠100)</b>：每 6 秒冰冻猛鬼 2 秒<br>
                     · <b>毁灭菇(🦠200)</b>：超高攻击——猛鬼靠近即核爆（一次性）<br><br>
-                    <b style="color:#ffd54a;">🥟 包子</b>：小喷菇系定期产出，走近拾取，按 E 投掷（伤害+眩晕）<br><br>
                     <b style="color:#ff8a8a;">👻 猛鬼规则</b>：全场<b>只有一只猛鬼</b>，开局 20 秒出笼，每 45 秒升级：<br>
                     <span style="color:#ff9e9e;">普通僵尸 → 路障 → 铁桶 → 橄榄球 → 铁门 → 冰车（最终形态）</span><br>
                     · 打倒猛鬼 8 秒后同级重生（升级不会停）；<b>击倒最终形态冰车僵尸 = 胜利</b>；HP 归零 = 失败<br>
-                    · 房间四周是<b>河道</b>，门口搭着<b>木桥 + 坚果门板</b>：你可以自由过桥，猛鬼得把门板啃穿（门板 1200 血）
+                    · 房间四周是<b>河道</b>，门口搭着<b>木桥 + 坚果门板</b>：你可以自由过桥，猛鬼得把门板啃穿（门板血量随坚果升级一起变硬）
                     <div style="text-align:center; margin-top:16px;"><button class="back-btn" style="position:static;" onclick="document.getElementById('dorm-help').style.display='none'">知道了</button></div>
                 </div>
             </div>
@@ -187,6 +184,6 @@
         </div>
     </div>
 
-    <script src="js/HauntedDorm.js?v=1791180000"></script>
+    <script src="js/HauntedDorm.js?v=1791103639"></script>
 </body>
 </html>
