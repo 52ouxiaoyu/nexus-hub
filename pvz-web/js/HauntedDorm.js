@@ -51,9 +51,12 @@ class HauntedDorm {
             // —— 坚果系（肉盾→攻防一体；升级耗普通阳光☀、血量逐级上涨 + 体型逐级变大；豌豆坚果线子弹跟踪）——
             wallnut:       { name: '坚果',       img: 'Plants/WallNut/0.gif',       card: 'WallNut.png',     hp: 4000,  cost: 50,
                              up: { cost: 40, cur: 'sun', to: 'nutshooter' } },
-            nutshooter:    { name: '豌豆坚果',   img: 'Plants/Fusions/nutshooter.png', card: 'WallNut.png',  hp: 5000,  cost: 0, scale: 1.05, blend: true,
+            nutshooter:    { name: '豌豆坚果',   img: 'Plants/WallNut/0.gif',       card: 'WallNut.png',  hp: 5000,  cost: 0, scale: 1.05,
+                             // v3.92.1：弃用自创拼接图，复刻主游戏融合「坚果射手」——原版坚果身体 + 头顶缩小的原版豌豆射手
+                             overlay: 'Plants/Peashooter/0.gif',
                              shoot: { dmg: 20, cd: 1.6, n: 1, range: 320, img: 'Plants/PB00.gif', homing: true }, up: { cost: 100, cur: 'sun', to: 'nutgunner' } },
-            nutgunner:     { name: '射手坚果',   img: 'Plants/Fusions/nutshooter.png', card: 'WallNut.png',  hp: 6500,  cost: 0, scale: 1.1, tint: 'saturate(1.4) brightness(1.12)', blend: true,
+            nutgunner:     { name: '射手坚果',   img: 'Plants/WallNut/0.gif',       card: 'WallNut.png',  hp: 6500,  cost: 0, scale: 1.1, tint: 'saturate(1.4) brightness(1.12)',
+                             overlay: 'Plants/Peashooter/0.gif',
                              shoot: { dmg: 20, cd: 1.3, n: 2, range: 320, img: 'Plants/PB00.gif', homing: true }, up: { cost: 160, cur: 'sun', to: 'cabbagenut' } },
             cabbagenut:    { name: '卷心菜坚果', img: 'Plants/WallNut/0.gif',       card: 'CabbagePult.png', hp: 8000,  cost: 0, scale: 1.15, hat: 'Plants/CabbagePult/Cabbage.png',
                              lob: { dmg: 45, cd: 2.2, range: 420, aoe: 70, img: 'Plants/CabbagePult/Cabbage.png' }, up: { cost: 260, cur: 'sun', to: 'tallnut' } },
@@ -349,6 +352,11 @@ class HauntedDorm {
         // blend：白底融合素材（Fusions 系列）用 multiply 吃掉白底，避免草地上出现白色方块
         const blend = def.blend ? 'mix-blend-mode:multiply;' : '';
         let inner = `<img src="assets/images/${def.img}" style="width:100%; height:100%; object-fit:contain; transform: scale(${1.2 * scale}) translateY(-10px); ${tint}${doorOpacity}${blend}">`;
+        // v3.92.1：overlay——原版素材组装（主游戏融合同款）：第二张贴图居中叠放，上移缩小
+        // 定位对齐主游戏 fusion_nutshooter（Plant.js: translate(2px,-28px) scale(0.6)，此处按 80px 格换算）
+        if (def.overlay) {
+            inner += `<img src="assets/images/${def.overlay}" style="position:absolute; left:50%; top:50%; width:100%; height:100%; object-fit:contain; pointer-events:none; transform: translate(-50%, -50%) translate(2px, -26px) scale(0.6);">`;
+        }
         if (def.hat) {
             inner += `<img src="assets/images/${def.hat}" style="position:absolute; left:22%; top:-34%; width:56%; pointer-events:none;">`;
         }
