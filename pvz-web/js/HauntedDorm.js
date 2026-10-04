@@ -446,6 +446,10 @@ class HauntedDorm {
             this.world1.appendChild(wall1);
         }
 
+        // 修复：清除在生成门和床时被错误赋予给玩家的房间归属
+        this.player.room = null;
+        for (const rm of this.rooms) rm.owner = null;
+
         // v3.93.0 安排 5 个人机，所有人都出生在地图正中央，然后走向各自房间
         let shuffledRooms = [...this.rooms].sort(() => Math.random() - 0.5);
         // 分配给人机的皮肤（不包含玩家当前选的那个，保证 1+5 刚好凑齐 6 个但不全部重复）
@@ -705,18 +709,14 @@ class HauntedDorm {
                         if (ai.sun >= c && ai.spore >= sc) {
                             // 【人机战力控制】检查目标等级，防止人机开挂秒杀僵尸
                             // 获取目标植物的 tier。如果不带 tier，默认当做 1。
-                            const targetTier = HauntedDorm.DEFS[p.def.up.to].tier || 1;
-                            const zLv = this.ghostLevel || 1;
-                            // 规则：人机的最高植物等级不能超过 僵尸等级 + 2 
-                            // （给玩家发挥空间，人机陪跑但不抢戏）
-                            if (targetTier <= zLv + 2) {
-                                // 优先升门，其次阳光菇
-                                let weight = p.def.isDoor ? 3 : (p.def.produce ? 2 : 1);
-                                // 如果快破门了，强制升门补血
-                                if (p.def.isDoor && p.hp < p.def.hp * 0.4) weight += 10;
-                                actions.push({ type: 'up', pl: p, cost: c, sporeCost: sc, to: p.def.up.to, weight: weight });
-                            }
+                            // 移除原有的僵尸等级锁，让人机可以自由发挥，火力全开
+                            let weight = p.def.isDoor ? 3 : (p.def.produce ? 2 : 1);
+                            if (p.def.isDoor && p.hp < p.maxHp * 0.6) weight += 20; // 门血量低时极高优先级升级补血
+                            actions.push({ type: 'up', pl: p, cost: c, sporeCost: sc, to: p.def.up.to, weight: weight });
                         }
+                    } else if (p.def.isDoor && p.hp < p.maxHp * 0.9 && ai.sun >= 20) {
+                        // 增加“修门”逻辑：如果无法升级或无需升级，花20阳光修500血
+                        actions.push({ type: 'repair', pl: p, cost: 20, weight: 15 });
                     }
                 }
                 
@@ -734,16 +734,24 @@ class HauntedDorm {
                 }
                 
                 if (emptyTiles.length > 0) {
-                    // 随机打乱空地
-                    emptyTiles.sort(() => Math.random() - 0.5);
+                    // 智能阵型规划：离门近的种武器，离门远的种阳光菇
+                    const doorC = rm.doorCol, doorR = rm.doorRow;
+                    emptyTiles.sort((a, b) => Math.hypot(a.c - doorC, a.r - doorR) - Math.hypot(b.c - doorC, b.r - doorR));
+                    const frontTile = emptyTiles[0]; // 最靠近门
+                    const backTile = emptyTiles[emptyTiles.length - 1]; // 最远离门
+                    
                     const peaCost = HauntedDorm.DEFS['peashooter'].cost || 0;
-                    if (ai.sun >= peaCost && peas.length < 5) {
-                        actions.push({ type: 'plant', id: 'peashooter', cost: peaCost, c: emptyTiles[0].c, r: emptyTiles[0].r, weight: 1 });
+                    if (ai.sun >= peaCost && peas.length < 6) {
+                        actions.push({ type: 'plant', id: 'peashooter', cost: peaCost, c: frontTile.c, r: frontTile.r, weight: 1 });
                     }
-                    // 孢子植物上限 4 个
                     const puffs = myPlants.filter(p => p.def.spore);
                     if (puffs.length < 4) {
-                        actions.push({ type: 'plant', id: 'puffshroom', cost: 0, c: emptyTiles[0].c, r: emptyTiles[0].r, weight: 2 });
+                        actions.push({ type: 'plant', id: 'puffshroom', cost: 0, c: frontTile.c, r: frontTile.r, weight: 2 });
+                    }
+                    // 补种阳光菇
+                    const sunCost = HauntedDorm.DEFS['sunshroom'].cost || 0;
+                    if (ai.sun >= sunCost) {
+                        actions.push({ type: 'plant', id: 'sunshroom', cost: sunCost, c: backTile.c, r: backTile.r, weight: 1.5 });
                     }
                 }
 
@@ -766,6 +774,10 @@ class HauntedDorm {
                         ai.sun -= chosen.cost;
                         this.spawnPlant(chosen.c, chosen.r, chosen.id);
                         this._flyText(chosen.c * 80 + 40, chosen.r * 80, `AI 种植！`, '#bfa8e0');
+                    } else if (chosen.type === 'repair') {
+                        ai.sun -= chosen.cost;
+                        chosen.pl.hp = Math.min(chosen.pl.maxHp, chosen.pl.hp + 800);
+                        this._flyText(chosen.pl.c * 80 + 40, chosen.pl.r * 80, "AI 修补！", "#0f0");
                     }
                 }
             }
