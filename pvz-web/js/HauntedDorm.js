@@ -1521,7 +1521,7 @@ class HauntedDorm {
 
         // 浇水（v3.89.0：1 秒才能浇一次——按再快也只按时间间隔计，杜绝拼手速；+1 阳光 / 催熟身边蘑菇）
         // 浇水（v3.92.0：空格开关式——按一下持续浇水不用按住，0.2 秒一次；+1 阳光 / 催熟身边蘑菇）
-        if (this.waterOn && !this.over && time - this.lastWaterTime > 200) {
+        if (this.waterOn && !this.over && time - this.lastWaterTime > 1000) {
             this.lastWaterTime = time;
             this._water();
         }
@@ -1562,13 +1562,23 @@ class HauntedDorm {
             if (zb.slowT > 0) zb.slowT -= dt;
             const spd = zb.speed * (zb.slowT > 0 ? 0.5 : 1);
 
-            // 找最近目标（玩家 + AI）
+            // 找综合仇恨值最高的目标（距离、门血量、门等级综合判断）
             let closestTarget = null;
-            let minDist = Infinity;
+            let minScore = Infinity;
             for (const p of this.allPlayers) {
-                if (p.hp <= 0) continue;
-                const d = Math.hypot(p.x - zb.x, p.y - zb.y);
-                if (d < minDist) { minDist = d; closestTarget = p; }
+                if (p.hp <= 0 || p.dead) continue;
+                let score = Math.hypot(p.x - zb.x, p.y - zb.y);
+                const rm = p.room || this.rooms.find(r => p.x >= r.x*80 && p.x <= (r.x+r.w)*80 && p.y >= r.y*80 && p.y <= (r.y+r.h)*80);
+                if (rm) {
+                    const doorPlant = this.getPlantAt(rm.doorCol * 80, rm.doorRow * 80);
+                    if (doorPlant) {
+                        score += (doorPlant.hp * 0.05); // 门血越厚，越不想打
+                        score += (doorPlant.def.tier || 1) * 300; // 门等级越高，越不想打
+                    } else {
+                        score -= 1000; // 门破了！优先干他！
+                    }
+                }
+                if (score < minScore) { minScore = score; closestTarget = p; }
             }
             if (!closestTarget) closestTarget = this.player;
 
@@ -1602,27 +1612,30 @@ class HauntedDorm {
                 targetX = this.worldWidth / 2;
                 targetY = this.worldHeight / 2;
                 if (Math.hypot(targetX - zb.x, targetY - zb.y) < 120) {
-                    zb.hp = Math.min(zb.maxHp, zb.hp + zb.maxHp * 0.1 * dt);
+                    zb.hp = Math.min(zb.maxHp, zb.hp + zb.maxHp * 0.15 * dt);
                     if (zb.hpBg) {
                         zb.hpBg.style.display = 'block';
                         zb.hpFg.style.width = (zb.hp / zb.maxHp * 100) + '%';
                     }
                     zb.el1.style.filter = 'drop-shadow(0 0 10px #0f0)';
                 } else {
-                    zb.el1.style.filter = '';
+                    zb.el1.style.filter = 'drop-shadow(0 0 10px #00f)';
                 }
+                zb.el1.style.opacity = '0.5'; // 灵体化
             } else {
                 zb.el1.style.filter = '';
+                zb.el1.style.opacity = '1';
             }
 
             let dx = targetX - zb.x;
             let dy = targetY - zb.y;
             
             // 防卡墙：如果一直撞墙没有位移，切换目标或者大范围绕行
-            if (zb.stuckTime > 3) {
-                // 如果卡了太久，强制瞬移一点点或者往反方向走
-                dx = (Math.random() - 0.5) * 100;
-                dy = (Math.random() - 0.5) * 100;
+            if (zb.stuckTime > 2) {
+                // 如果卡了，不再纯随机，而是尝试正交方向的绕墙滑行，并加上一点微扰
+                let ox = dx, oy = dy;
+                dx = -oy + (Math.random()-0.5)*10; 
+                dy = ox + (Math.random()-0.5)*10;
                 zb.stuckTime -= dt;
             }
 
@@ -1659,6 +1672,9 @@ class HauntedDorm {
                             bg.style.display = 'block';
                             fg.style.width = Math.max(0, (atkPlant.hp / atkPlant.maxHp) * 100) + '%';
                         }
+                        // 受击抖动反馈
+                        atkPlant.el1.style.transform = `translate(${(Math.random()-0.5)*10}px, ${(Math.random()-0.5)*10}px)`;
+                        setTimeout(() => { if(atkPlant && atkPlant.el1) atkPlant.el1.style.transform = 'none'; }, 100);
                         if (atkPlant.hp <= 0) {
                             atkPlant.el1.remove();
                             if (atkPlant.txtEl) atkPlant.txtEl.remove();
@@ -1668,8 +1684,9 @@ class HauntedDorm {
                     }
                     moved = false; // 啃食时不挪窝
                 } else {
-                    const bx = !this.checkCollision(nzx, zb.y);
-                    const by = !this.checkCollision(zb.x, nzy);
+                    // 穿墙逻辑：撤退回血时变为虚影，直接穿墙，防止卡死
+                    const bx = zb.retreating ? true : !this.checkCollision(nzx, zb.y);
+                    const by = zb.retreating ? true : !this.checkCollision(zb.x, nzy);
                     if (bx) { zb.x = nzx; moved = true; }
                     if (by) { zb.y = nzy; moved = true; }
                     if (!moved) {
