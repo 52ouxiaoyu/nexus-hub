@@ -465,11 +465,12 @@ class HauntedDorm {
                 y: (this.worldHeight / 2) + (Math.random() * 40 - 20),
                 targetX: (rm.x + rm.tpl.bed.c) * this.gridSize + 40,
                 targetY: (rm.y + rm.tpl.bed.r) * this.gridSize + 40,
-                sun: 50, hp: 100, maxHp: 100,
+                sun: 50, spore: 0, hp: 100, maxHp: 100,
                 isAi: true, room: rm, roleDef: roleDef,
-                icon: roleDef.icon,
+                icon: roleDef.icon, dead: false,
                 el1: document.createElement('div')
             };
+            rm.owner = ai; // AI 预占领房间
             ai.el1.className = 'entity avatar';
             ai.el1.innerHTML = `<img src="${ai.icon}">`;
             this.world1.appendChild(ai.el1);
@@ -481,6 +482,11 @@ class HauntedDorm {
 
     spawnPlant(col, row, type, isDoor = false) {
         if (this.plants.some(pl => pl.c === col && pl.r === row)) return;
+        const rm = this._insideRoom(col, row);
+        if (rm && !rm.owner && !this.player.room) {
+            rm.owner = this.player;
+            this.player.room = rm; // 玩家占领该房间
+        }
 
         const defs = HauntedDorm.DEFS;
         const def = defs[type];
@@ -661,6 +667,98 @@ class HauntedDorm {
         document.body.appendChild(msg);
         setTimeout(() => msg.remove(), 2600);
         if (sfx) this.playSfx(sfx, 0.55);
+    }
+
+    _updateAIs(dt) {
+        this.aiTick = (this.aiTick || 0) + dt;
+        if (this.aiTick > 1.5) { // 每 1.5 秒做一次决策
+            this.aiTick = 0;
+            for (const ai of this.ais) {
+                if (ai.dead) continue;
+                if (Math.hypot(ai.x - ai.targetX, ai.y - ai.targetY) > 10) continue; // 还在赶路
+                
+                const rm = ai.room;
+                if (!rm) continue;
+
+                const myPlants = this.plants.filter(p => p.c >= rm.x && p.c < rm.x + rm.w && p.r >= rm.y && p.r < rm.y + rm.h);
+                const shrooms = myPlants.filter(p => p.def.produce && p.def.produce.sun);
+                const door = myPlants.find(p => p.def.isDoor);
+                const peas = myPlants.filter(p => p.def.shoot && !p.def.isDoor);
+
+                // Priority 1: Plant a Sunshroom if none
+                if (shrooms.length === 0) {
+                    const cost = HauntedDorm.DEFS['sunshroom'].cost || 0;
+                    if (ai.sun >= cost) {
+                        ai.sun -= cost;
+                        this.spawnPlant(rm.x + rm.tpl.bed.c, rm.y + rm.tpl.bed.r, 'sunshroom');
+                    }
+                    continue; // 一次只做一个动作
+                }
+
+                // 收集可行操作
+                let actions = [];
+                
+                // 1. 尝试升级已有的植物 (门、阳光菇、豌豆)
+                for (const p of myPlants) {
+                    if (p.def.up) {
+                        const c = p.def.up.cost || 0, sc = p.def.up.sporeCost || 0;
+                        if (ai.sun >= c && ai.spore >= sc) {
+                            // 优先升门，其次阳光菇
+                            let weight = p.def.isDoor ? 3 : (p.def.produce ? 2 : 1);
+                            // 如果快破门了，强制升门补血
+                            if (p.def.isDoor && p.hp < p.def.hp * 0.4) weight += 10;
+                            actions.push({ type: 'up', pl: p, cost: c, sporeCost: sc, to: p.def.up.to, weight: weight });
+                        }
+                    }
+                }
+                
+                // 2. 尝试种豌豆或小喷菇
+                const emptyTiles = [];
+                for(let r = rm.y + 1; r < rm.y + rm.h - 1; r++) {
+                    for(let c = rm.x + 1; c < rm.x + rm.w - 1; c++) {
+                        if (!myPlants.some(p => p.c === c && p.r === r)) {
+                            emptyTiles.push({c, r});
+                        }
+                    }
+                }
+                
+                if (emptyTiles.length > 0) {
+                    // 随机打乱空地
+                    emptyTiles.sort(() => Math.random() - 0.5);
+                    const peaCost = HauntedDorm.DEFS['peashooter'].cost || 0;
+                    if (ai.sun >= peaCost && peas.length < 5) {
+                        actions.push({ type: 'plant', id: 'peashooter', cost: peaCost, c: emptyTiles[0].c, r: emptyTiles[0].r, weight: 1 });
+                    }
+                    // 小喷菇产孢子 (上限 2 个)
+                    const puffs = myPlants.filter(p => p.def.spore);
+                    if (puffs.length < 2) {
+                        actions.push({ type: 'plant', id: 'puffshroom', cost: 0, c: emptyTiles[0].c, r: emptyTiles[0].r, weight: 2 });
+                    }
+                }
+
+                // 随机轮盘选择执行
+                if (actions.length > 0) {
+                    const totalW = actions.reduce((sum, a) => sum + a.weight, 0);
+                    let r = Math.random() * totalW;
+                    let chosen = actions[actions.length - 1];
+                    for (const a of actions) {
+                        r -= a.weight;
+                        if (r <= 0) { chosen = a; break; }
+                    }
+                    
+                    if (chosen.type === 'up') {
+                        ai.sun -= chosen.cost;
+                        ai.spore -= chosen.sporeCost;
+                        this._evolve(chosen.pl, chosen.to);
+                        this._flyText(chosen.pl.c * 80 + 40, chosen.pl.r * 80, `AI 升级！`, '#bfa8e0');
+                    } else if (chosen.type === 'plant') {
+                        ai.sun -= chosen.cost;
+                        this.spawnPlant(chosen.c, chosen.r, chosen.id);
+                        this._flyText(chosen.c * 80 + 40, chosen.r * 80, `AI 种植！`, '#bfa8e0');
+                    }
+                }
+            }
+        }
     }
 
     _updateGhostDirector(time) {
@@ -1167,26 +1265,37 @@ class HauntedDorm {
     // v3.90.0：阳光菇只在玩家 300px 内才产——否则全场每间房的床铺菇同时产出（约 2.5 ☀/秒），
     // 收入远超浇水的 1 秒 1 阳光，用户反馈"阳光涨得太快，并不是一秒一个"
     _updateProduce(dt) {
-        const px = this.player.x, py = this.player.y;
         for (const pl of this.plants) {
+            const rm = this._insideRoom(pl.c, pl.r);
+            const owner = rm ? rm.owner : null;
+            if (!owner || owner.dead) continue;
+            
             const def = pl.def;
+            const wx = pl.c * 80 + 40, wy = pl.r * 80 + 40;
+            // 只有站得近才产出（AI 永远在房间里所以始终满足，玩家必须在房间附近）
+            if (Math.hypot(wx - owner.x, wy - owner.y) > 300) continue;
+
             if (def.produce) {
-                const wx = pl.c * 80 + 40, wy = pl.r * 80 + 40;
-                if (Math.hypot(wx - px, wy - py) > 300) continue; // 人不在旁边不产
                 pl.prodT += dt;
                 if (pl.prodT >= def.produce.every) {
                     pl.prodT = 0;
-                    this.addSun(def.produce.sun);
-                    this._flyText(pl.c * 80 + 40, pl.r * 80, `+${def.produce.sun} ☀`, 'yellow');
-                    this.playSfx('points.mp3', 0.25);
+                    owner.sun = (owner.sun || 0) + def.produce.sun;
+                    if (owner === this.player) {
+                        this.addSun(def.produce.sun); // 顺便更新UI
+                        this._flyText(wx, pl.r * 80, `+${def.produce.sun} ☀`, 'yellow');
+                        this.playSfx('points.mp3', 0.25);
+                    }
                 }
             }
             if (def.spore) {
                 pl.sporeT += dt;
                 if (pl.sporeT >= def.spore.every) {
                     pl.sporeT = 0;
-                    this.addSpore(def.spore.n);
-                    this._flyText(pl.c * 80 + 40, pl.r * 80 + 10, `+${def.spore.n} 🦠`, '#c79aff');
+                    owner.spore = (owner.spore || 0) + def.spore.n;
+                    if (owner === this.player) {
+                        this.addSpore(def.spore.n);
+                        this._flyText(wx, pl.r * 80 + 10, `+${def.spore.n} 🦠`, '#c79aff');
+                    }
                 }
             }
         }
@@ -1312,6 +1421,7 @@ class HauntedDorm {
 
         // 单僵尸导演：出笼 → 定时升级 → 打倒重生
         this._updateGhostDirector(time);
+        this._updateAIs(dt);
         if (Math.floor(time / 500) !== Math.floor((time - dt * 1000) / 500)) this._updateGhostChip(); // 0.5s 刷一次信息牌
 
         if (this.player.sunBuffT > 0) this.player.sunBuffT -= dt;
