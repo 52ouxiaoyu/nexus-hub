@@ -93,8 +93,8 @@ class HauntedDorm {
     static get GHOST_MAX_LV() { return HauntedDorm.GHOST_LEVELS.length; }
 
     constructor() {
-        this.cols = 40;
-        this.rows = 30;
+        this.cols = 60;
+        this.rows = 45;
         this.gridSize = 80;
         this.worldWidth = this.cols * this.gridSize;
         this.worldHeight = this.rows * this.gridSize;
@@ -115,7 +115,9 @@ class HauntedDorm {
         this.walls = new Set();
         this.plants = [];
         this.zombies = [];   // 永远最多 1 只（单僵尸体系）
-        this.peas = [];      // 各类弹道
+        this.peas = [];
+        this.ais = [];
+        this.allPlayers = [this.player];
         this.suns = [];      // 僵尸掉落的阳光袋
 
         // ===== 单僵尸导演系统 =====
@@ -239,23 +241,35 @@ class HauntedDorm {
 
         this.rooms = [];
 
-        // 房间形状模板 (1=地面)
+        // 房间形状模板 (1=地面) - 尺寸翻倍
         const templates = [
-            { // 4x4 矩形
-                grid: [[1,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1]],
-                door: {r: 4, c: 2}, bed: {r: 1, c: 2}
+            { // 8x8 矩形
+                grid: [
+                    [1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],
+                    [1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1]
+                ],
+                door: {r: 8, c: 4}, bed: {r: 2, c: 4}
             },
-            { // L型
-                grid: [[1,1,0,0],[1,1,0,0],[1,1,1,1],[1,1,1,1]],
-                door: {r: 4, c: 1}, bed: {r: 1, c: 0}
+            { // L型 10x10
+                grid: [
+                    [1,1,1,1,0,0,0,0],[1,1,1,1,0,0,0,0],[1,1,1,1,0,0,0,0],[1,1,1,1,0,0,0,0],
+                    [1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1]
+                ],
+                door: {r: 8, c: 2}, bed: {r: 2, c: 1}
             },
-            { // 凹型
-                grid: [[1,1,0,1,1],[1,1,0,1,1],[1,1,1,1,1],[1,1,1,1,1]],
-                door: {r: 4, c: 2}, bed: {r: 2, c: 2}
+            { // 凹型 10x8
+                grid: [
+                    [1,1,1,0,0,1,1,1],[1,1,1,0,0,1,1,1],[1,1,1,0,0,1,1,1],
+                    [1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1]
+                ],
+                door: {r: 6, c: 4}, bed: {r: 4, c: 4}
             },
-            { // 长条型
-                grid: [[1,1,1],[1,1,1],[1,1,1],[1,1,1],[1,1,1]],
-                door: {r: 5, c: 1}, bed: {r: 1, c: 1}
+            { // 长条型 6x12
+                grid: [
+                    [1,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1],
+                    [1,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1]
+                ],
+                door: {r: 10, c: 2}, bed: {r: 2, c: 2}
             }
         ];
 
@@ -322,9 +336,32 @@ class HauntedDorm {
                 }
             }
 
+
             // 生成床(阳光菇)
             this.spawnPlant(rm.x + rm.tpl.bed.c, rm.y + rm.tpl.bed.r, 'sunshroom');
         }
+
+        // v3.93.0 安排 6 个人机
+        let shuffledRooms = [...this.rooms].sort(() => Math.random() - 0.5);
+        for (let i = 0; i < 6; i++) {
+            if (i >= shuffledRooms.length) break;
+            const rm = shuffledRooms[i];
+            const ai = {
+                x: (rm.x + rm.tpl.bed.c) * this.gridSize + 40,
+                y: (rm.y + rm.tpl.bed.r) * this.gridSize + 40,
+                sun: 50, hp: 100, maxHp: 100,
+                isAi: true, room: rm,
+                icon: 'assets/images/interface/Dave.gif',
+                el1: document.createElement('div')
+            };
+            ai.el1.className = 'entity avatar';
+            ai.el1.innerHTML = `<img src="${ai.icon}">`;
+            ai.el1.style.filter = `hue-rotate(${Math.random()*360}deg)`;
+            this.world1.appendChild(ai.el1);
+            this.ais.push(ai);
+            this.allPlayers.push(ai);
+        }
+
     }
 
     spawnPlant(col, row, type, isDoor = false) {
@@ -1088,6 +1125,16 @@ class HauntedDorm {
         ny = this.player.y + vy1 * dt;
         if (ny > 30 && ny < this.worldHeight - 10 && !this.checkCollision(nx, ny)) this.player.y = ny;
 
+        // 防卡墙自救
+        if (this.checkCollision(this.player.x, this.player.y)) {
+            // 被卡在墙内了，尝试推出去
+            const r = 20;
+            if (!this.checkCollision(this.player.x + r, this.player.y)) this.player.x += r;
+            else if (!this.checkCollision(this.player.x - r, this.player.y)) this.player.x -= r;
+            else if (!this.checkCollision(this.player.x, this.player.y + r)) this.player.y += r;
+            else if (!this.checkCollision(this.player.x, this.player.y - r)) this.player.y -= r;
+        }
+
         // 浇水（v3.89.0：1 秒才能浇一次——按再快也只按时间间隔计，杜绝拼手速；+1 阳光 / 催熟身边蘑菇）
         // 浇水（v3.92.0：空格开关式——按一下持续浇水不用按住，0.2 秒一次；+1 阳光 / 催熟身边蘑菇）
         if (this.waterOn && !this.over && time - this.lastWaterTime > 200) {
@@ -1131,10 +1178,49 @@ class HauntedDorm {
             if (zb.slowT > 0) zb.slowT -= dt;
             const spd = zb.speed * (zb.slowT > 0 ? 0.5 : 1);
 
-            const targetX = this.player.x;
-            const targetY = this.player.y;
+            // 找最近目标（玩家 + AI）
+            let closestTarget = null;
+            let minDist = Infinity;
+            for (const p of this.allPlayers) {
+                if (p.hp <= 0) continue;
+                const d = Math.hypot(p.x - zb.x, p.y - zb.y);
+                if (d < minDist) { minDist = d; closestTarget = p; }
+            }
+            if (!closestTarget) closestTarget = this.player;
+
+            // 如果目标在房间里，优先攻击门的坐标
+            let targetX = closestTarget.x;
+            let targetY = closestTarget.y;
+            
+            // 简单判断目标是否在某个房间附近，且门存活
+            for (const rm of this.rooms) {
+                const doorC = rm.doorCol, doorR = rm.doorRow;
+                // 判断房间范围
+                const rxMin = rm.x * this.gridSize, rxMax = (rm.x + rm.w) * this.gridSize;
+                const ryMin = rm.y * this.gridSize, ryMax = (rm.y + rm.h) * this.gridSize;
+                if (closestTarget.x >= rxMin && closestTarget.x <= rxMax && closestTarget.y >= ryMin && closestTarget.y <= ryMax) {
+                    // 目标在房间内，检查门是否存在
+                    const doorPlant = this.getPlantAt(doorC * this.gridSize, doorR * this.gridSize);
+                    if (doorPlant) {
+                        targetX = doorC * this.gridSize + 40;
+                        targetY = doorR * this.gridSize + 40;
+                        // 为了避免贴着墙死磕，如果僵尸被墙卡死，它会尝试切换攻击对象（在下面detour逻辑里）
+                    }
+                    break;
+                }
+            }
+
             let dx = targetX - zb.x;
             let dy = targetY - zb.y;
+            
+            // 防卡墙：如果一直撞墙没有位移，切换目标或者大范围绕行
+            if (zb.stuckTime > 3) {
+                // 如果卡了太久，强制瞬移一点点或者往反方向走
+                dx = (Math.random() - 0.5) * 100;
+                dy = (Math.random() - 0.5) * 100;
+                zb.stuckTime -= dt;
+            }
+
             const len = Math.hypot(dx, dy);
 
             if (len > 1) {
@@ -1189,9 +1275,12 @@ class HauntedDorm {
                 }
             }
 
-            // 接触玩家 → 持续掉血（判定在移动块之外，len=0 也生效）
-            if (len < 48) {
-                playerHurt += touchDps * dt;
+            // 接触目标 → 持续掉血
+            for (const p of this.allPlayers) {
+                if (Math.hypot(p.x - zb.x, p.y - zb.y) < 48) {
+                    if (p === this.player) playerHurt += touchDps * dt;
+                    else p.hp -= touchDps * dt;
+                }
             }
             zb.el1.style.left = zb.x + 'px'; zb.el1.style.top = zb.y + 'px';
         }

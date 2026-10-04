@@ -22,8 +22,9 @@
         .tile.wall {
             background-image: repeating-linear-gradient(105deg, rgba(255,255,255,0.13) 0 8px, rgba(255,255,255,0) 8px 26px),
                               linear-gradient(180deg, #4a90c9 0%, #2e6da8 100%);
-            border: 2px solid #1f4f80; border-radius: 8px;
-            box-shadow: inset 0 4px 8px rgba(255,255,255,0.25), inset 0 -5px 10px rgba(6,35,80,0.45);
+            border: none; border-radius: 40px;
+            transform: scale(1.2);
+            box-shadow: none;
         }
         .tile.wall::after { content: ''; position: absolute; left: 10%; right: 10%; top: 32%; height: 14%;
             border-radius: 50%; background: rgba(255,255,255,0.3); filter: blur(1px); }
