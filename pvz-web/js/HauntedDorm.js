@@ -719,10 +719,13 @@ class HauntedDorm {
                 
                 // 2. 尝试种豌豆或小喷菇
                 const emptyTiles = [];
-                for(let r = rm.y + 1; r < rm.y + rm.h - 1; r++) {
-                    for(let c = rm.x + 1; c < rm.x + rm.w - 1; c++) {
-                        if (!myPlants.some(p => p.c === c && p.r === r)) {
-                            emptyTiles.push({c, r});
+                for(let r = rm.y; r < rm.y + rm.h; r++) {
+                    for(let c = rm.x; c < rm.x + rm.w; c++) {
+                        // 确保只种在房间有效的地板区域内
+                        if (rm.tpl.grid[r - rm.y][c - rm.x] === 1) {
+                            if (!myPlants.some(p => p.c === c && p.r === r)) {
+                                emptyTiles.push({c, r});
+                            }
                         }
                     }
                 }
@@ -892,6 +895,19 @@ class HauntedDorm {
         document.getElementById('ov-time').innerText = `${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}`;
         document.getElementById('ov-kills').innerText = this.kills;
         document.getElementById('ov-waves').innerText = this.ghostLevel;
+        
+        let mvp = this.player;
+        let maxScore = this.player.sun + this.player.spore * 100;
+        for (const ai of this.ais) {
+            const score = ai.sun + ai.spore * 100;
+            if (score > maxScore) { maxScore = score; mvp = ai; }
+        }
+        const mvpEl = document.getElementById('ov-mvp');
+        if (mvpEl) {
+            mvpEl.innerText = mvp === this.player ? '你' : `人机-${mvp.roleDef.name}`;
+            mvpEl.style.color = mvp === this.player ? '#00ff00' : mvp.color;
+        }
+
         document.getElementById('dorm-over').style.display = 'flex';
     }
 
@@ -1395,28 +1411,55 @@ class HauntedDorm {
 
     _updateMinimap() {
         const ctx = this.minimap;
-        const W = 176, H = 132;
+        const W = 320, H = 240; // 扩大版小地图
         const sx = W / this.worldWidth, sy = H / this.worldHeight;
         ctx.clearRect(0, 0, W, H);
-        ctx.fillStyle = 'rgba(8,25,45,0.55)';
+        ctx.fillStyle = 'rgba(8,25,45,0.75)';
         ctx.fillRect(0, 0, W, H);
         // 房间外框（河道蓝）
         ctx.strokeStyle = 'rgba(90,160,220,0.9)';
         ctx.lineWidth = 1.5;
         for (const rm of this.rooms) {
             ctx.strokeRect(rm.x * this.gridSize * sx, rm.y * this.gridSize * sy, rm.w * this.gridSize * sx, rm.h * this.gridSize * sy);
+            // 画个床位示意
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            ctx.fillRect((rm.x + rm.tpl.bed.c) * this.gridSize * sx, (rm.y + rm.tpl.bed.r) * this.gridSize * sy, this.gridSize * sx, this.gridSize * sy);
         }
         // 阳光袋
         ctx.fillStyle = '#ffe14a';
         for (const s of this.suns) ctx.fillRect(s.x * sx - 1.5, s.y * sy - 1.5, 3, 3);
         // 僵尸
         ctx.fillStyle = '#ff5252';
-        for (const zb of this.zombies) ctx.fillRect(zb.x * sx - 2, zb.y * sy - 2, 4, 4);
-        // 玩家
-        ctx.fillStyle = '#4da6ff';
-        ctx.beginPath();
-        ctx.arc(this.player.x * sx, this.player.y * sy, 3.5, 0, Math.PI * 2);
-        ctx.fill();
+        for (const zb of this.zombies) ctx.fillRect(zb.x * sx - 3, zb.y * sy - 3, 6, 6);
+        
+        // 玩家与人机
+        for (const p of this.allPlayers) {
+            const isMe = p === this.player;
+            // 颜色分配：你是绿色，人机取他们的颜色
+            let color = isMe ? '#00ff00' : p.color;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(p.x * sx, p.y * sy, isMe ? 6 : 5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 名字
+            ctx.fillStyle = 'white';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'center';
+            if (p.dead) {
+                ctx.fillStyle = '#888';
+                ctx.fillText(isMe ? '你(阵亡)' : p.roleDef.name, p.x * sx, p.y * sy - 8);
+                // 红色斜杠
+                ctx.strokeStyle = 'red';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(p.x * sx - 6, p.y * sy - 6);
+                ctx.lineTo(p.x * sx + 6, p.y * sy + 6);
+                ctx.stroke();
+            } else {
+                ctx.fillText(isMe ? '你' : p.roleDef.name, p.x * sx, p.y * sy - 8);
+            }
+        }
     }
 
     loop(time) {
@@ -1640,20 +1683,34 @@ class HauntedDorm {
 
             // 接触目标 → 持续掉血
             for (const p of this.allPlayers) {
+                if (p.dead) continue;
                 if (Math.hypot(p.x - zb.x, p.y - zb.y) < 48) {
                     if (p === this.player) playerHurt += touchDps * dt;
-                    else p.hp -= touchDps * dt;
+                    else {
+                        p.hp -= touchDps * dt;
+                        if (p.hp <= 0 && !p.dead) {
+                            p.dead = true;
+                            p.el1.classList.add('dead-slash');
+                            p.el1.style.filter = 'grayscale(1) ' + (p.color ? `drop-shadow(0 0 10px ${p.color})` : '');
+                        }
+                    }
                 }
             }
             zb.el1.style.left = zb.x + 'px'; zb.el1.style.top = zb.y + 'px';
         }
         this.zombies = this.zombies.filter(z => !z.dead || z.el1.parentNode); // 清理已完成动画的死尸
 
-        if (playerHurt > 0) {
+        if (playerHurt > 0 && !this.player.dead) {
             this.player.hp -= playerHurt;
             this.setHp();
             this.flashDamage();
-            if (this.player.hp <= 0) { this.gameOver(false); return; }
+            if (this.player.hp <= 0) { 
+                this.player.dead = true;
+                this.player.el1.classList.add('dead-slash');
+                this.player.el1.style.filter = 'grayscale(1) drop-shadow(0 0 10px #00ff00)';
+                this.gameOver(false); 
+                return; 
+            }
         }
 
         this.player.el1.style.left = this.player.x + 'px';

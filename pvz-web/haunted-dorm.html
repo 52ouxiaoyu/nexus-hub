@@ -50,6 +50,13 @@
         .hp-bar-bg { position: absolute; top: -10px; left: 0; width: 100%; height: 8px; background: rgba(0,0,0,0.5); border: 1px solid #000; border-radius: 4px; z-index: 10; display: none; }
         .hp-bar-fg { position: absolute; top: 0; left: 0; height: 100%; background: #0f0; border-radius: 3px; }
 
+        
+        /* 红斜杠（阵亡） */
+        .dead-slash::after {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to top right, transparent 45%, red 45%, red 55%, transparent 55%);
+            z-index: 1000; pointer-events: none;
+        }
         /* UI 层 */
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1000; }
         .player-hud { position: absolute; top: 20px; padding: 12px 20px; background: rgba(0,0,0,0.8); color: white; border: 3px solid #4da6ff; border-radius: 12px; font-size: 18px; text-shadow: 2px 2px 0 #000; left: 20px; pointer-events: auto; }
@@ -137,7 +144,7 @@
 
             <div id="wave-chip">👻 准备中…</div>
 
-            <canvas id="minimap" width="176" height="132"></canvas>
+            <canvas id="minimap" width="320" height="240"></canvas>
             <button class="back-btn" style="top:180px;" onclick="location.href='index.html'">返回主菜单</button>
             <button class="back-btn" style="top:216px;" onclick="document.getElementById('dorm-help').style.display='flex'">玩法说明</button>
 
@@ -189,6 +196,7 @@
                 <div class="ov-stat">坚持时间<b id="ov-time">0:00</b></div>
                 <div class="ov-stat">击杀僵尸<b id="ov-kills">0</b></div>
                 <div class="ov-stat">僵尸等级<b id="ov-waves">0</b></div>
+                <div class="ov-stat">本局MVP<b id="ov-mvp">你</b></div>
             </div>
             <div class="ov-btns">
                 <button class="ov-btn" id="ov-retry" onclick="location.reload()">再来一局</button>
