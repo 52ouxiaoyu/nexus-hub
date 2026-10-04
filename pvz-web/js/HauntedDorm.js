@@ -457,8 +457,8 @@ class HauntedDorm {
             const rm = shuffledRooms[i];
             const roleDef = this.playerRoles[i]; // 5个人机刚好一人分一个固定皮肤，涵盖全部5种
             const ai = {
-                x: cx + (Math.random() * 40 - 20),
-                y: cy + (Math.random() * 40 - 20),
+                x: (this.worldWidth / 2) + (Math.random() * 40 - 20),
+                y: (this.worldHeight / 2) + (Math.random() * 40 - 20),
                 targetX: (rm.x + rm.tpl.bed.c) * this.gridSize + 40,
                 targetY: (rm.y + rm.tpl.bed.r) * this.gridSize + 40,
                 sun: 50, hp: 100, maxHp: 100,
