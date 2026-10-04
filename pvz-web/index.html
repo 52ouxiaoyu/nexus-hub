@@ -108,53 +108,37 @@
             /* ===== v3.81.1 双人对战：第五张模式卡（与四卡同款种子包样式）=====
                宽 = 砸罐子卡 + 间距 + 我是僵尸卡（208+18+208=434px）；
                高 = 第一行卡片下方的剩余空间（flex:1 撑满）；矮宽卡用左图右文横排
-               v3.81.3：位置改到「砸罐子+我是僵尸」两列正下方——#vs-row 与卡片行同宽(886px)居中，
-               内部 justify-content:flex-end → 对战卡右缘=我是僵尸卡右缘 */
+               v3.81.3：位置改到「砸罐子+我是僵尸」两列正下方——#vs-row 与卡片行同宽(886px)居中
+               v3.86.0：#vs-row 一行两张宽卡（双人对战 + 猛鬼宿舍），两端对齐与其他卡行同宽对齐 */
             #vs-row {
                 position: relative; z-index: 2;
-                display: flex; justify-content: flex-end; align-items: stretch; gap: 18px;
+                display: flex; justify-content: space-between; align-items: stretch; gap: 18px;
                 width: 886px; max-width: 100%;
                 flex: 1 1 0; min-height: 0;
             }
-            #btn-dorm {
-                position: absolute;
-                left: 18px; bottom: 85px; /* Above the back button */
-                width: 208px; height: 110px;
-                z-index: 5;
-                padding: 10px 16px;
-                display: flex; flex-direction: column; align-items: center; justify-content: center;
-                background: linear-gradient(180deg, rgba(30,10,10,0.85) 0%, rgba(10,5,5,0.95) 100%);
-                border: 2px solid #5c3b1d; border-radius: 12px;
-                cursor: pointer; transition: all 0.2s cubic-bezier(0.2,0.8,0.2,1);
-            }
-            #btn-dorm:hover {
-                transform: translateY(-4px) scale(1.02);
-                border-color: #f7e6a1; box-shadow: 0 8px 16px rgba(0,0,0,0.6), inset 0 0 20px rgba(200,50,50,0.3);
-            }
-            #btn-dorm .pkt-art { width: 100%; display: flex; justify-content: center; height: 56px; margin-bottom: 4px; }
-            #btn-dorm .pkt-art img { height: 56px; width: auto; image-rendering: pixelated; }
-            #btn-dorm .pkt-name { font-size: 22px; letter-spacing: 3px; margin-top: 0; color: #ff5555; text-shadow: 2px 2px 0 #000; font-family: 'Kaiti SC', serif; }
-            #btn-dorm .pkt-tag { font-size: 11px; margin-top: 2px; letter-spacing: 2px; padding: 1px 6px; background: #660000; color: #fff; border-radius: 4px; }
-            #btn-dorm .pkt-sub { font-size: 11px; margin-top: 4px; line-height: 1.4; text-align: center; color: #ddd; }
-            #btn-vs {
+            /* v3.86.0：猛鬼宿舍宽卡与双人对战完全同款（同尺寸/同横排布局），仅配色不同 */
+            #btn-vs, #btn-dorm {
                 width: 434px; flex: 0 0 434px; height: auto; min-height: 110px;
                 margin-top: 0px; margin-bottom: 14px;
                 position: relative; z-index: 3;
                 padding: 10px 16px;
                 flex-direction: row; align-items: center; gap: 16px;
             }
-            #btn-vs .pkt-art { flex: 0 0 158px; width: 158px; height: auto; align-self: stretch; }
-            #btn-vs .pkt-art img { height: 56px; }
-            #btn-vs .vs-duel { display: flex; align-items: center; gap: 8px; }
+            #btn-vs .pkt-art, #btn-dorm .pkt-art { flex: 0 0 158px; width: 158px; height: auto; align-self: stretch; }
+            #btn-vs .pkt-art img, #btn-dorm .pkt-art img { height: 56px; }
+            #btn-vs .vs-duel, #btn-dorm .vs-duel { display: flex; align-items: center; gap: 8px; }
             #btn-vs .vs-badge {
                 font-family: Impact, 'Arial Black', sans-serif; font-size: 24px; font-weight: 900;
                 color: #c0211e; text-shadow: 2px 2px 0 #fff, 3px 3px 0 rgba(0,0,0,0.3);
                 transform: rotate(-6deg); animation: vs-pulse 1.6s ease-in-out infinite;
             }
-            #btn-vs .vs-text { flex: 1; display: flex; flex-direction: column; align-items: center; }
-            #btn-vs .pkt-name { font-size: 25px; letter-spacing: 6px; margin-top: 0; }
-            #btn-vs .pkt-tag { font-size: 11px; margin-top: 3px; letter-spacing: 3px; padding: 1px 8px; }
-            #btn-vs .pkt-sub { font-size: 12px; margin-top: 5px; line-height: 1.5; }
+            #btn-vs .vs-text, #btn-dorm .vs-text { flex: 1; display: flex; flex-direction: column; align-items: center; }
+            #btn-vs .pkt-name, #btn-dorm .pkt-name { font-size: 25px; letter-spacing: 6px; margin-top: 0; }
+            #btn-vs .pkt-tag, #btn-dorm .pkt-tag { font-size: 11px; margin-top: 3px; letter-spacing: 3px; padding: 1px 8px; }
+            #btn-vs .pkt-sub, #btn-dorm .pkt-sub { font-size: 12px; margin-top: 5px; line-height: 1.5; }
+            /* 猛鬼宿舍专属配色：暗夜红（其余视觉与双人对战一致） */
+            #btn-dorm .pkt-name { color: #b31217; }
+            #btn-dorm .pkt-tag { background: #660000; color: #fff; }
             @keyframes vs-pulse { 0%,100% { transform: rotate(-6deg) scale(1); } 50% { transform: rotate(-6deg) scale(1.12); } }
             /* ===== v3.81.0 僵尸方选卡（双人对战第二步）===== */
             /* v3.81.9：25 只僵尸改 12 列网格 = 两排多一个（12+12+1）；卡片收窄适配 64px 格 */
@@ -320,32 +304,39 @@
                     </button>
                 </div>
 
-                <!-- 大地图模式按钮 (绝对定位在左下角) -->
-                <button id="btn-dorm" class="mode-card" title="大地图模式：单人游玩！" onclick="document.getElementById('dorm-role-modal').style.display='flex'">
-                    <div class="pkt-art">
-                        <img src="assets/images/Plants/SunShroom/0.gif" alt="阳光菇" style="image-rendering: pixelated; transform: scale(1.3);">
-                    </div>
-                    <div class="pkt-name" style="color: #c0211e;">大地图模式</div>
-                    <div class="pkt-tag">HAUNTED DORM</div>
-                    <div class="pkt-sub">全新俯视角大地图 · 随机房间<br>植物/僵尸 双模式选择</div>
-                </button>
-
-                <!-- v3.81.1 双人对战：第五张模式卡（宽版） -->
+                <!-- v3.86.0 #vs-row：一行两张同款宽卡（双人对战 + 猛鬼宿舍），两端对齐 -->
                 <div id="vs-row">
-                <button id="btn-vs" class="mode-card" title="双人对战：一人带植物 · 一人带僵尸，同屏实时对战">
-                    <div class="pkt-art">
-                        <div class="vs-duel">
-                            <img src="assets/images/Plants/Peashooter/0.gif" alt="植物方" style="image-rendering: pixelated;">
-                            <span class="vs-badge">VS</span>
-                            <img src="assets/images/Zombies/Zombie/0.gif" alt="僵尸方" style="image-rendering: pixelated;">
+                    <!-- v3.81.1 双人对战：第五张模式卡（宽版） -->
+                    <button id="btn-vs" class="mode-card" title="双人对战：一人带植物 · 一人带僵尸，同屏实时对战">
+                        <div class="pkt-art">
+                            <div class="vs-duel">
+                                <img src="assets/images/Plants/Peashooter/0.gif" alt="植物方" style="image-rendering: pixelated;">
+                                <span class="vs-badge">VS</span>
+                                <img src="assets/images/Zombies/Zombie/0.gif" alt="僵尸方" style="image-rendering: pixelated;">
+                            </div>
                         </div>
-                    </div>
-                    <div class="vs-text">
-                        <div class="pkt-name">双人对战</div>
-                        <div class="pkt-tag">VERSUS</div>
-                        <div class="pkt-sub">一人指挥植物防线 · 一人统率僵尸大军<br>双阳光池经济 · 吃植物杀僵尸互赚阳光 · 同屏决胜</div>
-                    </div>
-                </button>
+                        <div class="vs-text">
+                            <div class="pkt-name">双人对战</div>
+                            <div class="pkt-tag">VERSUS</div>
+                            <div class="pkt-sub">一人指挥植物防线 · 一人统率僵尸大军<br>双阳光池经济 · 吃植物杀僵尸互赚阳光 · 同屏决胜</div>
+                        </div>
+                    </button>
+
+                    <!-- v3.86.0 猛鬼宿舍：与双人对战完全同款的宽卡（主题图=坚果门板+猛鬼） -->
+                    <button id="btn-dorm" class="mode-card" title="猛鬼宿舍：大地图随机房间，守住房间挺过 8 波！">
+                        <div class="pkt-art">
+                            <div class="vs-duel">
+                                <img src="assets/images/Plants/WallNut/0.gif" alt="坚果门板" style="image-rendering: pixelated; transform: translateY(4px);">
+                                <span style="font-family: Impact, 'Arial Black', sans-serif; font-size: 22px; font-weight: 900; color: #3d1f1f; text-shadow: 2px 2px 0 #fff;">+</span>
+                                <img src="assets/images/Zombies/Zombie/Zombie.gif" alt="猛鬼" style="image-rendering: pixelated; width: auto;">
+                            </div>
+                        </div>
+                        <div class="vs-text">
+                            <div class="pkt-name">猛鬼宿舍</div>
+                            <div class="pkt-tag">HAUNTED DORM</div>
+                            <div class="pkt-sub">大地图随机房间 · 浇水种植物造防线<br>猛鬼逐波来袭 · 挺过 8 波即胜利</div>
+                        </div>
+                    </button>
                 </div>
             </div>
 
@@ -381,22 +372,27 @@
             </div>
         </div>
 
-        <!-- 大地图阵营选择弹窗 -->
+        <!-- v3.86.0 猛鬼宿舍：阵营选择（与难度选择同款面板样式；进入方式与其他模式统一） -->
         <div id="dorm-role-modal" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.78); z-index:2400; align-items:center; justify-content:center; flex-direction:column;">
-            <div style="font-size:32px; color:#fff; font-family:'Kaiti SC', serif; text-shadow:2px 2px 0 #000; margin-bottom:20px;">请选择你的阵营</div>
-            <div style="display:flex; gap:30px;">
-                <button class="mode-card" style="width:200px; height:240px; padding: 20px; box-sizing: border-box;" onclick="location.href='haunted-dorm.html?role=plant'">
-                    <div class="pkt-art"><img src="assets/images/Plants/Peashooter/0.gif" style="height:100px; image-rendering:pixelated; margin-bottom:20px;"></div>
-                    <div class="pkt-name" style="color:#4da6ff; text-align:center;">植物阵营</div>
-                    <div class="pkt-sub" style="margin-top:10px; text-align:center;">建造防御，抵御僵尸进攻</div>
-                </button>
-                <button class="mode-card" style="width:200px; height:240px; padding: 20px; box-sizing: border-box;" onclick="alert('僵尸阵营还在开发中，敬请期待！')">
-                    <div class="pkt-art"><img src="assets/images/Zombies/Zombie/0.gif" style="height:100px; image-rendering:pixelated; margin-bottom:20px; transform:translateY(-10px);"></div>
-                    <div class="pkt-name" style="color:#ff4d4d; text-align:center;">僵尸阵营</div>
-                    <div class="pkt-sub" style="margin-top:10px; text-align:center;">(开发中) 扮演僵尸抓人</div>
-                </button>
+            <div class="diff-panel">
+                <div class="diff-title">猛鬼宿舍<span>HAUNTED DORM · 阵营选择</span></div>
+                <div class="diff-sub">大地图随机房间 · 浇水种植物 · 猛鬼逐波来袭</div>
+                <div class="diff-row">
+                    <button id="dorm-plant" class="diff-btn diff-easy">
+                        <span class="diff-name">植物阵营</span>
+                        <span class="diff-en">PLANT</span>
+                        <span class="diff-desc">住进宿舍 · 浇水攒阳光<br>门板+植物造防线 · 挺过 8 波</span>
+                    </button>
+                    <button id="dorm-zombie" class="diff-btn diff-hell" style="filter: grayscale(1) brightness(0.75); cursor: not-allowed;">
+                        <span class="diff-name">僵尸阵营</span>
+                        <span class="diff-en">ZOMBIE</span>
+                        <span class="diff-desc">扮演猛鬼抓人<br>（开发中 · 敬请期待）</span>
+                    </button>
+                </div>
+                <div class="diff-foot">
+                    <button id="dorm-back">返回主菜单</button>
+                </div>
             </div>
-            <button id="dorm-back" style="margin-top:30px; font-size:20px; padding:10px 30px; border-radius:8px; background:#4a2f1d; color:#fff; cursor:pointer; border:2px solid #8c6a4d;" onclick="document.getElementById('dorm-role-modal').style.display='none'">返回主菜单</button>
         </div>
 
         <!-- v3.81.0 双人对战：僵尸方选卡（8 只，向日葵头僵尸最多 1 只） -->
@@ -483,6 +479,18 @@
         }
         window.addEventListener('resize', resizeGame);
         resizeGame();
+
+        // ===== v3.86.0 猛鬼宿舍：与其他模式统一的进入方式（JS 绑定 + 同款面板弹窗）=====
+        (function bindDorm() {
+            const btn = document.getElementById('btn-dorm');
+            const modal = document.getElementById('dorm-role-modal');
+            if (btn && modal) btn.addEventListener('click', () => { modal.style.display = 'flex'; });
+            const bp = document.getElementById('dorm-plant');
+            if (bp) bp.addEventListener('click', () => { location.href = 'haunted-dorm.html?role=plant'; });
+            const back = document.getElementById('dorm-back');
+            if (back) back.addEventListener('click', () => { modal.style.display = 'none'; });
+            // 僵尸阵营（dorm-zombie）开发中：置灰不可点
+        })();
 
         // ===== 加载版本号：仅开始菜单左下角展示（游戏内 HUD 不再显示）=====
         (function loadVersion() {

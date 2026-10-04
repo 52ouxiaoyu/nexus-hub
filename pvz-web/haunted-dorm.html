@@ -2,45 +2,69 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>植物大战僵尸：大地图联机模式</title>
+    <title>植物大战僵尸：猛鬼宿舍（大地图）</title>
     <style>
         body { margin: 0; padding: 0; background: #000; overflow: hidden; display: flex; font-family: 'Arial Black', sans-serif; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; }
-        
+
         /* 单视角全屏 */
         .viewport { flex: 1; position: relative; overflow: hidden; background: #3b823e; }
         .world { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
-        
+
         /* 地图元素 */
         .tile { position: absolute; width: 80px; height: 80px; box-sizing: border-box; }
         .tile.wall { background: #6b4a22; border-radius: 4px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
         .tile.center { background: rgba(255, 255, 255, 0.2); border: 2px dashed #fff; border-radius: 50%; }
-        
+
         /* 实体 */
         .entity { position: absolute; transform: translate(-50%, -50%); transition: left 0.05s linear, top 0.05s linear; pointer-events: none; }
         .avatar { width: 100px; height: 100px; z-index: 100; filter: drop-shadow(0 10px 5px rgba(0,0,0,0.5)); }
         .avatar img { width: 100%; height: 100%; object-fit: contain; }
-        
+
         /* HP Bar */
         .hp-bar-bg { position: absolute; top: -10px; left: 0; width: 100%; height: 8px; background: rgba(0,0,0,0.5); border: 1px solid #000; border-radius: 4px; z-index: 10; display: none; }
         .hp-bar-fg { position: absolute; top: 0; left: 0; height: 100%; background: #0f0; border-radius: 3px; }
-        
+
         /* UI 层 */
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1000; }
         .player-hud { position: absolute; top: 20px; padding: 12px 20px; background: rgba(0,0,0,0.8); color: white; border: 3px solid #4da6ff; border-radius: 12px; font-size: 18px; text-shadow: 2px 2px 0 #000; left: 20px; pointer-events: auto; }
         .sun-text { color: #ffeb3b; font-size: 24px; }
-        
-        .back-btn { position: absolute; top: 20px; right: 20px; pointer-events: auto; padding: 10px 24px; font-size: 18px; font-weight: bold; background: linear-gradient(180deg, #d32f2f, #9a0007); color: white; border: 3px solid #ffcccc; cursor: pointer; border-radius: 12px; text-shadow: 1px 1px 2px #000; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        /* v3.86.0 玩家 HP 条常显 + 波次/击杀信息（猛鬼宿舍主题红牌） */
+        #hp-row { margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+        #hp-row .hp-label { color: #ff8a80; font-size: 14px; }
+        #hp-track { flex: 1; height: 14px; background: rgba(0,0,0,0.6); border: 2px solid #000; border-radius: 7px; overflow: hidden; min-width: 160px; }
+        #hp-fill { height: 100%; width: 100%; background: linear-gradient(180deg, #ff6b6b, #c62828); transition: width 0.2s; }
+        #wave-chip { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); padding: 10px 22px; background: rgba(20,5,5,0.85); color: #ff9e9e; border: 3px solid #7a2020; border-radius: 12px; font-size: 18px; text-shadow: 2px 2px 0 #000; font-family: 'Kaiti SC', serif; letter-spacing: 2px; }
+
+        /* 小地图 */
+        #minimap { position: absolute; top: 20px; right: 20px; border: 3px solid #5c3b1d; border-radius: 8px; background: rgba(0,0,0,0.75); pointer-events: auto; }
+
+        .back-btn { position: absolute; top: 180px; right: 20px; pointer-events: auto; padding: 10px 24px; font-size: 18px; font-weight: bold; background: linear-gradient(180deg, #d32f2f, #9a0007); color: white; border: 3px solid #ffcccc; cursor: pointer; border-radius: 12px; text-shadow: 1px 1px 2px #000; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         .back-btn:hover { filter: brightness(1.2); transform: translateY(-2px); }
-        
-        /* 种植菜单 */
-        #plant-menu { position: absolute; display: none; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 8px; border: 2px solid #fff; pointer-events: auto; z-index: 2000; display: flex; gap: 10px; }
-        .plant-option { cursor: pointer; text-align: center; color: white; font-size: 12px; border: 2px solid transparent; padding: 5px; border-radius: 6px; }
-        .plant-option:hover { background: rgba(255,255,255,0.2); border-color: #0f0; }
+
+        /* 种植菜单（木牌风） */
+        #plant-menu { position: absolute; display: none; background: rgba(46,26,12,0.92); padding: 10px; border-radius: 10px; border: 3px solid #8c6a4d; box-shadow: 0 6px 16px rgba(0,0,0,0.6); pointer-events: auto; z-index: 2000; display: flex; gap: 10px; }
+        .plant-option { cursor: pointer; text-align: center; color: #f5e6c8; font-size: 12px; border: 2px solid transparent; padding: 5px; border-radius: 8px; font-family: 'Kaiti SC', serif; }
+        .plant-option:hover { background: rgba(247,230,161,0.18); border-color: #f7e6a1; }
         .plant-option img { width: 50px; height: 50px; image-rendering: pixelated; margin-bottom: 5px; }
-        
+
         /* 提示文字 */
         .float-text { position: absolute; color: white; text-shadow: 1px 1px 2px black; font-size: 14px; font-family: 'Kaiti SC', serif; white-space: nowrap; pointer-events: none; z-index: 200; transform: translate(-50%, -150%); opacity: 0; transition: opacity 0.2s; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; border: 1px solid #fff; }
+
+        /* 受击红闪 */
+        #dmg-flash { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(ellipse at center, rgba(255,0,0,0) 55%, rgba(200,0,0,0.55) 100%); opacity: 0; transition: opacity 0.25s; z-index: 900; }
+
+        /* 胜负结算面板（与其他模式同款暗色面板） */
+        #dorm-over { position: absolute; display: none; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.78); z-index: 3000; align-items: center; justify-content: center; flex-direction: column; pointer-events: auto; }
+        #dorm-over .ov-title { font-size: 52px; font-family: 'Kaiti SC', serif; letter-spacing: 6px; text-shadow: 3px 3px 0 #000; margin-bottom: 18px; }
+        #dorm-over .ov-stats { display: flex; gap: 26px; margin-bottom: 34px; }
+        #dorm-over .ov-stat { background: rgba(0,0,0,0.55); border: 2px solid #8c6a4d; border-radius: 12px; padding: 14px 26px; text-align: center; color: #f5e6c8; font-family: 'Kaiti SC', serif; }
+        #dorm-over .ov-stat b { display: block; font-size: 30px; color: #ffeb3b; margin-top: 6px; }
+        #dorm-over .ov-btns { display: flex; gap: 20px; }
+        #dorm-over .ov-btn { font-size: 20px; padding: 12px 34px; border-radius: 10px; cursor: pointer; border: 3px solid #8c6a4d; color: #fff; font-family: 'Kaiti SC', serif; letter-spacing: 2px; }
+        #ov-retry { background: linear-gradient(180deg, #2e7d32, #1b5e20); }
+        #ov-home { background: linear-gradient(180deg, #6d4c41, #4a2f1d); }
+        #dorm-over .ov-btn:hover { filter: brightness(1.2); transform: translateY(-2px); }
     </style>
 </head>
 <body>
@@ -49,15 +73,24 @@
         <div id="vp1" class="viewport">
             <div id="world1" class="world"></div>
         </div>
-        
+
         <!-- 全局 UI -->
         <div id="ui-layer">
             <div id="hud-p1" class="player-hud">
                 <div style="color:#4da6ff; margin-bottom: 4px;">移动: WASD | 种植: 点击空地</div>
                 阳光: <span id="sun1" class="sun-text">50</span>
+                <div id="hp-row">
+                    <span class="hp-label">HP</span>
+                    <div id="hp-track"><div id="hp-fill"></div></div>
+                    <span id="hp-num" style="font-size:14px; color:#fff;">100</span>
+                </div>
             </div>
+
+            <div id="wave-chip"> dorm </div>
+
+            <canvas id="minimap" width="176" height="132"></canvas>
             <button class="back-btn" onclick="location.href='index.html'">返回主菜单</button>
-            
+
             <div id="plant-menu">
                 <div class="plant-option" onclick="window.game.doPlant('puffshroom', 0)">
                     <img src="assets/images/Card/Plants/PuffShroom.png"><br>免费(0)
@@ -73,8 +106,24 @@
                 </div>
             </div>
         </div>
+
+        <div id="dmg-flash"></div>
+
+        <!-- 胜负结算 -->
+        <div id="dorm-over">
+            <div class="ov-title" id="ov-title">你活下来了！</div>
+            <div class="ov-stats">
+                <div class="ov-stat">坚持时间<b id="ov-time">0:00</b></div>
+                <div class="ov-stat">击杀僵尸<b id="ov-kills">0</b></div>
+                <div class="ov-stat">挺过波次<b id="ov-waves">0</b></div>
+            </div>
+            <div class="ov-btns">
+                <button class="ov-btn" id="ov-retry" onclick="location.reload()">再来一局</button>
+                <button class="ov-btn" id="ov-home" onclick="location.href='index.html'">返回主菜单</button>
+            </div>
+        </div>
     </div>
-    
-    <script src="js/HauntedDorm.js"></script>
+
+    <script src="js/HauntedDorm.js?v=1791100000"></script>
 </body>
 </html>
