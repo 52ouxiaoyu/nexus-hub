@@ -15,37 +15,37 @@ class HauntedDorm {
     static get DEFS() {
         return {
             // —— 阳光系 (10级) ——
-            sunshroom:     { name: '阳光菇',     img: 'Plants/SunShroom/0.gif',     card: 'SunShroom.png',     hp: 300,  cost: 0,   scale: 0.75,
-                             produce: { sun: 2, every: 8 },  up: { cost: 25, cur: 'sun', to: 'sunshroom2' } },
+            sunshroom:     { name: '阳光菇',     img: 'Plants/SunShroom/0.gif',     card: 'SunShroom.png',     hp: 300,  cost: 10,   scale: 0.75,
+                             produce: { sun: 10, every: 0.5 },  up: { cost: 30, cur: 'sun', to: 'sunshroom2' } },
             sunshroom2:    { name: '大阳光菇',   img: 'Plants/SunShroom/0.gif',     hp: 350,  cost: 0,   scale: 1.1,
-                             produce: { sun: 3, every: 8 },  up: { cost: 75, cur: 'sun', to: 'sunflower' } },
+                             produce: { sun: 30, every: 0.5 },  up: { cost: 90, cur: 'sun', to: 'sunflower' } },
             sunflower:     { name: '向日葵',     img: 'Plants/SunFlower/0.gif',     hp: 400,  cost: 0,   scale: 1.1,
-                             produce: { sun: 5, every: 7 },  up: { cost: 200, cur: 'sun', to: 'twinsunflower' } },
+                             produce: { sun: 90, every: 0.5 },  up: { cost: 270, cur: 'sun', to: 'twinsunflower' } },
             twinsunflower: { name: '双子向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 450,  cost: 0,   scale: 1.2,
-                             produce: { sun: 10, every: 7 }, up: { cost: 400, cur: 'sun', to: 'sunpea' } },
+                             produce: { sun: 270, every: 0.5 }, up: { cost: 810, sporeCost: 1, cur: 'sun', to: 'sunpea' } },
             sunpea:        { name: '豌豆向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 550, cost: 0, scale: 1.2,
                              overlay: 'Plants/Peashooter/0.gif',
-                             produce: { sun: 15, every: 6 }, shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, 
-                             up: { cost: 800, cur: 'sun', to: 'sunnut' } },
+                             produce: { sun: 810, every: 0.5 }, shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, 
+                             up: { cost: 2430, sporeCost: 10, cur: 'sun', to: 'sunnut' } },
             sunnut:        { name: '坚果向日葵', img: 'Plants/WallNut/0.gif', hp: 2000, cost: 0, scale: 1.2, 
                              overlay: 'Plants/TwinSunflower/0.gif',
-                             produce: { sun: 20, every: 5 }, shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, 
-                             up: { cost: 1600, cur: 'sun', to: 'suncherry' } },
+                             produce: { sun: 2430, every: 0.5 }, shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, 
+                             up: { cost: 7290, sporeCost: 50, cur: 'sun', to: 'suncherry' } },
             suncherry:     { name: '樱桃向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 3000, cost: 0, scale: 1.3,
                              overlay: 'Plants/CherryBomb/0.gif',
-                             produce: { sun: 30, every: 4 }, shoot: { dmg: 40, cd: 1.0, n: 3, range: 400, img: 'Plants/PB00.gif', back: true },
-                             up: { cost: 3200, cur: 'sun', to: 'sunjala' } },
+                             produce: { sun: 7290, every: 0.5 }, shoot: { dmg: 40, cd: 1.0, n: 3, range: 400, img: 'Plants/PB00.gif', back: true },
+                             up: { cost: 21870, sporeCost: 250, cur: 'sun', to: 'sunjala' } },
             sunjala:       { name: '火爆向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 5000, cost: 0, scale: 1.4,
                              overlay: 'Plants/Jalapeno/0.gif',
-                             produce: { sun: 60, every: 3 }, shoot: { dmg: 50, cd: 0.8, n: 4, range: 500, img: 'Plants/PB00.gif', homing: true },
-                             up: { cost: 6000, cur: 'sun', to: 'sundoom' } },
+                             produce: { sun: 21870, every: 0.5 }, shoot: { dmg: 50, cd: 0.8, n: 4, range: 500, img: 'Plants/PB00.gif', homing: true },
+                             up: { cost: 65610, sporeCost: 1000, cur: 'sun', to: 'sundoom' } },
             sundoom:       { name: '毁灭向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 8000, cost: 0, scale: 1.5, tint: 'hue-rotate(240deg)',
                              overlay: 'Plants/DoomShroom/0.gif',
-                             produce: { sun: 150, every: 3 }, shoot: { dmg: 70, cd: 0.6, n: 6, range: 600, img: 'Plants/PB00.gif', homing: true, aoe: 50 },
-                             up: { cost: 12000, cur: 'sun', to: 'sungatling' } },
+                             produce: { sun: 65610, every: 0.5 }, shoot: { dmg: 70, cd: 0.6, n: 6, range: 600, img: 'Plants/PB00.gif', homing: true, aoe: 50 },
+                             up: { cost: 196830, sporeCost: 5000, cur: 'sun', to: 'sungatling' } },
             sungatling:    { name: '机枪向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 15000, cost: 0, scale: 1.6,
                              overlay: 'Plants/GatlingPea/0.gif',
-                             produce: { sun: 400, every: 2 }, shoot: { dmg: 100, cd: 0.4, n: 8, range: 800, img: 'Plants/PB00.gif', homing: true } },
+                             produce: { sun: 196830, every: 0.5 }, shoot: { dmg: 100, cd: 0.4, n: 8, range: 800, img: 'Plants/PB00.gif', homing: true } },
 
             // —— 蘑菇系 (10级，喂养大) ——
             puffshroom:    { name: '小喷菇', img: 'Plants/PuffShroom/0.gif',     card: 'PuffShroom.png',     hp: 300, cost: 200, scale: 0.9,
@@ -118,11 +118,11 @@ class HauntedDorm {
             wintermelonnut:{ name: '冰瓜坚果',   img: 'Plants/WallNut/0.gif',       hp: 18000, cost: 0, scale: 1.25, hat: 'Plants/WinterMelon/WinterMelon.png',
                              lob: { dmg: 100, cd: 1.8, range: 480, aoe: 120, img: 'Plants/WinterMelon/WinterMelon.png', slow: true }, up: { cost: 800, cur: 'sun', to: 'tallnut' } },
             tallnut:       { name: '高坚果',     img: 'Plants/TallNut/0.gif',       card: 'TallNut.png',     hp: 30000, cost: 0, scale: 1.3,
-                             up: { cost: 1500, cur: 'sun', to: 'pumpkin' } },
+                             up: { cost: 0, sporeCost: 5, cur: 'sun', to: 'pumpkin' } },
             pumpkin:       { name: '南瓜高坚果', img: 'Plants/TallNut/0.gif',       hp: 50000, cost: 0, scale: 1.4, hat: 'Plants/PumpkinHead/0.gif',
-                             up: { cost: 3000, cur: 'sun', to: 'doomtallnut' } },
+                             up: { cost: 0, sporeCost: 25, cur: 'sun', to: 'doomtallnut' } },
             doomtallnut:   { name: '毁灭高坚果', img: 'Plants/TallNut/0.gif',       hp: 90000, cost: 0, scale: 1.5, hat: 'Plants/DoomShroom/0.gif', tint: 'hue-rotate(240deg)',
-                             spike: { dps: 200, r: 80 }, up: { cost: 6000, cur: 'sun', to: 'holotallnut' } },
+                             spike: { dps: 200, r: 80 }, up: { cost: 0, sporeCost: 125, cur: 'sun', to: 'holotallnut' } },
             holotallnut:   { name: '神界高坚果', img: 'Plants/TallNut/0.gif',       hp: 200000, cost: 0, scale: 1.7, tint: 'drop-shadow(0 0 20px #ff0) brightness(2)',
                              spike: { dps: 500, r: 100 } },
 
@@ -139,7 +139,7 @@ class HauntedDorm {
 
     // 商店可购清单（阳光 / 孢子两种货币）
     static get MENU() {
-        return ['puffshroom', 'peashooter', 'wallnut', 'potatomine', 'spikeweed', 'iceshroom', 'doomshroom'];
+        return ['sunshroom', 'puffshroom', 'peashooter', 'potatomine', 'spikeweed', 'iceshroom', 'doomshroom'];
     }
 
     // ===== 僵尸升级链（10级）=====
@@ -278,11 +278,14 @@ class HauntedDorm {
         this.ppUp.onclick = () => {
             const pl = this.popupPlant;
             if (!pl || !pl.def.up) { this._closePopup(); return; }
-            const cost = pl.def.up.cost;
-            const useSun = pl.def.up.cur === 'sun';   // v3.90.0：向日葵链/坚果链升级花普通阳光，其余花孢子
-            const have = useSun ? this.player.sun : this.player.spore;
-            if (have < cost) {
-                this._flyText(pl.c * 80 + 40, pl.r * 80, useSun ? `阳光不足（需 ☀${cost}）` : `孢子不足（需 🦠${cost}）`, '#ff8a8a');
+            const cost = pl.def.up.cost || 0;
+            const sporeCost = pl.def.up.sporeCost || 0;
+            const canAfford = this.player.sun >= cost && this.player.spore >= sporeCost;
+            if (!canAfford) {
+                let err = [];
+                if (this.player.sun < cost) err.push(`☀${cost}`);
+                if (this.player.spore < sporeCost) err.push(`🦠${sporeCost}`);
+                this._flyText(pl.c * 80 + 40, pl.r * 80, `资源不足（需 ${err.join(' ')}）`, '#ff8a8a');
                 this.playSfx('buttonclick.mp3', 0.35);
                 return;
             }
@@ -290,7 +293,8 @@ class HauntedDorm {
             const nd = HauntedDorm.DEFS[to];
             const fac = pl.isDoor ? 0.3 : 1;
             this._closePopup();
-            if (useSun) this.addSun(-cost); else this.addSpore(-cost);
+            if (cost) this.addSun(-cost);
+            if (sporeCost) this.addSpore(-sporeCost);
             this.playSfx('readysetplant.mp3', 0.5);
             this._flyText(pl.c * 80 + 40, pl.r * 80,
                 `${pl.def.name} → ${nd.name}！（血量 ${Math.round(pl.def.hp * fac)}→${Math.round(nd.hp * fac)}）`, '#9dff6b');
@@ -575,10 +579,13 @@ class HauntedDorm {
             this.ppFeed.style.display = 'none';
         }
         if (def.up) {
-            const useSun = def.up.cur === 'sun';
+            let cstr = [];
+            if (def.up.cost) cstr.push(`☀${def.up.cost}`);
+            if (def.up.sporeCost) cstr.push(`🦠${def.up.sporeCost}`);
             this.ppUp.style.display = '';
-            this.ppUp.innerText = `升级 ${useSun ? '☀' : '🦠'}${def.up.cost}`;
-            this.ppUp.classList.toggle('pp-disabled', (useSun ? this.player.sun : this.player.spore) < def.up.cost);
+            this.ppUp.innerText = `升级 ${cstr.join(' ')}`;
+            const canAfford = (!def.up.cost || this.player.sun >= def.up.cost) && (!def.up.sporeCost || this.player.spore >= def.up.sporeCost);
+            this.ppUp.classList.toggle('pp-disabled', !canAfford);
         } else {
             this.ppUp.style.display = 'none';
         }
