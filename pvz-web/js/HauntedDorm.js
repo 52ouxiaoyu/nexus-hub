@@ -40,9 +40,9 @@ class HauntedDorm {
                              produce: { sun: 60, every: 3 }, shoot: { dmg: 50, cd: 0.8, n: 4, range: 500, img: 'Plants/PB00.gif', homing: true } },
             // —— 蘑菇系（浇水喂大，产孢子）——
             puffshroom:    { name: '小喷菇', img: 'Plants/PuffShroom/0.gif',     card: 'PuffShroom.png',     hp: 300, cost: 200, scale: 0.9,
-                             spore: { n: 1, every: 12 }, feed: { goal: 40, to: 'scaredyshroom' } },
+                             spore: { n: 1, every: 7 }, feed: { goal: 40, to: 'scaredyshroom' } },
             scaredyshroom: { name: '胆小菇', img: 'Plants/ScaredyShroom/0.gif',  card: 'ScaredyShroom.png',  hp: 400, cost: 0,   scale: 1.0,
-                             spore: { n: 2, every: 12 }, feed: { goal: 80, to: 'fumeshroom' } },
+                             spore: { n: 2, every: 7 }, feed: { goal: 80, to: 'fumeshroom' } },
             fumeshroom:    { name: '大喷菇', img: 'Plants/FumeShroom/0.gif',     card: 'FumeShroom.png',     hp: 500, cost: 0,   scale: 1.15,
                              spore: { n: 3, every: 12 }, shoot: { dmg: 25, cd: 1.6, n: 1, range: 240, img: 'Plants/ShroomBullet.gif' },
                              feed: { goal: 160, to: 'gloomshroom' } },
@@ -300,7 +300,16 @@ class HauntedDorm {
                 rx = Math.floor(Math.random() * (this.cols - rw - 4)) + 2;
                 ry = Math.floor(Math.random() * (this.rows - rh - 4)) + 2;
 
-                if (Math.abs(rx - this.cols/2) < 6 && Math.abs(ry - this.rows/2) < 6) continue;
+                
+                // 确保房间不会覆盖中心回血区（以中心点为圆心，半径约 4 格的区域必须空出）
+                const centerLeft = this.cols/2 - 4;
+                const centerRight = this.cols/2 + 4;
+                const centerTop = this.rows/2 - 4;
+                const centerBottom = this.rows/2 + 4;
+                if (!(rx + rw < centerLeft || rx > centerRight || ry + rh < centerTop || ry > centerBottom)) {
+                    continue;
+                }
+
 
                 valid = true;
                 for (const rm of this.rooms) {
@@ -1250,6 +1259,27 @@ class HauntedDorm {
                     }
                     break;
                 }
+            }
+
+            // 残血回城逻辑
+            if (zb.hp < zb.maxHp * 0.1) zb.retreating = true;
+            if (zb.hp >= zb.maxHp) zb.retreating = false;
+            
+            if (zb.retreating) {
+                targetX = this.worldWidth / 2;
+                targetY = this.worldHeight / 2;
+                if (Math.hypot(targetX - zb.x, targetY - zb.y) < 120) {
+                    zb.hp = Math.min(zb.maxHp, zb.hp + zb.maxHp * 0.1 * dt);
+                    if (zb.hpBg) {
+                        zb.hpBg.style.display = 'block';
+                        zb.hpFg.style.width = (zb.hp / zb.maxHp * 100) + '%';
+                    }
+                    zb.el1.style.filter = 'drop-shadow(0 0 10px #0f0)';
+                } else {
+                    zb.el1.style.filter = '';
+                }
+            } else {
+                zb.el1.style.filter = '';
             }
 
             let dx = targetX - zb.x;
