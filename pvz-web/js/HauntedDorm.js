@@ -119,11 +119,22 @@ class HauntedDorm {
 
         const urlParams = new URLSearchParams(window.location.search);
         this.role = urlParams.get('role') || 'plant';
+        
+        this.playerRoles = [
+            { id: 'sunflower', name: '向日葵', icon: 'assets/images/Plants/SunFlower/0.gif', skillDesc: '【M键】10秒内阳光产出翻倍' },
+            { id: 'peashooter', name: '豌豆射手', icon: 'assets/images/Plants/Peashooter/0.gif', skillDesc: '【M键】15秒内全场植物攻击力翻倍' },
+            { id: 'wallnut', name: '坚果', icon: 'assets/images/Plants/WallNut/0.gif', skillDesc: '【M键】一局一次免费升级门' },
+            { id: 'chomper', name: '大嘴花', icon: 'assets/images/Plants/Chomper/0.gif', skillDesc: '【M键】赶跑僵尸一次' },
+            { id: 'squash', name: '倭瓜', icon: 'assets/images/Plants/Squash/0.gif', skillDesc: '【M键】半血以上砸掉僵尸一半血' }
+        ];
+        
+        this.playerRoleDef = this.playerRoles[Math.floor(Math.random() * this.playerRoles.length)];
 
         this.player = {
             x: cx, y: cy, sun: 0, spore: 0, hp: 100, maxHp: 100,
-            icon: this.role === 'zombie' ? 'assets/images/Zombies/Zombie/0.gif' : 'assets/images/Plants/Peashooter/0.gif',
-            camX: 0, camY: 0
+            icon: this.role === 'zombie' ? 'assets/images/Zombies/Zombie/0.gif' : this.playerRoleDef.icon,
+            roleDef: this.playerRoleDef,
+            camX: 0, camY: 0, skillUsed: false, sunBuffT: 0, atkBuffT: 0
         };
 
         this.keys = {};
@@ -387,22 +398,22 @@ class HauntedDorm {
             this.world1.appendChild(wall1);
         }
 
-        // v3.93.0 安排 6 个人机
+        // v3.93.0 安排 5 个人机，拥有5种不同皮肤
         let shuffledRooms = [...this.rooms].sort(() => Math.random() - 0.5);
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 5; i++) {
             if (i >= shuffledRooms.length) break;
             const rm = shuffledRooms[i];
+            const roleDef = this.playerRoles[i]; // 一人一个
             const ai = {
                 x: (rm.x + rm.tpl.bed.c) * this.gridSize + 40,
                 y: (rm.y + rm.tpl.bed.r) * this.gridSize + 40,
                 sun: 50, hp: 100, maxHp: 100,
-                isAi: true, room: rm,
-                icon: 'assets/images/interface/Dave.gif',
+                isAi: true, room: rm, roleDef: roleDef,
+                icon: roleDef.icon,
                 el1: document.createElement('div')
             };
             ai.el1.className = 'entity avatar';
             ai.el1.innerHTML = `<img src="${ai.icon}">`;
-            ai.el1.style.filter = `hue-rotate(${Math.random()*360}deg)`;
             this.world1.appendChild(ai.el1);
             this.ais.push(ai);
             this.allPlayers.push(ai);
@@ -541,6 +552,26 @@ class HauntedDorm {
     }
 
     // ===== 单僵尸：出场 / 升级 / 重生 导演 =====
+    _levelUpGhostDirect() {
+        if (this.ghostLevel >= HauntedDorm.GHOST_MAX_LV) return;
+        this.ghostLevel++;
+        const cfg = HauntedDorm.GHOST_LEVELS[this.ghostLevel - 1];
+        const zb = this.zombies[0];
+        if (zb && !zb.dead) {
+            zb.level = this.ghostLevel;
+            zb.hp = cfg.hp; zb.maxHp = cfg.hp; zb.speed = cfg.speed; zb.cfg = cfg;
+            const im = zb.el1.querySelector('img');
+            if (im) im.src = 'assets/images/' + cfg.img;
+            if (zb.hpBg) zb.hpBg.style.display = 'none';
+            const bdg = zb.el1.querySelector('.lv-badge');
+            if (bdg) bdg.innerText = 'Lv.' + this.ghostLevel;
+            this._announce(`👻 僵尸咬破门，升级为【${cfg.name}】！`, 'finalwave.mp3');
+        } else {
+            this._announce(`👻 僵尸成长为【${cfg.name}】…`, 'finalwave.mp3');
+        }
+        this._updateGhostChip();
+    }
+
     _ghostSpawnPoint() {
         for (let tries = 0; tries < 30; tries++) {
             const rm = this.rooms[Math.floor(Math.random() * this.rooms.length)];
@@ -581,23 +612,7 @@ class HauntedDorm {
             }
             return;
         }
-        // 升级（时间驱动，死亡也不停——僵尸一直在成长）
-        if (this.ghostLevel < HauntedDorm.GHOST_MAX_LV && time >= this.ghostNextLvAt) {
-            this.ghostLevel++;
-            this.ghostNextLvAt += this.ghostLvEvery;
-            const cfg = HauntedDorm.GHOST_LEVELS[this.ghostLevel - 1];
-            const zb = this.zombies[0];
-            if (zb && !zb.dead) {
-                zb.level = this.ghostLevel;
-                zb.hp = cfg.hp; zb.maxHp = cfg.hp; zb.speed = cfg.speed; zb.cfg = cfg;
-                const im = zb.el1.querySelector('img');
-                if (im) im.src = 'assets/images/' + cfg.img;
-                if (zb.hpBg) zb.hpBg.style.display = 'none'; // 满血先藏血条
-                this._announce(`👻 僵尸升级为【${cfg.name}】！`, 'finalwave.mp3');
-            } else {
-                this._announce(`👻 僵尸成长为【${cfg.name}】…`, 'finalwave.mp3');
-            }
-        }
+        // 僵尸升级改为咬破门触发。这里保留重生逻辑即可。
         // 重生（打倒 8s 后同级再来）
         if (this.ghostRespawnAt > 0 && time >= this.ghostRespawnAt) {
             this.ghostRespawnAt = 0;
@@ -668,6 +683,14 @@ class HauntedDorm {
     _refreshHud() {
         document.getElementById('sun1').innerText = this.player.sun;
         document.getElementById('spore1').innerText = this.player.spore;
+        const skillEl = document.getElementById('skill-hud');
+        if (skillEl && this.player.roleDef) {
+            if (this.player.skillUsed) {
+                skillEl.innerHTML = `<span style="color:#aaa;"><s>${this.player.roleDef.skillDesc}</s> (已使用)</span>`;
+            } else {
+                skillEl.innerHTML = `<span style="color:#0f0;">${this.player.roleDef.skillDesc}</span>`;
+            }
+        }
     }
 
     setHp() {
@@ -771,9 +794,70 @@ class HauntedDorm {
         this.spawnPlant(this.menuCol, this.menuRow, type);
     }
 
+    _useSkill() {
+        if (this.player.skillUsed) return;
+        const p = this.player;
+        const r = p.roleDef.id;
+        const zb = this.zombies[0];
+
+        if (r === 'sunflower') {
+            p.skillUsed = true;
+            p.sunBuffT = 10;
+            this._announce('🌻 技能激活：10秒内阳光产出翻倍！', 'points.mp3');
+        } else if (r === 'peashooter') {
+            p.skillUsed = true;
+            p.atkBuffT = 15;
+            this._announce('🌿 技能激活：15秒内植物攻击力翻倍！', 'points.mp3');
+        } else if (r === 'wallnut') {
+            let myRm = null;
+            for (const rm of this.rooms) {
+                const rxMin = rm.x * this.gridSize, rxMax = (rm.x + rm.w) * this.gridSize;
+                const ryMin = rm.y * this.gridSize, ryMax = (rm.y + rm.h) * this.gridSize;
+                if (p.x >= rxMin && p.x <= rxMax && p.y >= ryMin && p.y <= ryMax) {
+                    myRm = rm; break;
+                }
+            }
+            if (myRm) {
+                const doorPlant = this.getPlantAt(myRm.doorCol * this.gridSize, myRm.doorRow * this.gridSize);
+                if (doorPlant && doorPlant.def.up) {
+                    p.skillUsed = true;
+                    this._upgradePlant(doorPlant, doorPlant.def.up.to);
+                    this._announce('🌰 技能激活：大门免费升级完毕！', 'points.mp3');
+                } else {
+                    this._announce('❌ 门不存在或无法再升级！', 'buzzer.mp3');
+                }
+            } else {
+                this._announce('❌ 必须在房间内才能升级门！', 'buzzer.mp3');
+            }
+        } else if (r === 'chomper') {
+            if (zb && !zb.dead) {
+                p.skillUsed = true;
+                zb.hp = Math.min(zb.hp, zb.maxHp * 0.05); // 触发回城
+                zb.retreating = true;
+                this._announce('🌸 技能激活：大嘴花将僵尸吓跑了！', 'chomp.mp3');
+            }
+        } else if (r === 'squash') {
+            if (zb && !zb.dead) {
+                if (zb.hp >= zb.maxHp / 2) {
+                    p.skillUsed = true;
+                    zb.hp -= zb.maxHp / 2;
+                    if (zb.hpBg) zb.hpBg.style.display = 'block';
+                    if (zb.hpFg) zb.hpFg.style.width = Math.max(0, zb.hp / zb.maxHp * 100) + '%';
+                    this._announce('🎃 技能激活：倭瓜砸掉了僵尸一半血！', 'squash_hmm.mp3');
+                } else {
+                    this._announce('❌ 僵尸血量不足一半，无法使用！', 'buzzer.mp3');
+                }
+            }
+        }
+        this._refreshHud();
+    }
+
     bindInput() {
         window.addEventListener('keydown', e => {
             this.keys[e.key.toLowerCase()] = true;
+            if (e.key.toLowerCase() === 'm' && !e.repeat && !this.player.skillUsed) {
+                this._useSkill();
+            }
             // v3.92.0：空格开关式浇水——按一下开启持续浇水，再按一下停止（过滤按住触发的 auto-repeat）
             if (e.key === ' ' && !e.repeat && this.role !== 'zombie') this.setWatering(!this.waterOn);
         });
@@ -1160,6 +1244,9 @@ class HauntedDorm {
         this._updateGhostDirector(time);
         if (Math.floor(time / 500) !== Math.floor((time - dt * 1000) / 500)) this._updateGhostChip(); // 0.5s 刷一次信息牌
 
+        if (this.player.sunBuffT > 0) this.player.sunBuffT -= dt;
+        if (this.player.atkBuffT > 0) this.player.atkBuffT -= dt;
+
         const speed = 400;
 
         let vx1 = 0, vy1 = 0;
@@ -1330,6 +1417,7 @@ class HauntedDorm {
                             atkPlant.el1.remove();
                             if (atkPlant.txtEl) atkPlant.txtEl.remove();
                             this.plants = this.plants.filter(p => p !== atkPlant);
+                            if (atkPlant.isDoor) this._levelUpGhostDirect();
                         }
                     }
                     moved = false; // 啃食时不挪窝
