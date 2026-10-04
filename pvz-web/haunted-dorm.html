@@ -8,13 +8,35 @@
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; }
 
         /* 单视角全屏 */
-        .viewport { flex: 1; position: relative; overflow: hidden; background: #3b823e; }
-        .world { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+        .viewport { flex: 1; position: relative; overflow: hidden; background: #35853e; }
+        /* v3.88.0 草地棋盘格纹路画在 .world 上（80px 两种绿相间）——
+           必须与白底融合素材同处一个层叠上下文（#world1 有 transform），mix-blend-mode 才能混到草地 */
+        .world { position: absolute; top: 0; left: 0; transform-origin: 0 0;
+            background-color: #35853e;
+            background-image: conic-gradient(#3c9145 0 90deg, #35853e 0 180deg, #3c9145 0 270deg, #35853e 0);
+            background-size: 160px 160px; }
 
         /* 地图元素 */
         .tile { position: absolute; width: 80px; height: 80px; box-sizing: border-box; }
-        .tile.wall { background: #6b4a22; border-radius: 4px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+        /* v3.88.0 墙面 = 蓝色河道（静态水波纹，避免大面积动画拖性能） */
+        .tile.wall {
+            background-image: repeating-linear-gradient(105deg, rgba(255,255,255,0.13) 0 8px, rgba(255,255,255,0) 8px 26px),
+                              linear-gradient(180deg, #4a90c9 0%, #2e6da8 100%);
+            border: 2px solid #1f4f80; border-radius: 8px;
+            box-shadow: inset 0 4px 8px rgba(255,255,255,0.25), inset 0 -5px 10px rgba(6,35,80,0.45);
+        }
+        .tile.wall::after { content: ''; position: absolute; left: 10%; right: 10%; top: 32%; height: 14%;
+            border-radius: 50%; background: rgba(255,255,255,0.3); filter: blur(1px); }
+        /* v3.88.0 门口木桥（门板坚果铺在桥上，玩家自由穿行） */
+        .tile.bridge {
+            background: repeating-linear-gradient(0deg, #9a6a35 0 12px, #7a4d22 12px 16px);
+            border: 2px solid #5c3b1d; border-radius: 6px;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.35);
+        }
         .tile.center { background: rgba(255, 255, 255, 0.2); border: 2px dashed #fff; border-radius: 50%; }
+
+        /* 猛鬼等级角标 */
+        .lv-badge { position: absolute; top: -26px; left: 50%; transform: translateX(-50%); background: rgba(90,0,0,0.85); color: #ffd54a; font-size: 13px; font-weight: bold; padding: 2px 8px; border-radius: 8px; border: 1px solid #ff5252; white-space: nowrap; z-index: 12; }
 
         /* 实体 */
         .entity { position: absolute; transform: translate(-50%, -50%); transition: left 0.05s linear, top 0.05s linear; pointer-events: none; }
@@ -48,6 +70,17 @@
         .plant-option:hover { background: rgba(247,230,161,0.18); border-color: #f7e6a1; }
         .plant-option img { width: 50px; height: 50px; image-rendering: pixelated; margin-bottom: 5px; }
 
+        /* v3.88.0 点击植物 →「升级 / 拆除」弹窗 */
+        #plant-popup { position: absolute; display: none; z-index: 2400; background: rgba(46,26,12,0.95); border: 3px solid #8c6a4d; border-radius: 10px; padding: 10px 12px; pointer-events: auto; box-shadow: 0 6px 16px rgba(0,0,0,0.6); min-width: 160px; }
+        #pp-title { color: #f5e6c8; font-family: 'Kaiti SC', serif; font-size: 16px; margin-bottom: 8px; text-align: center; letter-spacing: 1px; }
+        #pp-feed { color: #ffe14a; font-size: 12px; text-align: center; margin-bottom: 8px; font-family: 'Kaiti SC', serif; }
+        .pp-btns { display: flex; gap: 8px; justify-content: center; }
+        .pp-btn { font-size: 14px; padding: 6px 12px; border-radius: 8px; cursor: pointer; border: 2px solid #5c3b1d; color: #fff; font-family: 'Kaiti SC', serif; letter-spacing: 1px; }
+        .pp-btn:hover { filter: brightness(1.2); }
+        #pp-demolish { background: linear-gradient(180deg, #c62828, #8e0000); }
+        #pp-upgrade { background: linear-gradient(180deg, #2e7d32, #1b5e20); }
+        #pp-upgrade.pp-disabled { opacity: 0.45; cursor: not-allowed; }
+
         /* 提示文字 */
         .float-text { position: absolute; color: white; text-shadow: 1px 1px 2px black; font-size: 14px; font-family: 'Kaiti SC', serif; white-space: nowrap; pointer-events: none; z-index: 200; transform: translate(-50%, -150%); opacity: 0; transition: opacity 0.2s; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; border: 1px solid #fff; }
 
@@ -77,7 +110,7 @@
         <!-- 全局 UI -->
         <div id="ui-layer">
             <div id="hud-p1" class="player-hud">
-                <div style="color:#4da6ff; margin-bottom: 4px;">移动: WASD | 浇水: 空格(+1☀·催熟蘑菇) | 点击植物升级 | E: 扔包子</div>
+                <div style="color:#4da6ff; margin-bottom: 4px;">移动: WASD | 浇水: 空格(+1☀·催熟蘑菇) | 点击植物: 升级/拆除 | E: 扔包子</div>
                 <div style="display:flex; gap:18px; align-items:center;">
                     <span>阳光: <span id="sun1" class="sun-text">50</span></span>
                     <span>孢子: <span id="spore1" class="sun-text" style="color:#c79aff;">0</span></span>
@@ -90,7 +123,7 @@
                 </div>
             </div>
 
-            <div id="wave-chip"> dorm </div>
+            <div id="wave-chip">👻 准备中…</div>
 
             <canvas id="minimap" width="176" height="132"></canvas>
             <button class="back-btn" style="top:180px;" onclick="location.href='index.html'">返回主菜单</button>
@@ -99,25 +132,39 @@
             <!-- 种植菜单（选项由 HauntedDorm.js 按图鉴数据生成） -->
             <div id="plant-menu"></div>
 
+            <!-- v3.88.0 点击植物 → 升级/拆除弹窗 -->
+            <div id="plant-popup">
+                <div id="pp-title">植物</div>
+                <div id="pp-feed" style="display:none;"></div>
+                <div class="pp-btns">
+                    <button id="pp-demolish" class="pp-btn">拆除</button>
+                    <button id="pp-upgrade" class="pp-btn">升级 🦠0</button>
+                </div>
+            </div>
+
             <!-- 玩法说明（配方表 + 道具） -->
             <div id="dorm-help" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2900; align-items:center; justify-content:center; pointer-events:auto;">
                 <div style="max-width:640px; max-height:82vh; overflow:auto; background:rgba(30,16,8,0.96); border:3px solid #8c6a4d; border-radius:14px; padding:24px 30px; color:#f5e6c8; font-family:'Kaiti SC',serif; font-size:15px; line-height:1.9;">
                     <div style="text-align:center; font-size:26px; letter-spacing:4px; margin-bottom:12px;">👻 猛鬼宿舍 · 玩法说明</div>
                     <b style="color:#ffe14a;">基础操作</b><br>
                     · WASD 移动 · <b>空格浇水</b>：每次 +1 阳光，按住连浇；站在蘑菇旁边浇水可以<b>同时催熟</b>阳光菇和小喷菇<br>
-                    · 点击空地 = 种植菜单；<b>点击植物 = 升级</b>（费用递增）<br>
-                    · <b>E 键扔包子</b>：砸向最近猛鬼，造成伤害并眩晕 1.5 秒<br><br>
+                    · 点击空地 = 种植菜单；<b>点击植物 = 弹出「升级 / 拆除」面板</b>，升级统一消耗 <b style="color:#c79aff;">🦠孢子</b>（蘑菇系产出），拆除直接移除植物<br>
+                    · <b>E 键扔包子</b>：砸向猛鬼，造成伤害并眩晕 1.5 秒<br><br>
                     <b style="color:#ffe14a;">成长配方（唯一，不撞衫）</b><br>
-                    · 阳光菇 <span style="color:#9dff6b;">→(☀10)→ 大阳光菇 →(☀25)→ 向日葵 →(☀60)→ 双子向日葵</span>，逐级变大、产阳光更多<br>
+                    · 阳光菇 <span style="color:#9dff6b;">→(🦠5)→ 大阳光菇 →(🦠15)→ 向日葵 →(🦠40)→ 双子向日葵</span>，逐级变大、产阳光更多<br>
                     · 小喷菇(☀200 购买) 靠浇水喂大：<span style="color:#9dff6b;">浇水 400 → 胆小菇(产出×2) → 浇水 800 → 大喷菇(会喷射) → 浇水 1600 → 忧郁菇(强范围喷射)</span><br>
-                    · 坚果 <span style="color:#9dff6b;">→(☀100)→ 豌豆坚果 →(☀250)→ 射手坚果 →(☀400)→ 卷心菜坚果(投掷) →(☀500)→ 高坚果 →(☀800)→ 南瓜壳</span><br>
-                    · 豌豆射手三选一分支：<span style="color:#9dff6b;">双发射手→机枪射手</span> / <span style="color:#9dff6b;">寒冰射手→冰雪双发(减速)</span> / <span style="color:#9dff6b;">双向射手→三线射手(扇形)</span><br><br>
+                    · 坚果 <span style="color:#9dff6b;">→(🦠10)→ 豌豆坚果(子弹跟踪) →(🦠25)→ 射手坚果(跟踪·双发) →(🦠40)→ 卷心菜坚果(投掷) →(🦠60)→ 高坚果 →(🦠100)→ 南瓜壳</span><br>
+                    · 豌豆射手三选一分支：<span style="color:#9dff6b;">双发射手→(🦠60)→机枪射手</span> / <span style="color:#9dff6b;">寒冰射手→(🦠40)→冰雪双发(减速)</span> / <span style="color:#9dff6b;">双向射手→(🦠50)→三线射手(扇形)</span><br>
+                    · <b>跟踪弹规则</b>：豌豆坚果线的子弹在 <b>260px 内自动追踪猛鬼</b>，超出追踪区就变直线飞<br><br>
                     <b style="color:#c79aff;">🦠 孢子高级植物</b>（蘑菇系随时间产出孢子）<br>
                     · <b>地刺(🦠50)</b>：贴地陷阱，猛鬼站上持续掉血，不会被啃<br>
-                    · <b>眩晕菇(🦠100)</b>：每 6 秒冰冻周围猛鬼 2 秒<br>
-                    · <b>毁灭菇(🦠200)</b>：超高攻击——猛鬼靠近即核爆清场（一次性）<br><br>
+                    · <b>眩晕菇(🦠100)</b>：每 6 秒冰冻猛鬼 2 秒<br>
+                    · <b>毁灭菇(🦠200)</b>：超高攻击——猛鬼靠近即核爆（一次性）<br><br>
                     <b style="color:#ffd54a;">🥟 包子</b>：小喷菇系定期产出，走近拾取，按 E 投掷（伤害+眩晕）<br><br>
-                    <b style="color:#ff8a8a;">目标</b>：猛鬼 20 秒后来袭，每 35 秒一波、逐波更强，<b>挺过 8 波清场 = 胜利</b>；HP 归零 = 失败
+                    <b style="color:#ff8a8a;">👻 猛鬼规则</b>：全场<b>只有一只猛鬼</b>，开局 20 秒出笼，每 45 秒升级：<br>
+                    <span style="color:#ff9e9e;">普通僵尸 → 路障 → 铁桶 → 橄榄球 → 铁门 → 冰车（最终形态）</span><br>
+                    · 打倒猛鬼 8 秒后同级重生（升级不会停）；<b>击倒最终形态冰车僵尸 = 胜利</b>；HP 归零 = 失败<br>
+                    · 房间四周是<b>河道</b>，门口搭着<b>木桥 + 坚果门板</b>：你可以自由过桥，猛鬼得把门板啃穿（门板 1200 血）
                     <div style="text-align:center; margin-top:16px;"><button class="back-btn" style="position:static;" onclick="document.getElementById('dorm-help').style.display='none'">知道了</button></div>
                 </div>
             </div>
@@ -130,8 +177,8 @@
             <div class="ov-title" id="ov-title">你活下来了！</div>
             <div class="ov-stats">
                 <div class="ov-stat">坚持时间<b id="ov-time">0:00</b></div>
-                <div class="ov-stat">击杀僵尸<b id="ov-kills">0</b></div>
-                <div class="ov-stat">挺过波次<b id="ov-waves">0</b></div>
+                <div class="ov-stat">击杀猛鬼<b id="ov-kills">0</b></div>
+                <div class="ov-stat">猛鬼等级<b id="ov-waves">0</b></div>
             </div>
             <div class="ov-btns">
                 <button class="ov-btn" id="ov-retry" onclick="location.reload()">再来一局</button>
@@ -140,6 +187,6 @@
         </div>
     </div>
 
-    <script src="js/HauntedDorm.js?v=1791140000"></script>
+    <script src="js/HauntedDorm.js?v=1791180000"></script>
 </body>
 </html>
