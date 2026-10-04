@@ -23,29 +23,29 @@ class HauntedDorm {
                              produce: { sun: 5, every: 7 },  up: { cost: 200, cur: 'sun', to: 'twinsunflower' } },
             twinsunflower: { name: '双子向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 450,  cost: 0,   scale: 1.2,
                              produce: { sun: 10, every: 7 }, up: { cost: 400, cur: 'sun', to: 'sunpea' } },
-            sunpea:        { name: '向日葵豌豆', img: 'Plants/TwinSunflower/0.gif', hp: 550, cost: 0, scale: 1.2,
+            sunpea:        { name: '豌豆向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 550, cost: 0, scale: 1.2,
                              overlay: 'Plants/Peashooter/0.gif',
                              produce: { sun: 15, every: 6 }, shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, 
-                             up: { cost: 800, cur: 'sun', to: 'doompeaflower' } },
-            doompeaflower: { name: '毁灭向日葵双向', img: 'Plants/TwinSunflower/0.gif', hp: 700, cost: 0, scale: 1.3, tint: 'hue-rotate(240deg)',
-                             overlay: 'Plants/SplitPea/0.gif', hat: 'Plants/DoomShroom/0.gif',
-                             produce: { sun: 20, every: 5 }, shoot: { dmg: 40, cd: 1.2, n: 2, range: 400, img: 'Plants/PB00.gif', back: true }, 
-                             up: { cost: 1600, cur: 'sun', to: 'sunsplitnut' } },
-            sunsplitnut:   { name: '向日葵双向坚果', img: 'Plants/WallNut/0.gif', hp: 6000, cost: 0, scale: 1.4,
-                             overlay: 'Plants/TwinSunflower/0.gif', hat: 'Plants/SplitPea/0.gif',
+                             up: { cost: 800, cur: 'sun', to: 'sunnut' } },
+            sunnut:        { name: '坚果向日葵', img: 'Plants/WallNut/0.gif', hp: 2000, cost: 0, scale: 1.2, 
+                             overlay: 'Plants/TwinSunflower/0.gif',
+                             produce: { sun: 20, every: 5 }, shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, 
+                             up: { cost: 1600, cur: 'sun', to: 'suncherry' } },
+            suncherry:     { name: '樱桃向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 3000, cost: 0, scale: 1.3,
+                             overlay: 'Plants/CherryBomb/0.gif',
                              produce: { sun: 30, every: 4 }, shoot: { dmg: 40, cd: 1.0, n: 3, range: 400, img: 'Plants/PB00.gif', back: true },
-                             up: { cost: 3200, cur: 'sun', to: 'quadsunflower' } },
-            quadsunflower: { name: '四头向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 10000, cost: 0, scale: 1.6, tint: 'brightness(1.5)',
-                             overlays: ['Plants/TwinSunflower/0.gif'],
+                             up: { cost: 3200, cur: 'sun', to: 'sunjala' } },
+            sunjala:       { name: '火爆向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 5000, cost: 0, scale: 1.4,
+                             overlay: 'Plants/Jalapeno/0.gif',
                              produce: { sun: 60, every: 3 }, shoot: { dmg: 50, cd: 0.8, n: 4, range: 500, img: 'Plants/PB00.gif', homing: true },
-                             up: { cost: 6000, cur: 'sun', to: 'octosunflower' } },
-            octosunflower: { name: '八头向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 15000, cost: 0, scale: 1.8, tint: 'saturate(2)',
-                             overlays: ['Plants/TwinSunflower/0.gif', 'Plants/TwinSunflower/0.gif', 'Plants/TwinSunflower/0.gif'],
-                             produce: { sun: 150, every: 3 }, shoot: { dmg: 70, cd: 0.6, n: 8, range: 600, img: 'Plants/PB00.gif', homing: true },
-                             up: { cost: 12000, cur: 'sun', to: 'ultisunflower' } },
-            ultisunflower: { name: '终极向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 30000, cost: 0, scale: 2.2, tint: 'hue-rotate(90deg) brightness(2)',
-                             overlays: ['Plants/TwinSunflower/0.gif', 'Plants/TwinSunflower/0.gif', 'Plants/TwinSunflower/0.gif', 'Plants/TwinSunflower/0.gif'],
-                             produce: { sun: 400, every: 2 }, shoot: { dmg: 100, cd: 0.4, n: 16, range: 800, img: 'Plants/PB00.gif', homing: true } },
+                             up: { cost: 6000, cur: 'sun', to: 'sundoom' } },
+            sundoom:       { name: '毁灭向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 8000, cost: 0, scale: 1.5, tint: 'hue-rotate(240deg)',
+                             overlay: 'Plants/DoomShroom/0.gif',
+                             produce: { sun: 150, every: 3 }, shoot: { dmg: 70, cd: 0.6, n: 6, range: 600, img: 'Plants/PB00.gif', homing: true, aoe: 50 },
+                             up: { cost: 12000, cur: 'sun', to: 'sungatling' } },
+            sungatling:    { name: '机枪向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 15000, cost: 0, scale: 1.6,
+                             overlay: 'Plants/GatlingPea/0.gif',
+                             produce: { sun: 400, every: 2 }, shoot: { dmg: 100, cd: 0.4, n: 8, range: 800, img: 'Plants/PB00.gif', homing: true } },
 
             // —— 蘑菇系 (10级，喂养大) ——
             puffshroom:    { name: '小喷菇', img: 'Plants/PuffShroom/0.gif',     card: 'PuffShroom.png',     hp: 300, cost: 200, scale: 0.9,
@@ -170,7 +170,7 @@ class HauntedDorm {
         const cy = this.worldHeight / 2;
 
         const urlParams = new URLSearchParams(window.location.search);
-        this.role = urlParams.get('role') || 'plant';
+        this.role = urlParams.get('role') || 'peashooter'; // Default to peashooter if missing
         
         this.playerRoles = [
             { id: 'sunflower', name: '向日葵', icon: 'assets/images/Plants/SunFlower/0.gif', skillDesc: '【M键】10秒内阳光产出翻倍' },
@@ -180,11 +180,11 @@ class HauntedDorm {
             { id: 'squash', name: '倭瓜', icon: 'assets/images/Plants/Squash/0.gif', skillDesc: '【M键】半血以上砸掉僵尸一半血' }
         ];
         
-        this.playerRoleDef = this.playerRoles[Math.floor(Math.random() * this.playerRoles.length)];
+        this.playerRoleDef = this.playerRoles.find(r => r.id === this.role) || this.playerRoles[1];
 
         this.player = {
             x: cx, y: cy, sun: 0, spore: 0, hp: 100, maxHp: 100,
-            icon: this.role === 'zombie' ? 'assets/images/Zombies/Zombie/0.gif' : this.playerRoleDef.icon,
+            icon: this.playerRoleDef.icon,
             roleDef: this.playerRoleDef,
             camX: 0, camY: 0, skillUsed: false, sunBuffT: 0, atkBuffT: 0
         };
@@ -200,10 +200,8 @@ class HauntedDorm {
 
         // ===== 单僵尸导演系统 =====
         this.ghostSpawned = false;
-        this.ghostSpawnAt = 20000;        // 开局 20s 出笼
-        this.ghostLevel = 1;              // 当前等级 1..6
-        this.ghostLvEvery = 45000;        // 每 45s 升一级
-        this.ghostNextLvAt = 20000 + 45000;
+        this.ghostSpawnAt = performance.now() + 20000; // 开局 20s 出笼，修复准备中 bug
+        this.ghostLevel = 1;              // 当前等级 1..10
         this.ghostRespawnAt = 0;          // >0 = 死亡等待重生
         this.kills = 0;
         this.over = false;
@@ -452,10 +450,12 @@ class HauntedDorm {
 
         // v3.93.0 安排 5 个人机，所有人都出生在地图正中央，然后走向各自房间
         let shuffledRooms = [...this.rooms].sort(() => Math.random() - 0.5);
+        // 分配给人机的皮肤（不包含玩家当前选的那个，保证 1+5 刚好凑齐 6 个但不全部重复）
+        // 或者直接给5个人机分配 5 个标准皮肤
         for (let i = 0; i < 5; i++) {
             if (i >= shuffledRooms.length) break;
             const rm = shuffledRooms[i];
-            const roleDef = this.playerRoles[i]; // 一人一个
+            const roleDef = this.playerRoles[i]; // 5个人机刚好一人分一个固定皮肤，涵盖全部5种
             const ai = {
                 x: cx + (Math.random() * 40 - 20),
                 y: cy + (Math.random() * 40 - 20),
@@ -667,12 +667,7 @@ class HauntedDorm {
             return;
         }
         // 僵尸升级改为咬破门触发。这里保留重生逻辑即可。
-        // 重生（打倒 8s 后同级再来）
-        if (this.ghostRespawnAt > 0 && time >= this.ghostRespawnAt) {
-            this.ghostRespawnAt = 0;
-            this._spawnGhost();
-            this._announce('👻 僵尸又来了！', 'evillaugh.mp3');
-        }
+        // 一条命，不再重生
     }
 
     _spawnGhost() {
@@ -702,12 +697,12 @@ class HauntedDorm {
         if (!this.ghostSpawned) {
             chip.innerText = `👻 僵尸出笼还有 ${Math.max(0, Math.ceil((this.ghostSpawnAt - now) / 1000))}s`;
         } else if (this.ghostRespawnAt > 0) {
-            chip.innerText = `👻 僵尸重生还有 ${Math.max(0, Math.ceil((this.ghostRespawnAt - now) / 1000))}s · 击杀 ${this.kills}`;
+            chip.innerText = `🏆 僵尸已被击杀，游戏胜利！`;
         } else {
             const cfg = HauntedDorm.GHOST_LEVELS[this.ghostLevel - 1];
             const lvTxt = this.ghostLevel >= HauntedDorm.GHOST_MAX_LV
                 ? `Lv.${this.ghostLevel} ${cfg.name}（最终形态）`
-                : `Lv.${this.ghostLevel} ${cfg.name} · 升级还有 ${Math.max(0, Math.ceil((this.ghostNextLvAt - now) / 1000))}s`;
+                : `Lv.${this.ghostLevel} ${cfg.name}`;
             chip.innerText = `👻 ${lvTxt} · 击杀 ${this.kills}`;
         }
     }
@@ -1142,12 +1137,10 @@ class HauntedDorm {
         this.world1.appendChild(el);
         this.suns.push({ x: zb.x, y: zb.y, el });
         // 击倒最终形态（冰车僵尸）= 胜利；否则 8s 后同级重生
-        if (zb.level >= HauntedDorm.GHOST_MAX_LV) {
-            this.gameOver(true);
-            return;
-        }
-        this.ghostRespawnAt = performance.now() + 8000;
+        // 一命通关：僵尸死后游戏直接胜利
+        this.ghostRespawnAt = 1; // 标记已死
         this._updateGhostChip();
+        setTimeout(() => this.gameOver(true), 3000);
     }
 
     _updateSuns() {
