@@ -743,3 +743,9 @@ body {
         rgba(34, 26, 18, 0.28) 74%,
         rgba(34, 26, 18, 0) 88%);
 }
+
+/* Dorm Mode Phase 1 */
+#game-container.dorm-mode .row:not(:nth-child(3)) { display: none !important; }
+#game-container.dorm-mode #grid-overlay { border: 20px solid #555; background: rgba(0,0,0,0.8); box-shadow: inset 0 0 50px #000; }
+#game-container.dorm-mode { background: #111; }
+

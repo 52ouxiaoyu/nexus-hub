@@ -377,7 +377,10 @@ class HauntedDorm {
                 }
             }
             if (valid) {
-                this.rooms.push({ x: rx, y: ry, w: tpl.grid[0].length, h: tpl.grid.length, tpl: tpl });
+                this.rooms.push({ 
+                    x: rx, y: ry, w: tpl.grid[0].length, h: tpl.grid.length, tpl: tpl,
+                    frontX: (rx + tpl.door.c) * 80 + 40, frontY: (ry + tpl.door.r) * 80 + 40 
+                });
             }
         }
 
@@ -1105,8 +1108,8 @@ class HauntedDorm {
         if (badge) badge.style.display = this.waterOn ? 'block' : 'none';
     }
 
-    checkCollision(x, y) {
-        const r = 20; // v3.88.0：25 → 20，穿门更容易
+    checkCollision(x, y, r = 20) {
+        // v3.88.0：25 → 20，v3.96.0：支持动态半径，玩家设为10更容易进门
         const corners = [
             { c: Math.floor((x-r)/this.gridSize), r: Math.floor((y-r)/this.gridSize) },
             { c: Math.floor((x+r)/this.gridSize), r: Math.floor((y-r)/this.gridSize) },
@@ -1485,11 +1488,11 @@ class HauntedDorm {
 
         let nx = this.player.x + vx1 * dt;
         let ny = this.player.y;
-        if (nx > 20 && nx < this.worldWidth - 20 && !this.checkCollision(nx, ny)) this.player.x = nx;
+        if (nx > 20 && nx < this.worldWidth - 20 && !this.checkCollision(nx, ny, 10)) this.player.x = nx;
 
         nx = this.player.x;
         ny = this.player.y + vy1 * dt;
-        if (ny > 30 && ny < this.worldHeight - 10 && !this.checkCollision(nx, ny)) this.player.y = ny;
+        if (ny > 30 && ny < this.worldHeight - 10 && !this.checkCollision(nx, ny, 10)) this.player.y = ny;
 
         // 人机开局自动寻路（按路点走到床位，避免穿模穿墙）
         for (const ai of this.ais) {
@@ -1510,13 +1513,13 @@ class HauntedDorm {
         }
 
         // 防卡墙自救
-        if (this.checkCollision(this.player.x, this.player.y)) {
+        if (this.checkCollision(this.player.x, this.player.y, 10)) {
             // 被卡在墙内了，尝试推出去
-            const r = 20;
-            if (!this.checkCollision(this.player.x + r, this.player.y)) this.player.x += r;
-            else if (!this.checkCollision(this.player.x - r, this.player.y)) this.player.x -= r;
-            else if (!this.checkCollision(this.player.x, this.player.y + r)) this.player.y += r;
-            else if (!this.checkCollision(this.player.x, this.player.y - r)) this.player.y -= r;
+            const r = 10;
+            if (!this.checkCollision(this.player.x + r, this.player.y, 10)) this.player.x += r;
+            else if (!this.checkCollision(this.player.x - r, this.player.y, 10)) this.player.x -= r;
+            else if (!this.checkCollision(this.player.x, this.player.y + r, 10)) this.player.y += r;
+            else if (!this.checkCollision(this.player.x, this.player.y - r, 10)) this.player.y -= r;
         }
 
         // 浇水（v3.89.0：1 秒才能浇一次——按再快也只按时间间隔计，杜绝拼手速；+1 阳光 / 催熟身边蘑菇）
