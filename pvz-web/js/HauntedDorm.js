@@ -463,8 +463,10 @@ class HauntedDorm {
             const ai = {
                 x: (this.worldWidth / 2) + (Math.random() * 40 - 20),
                 y: (this.worldHeight / 2) + (Math.random() * 40 - 20),
-                targetX: (rm.x + rm.tpl.bed.c) * this.gridSize + 40,
-                targetY: (rm.y + rm.tpl.bed.r) * this.gridSize + 40,
+                path: [
+                    { x: rm.frontX, y: rm.frontY }, // 先走到门外引导点
+                    { x: (rm.x + rm.tpl.bed.c) * this.gridSize + 40, y: (rm.y + rm.tpl.bed.r) * this.gridSize + 40 } // 再走进去
+                ],
                 sun: 50, spore: 0, hp: 100, maxHp: 100,
                 isAi: true, room: rm, roleDef: roleDef,
                 icon: roleDef.icon, dead: false,
@@ -472,7 +474,7 @@ class HauntedDorm {
             };
             rm.owner = ai; // AI 预占领房间
             ai.el1.className = 'entity avatar';
-            ai.el1.innerHTML = `<img src="${ai.icon}">`;
+            ai.el1.innerHTML = `<img src="${ai.icon}" style="${ai.roleDef.imgStyle || ''}">`;
             this.world1.appendChild(ai.el1);
             this.ais.push(ai);
             this.allPlayers.push(ai);
@@ -675,7 +677,7 @@ class HauntedDorm {
             this.aiTick = 0;
             for (const ai of this.ais) {
                 if (ai.dead) continue;
-                if (Math.hypot(ai.x - ai.targetX, ai.y - ai.targetY) > 10) continue; // 还在赶路
+                if (ai.path && ai.path.length > 0) continue; // 还在赶路，等到了床边再开始发育
                 
                 const rm = ai.room;
                 if (!rm) continue;
@@ -1443,18 +1445,18 @@ class HauntedDorm {
         ny = this.player.y + vy1 * dt;
         if (ny > 30 && ny < this.worldHeight - 10 && !this.checkCollision(nx, ny)) this.player.y = ny;
 
-        // 人机开局自动寻路（走向房间的床位）
+        // 人机开局自动寻路（按路点走到床位，避免穿模穿墙）
         for (const ai of this.ais) {
-            if (ai.targetX && ai.targetY) {
-                const dx = ai.targetX - ai.x;
-                const dy = ai.targetY - ai.y;
+            if (ai.path && ai.path.length > 0) {
+                const target = ai.path[0];
+                const dx = target.x - ai.x;
+                const dy = target.y - ai.y;
                 const dist = Math.hypot(dx, dy);
                 if (dist > 5) {
                     ai.x += (dx / dist) * 200 * dt; // speed 200
                     ai.y += (dy / dist) * 200 * dt;
                 } else {
-                    ai.targetX = null;
-                    ai.targetY = null;
+                    ai.path.shift(); // 抵达当前路点，切下一个
                 }
                 ai.el1.style.left = ai.x + 'px';
                 ai.el1.style.top = ai.y + 'px';
