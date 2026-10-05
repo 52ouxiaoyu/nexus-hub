@@ -118,11 +118,11 @@ class HauntedDorm {
             // —— 特殊 ——
             potatomine:    { name: '土豆雷', img: 'Plants/PotatoMine/0.gif', card: 'PotatoMine.png', hp: 300, cost: 25, mine: true },
             spikeweed:     { name: '地刺',   img: 'Plants/Spikeweed/0.gif',  card: 'Spikeweed.png',  hp: 99999, cost: 50, sporeCost: 50, ground: true,
-                             spike: { dps: 40, r: 55 } },
-            iceshroom:     { name: '眩晕菇', img: 'Plants/IceShroom/0.gif',  card: 'IceShroom.png',  hp: 300,  cost: 100, sporeCost: 100,
-                             freeze: { every: 6, r: 170, t: 2 } },
-            doomshroom:    { name: '毁灭菇', img: 'Plants/DoomShroom/0.gif', card: 'DoomShroom.png', hp: 300,  cost: 200, sporeCost: 200,
-                             nuke: { r: 190, arm: 5 } }
+                             spike: { dps: 200, r: 55 } },
+            iceshroom:     { name: '极寒冰阵', img: 'Plants/IceShroom/0.gif',  card: 'IceShroom.png',  hp: 2000,  cost: 100, sporeCost: 100,
+                             freeze: { aura: true, slow: 0.5, dps: 80 } },
+            doomshroom:    { name: '毁灭重炮', img: 'Plants/DoomShroom/0.gif', card: 'DoomShroom.png', hp: 2000,  cost: 200, sporeCost: 200,
+                             nuke: { lob: true, dmg: 800, pct: 0.04, cd: 4.0, img: 'Plants/DoomShroom/0.gif' } }
         };
     }
 
@@ -990,14 +990,20 @@ class HauntedDorm {
         if (col < 0 || col >= this.cols || row < 0 || row >= this.rows) return;
         if (this.walls.has(`${col},${row}`)) return;
         if (this.plants.some(pl => pl.c === col && pl.r === row)) return;
-        // v3.91.0：植物只能种在房间里——房间外的草地不允许种植
-        const targetRm = this._insideRoom(col, row);
+        // v3.91.0：植物只能种在房间里——房间外的草地不允许种植 (新增: 地刺可以种在门外一格)
+        let targetRm = this._insideRoom(col, row);
+        let isSpikeTile = false;
         if (!targetRm) {
-            this._flyText(col * this.gridSize + 40, row * this.gridSize, '只能种在房间里', '#ff8a8a');
-            return;
+            targetRm = this.rooms.find(rm => col === rm.doorCol && row === rm.doorRow + 1);
+            if (targetRm) {
+                isSpikeTile = true;
+            } else {
+                this._flyText(col * this.gridSize + 40, row * this.gridSize, '只能种房内，或门外一格种地刺', '#ff8a8a');
+                return;
+            }
         }
         
-        // v3.94.6: 检查房间归属
+        // 检查房间归属
         if (this.ais.some(ai => ai.room === targetRm)) {
             this._flyText(col * this.gridSize + 40, row * this.gridSize, '这是人机的房间！', '#ff8a8a');
             return;
@@ -1014,6 +1020,16 @@ class HauntedDorm {
         this.plantMenu.style.display = 'flex';
         this.plantMenu.style.left = (mouseX + 20) + 'px';
         this.plantMenu.style.top = (mouseY - 20) + 'px';
+        
+        // 地刺格子只能种地刺，别的植物隐藏
+        const opts = this.plantMenu.querySelectorAll('.plant-option');
+        opts.forEach(opt => {
+            if (isSpikeTile) {
+                opt.style.display = (opt.dataset.t === 'spikeweed') ? 'block' : 'none';
+            } else {
+                opt.style.display = (opt.dataset.t === 'spikeweed') ? 'none' : 'block';
+            }
+        });
     }
 
     _closePlantMenu() {
@@ -1033,7 +1049,9 @@ class HauntedDorm {
     doPlant(type) {
         this._closePlantMenu();
         
-        const targetRm = this._insideRoom(this.menuCol, this.menuRow);
+        let targetRm = this._insideRoom(this.menuCol, this.menuRow);
+        if (!targetRm) targetRm = this.rooms.find(rm => this.menuCol === rm.doorCol && this.menuRow === rm.doorRow + 1);
+        
         if (targetRm && !this.player.room) {
             this.player.room = targetRm; // 绑定房间归属
         }
@@ -1300,7 +1318,7 @@ class HauntedDorm {
                     if (d < bd) { bd = d; best = zb; }
                 }
                 if (best) {
-                    const spd = Math.hypot(pea.vx, pea.vy);
+                    const spd = pea.speed || Math.hypot(pea.vx, pea.vy);
                     const cur = Math.atan2(pea.vy, pea.vx);
                     const want = Math.atan2(best.y - pea.y, best.x - pea.x);
                     let diff = want - cur;
@@ -1328,6 +1346,15 @@ class HauntedDorm {
                         : [zb];
                     for (const z of hits) {
                         z.hp -= pea.dmg;
+                        if (pea.pctDmg) z.hp -= z.maxHp * pea.pctDmg;
+                        if (pea.pctDmg) {
+                            // 毁灭大炮特效
+                            const boom = document.createElement('div');
+                            boom.style.cssText = `position:absolute; left:${pea.x-100}px; top:${pea.y-100}px; width:200px; height:200px; border-radius:50%; background:radial-gradient(circle, rgba(190,120,255,0.9) 0%, rgba(255,0,0,0) 70%); z-index:600; pointer-events:none;`;
+                            this.world1.appendChild(boom);
+                            setTimeout(() => boom.remove(), 400);
+                            this.playSfx('explosion.mp3', 0.4);
+                        }
                         if (pea.slow) z.slowT = 2.5;
                         if (z.hpBg) {
                             z.hpBg.style.display = 'block';
@@ -1443,46 +1470,65 @@ class HauntedDorm {
     }
 
     _updateIceshroom(dt) {
+        // 极寒冰阵：全局减速并造成持续伤害
+        let hasAura = false;
+        let dps = 0;
         for (const pl of this.plants) {
             const fz = pl.def.freeze;
-            if (!fz) continue;
-            pl.freezeT += dt;
-            if (pl.freezeT < fz.every) continue;
-            const px = pl.c * 80 + 40, py = pl.r * 80 + 40;
-            const victims = this.zombies.filter(z => !z.dead && Math.hypot(z.x - px, z.y - py) < fz.r);
-            if (!victims.length) continue;
-            pl.freezeT = 0;
-            for (const z of victims) {
-                z.stunT = Math.max(z.stunT, fz.t);
-                z.el1.querySelector('img').style.filter = 'saturate(0.35) brightness(1.5) drop-shadow(0 0 8px #7fd8ff)';
+            if (fz && fz.aura) {
+                hasAura = true;
+                dps += fz.dps;
             }
-            this.playSfx('frozen.mp3', 0.4);
-            setTimeout(() => {
-                for (const z of victims) { if (z.el1) z.el1.querySelector('img').style.filter = ''; }
-            }, fz.t * 1000);
+        }
+        for (const zb of this.zombies) {
+            if (zb.dead) continue;
+            if (hasAura) {
+                zb.slowT = 0.5;
+                zb.hp -= dps * dt;
+                zb.el1.querySelector('img').style.filter = 'saturate(0.35) brightness(1.5) drop-shadow(0 0 8px #7fd8ff)';
+                if (zb.hp <= 0) this._killZombie(zb);
+            } else {
+                if (zb.slowT <= 0 && zb.el1) zb.el1.querySelector('img').style.filter = '';
+            }
         }
     }
 
     _updateDoomshroom(dt) {
-        for (const pl of [...this.plants]) {
+        // 毁灭重炮：无限射程重炮，造成真伤
+        for (const pl of this.plants) {
             const nk = pl.def.nuke;
-            if (!nk) continue;
-            pl._armT = (pl._armT === undefined ? nk.arm : pl._armT);
-            if (pl._armT > 0) { pl._armT -= dt; continue; }
-            const px = pl.c * 80 + 40, py = pl.r * 80 + 40;
-            const victim = this.zombies.find(z => !z.dead && Math.hypot(z.x - px, z.y - py) < 120);
-            if (!victim) continue;
-            // 超高攻击：一次性核爆
-            this.playSfx('explosion.mp3', 0.65);
-            const boom = document.createElement('div');
-            boom.style.cssText = `position:absolute; left:${px - nk.r}px; top:${py - nk.r}px; width:${nk.r*2}px; height:${nk.r*2}px; border-radius:50%; background:radial-gradient(circle, rgba(190,120,255,0.95) 0%, rgba(90,0,140,0.8) 45%, rgba(255,0,0,0) 72%); z-index:600; pointer-events:none;`;
-            this.world1.appendChild(boom);
-            setTimeout(() => boom.remove(), 500);
-            for (const zb of [...this.zombies]) {
-                if (!zb.dead && Math.hypot(zb.x - px, zb.y - py) < nk.r) this._killZombie(zb);
+            if (!nk || !nk.lob) continue;
+            pl.nukeT = (pl.nukeT || 0) + dt;
+            if (pl.nukeT >= nk.cd) {
+                pl.nukeT = 0;
+                let best = null, bd = Infinity;
+                for (const zb of this.zombies) {
+                    if (zb.dead) continue;
+                    const d = Math.hypot(zb.x - pl.c*80, zb.y - pl.r*80);
+                    if (d < bd) { bd = d; best = zb; }
+                }
+                if (!best) continue;
+                
+                this.playSfx('throw.mp3', 0.4);
+                const px = pl.c * 80 + 40, py = pl.r * 80 + 40;
+                const el = document.createElement('div');
+                el.className = 'entity';
+                el.style.cssText = `width:40px;height:40px;z-index:150; transition: transform 0.1s linear;`;
+                el.innerHTML = `<img src="assets/images/${nk.img}" style="width:100%;height:100%;object-fit:contain; filter:drop-shadow(0 0 5px #f00);">`;
+                this.world1.appendChild(el);
+                
+                // 给导弹加上无限范围追踪属性
+                this.peas.push({
+                    x: px, y: py,
+                    vx: 0, vy: -200, 
+                    el: el, life: 10,
+                    dmg: nk.dmg,
+                    pctDmg: nk.pct,
+                    homing: true,
+                    homeR: 9999, // 无论多远都追踪
+                    speed: 350
+                });
             }
-            pl.el1.remove();
-            this.plants = this.plants.filter(p => p !== pl);
         }
     }
 
