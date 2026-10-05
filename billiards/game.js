@@ -2636,7 +2636,7 @@ function startGame(_vsAI, level, mode) {
 
 function initMenu() {
     let mode = 'ai';
-    let gameType = 'pool8';
+    let gameType = 'snooker';   // v2.8.3：默认斯诺克人机对战
     document.querySelectorAll('.game-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.game-btn').forEach(b => b.classList.remove('selected'));
