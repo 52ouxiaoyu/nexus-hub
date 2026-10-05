@@ -1849,7 +1849,9 @@ function aiChooseShot() {
     const cue = cueBall();
     const targets = legalTargetBalls();
     if (!targets.length || cue.potted) return null;
-    const sigma = [0.035, 0.014, 0.005][aiLevel];
+    // v2.8.5：简单/中等档调弱（用户反馈 AI 太强、一杆多个）——出杆瞄准噪声简单档 4°、中等 1.5°；
+    // 困难档保持原机器级强度不变
+    const sigma = [0.07, 0.026, 0.005][aiLevel];
     const cutMin = [0.22, 0.28, 0.30][aiLevel];
 
     // ---- 开球：直线全力冲球堆最前沿 ----
@@ -1928,13 +1930,16 @@ function aiChooseShot() {
         // v2.7.6：简单档不做事后噪声择优（那会无限贴近理想线、弹无虚发）——
         // 保留"会挑球/会算力度"的脑子，但出杆直接带满档噪声，该打丢就打丢
         if (isEasy) {
+            // v2.8.5：简单档出杆带满档瞄准噪声 + 力度抖动——该打丢就打丢，不再靠精准走位连杆
             const a = Math.atan2(bestPlan.dir.z, bestPlan.dir.x) + gauss() * sigma;
-            return { dir: { x: Math.cos(a), z: Math.sin(a) }, power: clamp(bestPlan.power, 0.10, 0.95), vert: 0 };
+            const pw = clamp(bestPlan.power + gauss() * 0.18, 0.10, 0.95);
+            return { dir: { x: Math.cos(a), z: Math.sin(a) }, power: pw, vert: 0 };
         }
-        // 噪声复验：从理想线 + 3 个噪声样本里选模拟实测最优的方向
+        // 噪声复验：困难档从理想线 + 3 个噪声样本里选模拟实测最优的方向；
+        // 普通档（v2.8.5 调弱）不提供理想线基线——只在带噪声样本里挑，保证每次出杆都有真实手抖
         const vert = bestPlan.vert || 0;
         let bdir = bestPlan.dir;
-        let bval = scoreSnookerSim(simulateShot(bdir.x, bdir.z, bestPlan.power, vert), on);
+        let bval = aiLevel === 2 ? scoreSnookerSim(simulateShot(bdir.x, bdir.z, bestPlan.power, vert), on) : -Infinity;
         for (let k = 0; k < 3; k++) {
             const a0 = Math.atan2(bestPlan.dir.z, bestPlan.dir.x) + gauss() * sigma;
             const d = { x: Math.cos(a0), z: Math.sin(a0) };
@@ -1998,9 +2003,10 @@ function aiChooseShot() {
     // 噪声复验：评分时用的是理想方向，实际出杆带瞄准噪声。
     // 对决胜球（如打黑8）毫厘之差就是胜负，所以从理想线 + 3 个噪声样本里
     // 选模拟实测最优的那个方向——保证"选出来的就是打出来的"。
+    // v2.8.5：理想线基线只留给困难档；普通档只在带噪声样本里挑（每次出杆都带真实手抖）。
     const vert = bestPlan.vert || 0;
     let bdir = bestPlan.dir;
-    let bval = scoreSim(simulateShot(bdir.x, bdir.z, bestPlan.power, vert), ctx);
+    let bval = aiLevel === 2 ? scoreSim(simulateShot(bdir.x, bdir.z, bestPlan.power, vert), ctx) : -Infinity;
     for (let k = 0; k < 3; k++) {
         const a0 = Math.atan2(bestPlan.dir.z, bestPlan.dir.x) + gauss() * sigma;
         const d = { x: Math.cos(a0), z: Math.sin(a0) };
