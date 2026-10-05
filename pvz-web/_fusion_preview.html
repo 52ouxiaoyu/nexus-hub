@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>融合新方案预览 v3.11.0</title><style>
+  * { box-sizing:border-box; }
+  body { margin:0; padding:22px 26px; background:#241708; width:1400px;
+         font-family:"Hiragino Sans GB","PingFang SC",sans-serif; color:#f4e6cf; }
+  h1 { font-size:23px; margin:0 0 4px; }
+  .sub { color:#c8a97a; font-size:12.5px; line-height:1.7; margin-bottom:16px; }
+  h2 { font-size:17px; margin:24px 0 10px; color:#ffd98a;
+        border-left:5px solid #8a5a24; padding-left:10px; }
+  .card { background:#3a2716; border:2px solid #6b4a2b; border-radius:12px;
+           margin-bottom:12px; overflow:hidden; }
+  .head { display:flex; align-items:center; gap:9px; padding:8px 14px;
+           background:#4a3018; border-bottom:2px solid #6b4a2b; }
+  .icon { font-size:19px; }
+  .name { font-size:17px; font-weight:bold; color:#ffe1a8; }
+  .tag { font-size:11px; color:#c8a97a; background:#241708; padding:2px 8px; border-radius:8px; }
+  .body { display:flex; gap:16px; padding:12px 14px; align-items:center; }
+  .recipe { display:flex; align-items:center; gap:8px; background:#6d4a29;
+             border:2px solid #4a3018; border-radius:10px; padding:8px 12px; flex:0 0 auto; }
+  .slot { display:flex; flex-direction:column; align-items:center; gap:2px; width:72px; }
+  .slot img { width:68px; height:68px; object-fit:contain; }
+  .slot span { font-size:11px; color:#ffeccc; }
+  .op { font-size:22px; font-weight:bold; color:#ffe1a8; padding:0 2px; }
+  .stage { position:relative; width:250px; height:230px; flex:0 0 auto; border-radius:10px;
+            overflow:hidden; border:2px solid #3d2a12;
+            background:radial-gradient(ellipse at 50% 74%, #74a044 0%, #517d2c 58%, #3b5c1e 100%); }
+  .text { flex:1 1 auto; font-size:13px; line-height:1.8; }
+  .text b { color:#ffd98a; }
+  .logic { margin:0 0 5px; }
+  .effect { margin:0; color:#bff0a0; }
+  .note { margin-top:6px; font-size:11px; color:#e8b464; }
+  .ba { display:flex; align-items:center; gap:14px; background:#3a2716;
+         border:2px solid #6b4a2b; border-radius:12px; padding:12px 16px; margin-bottom:10px; }
+  .ba-name { width:104px; font-size:15px; font-weight:bold; color:#ffe1a8; }
+  .ba-col { display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .ba-label { font-size:11px; padding:2px 8px; border-radius:8px; }
+  .ba-label.bad { background:#5a1f1f; color:#ffb0b0; }
+  .ba-label.good { background:#1f4a24; color:#b0ffb8; }
+  .ba-arrow { font-size:24px; color:#ffd98a; }
+  .stage.sm { width:190px; height:180px; }
+  .fix { background:#3a2716; border:2px solid #6b4a2b; border-radius:12px;
+          padding:12px 16px 14px; margin-bottom:12px; }
+  .fix-t { font-size:15px; font-weight:bold; color:#ffe1a8; margin-bottom:10px; }
+  .fix-row { display:flex; gap:18px; align-items:flex-end; margin-bottom:10px; flex-wrap:wrap; }
+  .fix-col { display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .bad-l,.good-l,.ref-l { font-size:11px; padding:2px 8px; border-radius:8px; }
+  .bad-l { background:#5a1f1f; color:#ffb0b0; }
+  .good-l { background:#1f4a24; color:#b0ffb8; }
+  .ref-l { background:#2b3a52; color:#a9c8ff; }
+  .zoom3 { width:216px; height:216px; object-fit:contain; image-rendering:auto;
+            background:#241708; border-radius:8px; }
+  .stage2 { width:150px; height:150px; display:flex; align-items:center; justify-content:center;
+             background:radial-gradient(ellipse at 50% 60%, #6f9a3f 0%, #4f7a2a 60%, #3c5f1f 100%);
+             border:2px solid #3d2a12; border-radius:8px; overflow:hidden; }
+  .crop4 { overflow:hidden; }
+  .crop4 img { display:block; image-rendering:pixelated; }
+  .fix-note { font-size:11.5px; color:#c8a97a; line-height:1.75; }
+  .price { width:100%; border-collapse:collapse; font-size:12.5px; }
+  .price th { background:#4a3018; color:#ffd98a; padding:5px 8px; text-align:left; }
+  .price td { padding:5px 8px; border-top:1px solid #55401f; }
+  .price .old { color:#e08a8a; }
+  .price .new { color:#b0ffb8; font-weight:bold; }
+</style></head><body>
+  <h1>融合进化 · v3.11.0 候选新方案</h1>
+  <div class="sub">预览用的叠加约定与游戏内<b>完全一致</b>（宿主与融合部件都锚在格心、<code>translate(-50%,-50%)</code> 居中），只是整体放大 1.9 倍方便看。<br>
+  下面 6 个是我按"融合对象少的植物"（大嘴花 / 火炬树桩 / 大蒜 / 土豆雷 / 地刺）新设计的方案，觉得丑的直接说编号，我换掉。</div>
+  <h2>① 新融合方案（6 个）</h2>
+  
+  <div class="card" id="fusion_tallchomp">
+    <div class="head"><span class="icon">🌰</span><span class="name">高坚果巨口</span>
+      <span class="tag">大嘴花系 · 回收被删配方</span></div>
+    <div class="body">
+      <div class="recipe">
+        <div class="slot"><img src="assets/images/Plants/Chomper/Chomper.gif"><span>大嘴花</span></div>
+        <div class="op">+</div>
+        <div class="slot"><img src="assets/images/Plants/TallNut/TallNut.gif"><span>高坚果</span></div>
+        <div class="op">=</div>
+        <div class="stage"><div style="position:absolute;left:50%;top:50%;width:0;height:0;transform:scale(1.9);"><img src="assets/images/Plants/TallNut/TallNut.gif" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) translateY(-20px);"><img src="assets/images/Plants/Chomper/Chomper.gif" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) translate(13px, -44px) scale(0.8);clip-path:polygon(0 0, 100% 0, 100% 78%, 0 78%);-webkit-clip-path:polygon(0 0, 100% 0, 100% 78%, 0 78%);"></div></div>
+      </div>
+      <div class="text"><p class="logic"><b>逻辑</b>：大嘴花咬得凶但太脆，高坚果扛得住却没牙口。把巨口嫁接到厚甲上——先挨啃，再一口吞。</p>
+        <p class="effect"><b>效果</b>：耐久 8000（高坚果级）；保留吞噬；咀嚼 42s → 30s</p></div>
+    </div>
+  </div>
+  <div class="card" id="fusion_flamechomp">
+    <div class="head"><span class="icon">🔥</span><span class="name">烈焰巨口</span>
+      <span class="tag">大嘴花系 · 火</span></div>
+    <div class="body">
+      <div class="recipe">
+        <div class="slot"><img src="assets/images/Plants/Chomper/Chomper.gif"><span>大嘴花</span></div>
+        <div class="op">+</div>
+        <div class="slot"><img src="assets/images/Plants/Torchwood/Torchwood.gif"><span>火炬树桩</span></div>
+        <div class="op">=</div>
+        <div class="stage"><div style="position:absolute;left:50%;top:50%;width:0;height:0;transform:scale(1.9);"><img src="assets/images/Plants/Chomper/Chomper.gif" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) translateY(0px);"><img src="assets/images/Plants/Torchwood/Torchwood.gif" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) translate(7px, 26px) scale(0.7);clip-path:polygon(0 0, 100% 0, 100% 48%, 0 48%);-webkit-clip-path:polygon(0 0, 100% 0, 100% 48%, 0 48%);"></div></div>
+      </div>
+      <div class="text"><p class="logic"><b>逻辑</b>：嘴里燃着火桩——吞下去的僵尸当场被焚化，不用慢慢消化。</p>
+        <p class="effect"><b>效果</b>：咀嚼 42s → 6s；每次吞噬对同一行造成一次火焰灼烧</p><div class="note">※ 火炬树桩本身要先由「坚果墙 + 火爆辣椒」融合出来，所以这两条是「二次融合」</div></div>
+    </div>
+  </div>
+  <div class="card" id="fusion_garlicchomp">
+    <div class="head"><span class="icon">🧄</span><span class="name">蒜口巨花</span>
+      <span class="tag">大嘴花系 · 驱赶</span></div>
+    <div class="body">
+      <div class="recipe">
+        <div class="slot"><img src="assets/images/Plants/Chomper/Chomper.gif"><span>大嘴花</span></div>
+        <div class="op">+</div>
+        <div class="slot"><img src="assets/images/Plants/Garlic/Garlic.gif"><span>大蒜</span></div>
+        <div class="op">=</div>
+        <div class="stage"><div style="position:absolute;left:50%;top:50%;width:0;height:0;transform:scale(1.9);"><img src="assets/images/Plants/Chomper/Chomper.gif" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) translateY(-10px);"><img src="assets/images/Plants/Garlic/Garlic.gif" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) translate(6px, 14px) scale(0.75);"></div></div>
+      </div>
+      <div class="text"><p class="logic"><b>逻辑</b>：一口吞下一整头蒜，口气冲得整行僵尸都退避三舍。</p>
+        <p class="effect"><b>效果</b>：每次吞噬后，同行僵尸被推退约半格并减速 1.5s</p></div>
+    </div>
+  </div>
+  <div class="card" id="fusion_lavaspike">
+    <div class="head"><span class="icon">🌋</span><span class="name">熔岩地刺</span>
+      <span class="tag">火炬树桩系</span></div>
+    <div class="body">
+      <div class="recipe">
+        <div class="slot"><img src="assets/images/Plants/Torchwood/Torchwood.gif"><span>火炬树桩</span></div>
+        <div class="op">+</div>
+        <div class="slot"><img src="assets/images/Plants/Spikeweed/Spikeweed.gif"><span>地刺</span></div>
+        <div class="op">=</div>
+        <div class="stage"><div style="position:absolute;left:50%;top:50%;width:0;height:0;transform:scale(1.9);"><img src="assets/images/Plants/Spikeweed/Spikeweed.gif" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) translateY(25px);"><img src="assets/images/Plants/Torchwood/Torchwood.gif" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) translate(1px, 24px) scale(0.85);clip-path:polygon(0 0, 100% 0, 100% 48%, 0 48%);-webkit-clip-path:polygon(0 0, 100% 0, 100% 48%, 0 48%);"></div></div>
+      </div>
+      <div class="text"><p class="logic"><b>逻辑</b>：地刺扎穿脚掌，火桩的余火顺着伤口把僵尸点着——踩上来就得一直烧。</p>
+        <p class="effect"><b>效果</b>：地刺伤害照旧，另附加持续灼烧（每 1.5s 5 点，共 4.5s）</p><div class="note">※ 火炬树桩本身要先由「坚果墙 + 火爆辣椒」融合出来，所以这两条是「二次融合」</div></div>
+    </div>
+  </div>
+  <div class="card" id="fusion_firemine">
+    <div class="head"><span class="icon">💥</span><span class="name">燃爆地雷</span>
+      <span class="tag">火炬树桩系</span></div>
+    <div class="body">
+      <div class="recipe">
+        <div class="slot"><img src="assets/images/Plants/Torchwood/Torchwood.gif"><span>火炬树桩</span></div>
+        <div class="op">+</div>
+        <div class="slot"><img src="assets/images/Plants/PotatoMine/PotatoMine.gif"><span>土豆雷</span></div>
+        <div class="op">=</div>
+        <div class="stage"><div style="position:absolute;left:50%;top:50%;width:0;height:0;transform:scale(1.9);"><img src="assets/images/Plants/PotatoMine/PotatoMine.gif" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) translateY(10px);"><img src="assets/images/Plants/Torchwood/Torchwood.gif" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) translate(1px, 12px) scale(0.8);clip-path:polygon(0 0, 100% 0, 100% 48%, 0 48%);-webkit-clip-path:polygon(0 0, 100% 0, 100% 48%, 0 48%);"></div></div>
+      </div>
+      <div class="text"><p class="logic"><b>逻辑</b>：土豆雷引爆时把火桩的余烬炸成一片火海，炸过的那块地还在烧。</p>
+        <p class="effect"><b>效果</b>：爆炸伤害照旧，并在 3×3 范围留下 6s 火场（每 1.5s 8 点）</p><div class="note">※ 火炬树桩本身要先由「坚果墙 + 火爆辣椒」融合出来，所以这两条是「二次融合」</div></div>
+    </div>
+  </div>
+  <div class="card" id="fusion_garlicnut">
+    <div class="head"><span class="icon">🧄</span><span class="name">蒜味坚果</span>
+      <span class="tag">大蒜系</span></div>
+    <div class="body">
+      <div class="recipe">
+        <div class="slot"><img src="assets/images/Plants/Garlic/Garlic.gif"><span>大蒜</span></div>
+        <div class="op">+</div>
+        <div class="slot"><img src="assets/images/Plants/WallNut/WallNut.gif"><span>坚果墙</span></div>
+        <div class="op">=</div>
+        <div class="stage"><div style="position:absolute;left:50%;top:50%;width:0;height:0;transform:scale(1.9);"><img src="assets/images/Plants/WallNut/WallNut.gif" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) translateY(-15px);"><img src="assets/images/Plants/Garlic/Garlic.gif" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) translate(1px, -43px) scale(0.8);"></div></div>
+      </div>
+      <div class="text"><p class="logic"><b>逻辑</b>：坚果墙上涂满蒜味——僵尸啃一口就被熏得改道，墙自然更耐啃。</p>
+        <p class="effect"><b>效果</b>：耐久 4000 不变；每次被啃食有 35% 概率令该僵尸改行</p></div>
+    </div>
+  </div>
+  <h2>② 顺带修好的"抽象融合"对照（你说的部件掉角落问题）</h2>
+  <div class="sub">根因：融合部件是裸 &lt;img&gt;，没有 .entity 的 <code>translate(-50%,-50%)</code> 基准，而代码又直接覆写 transform —— 整块部件于是相对植物中心偏右半个宽、偏下半个高，看起来就"被扔到右下角"。</div>
+  
+  <div class="ba">
+    <div class="ba-name">坚果射手</div>
+    <div class="ba-col"><div class="ba-label bad">修复前 · 部件掉到右下角</div>
+      <div class="stage"><div style="position:absolute;left:50%;top:50%;width:0;height:0;transform:scale(1.9);"><img src="assets/images/Plants/WallNut/WallNut.gif" style="position:absolute;left:0;top:0;transform:translateY(-15px);"><img src="assets/images/Plants/Peashooter/Peashooter.gif" style="position:absolute;left:0;top:0;transform:translate(5px, -15px) scale(1.0);clip-path:polygon(0 0, 100% 0, 100% 65%, 0 65%);-webkit-clip-path:polygon(0 0, 100% 0, 100% 65%, 0 65%);"></div></div></div>
+    <div class="ba-arrow">→</div>
+    <div class="ba-col"><div class="ba-label good">修复后 · 以植物中心对齐</div>
+      <div class="stage"><div style="position:absolute;left:50%;top:50%;width:0;height:0;transform:scale(1.9);"><img src="assets/images/Plants/WallNut/WallNut.gif" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) translateY(-15px);"><img src="assets/images/Plants/Peashooter/Peashooter.gif" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) translate(5px, -15px) scale(1.0);clip-path:polygon(0 0, 100% 0, 100% 65%, 0 65%);-webkit-clip-path:polygon(0 0, 100% 0, 100% 65%, 0 65%);"></div></div></div>
+  </div>
+  <div class="ba">
+    <div class="ba-name">大嘴坚果</div>
+    <div class="ba-col"><div class="ba-label bad">修复前 · 部件掉到右下角</div>
+      <div class="stage"><div style="position:absolute;left:50%;top:50%;width:0;height:0;transform:scale(1.9);"><img src="assets/images/Plants/WallNut/WallNut.gif" style="position:absolute;left:0;top:0;transform:translateY(-15px);"><img src="assets/images/Plants/Chomper/Chomper.gif" style="position:absolute;left:0;top:0;transform:translate(0px, -25px) scale(0.9);clip-path:polygon(0 0, 100% 0, 100% 85%, 0 85%);-webkit-clip-path:polygon(0 0, 100% 0, 100% 85%, 0 85%);"></div></div></div>
+    <div class="ba-arrow">→</div>
+    <div class="ba-col"><div class="ba-label good">修复后 · 以植物中心对齐</div>
+      <div class="stage"><div style="position:absolute;left:50%;top:50%;width:0;height:0;transform:scale(1.9);"><img src="assets/images/Plants/WallNut/WallNut.gif" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) translateY(-15px);"><img src="assets/images/Plants/Chomper/Chomper.gif" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) translate(20px, -25px) scale(0.9);clip-path:polygon(0 0, 100% 0, 100% 85%, 0 85%);-webkit-clip-path:polygon(0 0, 100% 0, 100% 85%, 0 85%);"></div></div></div>
+  </div>
+  <div class="ba">
+    <div class="ba-name">冰西瓜猫尾草</div>
+    <div class="ba-col"><div class="ba-label bad">修复前 · 部件掉到右下角</div>
+      <div class="stage"><div style="position:absolute;left:50%;top:50%;width:0;height:0;transform:scale(1.9);"><img src="assets/images/Plants/Cattail/Cattail.gif" style="position:absolute;left:0;top:0;transform:translateY(-10px);"><img src="assets/images/Plants/WinterMelon/WinterMelon.png?v=1789396446" style="position:absolute;left:0;top:0;transform:translate(-5px, -30px) scale(0.7);"></div></div></div>
+    <div class="ba-arrow">→</div>
+    <div class="ba-col"><div class="ba-label good">修复后 · 以植物中心对齐</div>
+      <div class="stage"><div style="position:absolute;left:50%;top:50%;width:0;height:0;transform:scale(1.9);"><img src="assets/images/Plants/Cattail/Cattail.gif" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) translateY(-10px);"><img src="assets/images/Plants/WinterMelon/WinterMelon.png?v=1789396446" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) translate(-5px, -30px) scale(0.7);"></div></div></div>
+  </div>
+  <h2>③ 一起修掉的其它问题</h2>
+  <div class="fix">
+    <div class="fix-t">🧑‍🌾 玉米投手补回眉毛</div>
+    <div class="fix-row">
+      <div class="fix-col"><div class="bad-l">修复前 · 立绘没眉</div>
+        <img class="zoom3" src="_old/KernelPult_old.png"></div>
+      <div class="fix-col"><div class="good-l">修复后 · 立绘有眉</div>
+        <img class="zoom3" src="assets/images/Plants/KernelPult/KernelPult.png"></div>
+      <div class="fix-col"><div class="bad-l">修复前 · 卡面</div>
+        <img class="zoom3" src="_old/KernelCard_old.png"></div>
+      <div class="fix-col"><div class="good-l">修复后 · 卡面</div>
+        <img class="zoom3" src="assets/images/Card/Plants/KernelPult.png"></div>
+    </div>
+    <div class="fix-note">眉形是从卷心菜投手的原版眉毛「移植」过来的（连通域提取 → 按玉米更窄的脸逐条缩放 → 各自对准本侧瞳孔），
+      不是手绘；颜色沿用原版眉色 <code>rgb(74,57,13)</code>。</div>
+  </div>
+
+  <div class="fix">
+    <div class="fix-t">🥬🌽 投掷物尺寸（原来只有米粒大）</div>
+    <div class="fix-row">
+      <div class="fix-col"><div class="bad-l">旧：玉米粒 16×17</div>
+        <div class="stage2"><img src="assets/images/Plants/KernelPult/Kernel.png" style="width:16px;height:17px;object-fit:contain;"></div></div>
+      <div class="fix-col"><div class="good-l">新：玉米粒 22×23</div>
+        <div class="stage2"><img src="assets/images/Plants/KernelPult/Kernel.png" style="width:22px;height:23px;object-fit:contain;"></div></div>
+      <div class="fix-col"><div class="ref-l">立绘篮筐里的那颗（实测 19×20）</div>
+        <div class="stage2"><div class="crop4" style="width:92px;height:136px;">
+          <img src="assets/images/Plants/KernelPult/KernelPult.png" style="width:384px;height:384px;
+               transform:translate(-8px,-76px);"></div></div></div>
+    </div>
+    <div class="fix-row">
+      <div class="fix-col"><div class="bad-l">旧：卷心菜 30×27</div>
+        <div class="stage2"><img src="assets/images/Plants/CabbagePult/Cabbage.png" style="width:30px;height:27px;object-fit:contain;"></div></div>
+      <div class="fix-col"><div class="good-l">新：卷心菜 34×31</div>
+        <div class="stage2"><img src="assets/images/Plants/CabbagePult/Cabbage.png" style="width:34px;height:31px;object-fit:contain;"></div></div>
+      <div class="fix-col"><div class="ref-l">立绘篮筐里的那颗（实测 32×22）</div>
+        <div class="stage2"><div class="crop4" style="width:144px;height:104px;">
+          <img src="assets/images/Plants/CabbagePult/CabbagePult.png" style="width:384px;height:384px;
+               transform:translate(-16px,-24px);"></div></div></div>
+    </div>
+    <div class="fix-note">黄油 46×48 → 28×29、爆米花 16×17 → 30×30（同为"与篮内弹药同档"的缩放）。
+      尺寸都用 <code>width/height</code> 改，不碰 <code>transform</code>，以免顶掉 .entity 的居中基准。</div>
+  </div>
+
+  <div class="fix">
+    <div class="fix-t">☀️ 投手涨价（破甲 + 黄油定身很值钱，不再按原版 100 阳光卖）</div>
+    <table class="price">
+      <tr><th>植物</th><th>旧价</th><th>新价</th><th>为什么值这个价</th></tr>
+      <tr><td>卷心菜投手</td><td class="old">100</td><td class="new">150</td>
+          <td>抛射物可破甲：越过路障/铁桶/报纸/铁门直接打僵尸本体，护甲不脱落</td></tr>
+      <tr><td>玉米投手</td><td class="old">100</td><td class="new">175</td>
+          <td>破甲之外，另有 20% 概率投出黄油，命中定身 3 秒</td></tr>
+    </table>
+  </div>
+</body></html>

@@ -1,0 +1,111 @@
+import re
+
+# 1. Update HTML
+html = """<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>王国保卫战 - Kingdom Rush</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Canvas will be resized dynamically to window size -->
+        <canvas id="gameCanvas"></canvas>
+        
+        <!-- Grid overlay will be centered dynamically -->
+        <div id="grid-overlay"></div>
+
+        <div id="ui-layer">
+            <div id="menu-panel" class="panel active">
+                <div style="position: absolute; bottom: 20px; right: 20px; color: rgba(255,255,255,0.3); font-size: 14px;">v6.0.0 (Borderless)</div>
+                <h1 class="game-title">KINGDOM RUSH</h1>
+                <h2 class="sub-title">王国保卫战：无界纪元</h2>
+                <button id="btn-start" class="ui-btn primary">保卫王国</button>
+            </div>
+
+            <div id="hud-panel" class="panel">
+                <div class="top-bar">
+                    <div class="hud-box"><span class="icon">🏰 基地血量</span><span id="king-hp-text">20 / 20</span></div>
+                    <div class="hud-box"><span class="icon">💰 金币</span><span id="hud-gold">500</span></div>
+                    <div class="hud-box" style="display:flex; align-items:center; gap: 10px;">
+                        <span class="icon">☠️</span><span>第 <span id="hud-wave">1</span> 波</span>
+                        <button id="btn-call-wave" class="small-btn pulse" style="display:none;">提前召唤(+🪙)</button>
+                        <button id="btn-speed" class="small-btn">▶️ 1x</button>
+                    </div>
+                </div>
+                
+                <div id="build-menu" class="bottom-bar" style="display: none;">
+                    <div class="tower-card" data-type="ARCHER"><div class="tower-icon">🏹</div><div class="tower-cost">70</div></div>
+                    <div class="tower-card" data-type="MAGE"><div class="tower-icon">🔮</div><div class="tower-cost">100</div></div>
+                    <div class="tower-card" data-type="ARTILLERY"><div class="tower-icon">💣</div><div class="tower-cost">125</div></div>
+                    <div class="tower-card" data-type="ICE"><div class="tower-icon">❄️</div><div class="tower-cost">150</div></div>
+                </div>
+
+                <div id="upgrade-menu">
+                    <div id="upg-title" style="color: #d4af37; font-size: 14px; text-align: center; margin-bottom: 5px;"></div>
+                    <button id="btn-upgrade" class="upg-btn">升级 (100)</button>
+                    <button id="btn-sell" class="upg-btn">出售 (50)</button>
+                </div>
+            </div>
+
+            <div id="gameover-panel" class="panel">
+                <h1 class="game-title text-danger" id="end-title">王国陨落</h1>
+                <h2 class="sub-title" id="end-desc">抵挡到了第 1 波</h2>
+                <button id="btn-restart" class="ui-btn primary">重新集结</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/audio.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
+"""
+with open('index.html', 'w') as f:
+    f.write(html)
+
+# 2. Update CSS
+css_updates = """
+body, html {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; 
+    background: #355E24; /* Seamless grass background */
+    font-family: 'Noto Serif SC', 'Cinzel', serif;
+    user-select: none; -webkit-user-select: none;
+}
+#game-container {
+    position: relative; width: 100%; height: 100%;
+    display: block; /* Remove flex centering */
+    background: #355E24;
+}
+canvas {
+    display: block;
+    position: absolute; top: 0; left: 0;
+    /* Remove borders and shadows */
+    border: none; box-shadow: none; background: transparent;
+}
+#grid-overlay {
+    position: absolute; pointer-events: auto;
+}
+#ui-layer {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+}
+"""
+
+with open('css/style.css', 'r') as f:
+    css = f.read()
+
+# Strip out old body, html, #game-container, canvas, #ui-layer definitions and prepend new ones.
+# Simple way: just append to override (since CSS cascades)
+# Better way: regex replace to keep it clean.
+import re
+css = re.sub(r'body, html \{.*?\}', '', css, flags=re.DOTALL)
+css = re.sub(r'#game-container \{.*?\}', '', css, flags=re.DOTALL)
+css = re.sub(r'canvas \{.*?\}', '', css, flags=re.DOTALL)
+css = re.sub(r'#ui-layer \{.*?\}', '', css, flags=re.DOTALL)
+
+with open('css/style.css', 'w') as f:
+    f.write(css_updates + "\n" + css)
