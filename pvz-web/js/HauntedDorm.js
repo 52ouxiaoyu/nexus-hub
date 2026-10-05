@@ -220,13 +220,11 @@ class HauntedDorm {
 
     setTimeScale(s) {
         this.timeScale = s;
-        document.querySelectorAll('#speed-hud .ov-btn').forEach(b => {
+        document.querySelectorAll('#speed-hud .speed-btn').forEach(b => {
             if (b.innerText === s + 'x') {
-                b.style.background = '#4da6ff';
-                b.style.color = '#fff';
+                b.classList.add('active');
             } else {
-                b.style.background = 'rgba(0,0,0,0.6)';
-                b.style.color = '';
+                b.classList.remove('active');
             }
         });
     }
@@ -1642,8 +1640,22 @@ class HauntedDorm {
 
         if (this.player.sunBuffT > 0) this.player.sunBuffT -= dt;
         if (this.player.atkBuffT > 0) this.player.atkBuffT -= dt;
+        
+        if (this.player.speedBuffT > 0) this.player.speedBuffT -= dt;
+        if (this.player.stealthT > 0) {
+            this.player.stealthT -= dt;
+            this.player.el1.style.opacity = '0.5';
+        } else {
+            this.player.el1.style.opacity = '1';
+        }
+        if (this.player.invincibleT > 0) {
+            this.player.invincibleT -= dt;
+            this.player.el1.style.filter = 'drop-shadow(0 0 10px #fff)';
+        } else {
+            this.player.el1.style.filter = '';
+        }
 
-        const speed = 400;
+        const speed = this.player.speedBuffT > 0 ? 800 : 400;
 
         let vx1 = 0, vy1 = 0;
         if (this.keys['a'] || this.keys['arrowleft']) vx1 -= speed;
@@ -1661,6 +1673,33 @@ class HauntedDorm {
 
         // 人机开局自动寻路（按路点走到床位，避免穿模穿墙）
         for (const ai of this.ais) {
+            if (ai.dead) continue;
+            
+            // 【新增】人机逃生机制
+            if (ai.room && this.ghostSpawned) {
+                const door = this.getPlantAt(ai.room.doorCol * 80, ai.room.doorRow * 80);
+                if (!door && Math.random() < 0.05) { // 门破了，5%概率触发逃跑（防扎堆计算）
+                    const oldRoom = ai.room;
+                    ai.room.owner = null;
+                    ai.room = null;
+                    this._flyText(ai.x, ai.y, "门破了！快跑！", "#ff5252");
+                    
+                    const candidateRooms = this.rooms.filter(r => {
+                        if (r === oldRoom) return false;
+                        const hasDoor = this.getPlantAt(r.doorCol*80, r.doorRow*80);
+                        if (r.owner && !hasDoor) return false; // 不去没门且被占的死胡同
+                        return true;
+                    });
+                    if (candidateRooms.length > 0) {
+                        ai.targetRoom = candidateRooms[Math.floor(Math.random() * candidateRooms.length)];
+                        const p = this._findPath(ai.x, ai.y, ai.targetRoom.frontX, ai.targetRoom.frontY);
+                        p.push({ x: (ai.targetRoom.x + ai.targetRoom.tpl.bed.c) * this.gridSize + 40, y: (ai.targetRoom.y + ai.targetRoom.tpl.bed.r) * this.gridSize + 40 });
+                        ai.speed = 300; // 极速逃生
+                        ai.path = p;
+                    }
+                }
+            }
+
             if (ai.path && ai.path.length > 0) {
                 // 获取玩家当前物理所在的房间
                 const playerCol = Math.floor(this.player.x / this.gridSize);
@@ -1670,8 +1709,9 @@ class HauntedDorm {
                 // 房间被占用的条件：有owner，或者是玩家正站在里面的房间
                 const isTaken = (rm) => rm.owner || rm === playerPhysicalRoom;
 
-                // 动态查房：如果目标房间已经被玩家抢了或玩家正站在里面，立刻换房
-                if (ai.targetRoom && (isTaken(ai.targetRoom) && ai.targetRoom.owner !== ai)) {
+                const isFleeing = ai.speed === 300;
+                // 动态查房：如果目标房间已经被玩家抢了或玩家正站在里面，立刻换房（逃跑时不介意房间有人，直接躲进去共享）
+                if (!isFleeing && ai.targetRoom && (isTaken(ai.targetRoom) && ai.targetRoom.owner !== ai)) {
                     const emptyRooms = this.rooms.filter(r => !isTaken(r) && !this.ais.some(a => a !== ai && a.targetRoom === r));
                     if (emptyRooms.length > 0) {
                         ai.targetRoom = emptyRooms[Math.floor(Math.random() * emptyRooms.length)];
@@ -1692,12 +1732,18 @@ class HauntedDorm {
                 } else {
                     ai.path.shift(); // 抵达当前路点，切下一个
                     // 彻底抵达床位，宣誓主权 (需要最终确认玩家没站在里面)
-                    if (ai.path.length === 0 && ai.targetRoom && !ai.targetRoom.owner && ai.targetRoom !== playerPhysicalRoom) {
-                        ai.targetRoom.owner = ai;
-                        ai.room = ai.targetRoom;
-                    } else if (ai.path.length === 0 && ai.targetRoom === playerPhysicalRoom) {
-                        // 如果到了床边发现玩家站在这里，假装没看到，给自己分配个假路径触发重新寻路
-                        ai.path = [{x: ai.x, y: ai.y}]; 
+                    if (ai.path.length === 0 && ai.targetRoom) {
+                        if (!ai.targetRoom.owner && ai.targetRoom !== playerPhysicalRoom) {
+                            ai.targetRoom.owner = ai;
+                            ai.room = ai.targetRoom;
+                            ai.speed = 200;
+                        } else if (isFleeing) {
+                            ai.room = ai.targetRoom; // 躲进别人的房间，不占owner，但认定为自己的房间并开始帮忙修墙
+                            ai.speed = 200;
+                        } else if (ai.targetRoom === playerPhysicalRoom) {
+                            // 如果到了床边发现玩家站在这里，假装没看到，给自己分配个假路径触发重新寻路
+                            ai.path = [{x: ai.x, y: ai.y}]; 
+                        }
                     }
                 }
                 ai.el1.style.left = ai.x + 'px';
@@ -1777,16 +1823,72 @@ class HauntedDorm {
                     continue;
                 }
                 if (Math.hypot(this.player.x - a.x, this.player.y - a.y) < 50) {
-                    const r = Math.random();
-                    if (r < 0.5) {
-                        this.addSun(500);
-                        this._flyText(a.x, a.y, '+500 阳光！', '#ffeb3b');
-                    } else if (r < 0.9) {
-                        this.addSpore(50);
-                        this._flyText(a.x, a.y, '+50 孢子！', '#c79aff');
-                    } else {
-                        this.player.hp = Math.min((this.player.maxHp || 100), this.player.hp + 50);
-                        this._flyText(a.x, a.y, '急救大回血！', '#0f0');
+                    const r = Math.floor(Math.random() * 12);
+                    switch(r) {
+                        case 0:
+                            this.addSun(800);
+                            this._flyText(a.x, a.y, '☀️ 阳光暴雨 (+800)', '#ffeb3b');
+                            break;
+                        case 1:
+                            this.addSpore(80);
+                            this._flyText(a.x, a.y, '🦠 孢子丰收 (+80)', '#c79aff');
+                            break;
+                        case 2:
+                            this.player.hp = Math.min((this.player.maxHp || 100), this.player.hp + 50);
+                            this._flyText(a.x, a.y, '💖 强效急救包 (+50血)', '#0f0');
+                            break;
+                        case 3:
+                            this.player.invincibleT = 15;
+                            this._flyText(a.x, a.y, '🛡️ 无敌护盾 (15s)', '#fff');
+                            break;
+                        case 4:
+                            this.player.speedBuffT = 15;
+                            this._flyText(a.x, a.y, '🚀 飞毛腿 (移速翻倍)', '#0ff');
+                            break;
+                        case 5:
+                            if (this.zombies[0] && !this.zombies[0].dead) {
+                                this.zombies[0].hp -= this.zombies[0].maxHp * 0.1;
+                                this._flyText(a.x, a.y, '💣 全屏核爆 (-10%BOSS血)', '#ff5252');
+                                if (this.zombies[0].hp <= 0) this._killZombie(this.zombies[0]);
+                            }
+                            break;
+                        case 6:
+                            if (this.zombies[0] && !this.zombies[0].dead) {
+                                this.zombies[0].stunT = 10;
+                                this._flyText(a.x, a.y, '❄️ 绝对零度 (冻结10s)', '#7fd8ff');
+                            }
+                            break;
+                        case 7:
+                            this.player.stealthT = 20;
+                            this._flyText(a.x, a.y, '👻 隐身斗篷 (20s无视你)', '#aaa');
+                            break;
+                        case 8:
+                            this.player.hp -= 10;
+                            this.addSun(1500);
+                            this._flyText(a.x, a.y, '💰 恶魔交易 (-10血, +1500阳光)', '#ffeb3b');
+                            if (this.player.hp <= 0) this.gameOver(false);
+                            break;
+                        case 9:
+                            if (this.zombies[0] && !this.zombies[0].dead && this.ghostLevel > 1) {
+                                this.ghostLevel--;
+                                this._flyText(a.x, a.y, '📉 僵尸降级 (Lv-1)', '#ff5252');
+                            } else {
+                                this.addSun(500);
+                                this._flyText(a.x, a.y, '☀️ 阳光替代 (+500)', '#ffeb3b');
+                            }
+                            break;
+                        case 10:
+                            for (const pl of this.plants) {
+                                if (pl.c >= this.player.x/80 - 10 && pl.c <= this.player.x/80 + 10) {
+                                    pl.hp = pl.def.hp || pl.maxHp || pl.hp;
+                                }
+                            }
+                            this._flyText(a.x, a.y, '🍄 圣光洗礼 (植物全回血)', '#0f0');
+                            break;
+                        case 11:
+                            this.spawnPlant(Math.floor(this.player.x/80), Math.floor(this.player.y/80), 'doomshroom');
+                            this._flyText(a.x, a.y, '🎁 意外之喜 (白给毁灭重炮)', '#ff00ff');
+                            break;
                     }
                     this.playSfx('sun.mp3', 0.5);
                     a.el.remove();
@@ -1821,6 +1923,7 @@ class HauntedDorm {
             let minScore = Infinity;
             for (const p of this.allPlayers) {
                 if (p.hp <= 0 || p.dead) continue;
+                if (p === this.player && this.player.stealthT > 0) continue; // 隐身免疫仇恨
                 let score = Math.hypot(p.x - zb.x, p.y - zb.y);
                 const rm = p.room || this.rooms.find(r => p.x >= r.x*80 && p.x <= (r.x+r.w)*80 && p.y >= r.y*80 && p.y <= (r.y+r.h)*80);
                 if (rm) {
@@ -1973,8 +2076,8 @@ class HauntedDorm {
             for (const p of this.allPlayers) {
                 if (p.dead) continue;
                 if (Math.hypot(p.x - zb.x, p.y - zb.y) < 48) {
-                    if (p === this.player) playerHurt += touchDps * dt;
-                    else {
+                    if (p === this.player && (!this.player.invincibleT || this.player.invincibleT <= 0)) playerHurt += touchDps * dt;
+                    else if (p !== this.player) {
                         p.hp -= touchDps * dt;
                         if (p.hp <= 0 && !p.dead) {
                             p.dead = true;

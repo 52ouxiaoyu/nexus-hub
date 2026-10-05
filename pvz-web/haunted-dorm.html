@@ -122,6 +122,12 @@
         #ov-retry { background: linear-gradient(180deg, #2e7d32, #1b5e20); }
         #ov-home { background: linear-gradient(180deg, #6d4c41, #4a2f1d); }
         #dorm-over .ov-btn:hover { filter: brightness(1.2); transform: translateY(-2px); }
+        .speed-btn {
+            background: transparent; border: none; color: #aaa; font-size: 13px; font-weight: bold;
+            padding: 4px 10px; border-radius: 14px; cursor: pointer; transition: all 0.2s;
+        }
+        .speed-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+        .speed-btn.active { background: #4da6ff; color: #fff; box-shadow: 0 0 8px #4da6ff; }
     </style>
 </head>
 <body>
@@ -145,12 +151,14 @@
                     <span id="hp-num" style="font-size:14px; color:#fff;">100</span>
                 </div>
                 <div id="skill-hud" style="margin-top: 8px; font-size: 14px;"></div>
-                <div id="speed-hud" style="margin-top: 8px; display: flex; gap: 8px; font-size: 14px; align-items: center;">
-                    <span style="color:#4da6ff;">倍速:</span>
-                    <button class="ov-btn" style="padding: 2px 8px; font-size: 13px;" onclick="window.game.setTimeScale(1)">1x</button>
-                    <button class="ov-btn" style="padding: 2px 8px; font-size: 13px;" onclick="window.game.setTimeScale(2)">2x</button>
-                    <button class="ov-btn" style="padding: 2px 8px; font-size: 13px;" onclick="window.game.setTimeScale(5)">5x</button>
-                    <button class="ov-btn" style="padding: 2px 8px; font-size: 13px;" onclick="window.game.setTimeScale(10)">10x</button>
+                <div id="speed-hud" style="margin-top: 10px; display: flex; align-items: center; background: rgba(0,0,0,0.6); border-radius: 20px; padding: 4px; box-shadow: 0 0 10px rgba(0,0,0,0.5);">
+                    <span style="color:#fff; margin: 0 8px 0 4px; font-weight: bold; font-size: 13px; text-shadow: 0 1px 2px #000;">🕒 倍速</span>
+                    <div style="display: flex; gap: 4px;">
+                        <button class="speed-btn active" onclick="window.game.setTimeScale(1)">1x</button>
+                        <button class="speed-btn" onclick="window.game.setTimeScale(2)">2x</button>
+                        <button class="speed-btn" onclick="window.game.setTimeScale(5)">5x</button>
+                        <button class="speed-btn" onclick="window.game.setTimeScale(10)">10x</button>
+                    </div>
                 </div>
             </div>
 
@@ -220,6 +228,6 @@
         </div>
     </div>
 
-    <script src="js/HauntedDorm.js?v=1791211302"></script>
+    <script src="js/HauntedDorm.js?v=1791213507"></script>
 </body>
 </html>
