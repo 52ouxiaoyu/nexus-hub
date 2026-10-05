@@ -562,6 +562,14 @@ class HauntedDorm {
     // ===== 点击植物 → 弹出「升级 / 拆除」面板 =====
     plantClick(pl, clientX, clientY) {
         if (this.role === 'zombie') return;
+        
+        // 禁止跨房间操作：不能帮人机或其他人升级植物
+        const room = this.rooms.find(rm => pl.c >= rm.x && pl.c < rm.x + rm.w && pl.r >= rm.y && pl.r < rm.y + rm.h);
+        if (room && room.owner && room.owner !== this.player) {
+            this._flyText(pl.c * 80 + 40, pl.r * 80 + 40, '不能操作别人的设备！', '#ff4b4b');
+            return;
+        }
+
         this._closePlantMenu();
         const def = pl.def;
         this.popupPlant = pl;
@@ -679,8 +687,8 @@ class HauntedDorm {
             ai.actTimer = (ai.actTimer || 0) - dt;
             if (ai.actTimer > 0) continue;
             
-            // 设定下一次行动间隔：5~8秒（大大降低人机建造频率，更符合真实玩家的手速）
-            ai.actTimer = 5.0 + Math.random() * 3.0;
+            // 设定下一次行动间隔：8~15秒（极大地降低人机行动频率，让它们显得笨一点，经济积压严重）
+            ai.actTimer = 8.0 + Math.random() * 7.0;
             
             const rm = ai.room;
             if (!rm) continue;
@@ -708,10 +716,10 @@ class HauntedDorm {
                     if (p.def.up) {
                         const c = p.def.up.cost || 0, sc = p.def.up.sporeCost || 0;
                         if (ai.sun >= c && ai.spore >= sc) {
-                            // 【人机战力控制】恢复等级锁：人机的装备等级最高只能领先僵尸 1 级！
+                            // 【人机战力控制 - 终极削弱版】人机的装备等级绝对不能超过僵尸等级（移除+1宽限）！
                             const targetTier = HauntedDorm.DEFS[p.def.up.to].tier || 1;
                             const zLv = this.ghostLevel || 1;
-                            if (targetTier <= zLv + 1) {
+                            if (targetTier <= zLv) {
                                 let weight = p.def.isDoor ? 3 : (p.def.produce ? 2 : 1);
                                 if (p.def.isDoor && p.hp < p.maxHp * 0.6) weight += 20; // 门血量低时极高优先级升级补血
                                 actions.push({ type: 'up', pl: p, cost: c, sporeCost: sc, to: p.def.up.to, weight: weight });
@@ -742,8 +750,8 @@ class HauntedDorm {
                     const frontTile = emptyTiles[0]; // 最靠近门
                     
                     const peaCost = HauntedDorm.DEFS['peashooter'].cost || 0;
-                    // 限制武器数量最多3个，且绝不建造小喷菇（白嫖太假）和额外阳光菇
-                    if (ai.sun >= peaCost && peas.length < 3) {
+                    // 限制武器数量最多2个，且绝不建造小喷菇（白嫖太假）和额外阳光菇
+                    if (ai.sun >= peaCost && peas.length < 2) {
                         actions.push({ type: 'plant', id: 'peashooter', cost: peaCost, c: frontTile.c, r: frontTile.r, weight: 1 });
                     }
                 }
