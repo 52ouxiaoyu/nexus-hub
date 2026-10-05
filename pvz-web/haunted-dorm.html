@@ -20,13 +20,10 @@
         .tile { position: absolute; width: 80px; height: 80px; box-sizing: border-box; }
         /* v3.88.0 墙面 = 蓝色河道（静态水波纹，避免大面积动画拖性能） */
         .tile.wall {
-            background-image: repeating-linear-gradient(105deg, rgba(255,255,255,0.13) 0 8px, rgba(255,255,255,0) 8px 26px),
-                              linear-gradient(180deg, #4a90c9 0%, #2e6da8 100%);
+            background-color: #3a8dff;
             border: none;
             box-shadow: none;
         }
-        .tile.wall::after { content: ''; position: absolute; left: 10%; right: 10%; top: 32%; height: 14%;
-            border-radius: 50%; background: rgba(255,255,255,0.3); filter: blur(1px); }
         /* v3.88.0 门口木桥（门板坚果铺在桥上，玩家自由穿行） */
         .tile.bridge {
             background: repeating-linear-gradient(0deg, #9a6a35 0 12px, #7a4d22 12px 16px);
@@ -169,8 +166,8 @@
                     · WASD 移动 · <b>空格开关浇水</b>：<b>按一下空格开启自动浇水</b>（头顶出现 🚿 标志，不用按住），再按一下停止；每 <b>0.2 秒浇一次</b>：+1 阳光并催熟身边的小喷菇——开局 0 阳光，找到房间开始浇水才有收入<br>
                     · 点击空地 = 种植菜单（<b>植物只能种在房间里面</b>，房间外的草地不能种）；<b>点击植物 = 弹出「升级 / 拆除」面板</b>，面板上会写出升级收益（血量/产出）：<b>向日葵链和坚果链升级花普通阳光 ☀</b>（阳光菇只在你在旁边时才产阳光），<b style="color:#c79aff;">🦠孢子</b>用来买高级孢子植物和豌豆分支升级；拆除直接移除植物<br><br>
                     <b style="color:#ffe14a;">成长配方（唯一，不撞衫）</b><br>
-                    · 阳光菇(☀10 购买) <span style="color:#9dff6b;">→(☀30)→ 大阳光菇 →(☀90)→ 向日葵 →(☀270)→ 双子向日葵</span>，逐级变大、产阳光更多<br>
-                    · 小喷菇(免费) 靠阳光升级：<span style="color:#9dff6b;">(☀50)→ 阳光喷菇(产孢子+阳光) →(☀150)→ 大喷菇(会喷射) →(☀450)→ 忧郁菇(强范围喷射)</span><br>
+                    · 阳光菇(无需购买，房间自带) <span style="color:#9dff6b;">→(☀30)→ 大阳光菇 →(☀90)→ 向日葵 →(☀270)→ 双子向日葵</span>，逐级变大、产阳光更多<br>
+                    · 小喷菇(☀200 购买) 靠阳光升级：<span style="color:#9dff6b;">(☀50)→ 阳光喷菇(产孢子+阳光) →(☀150)→ 大喷菇(会喷射) →(☀450)→ 忧郁菇(强范围喷射)</span><br>
                     · 坚果 <span style="color:#9dff6b;">→(☀40)→ 豌豆坚果(子弹跟踪·血量5000) →(☀100)→ 射手坚果(跟踪·双发·血量6500) →(☀160)→ 卷心菜坚果(投掷·血量8000) →(☀260)→ 高坚果(血量10000) →(☀400)→ 南瓜壳(血量15000)</span>，逐级变大变硬<br>
                     · 豌豆射手三选一分支：<span style="color:#9dff6b;">双发射手→(🦠60)→机枪射手</span> / <span style="color:#9dff6b;">寒冰射手→(🦠40)→冰雪双发(减速)</span> / <span style="color:#9dff6b;">双向射手→(🦠50)→三线射手(扇形)</span><br>
                     · <b>跟踪弹规则</b>：豌豆坚果线的子弹在 <b>260px 内自动追踪僵尸</b>，超出追踪区就变直线飞<br><br>
@@ -205,6 +202,6 @@
         </div>
     </div>
 
-    <script src="js/HauntedDorm.js?v=1791191287"></script>
+    <script src="js/HauntedDorm.js?v=1791191715"></script>
 </body>
 </html>

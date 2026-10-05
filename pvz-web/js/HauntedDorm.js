@@ -16,60 +16,60 @@ class HauntedDorm {
         return {
             // —— 阳光系 (10级) ——
             sunshroom:     { tier: 1, name: '阳光菇',     img: 'Plants/SunShroom/0.gif',     card: 'SunShroom.png',     hp: 300,  cost: 10,   scale: 0.75,
-                             produce: { sun: 10, every: 0.5 },  up: { cost: 30, cur: 'sun', to: 'sunshroom2' } },
+                             produce: { sun: 1, every: 2.0 },  up: { cost: 30, cur: 'sun', to: 'sunshroom2' } },
             sunshroom2:    { tier: 2, name: '大阳光菇',   img: 'Plants/SunShroom/0.gif',     hp: 350,  cost: 0,   scale: 1.1,
-                             produce: { sun: 30, every: 0.5 },  up: { cost: 90, cur: 'sun', to: 'sunflower' } },
+                             produce: { sun: 2, every: 2.0 },  up: { cost: 90, cur: 'sun', to: 'sunflower' } },
             sunflower:     { tier: 3, name: '向日葵',     img: 'Plants/SunFlower/0.gif',     hp: 400,  cost: 0,   scale: 1.1,
-                             produce: { sun: 90, every: 0.5 },  up: { cost: 270, cur: 'sun', to: 'twinsunflower' } },
+                             produce: { sun: 4, every: 2.0 },  up: { cost: 270, cur: 'sun', to: 'twinsunflower' } },
             twinsunflower: { tier: 4, name: '双子向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 450,  cost: 0,   scale: 1.2,
-                             produce: { sun: 270, every: 0.5 }, up: { cost: 810, sporeCost: 1, cur: 'sun', to: 'sunpea' } },
+                             produce: { sun: 8, every: 2.0 }, up: { cost: 810, sporeCost: 1, cur: 'sun', to: 'sunpea' } },
             sunpea:        { tier: 5, name: '豌豆向日葵', img: 'Plants/TwinSunflower/0.gif', overlay: 'Plants/Peashooter/0.gif', hp: 550, cost: 0, scale: 1.2,
                              baseClip: 'polygon(0 35%, 100% 35%, 100% 100%, 0 100%)',
                              overClip: 'polygon(0 0, 100% 0, 100% 40%, 0 40%)',
                              overTransform: 'translate(-50%, -50%) translate(0, -30px) scale(0.8)',
-                             produce: { sun: 810, every: 0.5 }, shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, 
+                             produce: { sun: 16, every: 2.0 }, shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, 
                              up: { cost: 2430, sporeCost: 10, cur: 'sun', to: 'sunnut' } },
             sunnut:        { tier: 6, name: '坚果向日葵', img: 'Plants/WallNut/0.gif', hp: 2000, cost: 0, scale: 1.2, 
                              overlay: 'Plants/TwinSunflower/0.gif',
-                             produce: { sun: 2430, every: 0.5 }, shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, 
+                             produce: { sun: 32, every: 2.0 }, shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, 
                              up: { cost: 7290, sporeCost: 50, cur: 'sun', to: 'suncherry' } },
             suncherry:     { tier: 7, name: '樱桃向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 3000, cost: 0, scale: 1.3,
                              overlay: 'Plants/CherryBomb/0.gif',
-                             produce: { sun: 7290, every: 0.5 }, shoot: { dmg: 40, cd: 1.0, n: 3, range: 400, img: 'Plants/PB00.gif', back: true },
+                             produce: { sun: 64, every: 2.0 }, shoot: { dmg: 40, cd: 1.0, n: 3, range: 400, img: 'Plants/PB00.gif', back: true },
                              up: { cost: 21870, sporeCost: 250, cur: 'sun', to: 'sunjala' } },
             sunjala:       { tier: 8, name: '火爆向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 5000, cost: 0, scale: 1.4,
                              overlay: 'Plants/Jalapeno/0.gif',
-                             produce: { sun: 21870, every: 0.5 }, shoot: { dmg: 50, cd: 0.8, n: 4, range: 500, img: 'Plants/PB00.gif', homing: true },
+                             produce: { sun: 128, every: 2.0 }, shoot: { dmg: 50, cd: 0.8, n: 4, range: 500, img: 'Plants/PB00.gif', homing: true },
                              up: { cost: 65610, sporeCost: 1000, cur: 'sun', to: 'sundoom' } },
             sundoom:       { tier: 9, name: '毁灭向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 8000, cost: 0, scale: 1.5, tint: 'hue-rotate(240deg)',
                              overlay: 'Plants/DoomShroom/0.gif',
-                             produce: { sun: 65610, every: 0.5 }, shoot: { dmg: 70, cd: 0.6, n: 6, range: 600, img: 'Plants/PB00.gif', homing: true, aoe: 50 },
+                             produce: { sun: 256, every: 2.0 }, shoot: { dmg: 70, cd: 0.6, n: 6, range: 600, img: 'Plants/PB00.gif', homing: true, aoe: 50 },
                              up: { cost: 196830, sporeCost: 5000, cur: 'sun', to: 'sungatling' } },
             sungatling:    { tier: 10, name: '机枪向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 15000, cost: 0, scale: 1.6,
                              overlay: 'Plants/GatlingPea/0.gif',
-                             produce: { sun: 196830, every: 0.5 }, shoot: { dmg: 100, cd: 0.4, n: 8, range: 800, img: 'Plants/PB00.gif', homing: true } },
+                             produce: { sun: 512, every: 2.0 }, shoot: { dmg: 100, cd: 0.4, n: 8, range: 800, img: 'Plants/PB00.gif', homing: true } },
 
             // —— 孢子系 (10级，纯产包子) ——
-            puffshroom:    { tier: 1, name: '小喷菇', img: 'Plants/PuffShroom/0.gif',     card: 'PuffShroom.png',     hp: 300, cost: 0, scale: 0.9,
-                             spore: { n: 1, every: 1.0 }, up: { cost: 50, cur: 'sun', to: 'sunpuff' } },
+            puffshroom:    { tier: 1, name: '小喷菇', img: 'Plants/PuffShroom/0.gif',     card: 'PuffShroom.png',     hp: 300, cost: 200, scale: 0.9,
+                             spore: { n: 1, every: 2.0 }, up: { cost: 50, cur: 'sun', to: 'sunpuff' } },
             sunpuff:       { tier: 2, name: '阳光喷菇', img: 'Plants/PuffShroom/0.gif',   hp: 400, cost: 0,   scale: 1.0, hat: 'Plants/SunShroom/0.gif',
-                             spore: { n: 5, every: 1.0 }, up: { cost: 150, cur: 'sun', to: 'fumeshroom' } },
+                             spore: { n: 2, every: 2.0 }, up: { cost: 150, cur: 'sun', to: 'fumeshroom' } },
             fumeshroom:    { tier: 3, name: '大喷菇', img: 'Plants/FumeShroom/0.gif',     card: 'FumeShroom.png',     hp: 500, cost: 0,   scale: 1.1,
-                             spore: { n: 25, every: 1.0 }, up: { cost: 450, cur: 'sun', to: 'gloomshroom' } },
+                             spore: { n: 4, every: 2.0 }, up: { cost: 450, cur: 'sun', to: 'gloomshroom' } },
             gloomshroom:   { tier: 4, name: '忧郁菇', img: 'Plants/GloomShroom/0.gif',    card: 'GloomShroom.png',    hp: 600, cost: 0,   scale: 1.2,
-                             spore: { n: 125, every: 1.0 }, up: { cost: 1350, cur: 'sun', to: 'hypnoshroom' } },
+                             spore: { n: 8, every: 2.0 }, up: { cost: 1350, cur: 'sun', to: 'hypnoshroom' } },
             hypnoshroom:   { tier: 5, name: '魅惑喷菇', img: 'Plants/HypnoShroom/0.gif', hp: 800, cost: 0, scale: 1.3,
-                             spore: { n: 625, every: 1.0 }, up: { cost: 4050, cur: 'sun', to: 'scaredyshroom' } },
+                             spore: { n: 16, every: 2.0 }, up: { cost: 4050, cur: 'sun', to: 'scaredyshroom' } },
             scaredyshroom: { tier: 6, name: '胆小喷菇', img: 'Plants/ScaredyShroom/0.gif', hp: 1200, cost: 0, scale: 1.35,
-                             spore: { n: 3125, every: 1.0 }, up: { cost: 12150, cur: 'sun', to: 'iceshroom_puff' } },
+                             spore: { n: 32, every: 2.0 }, up: { cost: 12150, cur: 'sun', to: 'iceshroom_puff' } },
             iceshroom_puff:{ tier: 7, name: '冰霜喷菇', img: 'Plants/FumeShroom/0.gif', hp: 1800, cost: 0, scale: 1.4, hat: 'Plants/IceShroom/0.gif', tint: 'hue-rotate(180deg)',
-                             spore: { n: 15625, every: 1.0 }, up: { cost: 36450, cur: 'sun', to: 'doomshroom_puff' } },
+                             spore: { n: 64, every: 2.0 }, up: { cost: 36450, cur: 'sun', to: 'doomshroom_puff' } },
             doomshroom_puff:{tier: 8, name: '毁灭喷菇', img: 'Plants/FumeShroom/0.gif', hp: 3000, cost: 0, scale: 1.5, hat: 'Plants/DoomShroom/0.gif', tint: 'hue-rotate(240deg)',
-                             spore: { n: 78125, every: 1.0 }, up: { cost: 109350, cur: 'sun', to: 'seashroom' } },
+                             spore: { n: 128, every: 2.0 }, up: { cost: 109350, cur: 'sun', to: 'seashroom' } },
             seashroom:     { tier: 9, name: '海蘑菇', img: 'Plants/SeaShroom/0.gif', hp: 5000, cost: 0, scale: 1.6,
-                             spore: { n: 390625, every: 1.0 }, up: { cost: 328050, cur: 'sun', to: 'ultimategloom' } },
+                             spore: { n: 256, every: 2.0 }, up: { cost: 328050, cur: 'sun', to: 'ultimategloom' } },
             ultimategloom: { tier: 10, name: '终极孢子', img: 'Plants/GloomShroom/0.gif', hp: 12000, cost: 0, scale: 2.0, tint: 'brightness(1.5) drop-shadow(0 0 10px #ff0)', hat: 'Plants/HypnoShroom/0.gif',
-                             spore: { n: 1953125, every: 1.0 } },
+                             spore: { n: 512, every: 2.0 } },
 
             // —— 豌豆系 (10级，纯输出，阳光升级) ——
             peashooter:    { tier: 1, name: '豌豆射手', img: 'Plants/Peashooter/0.gif',   card: 'Peashooter.png',  hp: 300, cost: 10,
@@ -135,7 +135,7 @@ class HauntedDorm {
 
     // 商店可购清单（阳光 / 孢子两种货币）
     static get MENU() {
-        return ['sunshroom', 'puffshroom', 'peashooter', 'potatomine', 'spikeweed', 'iceshroom', 'doomshroom'];
+        return ['puffshroom', 'peashooter', 'potatomine', 'spikeweed', 'iceshroom', 'doomshroom'];
     }
 
     // ===== 僵尸升级链（10级）=====
@@ -1724,32 +1724,43 @@ class HauntedDorm {
                 zb.el1.style.filter = '';
                 zb.el1.style.opacity = '1';
             }
+            // 【新增】僵尸寻路逻辑：如果未撤退，每秒重算一次 BFS 路径
+            if (!zb.retreating) {
+                zb.pathTimer = (zb.pathTimer || 0) + dt;
+                if (zb.pathTimer > 1.0 || !zb.path || zb.path.length === 0) {
+                    zb.pathTimer = 0;
+                    zb.path = this._findPath(zb.x, zb.y, targetX, targetY);
+                    if (zb.path && zb.path.length > 0) {
+                        zb.path.push({x: targetX, y: targetY}); // 确保最后一步精确定位到玩家
+                    }
+                }
+            } else {
+                zb.path = null;
+            }
 
-            let dx = targetX - zb.x;
-            let dy = targetY - zb.y;
-            
-            // 防卡墙：如果一直撞墙没有位移，切换目标或者大范围绕行
-            if (zb.stuckTime > 2) {
-                // 如果卡了，不再纯随机，而是尝试正交方向的绕墙滑行，并加上一点微扰
-                let ox = dx, oy = dy;
-                dx = -oy + (Math.random()-0.5)*10; 
-                dy = ox + (Math.random()-0.5)*10;
-                zb.stuckTime -= dt;
+            let dx = 0, dy = 0;
+            if (zb.retreating || !zb.path || zb.path.length === 0) {
+                dx = targetX - zb.x;
+                dy = targetY - zb.y;
+            } else {
+                let nextNode = zb.path[0];
+                dx = nextNode.x - zb.x;
+                dy = nextNode.y - zb.y;
+                if (Math.hypot(dx, dy) < 10) {
+                    zb.path.shift();
+                    if (zb.path.length > 0) {
+                        nextNode = zb.path[0];
+                        dx = nextNode.x - zb.x;
+                        dy = nextNode.y - zb.y;
+                    }
+                }
             }
 
             const len = Math.hypot(dx, dy);
 
             if (len > 1) {
-                // 绕行状态：卡住超过 0.4s → 沿切向走 1s
-                if (zb.detourT > 0) {
-                    zb.detourT -= dt;
-                    const px = -dy / len * zb.side, py = dx / len * zb.side;
-                    dx = dx / len * 0.35 + px; dy = dy / len * 0.35 + py;
-                    const l2 = Math.hypot(dx, dy) || 1;
-                    dx /= l2; dy /= l2;
-                } else {
-                    dx /= len; dy /= len;
-                }
+                dx /= len; dy /= len;
+
 
                 // 【僵尸转身逻辑】正着走
                 if (zb.imgEl) {
