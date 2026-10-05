@@ -145,6 +145,13 @@
                     <span id="hp-num" style="font-size:14px; color:#fff;">100</span>
                 </div>
                 <div id="skill-hud" style="margin-top: 8px; font-size: 14px;"></div>
+                <div id="speed-hud" style="margin-top: 8px; display: flex; gap: 8px; font-size: 14px; align-items: center;">
+                    <span style="color:#4da6ff;">倍速:</span>
+                    <button class="ov-btn" style="padding: 2px 8px; font-size: 13px;" onclick="window.game.setTimeScale(1)">1x</button>
+                    <button class="ov-btn" style="padding: 2px 8px; font-size: 13px;" onclick="window.game.setTimeScale(2)">2x</button>
+                    <button class="ov-btn" style="padding: 2px 8px; font-size: 13px;" onclick="window.game.setTimeScale(5)">5x</button>
+                    <button class="ov-btn" style="padding: 2px 8px; font-size: 13px;" onclick="window.game.setTimeScale(10)">10x</button>
+                </div>
             </div>
 
             <div id="wave-chip">👻 准备中…</div>
@@ -213,6 +220,6 @@
         </div>
     </div>
 
-    <script src="js/HauntedDorm.js?v=1791193541"></script>
+    <script src="js/HauntedDorm.js?v=1791211059"></script>
 </body>
 </html>

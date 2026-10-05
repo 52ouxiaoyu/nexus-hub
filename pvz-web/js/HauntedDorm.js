@@ -191,7 +191,9 @@ class HauntedDorm {
 
         // ===== 单僵尸导演系统 =====
         this.ghostSpawned = false;
-        this.ghostSpawnAt = performance.now() + 20000; // 开局 20s 出笼，修复准备中 bug
+        this.gameTime = 0;
+        this.timeScale = 1;
+        this.ghostSpawnAt = 20000; // 开局 20s 出笼，修复准备中 bug
         this.ghostLevel = 1;              // 当前等级 1..10
         this.ghostRespawnAt = 0;          // >0 = 死亡等待重生
         this.kills = 0;
@@ -210,9 +212,23 @@ class HauntedDorm {
         this._updateGhostChip();
         this._refreshHud();
 
-        this.startTime = performance.now();
-        this.lastTime = this.startTime;
+        this.startTime = 0;
+        this.lastTime = performance.now();
         requestAnimationFrame(t => this.loop(t));
+    }
+
+
+    setTimeScale(s) {
+        this.timeScale = s;
+        document.querySelectorAll('#speed-hud .ov-btn').forEach(b => {
+            if (b.innerText === s + 'x') {
+                b.style.background = '#4da6ff';
+                b.style.color = '#fff';
+            } else {
+                b.style.background = 'rgba(0,0,0,0.6)';
+                b.style.color = '';
+            }
+        });
     }
 
     initDOM() {
@@ -847,7 +863,7 @@ class HauntedDorm {
     _updateGhostChip() {
         const chip = document.getElementById('wave-chip');
         if (!chip) return;
-        const now = performance.now();
+        const now = this.gameTime;
         if (!this.ghostSpawned) {
             chip.innerText = `👻 僵尸出笼还有 ${Math.max(0, Math.ceil((this.ghostSpawnAt - now) / 1000))}s`;
         } else if (this.ghostRespawnAt > 0) {
@@ -905,7 +921,7 @@ class HauntedDorm {
 
     // 受击红闪（节流）
     flashDamage() {
-        const now = performance.now();
+        const now = this.gameTime;
         if (now - this.lastFlashAt < 300) return;
         this.lastFlashAt = now;
         const f = document.getElementById('dmg-flash');
@@ -930,7 +946,7 @@ class HauntedDorm {
         document.getElementById('wave-announce')?.remove(); // 结算时移除残留的播报字
         this.playSfx(win ? 'winmusic.mp3' : 'losemusic.mp3', 0.6);
         this._closePopup();
-        const secs = Math.floor((performance.now() - this.startTime) / 1000);
+        const secs = Math.floor((this.gameTime) / 1000);
         document.getElementById('ov-title').innerText = win ? '🏆 僵尸被击倒了！' : '💀 被僵尸抓住了…';
         document.getElementById('ov-title').style.color = win ? '#ffd54a' : '#ff6b6b';
         document.getElementById('ov-time').innerText = `${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}`;
@@ -1555,11 +1571,25 @@ class HauntedDorm {
     }
 
     loop(time) {
-        if (this.over) return; // 结算后冻结
-        const dt = Math.min((time - this.lastTime) / 1000, 0.1);
+        if (this.over) return;
+        if (!this.lastTime) this.lastTime = time;
+        const realDt = Math.min((time - this.lastTime) / 1000, 0.1);
         this.lastTime = time;
 
-        // 单僵尸导演：出笼 → 定时升级 → 打倒重生
+        const simulatedDt = realDt * (this.timeScale || 1.0);
+        const steps = Math.max(1, Math.ceil(simulatedDt / 0.016));
+        const dt = simulatedDt / steps;
+
+        for (let i = 0; i < steps; i++) {
+            this.gameTime += dt * 1000;
+            this._tick(dt, this.gameTime);
+        }
+
+        this._updateMinimap();
+        requestAnimationFrame(t => this.loop(t));
+    }
+
+    _tick(dt, time) {
         this._updateGhostDirector(time);
         this._updateAIs(dt);
         if (Math.floor(time / 500) !== Math.floor((time - dt * 1000) / 500)) this._updateGhostChip(); // 0.5s 刷一次信息牌
@@ -1661,6 +1691,64 @@ class HauntedDorm {
         this._updateIceshroom(dt);
         this._updateDoomshroom(dt);
         this._updateMines();
+        // 【新增】物资盲盒空投机制
+        if (this.ghostSpawned && !this.over) {
+            this.airdropTimer = (this.airdropTimer || 0) + dt;
+            if (this.airdropTimer > 30) {
+                this.airdropTimer = 0;
+                let rx, ry;
+                for (let tries = 0; tries < 50; tries++) {
+                    const c = Math.floor(Math.random() * (this.cols - 2)) + 1;
+                    const r = Math.floor(Math.random() * (this.rows - 2)) + 1;
+                    if (this.walls.has(`${c},${r}`)) continue;
+                    if (this._insideRoom(c, r)) continue;
+                    rx = c * this.gridSize + 40;
+                    ry = r * this.gridSize + 40;
+                    break;
+                }
+                if (rx && ry) {
+                    const box = { x: rx, y: ry, life: 25 };
+                    const el = document.createElement('div');
+                    el.className = 'entity';
+                    el.style.cssText = `width:50px; height:50px; z-index:50; left:${rx}px; top:${ry}px;`;
+                    el.innerHTML = '<div style="font-size:36px; transform:translate(-50%, -50%);">🎁</div>';
+                    this.world1.appendChild(el);
+                    box.el = el;
+                    if (!this.airdrops) this.airdrops = [];
+                    this.airdrops.push(box);
+                    this._announce('🎁 神秘盲盒已空降过道！快出房抢！', 'readysetplant.mp3');
+                }
+            }
+        }
+        if (this.airdrops) {
+            for (let i = this.airdrops.length - 1; i >= 0; i--) {
+                const a = this.airdrops[i];
+                a.life -= dt;
+                a.el.style.opacity = Math.min(1, a.life / 2);
+                if (a.life <= 0) {
+                    a.el.remove();
+                    this.airdrops.splice(i, 1);
+                    continue;
+                }
+                if (Math.hypot(this.player.x - a.x, this.player.y - a.y) < 50) {
+                    const r = Math.random();
+                    if (r < 0.5) {
+                        this.addSun(500);
+                        this._flyText(a.x, a.y, '+500 阳光！', '#ffeb3b');
+                    } else if (r < 0.9) {
+                        this.addSpore(50);
+                        this._flyText(a.x, a.y, '+50 孢子！', '#c79aff');
+                    } else {
+                        this.player.hp = Math.min((this.player.maxHp || 100), this.player.hp + 50);
+                        this._flyText(a.x, a.y, '急救大回血！', '#0f0');
+                    }
+                    this.playSfx('sun.mp3', 0.5);
+                    a.el.remove();
+                    this.airdrops.splice(i, 1);
+                }
+            }
+        }
+
 
         // 僵尸AI：追踪玩家，啃食沿途植物，接触玩家掉血；撞墙自动切向绕行
         // v3.90.0：啃咬改离散慢咬——站在植物上一口一口啃（2.4s/口），不再逐帧持续扣血（用户：开局啃门要非常慢）；
@@ -1881,11 +1969,8 @@ class HauntedDorm {
         const cy = Math.max(0, Math.min(this.worldHeight - vph, this.player.y - vph / 2));
         this.player.camX = cx; this.player.camY = cy;
         this.world1.style.transform = `translate(${-cx}px, ${-cy}px)`;
-
-        this._updateMinimap();
-
-        requestAnimationFrame(t => this.loop(t));
     }
+
 }
 
 window.onload = () => {
