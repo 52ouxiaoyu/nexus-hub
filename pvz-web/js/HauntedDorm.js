@@ -920,7 +920,6 @@ class HauntedDorm {
         document.getElementById('ov-title').innerText = win ? '🏆 僵尸被击倒了！' : '💀 被僵尸抓住了…';
         document.getElementById('ov-title').style.color = win ? '#ffd54a' : '#ff6b6b';
         document.getElementById('ov-time').innerText = `${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}`;
-        document.getElementById('ov-kills').innerText = this.kills;
         document.getElementById('ov-waves').innerText = this.ghostLevel;
         
         let mvp = this.player;
@@ -1332,15 +1331,7 @@ class HauntedDorm {
         zb.el1.style.opacity = '0';
         setTimeout(() => zb.el1.remove(), 480);
         this.playSfx('scream.mp3', 0.35);
-        // 掉落阳光袋
-        const el = document.createElement('div');
-        el.className = 'entity';
-        el.style.cssText = 'width:44px;height:44px;z-index:80;';
-        el.innerHTML = `<img src="assets/images/Sun/Sun.gif" style="width:100%;height:100%;object-fit:contain;">`;
-        el.style.left = zb.x + 'px';
-        el.style.top = zb.y + 'px';
-        this.world1.appendChild(el);
-        this.suns.push({ x: zb.x, y: zb.y, el });
+        // 用户要求：去掉僵尸死亡后的掉落物
         // 击倒最终形态（冰车僵尸）= 胜利；否则 8s 后同级重生
         // 一命通关：僵尸死后游戏直接胜利
         this.ghostRespawnAt = 1; // 标记已死
