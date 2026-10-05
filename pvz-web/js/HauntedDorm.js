@@ -465,7 +465,7 @@ class HauntedDorm {
                     { x: rm.frontX, y: rm.frontY }, // 先走到门外引导点
                     { x: (rm.x + rm.tpl.bed.c) * this.gridSize + 40, y: (rm.y + rm.tpl.bed.r) * this.gridSize + 40 } // 再走进去
                 ],
-                sun: 50, spore: 0, hp: 100, maxHp: 100,
+                sun: 0, spore: 0, hp: 100, maxHp: 100, actTimer: 2.0 + Math.random() * 3.0,
                 isAi: true, room: rm, roleDef: roleDef,
                 icon: roleDef.icon, dead: false,
                 el1: document.createElement('div')
@@ -674,15 +674,18 @@ class HauntedDorm {
     }
 
     _updateAIs(dt) {
-        this.aiTick = (this.aiTick || 0) + dt;
-        if (this.aiTick > 2.0) { // 每 2 秒做一次决策（降速防过快雪球）
-            this.aiTick = 0;
-            for (const ai of this.ais) {
-                if (ai.dead) continue;
-                if (ai.path && ai.path.length > 0) continue; // 还在赶路，等到了床边再开始发育
-                
-                const rm = ai.room;
-                if (!rm) continue;
+        for (const ai of this.ais) {
+            if (ai.dead) continue;
+            if (ai.path && ai.path.length > 0) continue; // 还在赶路，等到了床边再开始发育
+            
+            ai.actTimer = (ai.actTimer || 0) - dt;
+            if (ai.actTimer > 0) continue;
+            
+            // 设定下一次行动间隔：3~5秒（比原来统一的2秒更慢，且异步，不显得像作弊机器）
+            ai.actTimer = 3.0 + Math.random() * 2.0;
+            
+            const rm = ai.room;
+            if (!rm) continue;
 
                 const myPlants = this.plants.filter(p => p.c >= rm.x && p.c < rm.x + rm.w && p.r >= rm.y && p.r < rm.y + rm.h);
                 const shrooms = myPlants.filter(p => p.def.produce && p.def.produce.sun);
@@ -780,7 +783,6 @@ class HauntedDorm {
                         this._flyText(chosen.pl.c * 80 + 40, chosen.pl.r * 80, "AI 修补！", "#0f0");
                     }
                 }
-            }
         }
     }
 
