@@ -458,13 +458,14 @@ class HauntedDorm {
             if (i >= shuffledRooms.length) break;
             const rm = shuffledRooms[i];
             const roleDef = this.playerRoles[i]; // 5个人机刚好一人分一个固定皮肤，涵盖全部5种
+            const sx = (this.worldWidth / 2) + (Math.random() * 40 - 20);
+            const sy = (this.worldHeight / 2) + (Math.random() * 40 - 20);
+            const p = this._findPath(sx, sy, rm.frontX, rm.frontY);
+            p.push({ x: (rm.x + rm.tpl.bed.c) * this.gridSize + 40, y: (rm.y + rm.tpl.bed.r) * this.gridSize + 40 }); // 最后走到床位
             const ai = {
-                x: (this.worldWidth / 2) + (Math.random() * 40 - 20),
-                y: (this.worldHeight / 2) + (Math.random() * 40 - 20),
-                path: [
-                    { x: rm.frontX, y: rm.frontY }, // 先走到门外引导点
-                    { x: (rm.x + rm.tpl.bed.c) * this.gridSize + 40, y: (rm.y + rm.tpl.bed.r) * this.gridSize + 40 } // 再走进去
-                ],
+                x: sx,
+                y: sy,
+                path: p,
                 sun: 0, spore: 0, hp: 100, maxHp: 100, actTimer: 2.0 + Math.random() * 3.0,
                 isAi: true, room: rm, roleDef: roleDef,
                 icon: roleDef.icon, dead: false,
@@ -1120,6 +1121,48 @@ class HauntedDorm {
         this.waterOn = !!on;
         const badge = document.getElementById('water-badge');
         if (badge) badge.style.display = this.waterOn ? 'block' : 'none';
+    }
+
+    _findPath(startX, startY, targetX, targetY) {
+        const sc = Math.floor(startX / this.gridSize);
+        const sr = Math.floor(startY / this.gridSize);
+        const tc = Math.floor(targetX / this.gridSize);
+        const tr = Math.floor(targetY / this.gridSize);
+        
+        const q = [[sc, sr]];
+        const visited = new Set();
+        visited.add(`${sc},${sr}`);
+        const parent = {};
+        
+        const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
+        let found = false;
+        
+        while(q.length > 0) {
+            const [c, r] = q.shift();
+            if (c === tc && r === tr) { found = true; break; }
+            for (const [dc, dr] of dirs) {
+                const nc = c + dc, nr = r + dr;
+                if (nc < 0 || nc >= this.cols || nr < 0 || nr >= this.rows) continue;
+                if (this.walls.has(`${nc},${nr}`) && !(nc === tc && nr === tr)) continue; // Allow entering the door tile itself if it's considered a wall temporarily, though doors are usually not in this.walls
+                const key = `${nc},${nr}`;
+                if (!visited.has(key)) {
+                    visited.add(key);
+                    parent[key] = `${c},${r}`;
+                    q.push([nc, nr]);
+                }
+            }
+        }
+        
+        if (!found) return [{x: targetX, y: targetY}];
+        
+        const path = [];
+        let curr = `${tc},${tr}`;
+        while(curr !== `${sc},${sr}`) {
+            const [c, r] = curr.split(',');
+            path.unshift({ x: parseInt(c) * this.gridSize + 40, y: parseInt(r) * this.gridSize + 40 });
+            curr = parent[curr];
+        }
+        return path;
     }
 
     checkCollision(x, y, r = 20) {
