@@ -710,12 +710,14 @@ class HauntedDorm {
                     if (p.def.up) {
                         const c = p.def.up.cost || 0, sc = p.def.up.sporeCost || 0;
                         if (ai.sun >= c && ai.spore >= sc) {
-                            // 【人机战力控制】检查目标等级，防止人机开挂秒杀僵尸
-                            // 获取目标植物的 tier。如果不带 tier，默认当做 1。
-                            // 移除原有的僵尸等级锁，让人机可以自由发挥，火力全开
-                            let weight = p.def.isDoor ? 3 : (p.def.produce ? 2 : 1);
-                            if (p.def.isDoor && p.hp < p.maxHp * 0.6) weight += 20; // 门血量低时极高优先级升级补血
-                            actions.push({ type: 'up', pl: p, cost: c, sporeCost: sc, to: p.def.up.to, weight: weight });
+                            // 【人机战力控制】恢复等级锁：人机的装备等级最高只能领先僵尸 1 级！
+                            const targetTier = HauntedDorm.DEFS[p.def.up.to].tier || 1;
+                            const zLv = this.ghostLevel || 1;
+                            if (targetTier <= zLv + 1) {
+                                let weight = p.def.isDoor ? 3 : (p.def.produce ? 2 : 1);
+                                if (p.def.isDoor && p.hp < p.maxHp * 0.6) weight += 20; // 门血量低时极高优先级升级补血
+                                actions.push({ type: 'up', pl: p, cost: c, sporeCost: sc, to: p.def.up.to, weight: weight });
+                            }
                         }
                     } else if (p.def.isDoor && p.hp < p.maxHp * 0.9 && ai.sun >= 20) {
                         // 增加“修门”逻辑：如果无法升级或无需升级，花20阳光修500血
@@ -723,11 +725,10 @@ class HauntedDorm {
                     }
                 }
                 
-                // 2. 尝试种豌豆或小喷菇
+                // 2. 尝试种武器
                 const emptyTiles = [];
                 for(let r = rm.y; r < rm.y + rm.h; r++) {
                     for(let c = rm.x; c < rm.x + rm.w; c++) {
-                        // 确保只种在房间有效的地板区域内
                         if (rm.tpl.grid[r - rm.y][c - rm.x] === 1) {
                             if (!myPlants.some(p => p.c === c && p.r === r)) {
                                 emptyTiles.push({c, r});
@@ -737,25 +738,15 @@ class HauntedDorm {
                 }
                 
                 if (emptyTiles.length > 0) {
-                    // 智能阵型规划：离门近的种武器，离门远的种阳光菇
+                    // 智能阵型规划：离门近的种武器
                     const doorC = rm.doorCol, doorR = rm.doorRow;
                     emptyTiles.sort((a, b) => Math.hypot(a.c - doorC, a.r - doorR) - Math.hypot(b.c - doorC, b.r - doorR));
                     const frontTile = emptyTiles[0]; // 最靠近门
-                    const backTile = emptyTiles[emptyTiles.length - 1]; // 最远离门
                     
                     const peaCost = HauntedDorm.DEFS['peashooter'].cost || 0;
-                    if (ai.sun >= peaCost && peas.length < 6) {
+                    // 限制武器数量最多3个，且绝不建造小喷菇（白嫖太假）和额外阳光菇
+                    if (ai.sun >= peaCost && peas.length < 3) {
                         actions.push({ type: 'plant', id: 'peashooter', cost: peaCost, c: frontTile.c, r: frontTile.r, weight: 1 });
-                    }
-                    const puffs = myPlants.filter(p => p.def.spore);
-                    if (puffs.length < 4) {
-                        actions.push({ type: 'plant', id: 'puffshroom', cost: 0, c: frontTile.c, r: frontTile.r, weight: 2 });
-                    }
-                    // 限制人机种阳光菇的数量（最多1个，防止满屋子全造阳光菇导致经济爆炸）
-                    const numSun = myPlants.filter(p => p.def.produce && p.def.produce.sun).length;
-                    const sunCost = HauntedDorm.DEFS['sunshroom'].cost || 0;
-                    if (ai.sun >= sunCost && numSun < 1) {
-                        actions.push({ type: 'plant', id: 'sunshroom', cost: sunCost, c: backTile.c, r: backTile.r, weight: 1.5 });
                     }
                 }
 
@@ -1554,9 +1545,17 @@ class HauntedDorm {
         // 人机开局自动寻路（按路点走到床位，避免穿模穿墙）
         for (const ai of this.ais) {
             if (ai.path && ai.path.length > 0) {
-                // 动态查房：如果目标房间已经被玩家抢了，立刻换房
-                if (ai.targetRoom && ai.targetRoom.owner && ai.targetRoom.owner !== ai) {
-                    const emptyRooms = this.rooms.filter(r => !r.owner && !this.ais.some(a => a !== ai && a.targetRoom === r));
+                // 获取玩家当前物理所在的房间
+                const playerCol = Math.floor(this.player.x / this.gridSize);
+                const playerRow = Math.floor(this.player.y / this.gridSize);
+                const playerPhysicalRoom = this._insideRoom(playerCol, playerRow);
+                
+                // 房间被占用的条件：有owner，或者是玩家正站在里面的房间
+                const isTaken = (rm) => rm.owner || rm === playerPhysicalRoom;
+
+                // 动态查房：如果目标房间已经被玩家抢了或玩家正站在里面，立刻换房
+                if (ai.targetRoom && (isTaken(ai.targetRoom) && ai.targetRoom.owner !== ai)) {
+                    const emptyRooms = this.rooms.filter(r => !isTaken(r) && !this.ais.some(a => a !== ai && a.targetRoom === r));
                     if (emptyRooms.length > 0) {
                         ai.targetRoom = emptyRooms[Math.floor(Math.random() * emptyRooms.length)];
                         const p = this._findPath(ai.x, ai.y, ai.targetRoom.frontX, ai.targetRoom.frontY);
@@ -1575,10 +1574,13 @@ class HauntedDorm {
                     ai.y += (dy / dist) * 200 * dt;
                 } else {
                     ai.path.shift(); // 抵达当前路点，切下一个
-                    // 彻底抵达床位，宣誓主权
-                    if (ai.path.length === 0 && ai.targetRoom && !ai.targetRoom.owner) {
+                    // 彻底抵达床位，宣誓主权 (需要最终确认玩家没站在里面)
+                    if (ai.path.length === 0 && ai.targetRoom && !ai.targetRoom.owner && ai.targetRoom !== playerPhysicalRoom) {
                         ai.targetRoom.owner = ai;
                         ai.room = ai.targetRoom;
+                    } else if (ai.path.length === 0 && ai.targetRoom === playerPhysicalRoom) {
+                        // 如果到了床边发现玩家站在这里，假装没看到，给自己分配个假路径触发重新寻路
+                        ai.path = [{x: ai.x, y: ai.y}]; 
                     }
                 }
                 ai.el1.style.left = ai.x + 'px';
