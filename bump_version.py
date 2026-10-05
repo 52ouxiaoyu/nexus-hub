@@ -24,6 +24,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 VERSION_FILE = os.path.join(ROOT, "pvz-web", "version.json")
 SCAN_GLOBS = [
     os.path.join(ROOT, "pvz-web", "index.html"),
+    os.path.join(ROOT, "pvz-web", "haunted-dorm.html"),
     os.path.join(ROOT, "pvz-web", "js"),
 ]
 SKIP_DIRS = {"node_modules", "_orig"}

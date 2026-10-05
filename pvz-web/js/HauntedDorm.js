@@ -813,6 +813,7 @@ class HauntedDorm {
             `<div class="hp-bar-bg" style="top:-14px;"><div class="hp-bar-fg" style="width:100%; background:#ff5252;"></div></div>`;
         this.world1.appendChild(zEl1);
         zb.el1 = zEl1;
+        zb.imgEl = zEl1.querySelector('img');
         zb.hpBg = zEl1.querySelector('.hp-bar-bg');
         zb.hpFg = zEl1.querySelector('.hp-bar-fg');
         this._updateGhostChip();
@@ -1736,6 +1737,12 @@ class HauntedDorm {
                     dx /= l2; dy /= l2;
                 } else {
                     dx /= len; dy /= len;
+                }
+
+                // 【僵尸转身逻辑】正着走
+                if (zb.imgEl) {
+                    if (dx > 0.05) zb.imgEl.style.transform = 'translate(-20%, -30%) scaleX(-1)';
+                    else if (dx < -0.05) zb.imgEl.style.transform = 'translate(-20%, -30%) scaleX(1)';
                 }
 
                 let moved = false;
