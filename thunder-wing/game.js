@@ -3,7 +3,7 @@
 (function () {
   const TW = window.TW || (window.TW = {});
   const W = 480, H = 800;
-  const VERSION = 'v1.0.1';
+  const VERSION = 'v1.1.0';
 
   /* ==================== 画布 ==================== */
   const cv = document.getElementById('cv');
@@ -27,42 +27,62 @@
   ];
   TW.WEAPONS = WEAPONS;
 
+  /* ==================== 玩家配色 / 构造 ==================== */
+  const PCFG = [
+    { tag: '1P', color: '#8cf0ff', ring: 'rgba(140,240,255,0.55)' },
+    { tag: '2P', color: '#ffd45e', ring: 'rgba(255,212,94,0.6)' },
+  ];
+  function homeX(id, two) { return two ? (id === 0 ? W / 2 - 64 : W / 2 + 64) : W / 2; }
+  function makePlayer(id, two) {
+    return {
+      id: id, tag: PCFG[id].tag, out: false,
+      x: homeX(id, two), y: H - 120, vx: 0, vy: 0,
+      r: 3, grazeR: 22, tilt: 0, dead: false,
+      fireT: 0, charge: 0, invuln: 0, firing: false,
+      lives: 3, bombs: 3, power: 1, weapon: 0, spd: 3,
+      combo: 0, comboT: 0, graze: 0, kills: 0,
+    };
+  }
+
   /* ==================== 状态 ==================== */
   const G = {
     state: 'MENU',           // MENU / PLAYING / PAUSED / CLEAR / OVER / WIN
     mode: 'story',           // story / endless
+    two: false,              // 是否双人同屏
     frame: 0, stage: 0, stageT: 0, scriptI: 0, pending: [],
     enemies: [], ebullets: [], pbullets: [], items: [],
-    boss: null, player: null,
-    score: 0, lives: 3, bombs: 3, power: 1, weapon: 0, spd: 3,
-    combo: 0, comboT: 0, rank: 0, graze: 0, kills: 0,
+    boss: null,
+    players: [],             // 玩家对象数组（1 或 2 个）
+    score: 0, rank: 0, kills: 0,
     nextExtend: 80000, wave: 0, clearT: 0, flash: 0, deathT: 0,
     best: 0, sfx: true, waveMsg: 0, msgText: '',
     stars: [],
 
-    reset() {
+    reset(two) {
       this.enemies.length = 0; this.ebullets.length = 0; this.pbullets.length = 0;
       this.items.length = 0; this.pending.length = 0;
       this.frame = 0; this.stageT = 0; this.scriptI = 0; this.boss = null;
-      this.score = 0; this.lives = 3; this.bombs = 3; this.power = 1; this.weapon = 0; this.spd = 3;
-      this.combo = 0; this.comboT = 0; this.rank = 0; this.graze = 0; this.kills = 0;
+      this.score = 0; this.rank = 0; this.kills = 0;
       this.nextExtend = 80000; this.wave = 0; this.clearT = 0; this.flash = 0; this.deathT = 0;
       TW.FX.reset();
-      this.player = {
-        x: W / 2, y: H - 120, vx: 0, vy: 0, r: 3, grazeR: 22,
-        fireT: 0, charge: 0, invuln: 0, dead: false, tilt: 0, alive: true,
-      };
+      this.two = !!two;
+      this.players.length = 0;
+      for (let i = 0; i < (this.two ? 2 : 1); i++) this.players.push(makePlayer(i, this.two));
       this.best = +(localStorage.getItem('tw_best') || 0);
     },
     rankSpd() { return 1 + this.rank * 0.0025; },
     rankRate() { return 1 + this.rank * 0.004; },
-    mult() { return 1 + Math.min(this.combo, 60) * 0.05; },
-    addScore(v, x, y) {
-      const s = Math.round(v * this.mult());
+    mult(pl) { const p = pl || this.players[0]; return p ? 1 + Math.min(p.combo, 60) * 0.05 : 1; },
+    alive() { const a = []; for (let i = 0; i < this.players.length; i++) if (!this.players[i].out) a.push(this.players[i]); return a; },
+    grazeTotal() { let n = 0; for (let i = 0; i < this.players.length; i++) n += this.players[i].graze; return n; },
+    bombTotal() { let n = 0; for (let i = 0; i < this.players.length; i++) n += Math.max(0, this.players[i].bombs); return n; },
+    addScore(v, x, y, pl) {
+      const s = Math.round(v * this.mult(pl));
       this.score += s;
       if (x !== undefined) TW.FX.text(x, y, '+' + s, '#ffe9a8', 12);
       while (this.score >= this.nextExtend) {
-        this.nextExtend += 120000; this.lives++;
+        this.nextExtend += 120000;
+        for (let i = 0; i < this.players.length; i++) if (!this.players[i].out) this.players[i].lives++;
         TW.FX.text(W / 2, H / 2, '残机 +1', '#9ff0ff', 22);
         TW.Audio.extend();
       }
@@ -74,6 +94,18 @@
     },
   };
   TW.G = G;
+
+  /* 单人场景的便捷代理：G.xxx / G.player 等价于 1P（仅用于读写的快捷方式，战斗逻辑一律走 p.xxx） */
+  Object.defineProperty(G, 'player', {
+    configurable: true, get() { return this.players[0] || null; },
+  });
+  ['lives', 'bombs', 'power', 'weapon', 'spd', 'combo', 'comboT', 'graze'].forEach((name) => {
+    Object.defineProperty(G, name, {
+      configurable: true,
+      get() { const p = this.players[0]; return p ? p[name] : undefined; },
+      set(v) { const p = this.players[0]; if (p) p[name] = v; },
+    });
+  });
 
   /* ==================== 星空背景 ==================== */
   function initStars() {
@@ -87,25 +119,61 @@
   }
   initStars();
 
-  /* ==================== 输入 ==================== */
+  /* ==================== 输入 ====================
+     每人只要三个键：方向 + 射击 + 大招；暂停全局共用。
+     1P = WASD / 空格(J) / K(左Shift)
+     2P = ↑↓←→ / 回车 / 右Shift(/)
+     单人模式下方向键同样控制 1P。 */
   const keys = {};
-  let firing = false, touch = false, dragLast = null;
+  let touch = false, dragLast = null;
+  const KEYMAP = [
+    { lf: ['a'], rt: ['d'], up: ['w'], dn: ['s'], fire: [' ', 'j', 'z'], bomb: ['k', 'x', 'q', 'shiftleft'] },
+    { lf: ['arrowleft'], rt: ['arrowright'], up: ['arrowup'], dn: ['arrowdown'],
+      fire: ['enter', 'numpadenter'], bomb: ['slash', 'period', 'numpad0', 'shiftright'] },
+  ];
+  function held(list) {
+    for (let i = 0; i < list.length; i++) if (keys[list[i]]) return true;
+    return false;
+  }
+  function moveKeys(i) {
+    const m = KEYMAP[i];
+    if (i === 0 && !G.two) {
+      return { lf: m.lf.concat(['arrowleft']), rt: m.rt.concat(['arrowright']),
+        up: m.up.concat(['arrowup']), dn: m.dn.concat(['arrowdown']) };
+    }
+    return m;
+  }
+  function bombKeys(i) { return i === 0 && !G.two ? KEYMAP[0].bomb.concat(['shiftright']) : KEYMAP[i].bomb; }
+  function isFire(i, k, code) { const l = KEYMAP[i].fire; return l.indexOf(k) >= 0 || (code && l.indexOf(code) >= 0); }
+  function isBomb(i, k, code) { const l = bombKeys(i); return l.indexOf(k) >= 0 || (code && l.indexOf(code) >= 0); }
+
+  function pressKey(k, code, down) {
+    keys[k] = !!down;
+    if (code) keys[code] = !!down;
+    for (let i = 0; i < G.players.length; i++) {
+      if (isFire(i, k, code)) G.players[i].firing = !!down;
+    }
+  }
+
   window.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
-    keys[k] = true;
-    if (k === 'j' || k === ' ' || k === 'z') firing = true;
-    if (k === 'k' || k === 'x') useBomb();
+    const code = (e.code || '').toLowerCase();
+    pressKey(k, code, true);
     if (k === 'p' || k === 'escape') togglePause();
-    if (k === 'enter') {
-      if (G.state === 'MENU') startGame(document.body.dataset.mode || 'story');
-      else if (G.state === 'OVER' || G.state === 'WIN') startGame(G.mode);
+    if (k === 'enter' && (G.state === 'MENU' || G.state === 'OVER' || G.state === 'WIN')) {
+      startGame(G.state === 'MENU' ? (document.body.dataset.mode || 'story') : G.mode,
+        document.body.dataset.two === '1');
+    }
+    if (G.state === 'PLAYING') {
+      for (let i = 0; i < G.players.length; i++) {
+        if (!e.repeat && isBomb(i, k, code)) useBomb(G.players[i]);
+      }
     }
     if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].indexOf(k) >= 0) e.preventDefault();
   });
   window.addEventListener('keyup', (e) => {
     const k = e.key.toLowerCase();
-    keys[k] = false;
-    if (k === 'j' || k === ' ' || k === 'z') firing = false;
+    pressKey(k, (e.code || '').toLowerCase(), false);
   });
 
   function toLogical(cx, cy) {
@@ -116,20 +184,22 @@
     touch = true; TW.Audio.init(); TW.Audio.resume();
     const p = toLogical(e.clientX, e.clientY);
     dragLast = p;
-    if (!G.player) return;
+    const p1 = G.players[0];
+    if (!p1) return;
     // 直接拖动：把飞机拉到手指位置（相对位移，手指不遮挡机体）
-    G.player.x = p.x; G.player.y = p.y - 40;
+    p1.x = p.x; p1.y = p.y - 40;
     cv.setPointerCapture(e.pointerId);
-    firing = true;
+    p1.firing = true;
   });
   cv.addEventListener('pointermove', (e) => {
-    if (!dragLast || !G.player) return;
+    const p1 = G.players[0];
+    if (!dragLast || !p1) return;
     const p = toLogical(e.clientX, e.clientY);
-    G.player.x += (p.x - dragLast.x) * 1.55;
-    G.player.y += (p.y - dragLast.y) * 1.55;
+    p1.x += (p.x - dragLast.x) * 1.55;
+    p1.y += (p.y - dragLast.y) * 1.55;
     dragLast = p;
   });
-  const endDrag = () => { dragLast = null; if (touch) firing = true; };
+  const endDrag = () => { dragLast = null; if (touch && G.players[0]) G.players[0].firing = true; };
   cv.addEventListener('pointerup', endDrag);
   cv.addEventListener('pointercancel', endDrag);
   cv.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -140,96 +210,95 @@
   if (bombBtn) bombBtn.style.display = ('ontouchstart' in window) ? 'flex' : 'none';
 
   /* ==================== 玩家 ==================== */
-  function updatePlayer() {
-    const p = G.player;
-    if (!p) return;
-    if (p.dead) {
-      p.dead = false;
-      p.x = W / 2; p.y = H - 120; p.invuln = 150;
+  function updatePlayer(pl) {
+    if (pl.out) return;
+    if (pl.dead) {
+      pl.dead = false;
+      pl.x = homeX(pl.id, G.two); pl.y = H - 120; pl.invuln = 150;
     }
-    if (p.invuln > 0) p.invuln--;
+    if (pl.invuln > 0) pl.invuln--;
 
     let dx = 0, dy = 0;
-    if (!touch) {
-      if (keys['a'] || keys['arrowleft']) dx -= 1;
-      if (keys['d'] || keys['arrowright']) dx += 1;
-      if (keys['w'] || keys['arrowup']) dy -= 1;
-      if (keys['s'] || keys['arrowdown']) dy += 1;
+    if (!(touch && pl.id === 0)) {
+      const m = moveKeys(pl.id);
+      if (held(m.lf)) dx -= 1;
+      if (held(m.rt)) dx += 1;
+      if (held(m.up)) dy -= 1;
+      if (held(m.dn)) dy += 1;
       if (dx && dy) { const k = Math.SQRT1_2; dx *= k; dy *= k; }
-      const slow = keys['shift'] ? 0.42 : 1;
-      const sp = (3.6 + G.spd * 0.35) * slow;
-      p.x += dx * sp; p.y += dy * sp;
-      p.tilt += ((dx * 0.22) - p.tilt) * 0.18;
+      const sp = 3.6 + pl.spd * 0.35;
+      pl.x += dx * sp; pl.y += dy * sp;
+      pl.tilt += ((dx * 0.22) - pl.tilt) * 0.18;
     }
-    p.x = Math.max(16, Math.min(W - 16, p.x));
-    p.y = Math.max(40, Math.min(H - 24, p.y));
+    pl.x = Math.max(16, Math.min(W - 16, pl.x));
+    pl.y = Math.max(40, Math.min(H - 24, pl.y));
 
-    if (p.invuln > 0 && p.invuln % 8 < 4) { /* 闪烁 */ }
+    if (pl.invuln > 0 && pl.invuln % 8 < 4) { /* 闪烁 */ }
 
     /* 射击 */
-    const wp = WEAPONS[G.weapon];
-    const held = firing || touch;
-    if (held && G.state === 'PLAYING') {
-      p.fireT--;
-      if (p.fireT <= 0) { shoot(wp); p.fireT = wp.interval; }
-      p.charge++;
-      if (p.charge >= 48) { p.charge = 0; fireCharge(wp); }
-    } else if (p.charge > 0) {
-      p.charge = Math.max(0, p.charge - 1.5);
+    const wp = WEAPONS[pl.weapon];
+    const shooting = pl.firing || (touch && pl.id === 0);
+    if (shooting && G.state === 'PLAYING') {
+      pl.fireT--;
+      if (pl.fireT <= 0) { shoot(pl, wp); pl.fireT = wp.interval; }
+      pl.charge++;
+      if (pl.charge >= 48) { pl.charge = 0; fireCharge(pl, wp); }
+    } else if (pl.charge > 0) {
+      pl.charge = Math.max(0, pl.charge - 1.5);
     }
   }
 
-  function shoot(wp) {
-    const p = G.player, lv = G.power;
+  function shoot(pl, wp) {
+    const lv = pl.power;
     const ang = -Math.PI / 2;
-    if (G.weapon === 0) {
+    if (pl.weapon === 0) {
       const n = [1, 2, 3, 3, 5][lv - 1];
       const spread = [0, 0.07, 0.14, 0.16, 0.15][lv - 1];
       for (let i = 0; i < n; i++) {
         const off = (i - (n - 1) / 2) * spread;
-        addBullet(p.x, p.y - 14, ang + off, 11, wp.dmg, wp.spr, 0);
+        addBullet(pl, pl.x, pl.y - 14, ang + off, 11, wp.dmg, wp.spr, 0);
       }
-    } else if (G.weapon === 1) {
+    } else if (pl.weapon === 1) {
       const n = [1, 1, 2, 2, 3][lv - 1];
       const offs = n === 1 ? [0] : n === 2 ? [-8, 8] : [-12, 0, 12];
-      for (let i = 0; i < n; i++) addBullet(p.x + offs[i], p.y - 16, ang, 15, wp.dmg, wp.spr, 2);
+      for (let i = 0; i < n; i++) addBullet(pl, pl.x + offs[i], pl.y - 16, ang, 15, wp.dmg, wp.spr, 2);
     } else {
       const n = [1, 2, 2, 3, 3][lv - 1];
       for (let i = 0; i < n; i++) {
         const off = n === 1 ? 0 : (i - (n - 1) / 2) * 0.5;
-        addBullet(p.x, p.y - 12, ang + off * 0.25, 7.5, wp.dmg, wp.spr, 0, true);
+        addBullet(pl, pl.x, pl.y - 12, ang + off * 0.25, 7.5, wp.dmg, wp.spr, 0, true);
       }
     }
     /* 僚机 */
     if (lv >= 3) {
       const wa = lv >= 5 ? 0.13 : 0;
-      addBullet(p.x - 26, p.y + 2, ang - wa, 10, 1, 'wing', 0);
-      addBullet(p.x + 26, p.y + 2, ang + wa, 10, 1, 'wing', 0);
+      addBullet(pl, pl.x - 26, pl.y + 2, ang - wa, 10, 1, 'wing', 0);
+      addBullet(pl, pl.x + 26, pl.y + 2, ang + wa, 10, 1, 'wing', 0);
     }
-    if (G.sfx) (G.weapon === 1 ? TW.Audio.laser() : G.weapon === 2 ? TW.Audio.missile() : TW.Audio.shot());
+    if (G.sfx) (pl.weapon === 1 ? TW.Audio.laser() : pl.weapon === 2 ? TW.Audio.missile() : TW.Audio.shot());
   }
 
-  function addBullet(x, y, ang, sp, dmg, kind, pierce, homing) {
+  function addBullet(pl, x, y, ang, sp, dmg, kind, pierce, homing) {
     if (G.pbullets.length > 260) return;
     G.pbullets.push({
       x: x, y: y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
       dmg: dmg, kind: kind, pierce: pierce || 0, homing: !!homing, hit: [], t: 0,
+      owner: pl ? pl.id : 0,
       w: kind === 'laser' ? 10 : (kind === 'charge' ? 16 : (kind === 'wing' ? 7 : 8)),
       h: kind === 'laser' ? 30 : (kind === 'charge' ? 28 : (kind === 'wing' ? 13 : 16)),
       r: kind === 'laser' ? 6 : 5,
     });
   }
 
-  function fireCharge(wp) {
-    const p = G.player;
+  function fireCharge(pl, wp) {
     TW.Audio.chargeFire();
-    TW.FX.ring(p.x, p.y - 10, 14, '#9ff0ff', 20);
-    if (G.weapon === 0) {
-      for (let i = -1; i <= 1; i++) addBullet(p.x, p.y - 18, -Math.PI / 2 + i * 0.13, 13, 3, 'charge', 1);
-    } else if (G.weapon === 1) {
-      for (let i = -1; i <= 1; i++) addBullet(p.x + i * 14, p.y - 18, -Math.PI / 2, 17, 9, 'charge', 6);
+    TW.FX.ring(pl.x, pl.y - 10, 14, '#9ff0ff', 20);
+    if (pl.weapon === 0) {
+      for (let i = -1; i <= 1; i++) addBullet(pl, pl.x, pl.y - 18, -Math.PI / 2 + i * 0.13, 13, 3, 'charge', 1);
+    } else if (pl.weapon === 1) {
+      for (let i = -1; i <= 1; i++) addBullet(pl, pl.x + i * 14, pl.y - 18, -Math.PI / 2, 17, 9, 'charge', 6);
     } else {
-      for (let i = 0; i < 5; i++) addBullet(p.x, p.y - 14, -Math.PI / 2 + (i - 2) * 0.3, 9, 4, 'charge', 0, true);
+      for (let i = 0; i < 5; i++) addBullet(pl, pl.x, pl.y - 14, -Math.PI / 2 + (i - 2) * 0.3, 9, 4, 'charge', 0, true);
     }
     G.rank = Math.min(100, G.rank + 1);
   }
@@ -237,136 +306,160 @@
   /* ==================== 道具 ==================== */
   TW.dropItem = function (x, y, kind) {
     if (kind === 'weapon') {
-      let w = G.weapon;
-      while (w === G.weapon) w = Math.floor(Math.random() * 3);
+      if (G.two) {
+        // 双人：三种武器各掉一个，两人各取所需
+        const base = Math.floor(Math.random() * 3);
+        for (let i = 0; i < 3; i++) {
+          G.items.push({ x: x + (i - 1) * 22, y: y, vy: 1.5, vx: 0, kind: 'weapon', w: (base + i) % 3, t: 0 });
+        }
+        return;
+      }
+      const cur = G.players[0] ? G.players[0].weapon : 0;
+      let w = cur;
+      while (w === cur) w = Math.floor(Math.random() * 3);
       G.items.push({ x: x, y: y, vy: 1.5, vx: 0, kind: 'weapon', w: w, t: 0 });
       return;
     }
     G.items.push({ x: x, y: y, vy: 1.5, vx: 0, kind: kind, t: 0 });
+    // 双人模式火力道具成对掉落，避免抢资源
+    if (G.two && kind === 'power') {
+      G.items.push({ x: Math.min(W - 16, x + 26), y: y, vy: 1.5, vx: 0, kind: kind, t: 0 });
+    }
   };
 
   function updateItems() {
-    const p = G.player;
     for (let i = G.items.length - 1; i >= 0; i--) {
       const it = G.items[i];
       it.t++; it.y += it.vy; it.x += Math.sin(it.t * 0.06) * 0.7;
       if (it.y > H + 30) { G.items.splice(i, 1); continue; }
-      if (!p) continue;
-      const d = Math.hypot(it.x - p.x, it.y - p.y);
-      if (d < 26) {
-        applyItem(it); G.items.splice(i, 1);
+      for (let j = 0; j < G.players.length; j++) {
+        const pl = G.players[j];
+        if (pl.out || pl.dead) continue;
+        if (Math.hypot(it.x - pl.x, it.y - pl.y) < 26) {
+          applyItem(it, pl); G.items.splice(i, 1); break;
+        }
       }
     }
   }
 
-  function applyItem(it) {
+  function applyItem(it, pl) {
+    const px = pl.x, py = pl.y - 30;
     switch (it.kind) {
       case 'power':
-        if (G.power < 5) {
-          G.power++; TW.FX.text(G.player.x, G.player.y - 30, '火力 ' + G.power, '#9ff0ff', 15);
+        if (pl.power < 5) {
+          pl.power++; TW.FX.text(px, py, pl.tag + ' 火力 ' + pl.power, '#9ff0ff', 15);
           G.rank = Math.min(100, G.rank + 8);
-        } else { G.addScore(2000, G.player.x, G.player.y - 30); }
+        } else { G.addScore(2000, px, py, pl); }
         TW.Audio.powerup(); break;
       case 'weapon':
-        G.weapon = it.w; G.power = Math.max(2, G.power);
-        TW.FX.text(G.player.x, G.player.y - 30, WEAPONS[G.weapon].name, WEAPONS[G.weapon].color, 15);
+        if (it.w === pl.weapon && pl.weapon !== undefined) { G.addScore(800, px, py, pl); break; }
+        pl.weapon = it.w; pl.power = Math.max(2, pl.power);
+        TW.FX.text(px, py, pl.tag + ' ' + WEAPONS[pl.weapon].name, WEAPONS[pl.weapon].color, 15);
         TW.Audio.powerup(); break;
       case 'bomb':
-        G.bombs = Math.min(5, G.bombs + 1);
-        TW.FX.text(G.player.x, G.player.y - 30, '炸弹 +1', '#ffd27a', 15);
+        pl.bombs = Math.min(5, pl.bombs + 1);
+        TW.FX.text(px, py, pl.tag + ' 大招 +1', '#ffd27a', 15);
         TW.Audio.pickup(); break;
       case 'speed':
-        G.spd = Math.min(5, G.spd + 1);
-        TW.FX.text(G.player.x, G.player.y - 30, '速度 +1', '#9ff0ff', 15);
+        pl.spd = Math.min(5, pl.spd + 1);
+        TW.FX.text(px, py, pl.tag + ' 速度 +1', '#9ff0ff', 15);
         TW.Audio.pickup(); break;
       case 'life':
-        G.lives++; TW.FX.text(G.player.x, G.player.y - 30, '残机 +1', '#ff9ad6', 17);
+        pl.lives++; TW.FX.text(px, py, pl.tag + ' 残机 +1', '#ff9ad6', 17);
         TW.Audio.extend(); break;
       case 'medal':
-        G.addScore(1500, G.player.x, G.player.y - 30); TW.Audio.pickup(); break;
+        G.addScore(1500, px, py, pl); TW.Audio.pickup(); break;
     }
   }
 
-  /* ==================== 炸弹 ==================== */
-  function useBomb() {
-    if (G.state !== 'PLAYING' || !G.player) return;
-    if (G.bombs <= 0 || G.player.invuln > 90) return;
-    G.bombs--;
-    G.player.invuln = Math.max(G.player.invuln, 95);
+  /* ==================== 炸弹 / 大招 ==================== */
+  function useBomb(pl) {
+    if (!pl) pl = G.players[0];
+    if (G.state !== 'PLAYING' || !pl || pl.out || pl.dead) return;
+    if (pl.bombs <= 0 || pl.invuln > 90) return;
+    pl.bombs--;
+    pl.invuln = Math.max(pl.invuln, 95);
     G.clearBullets(true);
     G.flash = 12;
     TW.FX.quake(10, 26); TW.FX.stop(6);
-    TW.FX.bigBoom(G.player.x, G.player.y, 4, '#bff6ff');
+    TW.FX.bigBoom(pl.x, pl.y, 4, pl.id === 0 ? '#bff6ff' : '#ffe6a8');
     TW.Audio.bomb();
     for (let i = 0; i < G.enemies.length; i++) {
       const e = G.enemies[i];
-      if (e.boss) { if (!e.dying) hurtEnemy(e, 40, e.x, e.y); }
-      else hurtEnemy(e, 25, e.x, e.y);
+      if (e.boss) { if (!e.dying) hurtEnemy(e, 40, e.x, e.y, pl); }
+      else hurtEnemy(e, 25, e.x, e.y, pl);
     }
     G.rank = Math.max(0, G.rank - 6);
   }
 
   /* ==================== 伤害与击破 ==================== */
-  function hurtEnemy(e, dmg, hx, hy) {
+  function hurtEnemy(e, dmg, hx, hy, pl) {
     if (e.boss) {
       if (e.invuln > 0 || e.dying) return;
       e.hp -= dmg; e.flash = 3;
-      if (e.hp <= 0) { e.hp = 0; bossDown(e); }
+      if (e.hp <= 0) { e.hp = 0; bossDown(e, pl); }
       return;
     }
     e.hp -= dmg; e.flash = 3;
     TW.FX.hit(hx, hy, '#ffffff');
-    if (e.hp <= 0) killEnemy(e);
+    if (e.hp <= 0) killEnemy(e, pl);
   }
 
-  function killEnemy(e) {
+  function killEnemy(e, pl) {
     if (e.dead) return;
     e.dead = true;
     TW.FX.boom(e.x, e.y, e.type === 'bomber' || e.type === 'gunship' ? 1.7 : 1, '#ffb04a');
     TW.Audio.explode();
     G.kills++;
-    G.combo++; G.comboT = 100;
+    if (pl) { pl.kills++; pl.combo++; pl.comboT = 100; }
     G.rank = Math.min(100, G.rank + 0.18);
-    const s = G.addScore(e.score, e.x, e.y - 10);
+    G.addScore(e.score, e.x, e.y - 10, pl);
     if (e.item) TW.dropItem(e.x, e.y, e.item);
-    else if (Math.random() < 0.06) TW.dropItem(e.x, e.y, 'medal');
-    return s;
+    else if (Math.random() < (G.two ? 0.1 : 0.06)) TW.dropItem(e.x, e.y, 'medal');
   }
 
-  function bossDown(b) {
+  function bossDown(b, pl) {
     b.dying = true; b.dyT = 0; b.invuln = 99999;
     TW.FX.stop(12); TW.FX.quake(9, 30);
     TW.Audio.bigExplode();
-    G.addScore(b.score, b.x, b.y + 90);
+    G.addScore(b.score, b.x, b.y + 90, pl);
+    const drops = G.two ? 2 : 1;
     for (let i = 0; i < b.parts.length; i++) {
-      if (b.parts[i].alive) { b.parts[i].alive = false; TW.dropItem(b.x + b.parts[i].ox, b.y + b.parts[i].oy, 'power'); }
+      if (!b.parts[i].alive) continue;
+      b.parts[i].alive = false;
+      for (let k = 0; k < drops; k++) {
+        TW.dropItem(b.x + b.parts[i].ox + (drops > 1 ? (k ? 18 : -18) : 0), b.y + b.parts[i].oy, 'power');
+      }
     }
   }
 
-  function playerDie() {
-    const p = G.player;
-    if (p.invuln > 0 || G.state !== 'PLAYING') return;
-    G.lives--;
-    G.combo = 0; G.comboT = 0;
+  function playerDie(pl) {
+    if (pl.invuln > 0 || G.state !== 'PLAYING' || pl.out) return;
+    pl.lives--;
+    pl.combo = 0; pl.comboT = 0;
     G.rank = Math.max(0, G.rank - 28);
-    G.power = Math.max(1, G.power - 2);
+    pl.power = Math.max(1, pl.power - 2);
     G.clearBullets(false);
-    TW.FX.bigBoom(p.x, p.y, 2.4, '#ff8a5c');
+    TW.FX.bigBoom(pl.x, pl.y, 2.4, '#ff8a5c');
     TW.FX.quake(9, 24); TW.Audio.death();
     G.flash = 8;
-    if (G.lives < 0) {
-      G.state = 'OVER';
-      if (G.score > G.best) { G.best = G.score; localStorage.setItem('tw_best', G.best); }
-      showOverlay('result');
+    if (pl.lives < 0) {
+      pl.out = true; pl.firing = false; pl.dead = false;
+      if (G.alive().length === 0) {
+        G.state = 'OVER';
+        if (G.score > G.best) { G.best = G.score; localStorage.setItem('tw_best', G.best); }
+        showOverlay('result');
+      } else {
+        TW.FX.text(W / 2, H / 2, pl.tag + ' 已出局', PCFG[pl.id].color, 22);
+      }
       return;
     }
-    p.dead = true; p.invuln = 150;
+    pl.dead = true; pl.invuln = 150;
     G.deathT = 40;
   }
 
   /* ==================== 碰撞 ==================== */
   function collide() {
-    const p = G.player;
     /* 我方子弹 → 敌人 */
     for (let i = G.pbullets.length - 1; i >= 0; i--) {
       const b = G.pbullets[i];
@@ -378,6 +471,7 @@
       for (let j = 0; j < G.enemies.length; j++) {
         const e = G.enemies[j];
         if (e.dead || e.dying) continue;
+        const pl = G.players[b.owner] || G.players[0] || null;
         let hit = false, hx = b.x, hy = b.y;
         if (e.boss) {
           for (let k = 0; k < e.parts.length; k++) {
@@ -401,9 +495,9 @@
           if (b.pierce > 0) {
             if (b.hit.indexOf(e) >= 0) continue;
             b.hit.push(e); b.pierce--;
-            hurtEnemy(e, b.dmg * 0.85, hx, hy);
+            hurtEnemy(e, b.dmg * 0.85, hx, hy, pl);
           } else {
-            hurtEnemy(e, b.dmg, hx, hy);
+            hurtEnemy(e, b.dmg, hx, hy, pl);
             consumed = true;
           }
           TW.FX.hit(hx, hy, '#ffffff');
@@ -414,40 +508,51 @@
       if (consumed) G.pbullets.splice(i, 1);
     }
 
-    if (!p) return;
+    if (G.players.length === 0) return;
 
-    /* 敌弹 → 玩家 */
-    const pr = p.r;
+    /* 敌弹 → 玩家（逐在多玩家身上独立判定） */
     for (let i = G.ebullets.length - 1; i >= 0; i--) {
       const b = G.ebullets[i];
+      if (!b) break;   // 玩家阵亡会清屏，后续索引已失效
       b.t++;
       b.x += b.vx; b.y += b.vy;
       if (b.y < -40 || b.y > H + 40 || b.x < -40 || b.x > W + 40) { G.ebullets.splice(i, 1); continue; }
-      const d = Math.hypot(b.x - p.x, b.y - p.y);
-      if (d < pr + b.r * 0.62) {
-        G.ebullets.splice(i, 1);
-        playerDie();
-        return;
+      if (!b.gz) b.gz = [false, false];
+      let gone = false;
+      for (let j = 0; j < G.players.length; j++) {
+        const pl = G.players[j];
+        if (pl.out || pl.dead) continue;
+        const d = Math.hypot(b.x - pl.x, b.y - pl.y);
+        if (d < pl.r + b.r * 0.62) {
+          G.ebullets.splice(i, 1);
+          playerDie(pl);
+          gone = true; break;
+        }
+        if (!b.gz[j] && d < pl.grazeR + b.r) {
+          b.gz[j] = true; pl.graze++;
+          G.addScore(50, undefined, undefined, pl);
+          G.rank = Math.min(100, G.rank + 0.05);
+          TW.FX.graze(pl.x, pl.y);
+          if (G.sfx && pl.graze % 3 === 0) TW.Audio.graze();
+        }
       }
-      if (!b.grazed && d < p.grazeR + b.r) {
-        b.grazed = true; G.graze++;
-        G.addScore(50);
-        G.rank = Math.min(100, G.rank + 0.05);
-        TW.FX.graze(p.x, p.y);
-        if (G.sfx && G.graze % 3 === 0) TW.Audio.graze();
-      }
+      if (gone) continue;
     }
 
     /* 撞机 */
     for (let j = 0; j < G.enemies.length; j++) {
       const e = G.enemies[j];
       if (e.dead || e.dying) continue;
-      if (e.boss) {
-        const dx = (p.x - e.x) / (e.r * 0.9), dy = (p.y - e.y) / (e.r * 0.7);
-        if (dx * dx + dy * dy < 1) { playerDie(); return; }
-      } else if (Math.hypot(p.x - e.x, p.y - e.y) < e.r * 0.62 + pr) {
-        if (e.ground) { hurtEnemy(e, 12, e.x, e.y); }
-        playerDie(); return;
+      for (let k = 0; k < G.players.length; k++) {
+        const pl = G.players[k];
+        if (pl.out || pl.dead) continue;
+        if (e.boss) {
+          const dx = (pl.x - e.x) / (e.r * 0.9), dy = (pl.y - e.y) / (e.r * 0.7);
+          if (dx * dx + dy * dy < 1) { playerDie(pl); break; }
+        } else if (Math.hypot(pl.x - e.x, pl.y - e.y) < e.r * 0.62 + pl.r) {
+          if (e.ground) { hurtEnemy(e, 12, e.x, e.y, pl); }
+          playerDie(pl); break;
+        }
       }
     }
   }
@@ -542,7 +647,10 @@
     G.stageT++;
     if (G.waveMsg > 0) G.waveMsg--;
     if (G.flash > 0) G.flash--;
-    if (G.comboT > 0) { G.comboT--; if (G.comboT === 0) G.combo = 0; }
+    for (let i = 0; i < G.players.length; i++) {
+      const pl = G.players[i];
+      if (pl.comboT > 0) { pl.comboT--; if (pl.comboT === 0) pl.combo = 0; }
+    }
     G.rank = Math.min(100, G.rank + 0.006);
 
     /* 延迟生成 */
@@ -551,7 +659,7 @@
     }
 
     runScript();
-    updatePlayer();
+    for (let i = 0; i < G.players.length; i++) updatePlayer(G.players[i]);
 
     for (let i = G.enemies.length - 1; i >= 0; i--) {
       const e = G.enemies[i];
@@ -578,7 +686,7 @@
     TW.FX.update();
 
     /* 背景 */
-    const spd = 1 + G.spd * 0.15;
+    const spd = 1 + (G.players[0] ? G.players[0].spd : 3) * 0.15;
     for (let i = 0; i < G.stars.length; i++) {
       const s = G.stars[i];
       s.y += s.s * spd;
@@ -587,7 +695,7 @@
   }
 
   function stageClear() {
-    const bonus = 10000 + G.bombs * 1500 + (G.graze * 20);
+    const bonus = 10000 + G.bombTotal() * 1500 + G.grazeTotal() * 20;
     G.score += bonus;
     if (G.stage + 1 >= TW.STAGES.length) {
       G.state = 'WIN';
@@ -706,28 +814,45 @@
     }
 
     /* 玩家 */
-    const p = G.player;
-    if (p && G.state === 'PLAYING') {
-      if (!(p.invuln > 0 && p.invuln % 8 < 4)) {
-        drawSpr(TW.SPR.player, p.x, p.y, 40, 44, p.tilt, false);
-        if (G.power >= 3) {
-          drawSpr(TW.SPR.wing, p.x - 26, p.y + 4, 18, 20, 0, false);
-          drawSpr(TW.SPR.wing, p.x + 26, p.y + 4, 18, 20, 0, false);
+    if (G.state === 'PLAYING') {
+      for (let i = G.players.length - 1; i >= 0; i--) {
+        const p = G.players[i];
+        if (!p || p.out) continue;
+        const body = p.id === 0 ? TW.SPR.player : TW.SPR.player2;
+        const wing = p.id === 0 ? TW.SPR.wing : TW.SPR.wing2;
+        if (!(p.invuln > 0 && p.invuln % 8 < 4)) {
+          drawSpr(body, p.x, p.y, 40, 44, p.tilt, false);
+          if (p.power >= 3) {
+            drawSpr(wing, p.x - 26, p.y + 4, 18, 20, 0, false);
+            drawSpr(wing, p.x + 26, p.y + 4, 18, 20, 0, false);
+          }
         }
-      }
-      /* 判定点 */
-      const slowKey = keys['shift'];
-      ctx.fillStyle = slowKey ? '#ffffff' : 'rgba(255,255,255,0.55)';
-      ctx.beginPath(); ctx.arc(p.x, p.y, 3.2, 0, Math.PI * 2); ctx.fill();
-      if (slowKey) {
-        ctx.strokeStyle = 'rgba(159,240,255,0.55)'; ctx.lineWidth = 1;
+        /* 队友识别环 + 编号（仅双人） */
+        if (G.two) {
+          ctx.strokeStyle = PCFG[p.id].ring;
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.ellipse(p.x, p.y + 2, 24, 27, 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.font = '700 11px system-ui, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillStyle = PCFG[p.id].color;
+          ctx.globalAlpha = 0.85;
+          ctx.fillText(p.tag, p.x, p.y + 40);
+          ctx.globalAlpha = 1;
+        }
+        /* 判定点（擦弹判定圈常态淡显） */
+        ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+        ctx.lineWidth = 1;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.grazeR, 0, Math.PI * 2); ctx.stroke();
-      }
-      /* 蓄力条 */
-      if (p.charge > 4) {
-        ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(p.x - 20, p.y + 26, 40, 4);
-        ctx.fillStyle = p.charge >= 44 ? '#ffffff' : '#7fe8ff';
-        ctx.fillRect(p.x - 20, p.y + 26, 40 * Math.min(1, p.charge / 48), 4);
+        ctx.fillStyle = 'rgba(255,255,255,0.75)';
+        ctx.beginPath(); ctx.arc(p.x, p.y, 3.2, 0, Math.PI * 2); ctx.fill();
+        /* 蓄力条 */
+        if (p.charge > 4) {
+          ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(p.x - 20, p.y + 26, 40, 4);
+          ctx.fillStyle = p.charge >= 44 ? '#ffffff' : '#7fe8ff';
+          ctx.fillRect(p.x - 20, p.y + 26, 40 * Math.min(1, p.charge / 48), 4);
+        }
       }
     }
 
@@ -763,38 +888,76 @@
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.fillText('HI ' + Math.max(G.best, G.score), 12, 42);
 
-    /* 残机 / 炸弹 */
+    /* 残机 / 炸弹（逐玩家分行） */
     ctx.textAlign = 'right';
     ctx.font = '600 13px system-ui, sans-serif';
-    ctx.fillStyle = '#9ff0ff';
-    ctx.fillText('残机 ' + Math.max(0, G.lives), W - 12, 26);
-    ctx.fillStyle = '#ffd27a';
-    ctx.fillText('炸弹 ' + G.bombs, W - 12, 44);
+    for (let i = 0; i < G.players.length; i++) {
+      const pl = G.players[i];
+      if (G.two) {
+        ctx.font = '600 13px system-ui, sans-serif';
+        ctx.fillStyle = PCFG[i].color;
+        ctx.fillText(pl.tag + (pl.out ? ' OUT' : ' 残机 ' + Math.max(0, pl.lives) + '  大招 ' + pl.bombs),
+          W - 12, 26 + i * 20);
+      } else {
+        ctx.fillStyle = '#9ff0ff';
+        ctx.fillText('残机 ' + Math.max(0, pl.out ? 0 : pl.lives), W - 12, 26);
+        ctx.fillStyle = '#ffd27a';
+        ctx.fillText('大招 ' + pl.bombs, W - 12, 44);
+      }
+    }
 
-    /* 连击 */
-    if (G.combo > 1) {
+    /* 连击（单人取 1P，双人取连击更高者） */
+    let cl = null;
+    for (let i = 0; i < G.players.length; i++) {
+      const pl = G.players[i];
+      if (pl.out) continue;
+      if (pl.combo > 1 && (!cl || pl.combo > cl.combo)) cl = pl;
+    }
+    if (cl) {
       ctx.textAlign = 'center';
       ctx.font = '600 18px system-ui, sans-serif';
       ctx.fillStyle = '#ffe9a8';
-      ctx.fillText('x' + G.mult().toFixed(2) + '  ' + G.combo + ' COMBO', W / 2, 26);
+      ctx.fillText('x' + G.mult(cl).toFixed(2) + '  ' + cl.combo + (G.two ? ' ' + cl.tag : '') + ' COMBO', W / 2, 26);
     }
 
-    /* 武器 / 火力 */
-    const wp = WEAPONS[G.weapon];
-    ctx.textAlign = 'left';
-    ctx.font = '600 14px system-ui, sans-serif';
-    ctx.fillStyle = wp.color;
-    ctx.fillText(wp.name, 12, H - 26);
-    for (let i = 0; i < 5; i++) {
-      ctx.fillStyle = i < G.power ? wp.color : 'rgba(255,255,255,0.18)';
-      ctx.fillRect(12 + i * 14, H - 18, 11, 6);
+    /* 武器 / 火力（逐玩家） */
+    for (let i = 0; i < G.players.length; i++) {
+      const pl = G.players[i];
+      if (pl.out) continue;
+      const wp = WEAPONS[pl.weapon];
+      if (i === 0) {
+        ctx.textAlign = 'left';
+        ctx.font = '600 14px system-ui, sans-serif';
+        ctx.fillStyle = wp.color;
+        ctx.fillText((G.two ? '1P ' : '') + wp.name, 12, H - 26);
+        for (let k = 0; k < 5; k++) {
+          ctx.fillStyle = k < pl.power ? wp.color : 'rgba(255,255,255,0.18)';
+          ctx.fillRect(12 + k * 14, H - 18, 11, 6);
+        }
+      } else {
+        ctx.textAlign = 'right';
+        ctx.font = '600 14px system-ui, sans-serif';
+        ctx.fillStyle = wp.color;
+        ctx.fillText('2P ' + wp.name, W - 12, H - 26);
+        for (let k = 0; k < 5; k++) {
+          ctx.fillStyle = k < pl.power ? wp.color : 'rgba(255,255,255,0.18)';
+          ctx.fillRect(W - 23 - k * 14, H - 18, 11, 6);
+        }
+      }
     }
     ctx.fillStyle = 'rgba(255,255,255,0.55)';
     ctx.font = '400 11px system-ui, sans-serif';
-    ctx.fillText('擦弹 ' + G.graze, 12, H - 46);
-    ctx.textAlign = 'right';
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.fillText('RANK ' + Math.round(G.rank), W - 12, H - 26);
+    if (G.two) {
+      ctx.textAlign = 'right';
+      ctx.fillText('擦弹 ' + G.grazeTotal() + '   RANK ' + Math.round(G.rank), W - 12, H - 46);
+    } else {
+      ctx.textAlign = 'left';
+      ctx.fillText('擦弹 ' + G.grazeTotal(), 12, H - 46);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.fillText('RANK ' + Math.round(G.rank), W - 12, H - 26);
+    }
+    ctx.textAlign = 'left';
 
     /* Boss 血条 */
     const b = G.boss;
@@ -852,21 +1015,33 @@
     const d = document.getElementById('res-detail');
     if (t) t.textContent = G.state === 'WIN' ? '任务完成' : '任务失败';
     if (s) s.textContent = G.score;
+    const lines = [];
+    if (G.two) {
+      for (let i = 0; i < G.players.length; i++) {
+        const pl = G.players[i];
+        lines.push('<span style="color:' + PCFG[i].color + '">' + pl.tag +
+          ' 击破 ' + pl.kills + ' · 擦弹 ' + pl.graze + ' · 残机 ' + Math.max(0, pl.lives) + '</span>');
+      }
+    } else {
+      lines.push('击破 ' + G.kills + ' · 擦弹 ' + G.grazeTotal());
+    }
     if (d) {
       d.innerHTML = (G.mode === 'story'
-        ? (G.state === 'WIN' ? '全 5 关通关' : '到达 STAGE ' + (G.stage + 1))
+        ? (G.state === 'WIN' ? '双人合作通关全 5 关' : '到达 STAGE ' + (G.stage + 1))
         : '无尽模式 WAVE ' + G.wave)
-        + ' · 击破 ' + G.kills + ' · 擦弹 ' + G.graze
+        + '<br>' + lines.join('<br>')
         + '<br>最高分 ' + G.best;
     }
   }
 
-  function startGame(mode) {
+  function startGame(mode, two) {
     TW.Audio.init(); TW.Audio.resume();
     G.mode = mode || 'story';
-    G.reset();
+    G.reset(two === undefined ? G.two : !!two);
     G.state = 'PLAYING';
     startStage(0);
+    document.body.dataset.mode = G.mode;
+    document.body.dataset.two = G.two ? '1' : '0';
     hideAll();
   }
   function togglePause() {
@@ -877,10 +1052,12 @@
   document.querySelectorAll('[data-act]').forEach((el) => {
     el.addEventListener('click', () => {
       const a = el.dataset.act;
-      if (a === 'start-story') startGame('story');
-      else if (a === 'start-endless') startGame('endless');
+      if (a === 'start-solo') startGame('story', false);
+      else if (a === 'start-coop') startGame('story', true);
+      else if (a === 'start-endless') startGame('endless', false);
+      else if (a === 'start-endless2') startGame('endless', true);
       else if (a === 'resume') togglePause();
-      else if (a === 'restart') startGame(G.mode);
+      else if (a === 'restart') startGame(G.mode, G.two);
       else if (a === 'menu') { G.state = 'MENU'; showOverlay('menu'); }
       else if (a === 'mute') {
         TW.Audio.init(); TW.Audio.setMuted(!TW.Audio.muted);
@@ -900,14 +1077,20 @@
     VERSION: VERSION, W: W, H: H,
     get G() { return G; },
     state: () => G.state,
-    start: (m) => startGame(m || 'story'),
+    start: (m, two) => startGame(m || 'story', !!two),
     pause: togglePause,
     frame: (n) => { for (let i = 0; i < (n || 1); i++) update(); },
     render: render,
-    bomb: useBomb,
-    key: (k, down) => { keys[k] = !!down; if ((k === 'j' || k === ' ') && down) firing = true; if ((k === 'j' || k === ' ') && !down) firing = false; },
-    setWeapon: (w) => { G.weapon = w; },
-    setPower: (p) => { G.power = p; },
+    bomb: (i) => useBomb(G.players[i || 0]),
+    key: (k, down) => pressKey(String(k).toLowerCase(), '', !!down),
+    press: (k, down, code) => pressKey(String(k).toLowerCase(), (code || '').toLowerCase(), !!down),
+    setWeapon: (w, i) => { const pl = G.players[i || 0]; if (pl) pl.weapon = w; },
+    setPower: (p, i) => { const pl = G.players[i || 0]; if (pl) pl.power = p; },
+    playerInfo: () => G.players.map((p) => ({
+      id: p.id, out: p.out, x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10,
+      lives: p.lives, bombs: p.bombs, power: p.power, weapon: p.weapon,
+      combo: p.combo, graze: p.graze, kills: p.kills, charge: p.charge, invuln: p.invuln,
+    })),
     spawnBoss: (s) => TW.spawnBoss(s || 0),
     killAll: () => { G.enemies.length = 0; G.boss = null; },
     gotoStage: (n) => { startStage(n); },

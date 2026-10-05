@@ -46,6 +46,21 @@
     glowDot(g, 0, 4, 3.5, 'rgba(120,235,255,0.85)', 'rgba(120,235,255,0)');
   });
 
+  /* 2P 机体：同轮廓换涂装（冷白机身 + 琥珀勾线），与 1P 青色一眼可分 */
+  function variant(src, hue, gold) {
+    const c = mk(src.width, src.height), g = c.getContext('2d');
+    try { g.filter = 'hue-rotate(' + hue + 'deg) saturate(0.35) brightness(1.45)'; } catch (e) { /* 老浏览器忽略 */ }
+    g.drawImage(src, 0, 0);
+    g.filter = 'none';
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = gold;
+    g.fillRect(0, 0, c.width, c.height);
+    g.globalCompositeOperation = 'source-over';
+    return c;
+  }
+  TW.SPR.player2 = variant(TW.SPR.player, -18, 'rgba(255,206,90,0.42)');
+  TW.SPR.wing2 = variant(TW.SPR.wing, -18, 'rgba(255,206,90,0.42)');
+
   /* ---------------- 敌方杂兵 ---------------- */
   TW.SPR.drone = sp(30, 30, (g, w, h) => {
     g.translate(w / 2, h / 2); g.scale(1, -1); // 机头朝下

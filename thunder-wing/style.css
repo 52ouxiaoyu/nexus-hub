@@ -24,17 +24,19 @@ html, body {
 }
 
 #hud-top {
-  position: fixed; top: 10px; left: 12px;
+  /* 版本徽标：贴底居中，避开画布内的分数 / 火力 HUD */
+  position: fixed; bottom: 6px; left: 50%; transform: translateX(-50%);
   display: flex; align-items: center; gap: 8px;
   pointer-events: none;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.35);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.32);
   letter-spacing: 1px;
+  white-space: nowrap;
 }
 #hud-top .ver { color: rgba(159, 240, 255, 0.5); }
 
 #btn-bomb {
-  position: fixed; right: 18px; bottom: 18px;
+  position: fixed; right: 18px; bottom: 78px;
   width: 62px; height: 62px; border-radius: 50%;
   display: none; align-items: center; justify-content: center;
   background: rgba(255, 210, 122, 0.12);
@@ -75,18 +77,29 @@ html, body {
 
 .ttl { font-size: 24px; font-weight: 600; letter-spacing: 2px; }
 
-.btns { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+.btns {
+  margin-top: 18px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
 .btn {
-  padding: 12px 16px;
+  padding: 12px 14px;
   border-radius: 10px;
   border: 1px solid rgba(159, 240, 255, 0.35);
   background: rgba(159, 240, 255, 0.06);
   color: #dff6ff;
-  font-size: 15px; font-family: inherit;
+  font-size: 14px; font-family: inherit;
   cursor: pointer;
   transition: background .15s, transform .1s;
 }
-.btn span { font-size: 11px; color: rgba(159, 240, 255, 0.6); margin-left: 6px; }
+.btn span { display: block; font-size: 10px; color: rgba(159, 240, 255, 0.6); margin: 3px 0 0; }
+.btn.primary[disabled] { opacity: .5; }
+/* 双人合作按钮：暖色标识 2P */
+.btn[data-act="start-coop"] { border-color: rgba(255, 212, 94, 0.6); background: rgba(255, 212, 94, 0.08); }
+.btn[data-act="start-coop"] span { color: rgba(255, 212, 94, 0.7); }
+.btn.primary[data-act="start-coop"] {
+  border-color: rgba(255, 212, 94, 0.85);
+  background: linear-gradient(180deg, rgba(255, 200, 90, 0.28), rgba(200, 140, 40, 0.18));
+}
 .btn:hover { background: rgba(159, 240, 255, 0.14); }
 .btn:active { transform: scale(0.985); }
 .btn.primary {
@@ -102,6 +115,17 @@ html, body {
 }
 .help .row { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
 .help b { color: #9ff0ff; font-weight: 500; }
+/* 键位表：每行 4 列（玩家 / 移动 / 射击 / 大招） */
+.help .krow {
+  display: grid; grid-template-columns: 46px 1fr 1.1fr 1.2fr;
+  gap: 8px; align-items: center; padding: 4px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+}
+.help .krow:last-child { border-bottom: none; }
+.help .khead { font-size: 10px; color: rgba(255, 255, 255, 0.35); letter-spacing: 1px; }
+.help .krow span.p1 { color: #8cf0ff; font-weight: 700; }
+.help .krow span.p2 { color: #ffd45e; font-weight: 700; }
+.help .krow span.pz { color: rgba(255, 255, 255, 0.5); font-weight: 600; }
 
 .tips {
   margin-top: 12px; font-size: 11px; line-height: 1.6;

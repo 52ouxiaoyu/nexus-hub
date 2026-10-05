@@ -12,10 +12,10 @@
 
   <div id="hud-top">
     <span class="tag">雷霆之翼</span>
-    <span id="ver" class="ver">v1.0.1</span>
+    <span id="ver" class="ver">v1.1.0</span>
   </div>
 
-  <button id="btn-bomb" title="炸弹">B</button>
+  <button id="btn-bomb" title="大招">B</button>
 
   <!-- 主菜单 -->
   <div id="ov-menu" class="overlay">
@@ -24,19 +24,20 @@
       <div class="logo-en">T H U N D E R &nbsp; W I N G</div>
       <div id="menu-best" class="best">最高分 0</div>
       <div class="btns">
-        <button class="btn primary" data-act="start-story">故事模式 <span>5 关闯关</span></button>
-        <button class="btn" data-act="start-endless">无尽模式 <span>越打越难</span></button>
+        <button class="btn" data-act="start-solo">单人出击 <span>故事模式 5 关</span></button>
+        <button class="btn primary" data-act="start-coop">双人合作 <span>本机同屏 · 2P 加入</span></button>
+        <button class="btn" data-act="start-endless">单人无尽 <span>越打越难</span></button>
+        <button class="btn" data-act="start-endless2">双人无尽 <span>共斗刷波次</span></button>
       </div>
       <div class="help">
-        <div class="row"><b>WASD / 方向键</b><span>移动</span></div>
-        <div class="row"><b>J / 空格</b><span>射击（按住 0.8 秒自动蓄力炮）</span></div>
-        <div class="row"><b>K / X</b><span>炸弹（清屏 + 无敌）</span></div>
-        <div class="row"><b>Shift</b><span>低速微调（显示判定点）</span></div>
-        <div class="row"><b>P / Esc</b><span>暂停</span></div>
-        <div class="row touch-only"><b>触屏</b><span>拖动移动 · 自动射击 · 右下 B 放炸弹</span></div>
+        <div class="krow khead"><span>玩家</span><span>移动</span><span>射击</span><span>大招</span></div>
+        <div class="krow"><span class="p1">1P</span><span><b>W A S D</b></span><span><b>空格</b> / <b>J</b></span><span><b>K</b> / <b>左Shift</b></span></div>
+        <div class="krow"><span class="p2">2P</span><span><b>↑ ↓ ← →</b></span><span><b>回车</b></span><span><b>右Shift</b> / <b>/</b></span></div>
+        <div class="krow"><span class="pz">暂停</span><span><b>P</b> / <b>Esc</b></span><span>全屏共用</span><span></span></div>
+        <div class="row touch-only"><b>触屏</b><span>拖动移动 · 自动射击 · 右下 B 放 1P 大招</span></div>
       </div>
-      <div class="tips">擦着敌弹飞过可加分，连击不断倍率最高 x4.00</div>
-      <div class="foot">程序化矢量美术 · 无外部素材 · <span id="menu-ver">v1.0.1</span></div>
+      <div class="tips">擦着敌弹飞过可加分，连击不断倍率最高 x4.00<br>双人：共用分数与关卡，各自独立的残机 / 火力 / 大招</div>
+      <div class="foot">程序化矢量美术 · 无外部素材 · <span id="menu-ver">v1.1.0</span></div>
       <button class="btn small" data-act="mute">♪ 开启</button>
     </div>
   </div>

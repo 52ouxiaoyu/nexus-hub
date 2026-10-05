@@ -29,8 +29,21 @@
     });
   };
 
+  /* 取距离最近的存活玩家作为目标（单人即 1P） */
+  function nearest(x, y) {
+    const ps = G().players || [];
+    let best = null, bd = Infinity;
+    for (let i = 0; i < ps.length; i++) {
+      const p = ps[i];
+      if (!p || p.out) continue;
+      const d = Math.hypot(p.x - x, p.y - y);
+      if (d < bd) { bd = d; best = p; }
+    }
+    return best || { x: W / 2, y: H - 120 };
+  }
+
   function aimAt(x, y) {
-    const p = G().player;
+    const p = nearest(x, y);
     return Math.atan2(p.y - y, p.x - x);
   }
 
@@ -100,14 +113,14 @@
     e.t++;
     if (e.flash > 0) e.flash--;
     const g = G();
-    const p = g.player;
+    const tp = nearest(e.x, e.y);
 
     switch (e.pat) {
       case 'sine':
         e.y += e.vy; e.x = e.x0 + Math.sin(e.t * e.w) * e.amp; break;
       case 'dive':
         e.y += e.vy;
-        e.vx += (p.x - e.x) * 0.0022;
+        e.vx += (tp.x - e.x) * 0.0022;
         e.vx = Math.max(-3.4, Math.min(3.4, e.vx));
         e.x += e.vx; break;
       case 'hover':
@@ -132,7 +145,6 @@
   };
 
   function fire(e) {
-    const p = G().player;
     const a0 = aimAt(e.x, e.y);
     switch (e.fire) {
       case 'aimed':
