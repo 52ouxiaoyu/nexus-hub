@@ -1471,51 +1471,56 @@ class HauntedDorm {
         const W = 320, H = 240; // 扩大版小地图
         const sx = W / this.worldWidth, sy = H / this.worldHeight;
         ctx.clearRect(0, 0, W, H);
-        ctx.fillStyle = 'rgba(8,25,45,0.75)';
+        
+        // 【背景】河道
+        ctx.fillStyle = 'rgba(46, 109, 168, 0.9)'; // #2e6da8
         ctx.fillRect(0, 0, W, H);
-        // 房间外框（河道蓝）
-        ctx.strokeStyle = 'rgba(90,160,220,0.9)';
-        ctx.lineWidth = 1.5;
+
+        // 【房间地形】草地
         for (const rm of this.rooms) {
+            ctx.fillStyle = 'rgba(53, 133, 62, 0.95)'; // #35853e 草地绿
+            ctx.fillRect(rm.x * this.gridSize * sx, rm.y * this.gridSize * sy, rm.w * this.gridSize * sx, rm.h * this.gridSize * sy);
+            
+            // 墙面/边框略微加深一点，更清晰
+            ctx.strokeStyle = '#225522';
+            ctx.lineWidth = 1;
             ctx.strokeRect(rm.x * this.gridSize * sx, rm.y * this.gridSize * sy, rm.w * this.gridSize * sx, rm.h * this.gridSize * sy);
-            // 画个床位示意
-            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+
+            // 床位示意
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
             ctx.fillRect((rm.x + rm.tpl.bed.c) * this.gridSize * sx, (rm.y + rm.tpl.bed.r) * this.gridSize * sy, this.gridSize * sx, this.gridSize * sy);
         }
+
+        // 【植物和门】
+        for (const pl of this.plants) {
+            if (pl.def.isDoor) {
+                ctx.fillStyle = '#ffa040'; // 门是橙黄色
+            } else {
+                ctx.fillStyle = '#a0ffa0'; // 其他植物浅绿色
+            }
+            ctx.fillRect(pl.c * this.gridSize * sx, pl.r * this.gridSize * sy, this.gridSize * sx, this.gridSize * sy);
+        }
+
         // 阳光袋
         ctx.fillStyle = '#ffe14a';
         for (const s of this.suns) ctx.fillRect(s.x * sx - 1.5, s.y * sy - 1.5, 3, 3);
+        
         // 僵尸
         ctx.fillStyle = '#ff5252';
-        for (const zb of this.zombies) ctx.fillRect(zb.x * sx - 3, zb.y * sy - 3, 6, 6);
+        for (const zb of this.zombies) {
+            if (zb.dead) continue;
+            ctx.fillRect(zb.x * sx - 3, zb.y * sy - 3, 6, 6);
+        }
         
         // 玩家与人机
         for (const p of this.allPlayers) {
+            if (p.dead) continue;
             const isMe = p === this.player;
-            // 颜色分配：你是绿色，人机取他们的颜色
             let color = isMe ? '#00ff00' : p.color;
             ctx.fillStyle = color;
             ctx.beginPath();
             ctx.arc(p.x * sx, p.y * sy, isMe ? 6 : 5, 0, Math.PI * 2);
             ctx.fill();
-            
-            // 名字
-            ctx.fillStyle = 'white';
-            ctx.font = '10px Arial';
-            ctx.textAlign = 'center';
-            if (p.dead) {
-                ctx.fillStyle = '#888';
-                ctx.fillText(isMe ? '你(阵亡)' : p.roleDef.name, p.x * sx, p.y * sy - 8);
-                // 红色斜杠
-                ctx.strokeStyle = 'red';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(p.x * sx - 6, p.y * sy - 6);
-                ctx.lineTo(p.x * sx + 6, p.y * sy + 6);
-                ctx.stroke();
-            } else {
-                ctx.fillText(isMe ? '你' : p.roleDef.name, p.x * sx, p.y * sy - 8);
-            }
         }
     }
 
