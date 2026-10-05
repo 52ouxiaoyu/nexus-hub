@@ -20,9 +20,17 @@
         .tile { position: absolute; width: 80px; height: 80px; box-sizing: border-box; }
         /* v3.88.0 墙面 = 蓝色河道（静态水波纹，避免大面积动画拖性能） */
         .tile.wall {
-            background-color: #3a8dff;
+            background-color: #2e6da8;
+            /* 柔和的深浅渐变 + 淡淡的水平水波纹理，摒弃之前斜向和涂鸦感 */
+            background-image: repeating-linear-gradient(
+                0deg, 
+                transparent, 
+                transparent 14px, 
+                rgba(255, 255, 255, 0.08) 14px, 
+                rgba(255, 255, 255, 0.08) 16px
+            ), linear-gradient(180deg, #4a90c9 0%, #2e6da8 100%);
             border: none;
-            box-shadow: none;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.15);
         }
         /* v3.88.0 门口木桥（门板坚果铺在桥上，玩家自由穿行） */
         .tile.bridge {
@@ -202,6 +210,6 @@
         </div>
     </div>
 
-    <script src="js/HauntedDorm.js?v=1791191715"></script>
+    <script src="js/HauntedDorm.js?v=1791191938"></script>
 </body>
 </html>
