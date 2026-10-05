@@ -93,6 +93,29 @@ html, body {
 }
 .btn span { display: block; font-size: 10px; color: rgba(159, 240, 255, 0.6); margin: 3px 0 0; }
 .btn.primary[disabled] { opacity: .5; }
+/* 敌我辨识图例：有害=暖色尖角，有利=白色圆环 */
+.legend {
+  margin-top: 14px; padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left; font-size: 11px; line-height: 1.5;
+  color: rgba(255, 255, 255, 0.6);
+}
+.legend .lg-row { display: flex; gap: 8px; align-items: flex-start; padding: 3px 0; }
+.legend b { font-weight: 600; }
+.legend .lg-bad b { color: #ff8f9a; }
+.legend .lg-good b { color: #bff6ff; }
+.lg-ico { flex: 0 0 auto; width: 15px; height: 15px; margin-top: 2px; }
+.lg-ico-bad {
+  background: #ff3550;
+  clip-path: polygon(50% 0%, 63% 37%, 100% 50%, 63% 63%, 50% 100%, 37% 63%, 0% 50%, 37% 37%);
+}
+.lg-ico-good {
+  box-sizing: border-box; border-radius: 50%;
+  border: 2px solid #ffffff;
+  background: radial-gradient(circle, rgba(140, 235, 255, 0.85) 0 40%, rgba(140, 235, 255, 0.25) 41%);
+}
 /* 双人合作按钮：暖色标识 2P */
 .btn[data-act="start-coop"] { border-color: rgba(255, 212, 94, 0.6); background: rgba(255, 212, 94, 0.08); }
 .btn[data-act="start-coop"] span { color: rgba(255, 212, 94, 0.7); }

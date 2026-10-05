@@ -88,12 +88,13 @@
 
   TW.SPR.bomber = sp(60, 50, (g, w, h) => {
     g.translate(w / 2, h / 2); g.scale(1, -1);
+    // 轰炸机原为绿色，语义上像「安全/有利」，改为暖橙并加深色机身，保证敌方一律暖色
     poly(g, [[0, 22], [14, 16], [27, 6], [26, -6], [14, -16], [0, -22], [-14, -16], [-26, -6], [-27, 6], [-14, 16]],
-      '#123024', '#54e08a', 2);
-    poly(g, [[0, 6], [10, 0], [0, -8], [-10, 0]], '#c9ffe0', '#ffffff', 1);
-    g.strokeStyle = '#2f9d63'; g.lineWidth = 2;
+      '#2a1206', '#ff8a4a', 2);
+    poly(g, [[0, 6], [10, 0], [0, -8], [-10, 0]], '#ffe0cc', '#ffffff', 1);
+    g.strokeStyle = '#c25a20'; g.lineWidth = 2;
     g.beginPath(); g.moveTo(-18, 10); g.lineTo(-7, 14); g.moveTo(18, 10); g.lineTo(7, 14); g.stroke();
-    glowDot(g, 0, 14, 6, 'rgba(90,230,140,0.85)', 'rgba(90,230,140,0)');
+    glowDot(g, 0, 14, 6, 'rgba(255,138,74,0.85)', 'rgba(255,138,74,0)');
   });
 
   TW.SPR.tank = sp(42, 34, (g, w, h) => {
@@ -159,12 +160,13 @@
     g.globalAlpha = 1;
   }
 
+  /* Boss 一律暖色涂装：敌我辨识规则里「冷色=我方」，Boss 绝不能是蓝/绿 */
   const BOSS_SKIN = [
-    ['#2a1016', '#ff6b7d', '#5c1b26'],
-    ['#101c33', '#5fb0ff', '#1b3560'],
-    ['#241038', '#c07bff', '#3d1c5c'],
-    ['#12301f', '#54e08a', '#1c4a30'],
-    ['#331f08', '#ffc44d', '#5c3a0d'],
+    ['#2a1016', '#ff6b7d', '#5c1b26'],   // 赤鲨级：红
+    ['#2e1a08', '#ffa63c', '#5c3a12'],   // 苍穹母舰：橙
+    ['#241038', '#c07bff', '#3d1c5c'],   // 深渊要塞：紫
+    ['#2a0c24', '#ff5ec8', '#4d1a42'],   // 钢蜈蚣：洋红
+    ['#331f08', '#ffc44d', '#5c3a0d'],   // 终焉旗舰：金
   ];
   TW.SPR.boss = BOSS_SKIN.map((s, i) => sp(180, 130, (g) => bossBase(g, s[0], s[1], s[2], i)));
 
@@ -176,8 +178,11 @@
     glowDot(g, 0, 0, 6, 'rgba(255,140,80,0.9)', 'rgba(255,140,80,0)');
   });
 
-  /* ---------------- 弹丸 ---------------- */
-  /* 弹丸：细长光矢，核心色占主体，白色只做针尖，避免满屏白球 */
+  /* ---------------- 弹丸 ----------------
+     视觉契约（一眼分辨敌我 / 利害）：
+       有害 = 暖色（红/橙/洋红/紫）+ 尖锐星芒 + 深色描边
+       有利 = 白色圆环徽章（道具，见 game.js 绘制）
+       我方子弹 = 冷色细长光矢（几何上明确指向机头前方） */
   function bullet(w, h, core, ring) {
     return sp(w, h, (g) => {
       const cx = w / 2, cy = h / 2;
@@ -191,17 +196,39 @@
   TW.BULLET = {
     vulcan: bullet(8, 16, '#63dcff', 'rgba(70,200,255,0.42)'),
     laser: bullet(10, 30, '#5fb0ff', 'rgba(80,170,255,0.45)'),
-    missile: bullet(10, 16, '#b98cff', 'rgba(150,110,255,0.42)'),
+    missile: bullet(10, 16, '#5ce8b4', 'rgba(92,232,180,0.42)'),
     wing: bullet(7, 13, '#8ceaff', 'rgba(110,220,255,0.38)'),
     charge: bullet(16, 28, '#bff6ff', 'rgba(140,235,255,0.6)'),
-    // 敌方：暖色系
-    red: bullet(12, 12, '#ff5a6e', 'rgba(255,90,110,0.42)'),
-    amber: bullet(12, 12, '#ffb03a', 'rgba(255,176,58,0.42)'),
-    magenta: bullet(12, 12, '#ff5ec8', 'rgba(255,94,200,0.42)'),
-    purple: bullet(14, 14, '#c07bff', 'rgba(192,123,255,0.42)'),
-    green: bullet(12, 12, '#7cf07c', 'rgba(124,240,124,0.42)'),
-    big: bullet(18, 18, '#ff7a3a', 'rgba(255,122,58,0.5)'),
   };
+
+  /* 敌方弹幕：n 角尖锐星芒 + 深色描边 + 白核（尖 = 危险，和圆润道具形成硬对比） */
+  function hazard(size, core, ring, spikes) {
+    return sp(size, size, (g) => {
+      const cx = size / 2, cy = size / 2, R = size / 2 - 1.5;
+      glowDot(g, cx, cy, R, ring, 'rgba(0,0,0,0)');
+      const n = spikes || 4, ri = R * 0.58;
+      g.beginPath();
+      for (let i = 0; i < n * 2; i++) {
+        const a = (Math.PI / n) * i - Math.PI / 2;
+        const rr = (i % 2 === 0) ? R * 0.94 : ri;
+        const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
+        if (i) g.lineTo(x, y); else g.moveTo(x, y);
+      }
+      g.closePath();
+      g.fillStyle = core; g.fill();
+      g.lineWidth = Math.max(1.6, size * 0.07);
+      g.strokeStyle = 'rgba(38,2,10,0.95)'; g.stroke();   // 暗描边：与白色光环道具一眼分开
+      g.fillStyle = 'rgba(255,255,255,0.95)';
+      g.beginPath(); g.arc(cx, cy, Math.max(1.3, size * 0.115), 0, Math.PI * 2); g.fill();
+    });
+  }
+  /* 敌弹色域：全部落在暖色区，不同形状attack对应不同星角数便于辨认来源 */
+  TW.BULLET.red = hazard(30, '#ff4864', 'rgba(255,72,100,0.5)', 4);      // 四芒：直射
+  TW.BULLET.amber = hazard(30, '#ffa42e', 'rgba(255,164,46,0.5)', 4);   // 四芒：扇形
+  TW.BULLET.magenta = hazard(32, '#ff2fae', 'rgba(255,47,174,0.45)', 6); // 六芒：环形/弹墙
+  TW.BULLET.purple = hazard(32, '#c15cff', 'rgba(193,92,255,0.45)', 5);  // 五芒：环形
+  TW.BULLET.green = hazard(30, '#ff7a34', 'rgba(255,122,52,0.5)', 2);   // 菱形：螺旋（原绿色=友好语义，改为橙红）
+  TW.BULLET.big = hazard(48, '#ff4a26', 'rgba(255,74,38,0.5)', 6);       // 六芒大弹：重型
 
   /* ---------------- 受击白闪剪影 ---------------- */
   function whiten(src) {

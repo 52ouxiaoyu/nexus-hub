@@ -1,7 +1,14 @@
 /* 雷霆之翼 Thunder Wing — 敌人、波次脚本与 Boss */
 (function () {
   const TW = window.TW || (window.TW = {});
-  const W = 480, H = 800;
+  const H = 800;
+  /* 战场宽度自适应：宽屏/machines 上摊宽、手机保持竖屏手感。
+     game.js 的 resize() 会通过 TW.setWidth 同步实际宽度。
+     关卡脚本里的横向坐标按参考宽度 RW=480 等比映射，保证编队始终对称。 */
+  const RW = 480;
+  let W = RW;
+  TW.setWidth = function (w) { if (w > 0) W = w; };
+  function X(v) { return v / RW * W; }
 
   function G() { return TW.G; }
   function later(fr, fn) { if (fr <= 0) fn(); else G().pending.push({ t: G().frame + fr, fn: fn }); }
@@ -125,7 +132,7 @@
         e.x += e.vx; break;
       case 'hover':
         if (e.y < e.ty) { e.y += e.vy; if (e.y >= e.ty) e.y = e.ty; }
-        else { e.x = e.x0 + Math.sin(e.t * 0.028) * 70; e.y += 0.12; }
+        else { e.x = e.x0 + Math.sin(e.t * 0.028) * Math.min(96, 70 * W / RW); e.y += 0.12; }
         break;
       case 'arc':
         e.y += e.vy; e.x += e.vx; e.vx *= 0.995; break;
@@ -173,21 +180,21 @@
       name: '边境星域', sub: 'Frontier Belt', tint: '#071428', star: '#9fd8ff',
       boss: 0,
       script: [
-        S(40, () => F.vee('drone', 5, 240, 46, 1.9)),
-        S(200, () => F.line('drone', 5, 110, 65, 1.7, { item: 'power' })),
-        S(380, () => F.sine('fighter', 4, 120, 80, 2.0)),
-        S(560, () => F.col('drone', 6, 90, 22, { pat: 'sine', amp: 50 })),
-        S(700, () => F.col('drone', 6, 390, 22, { pat: 'sine', amp: 50 })),
+        S(40, () => F.vee('drone', 5, X(240), X(46), 1.9)),
+        S(200, () => F.line('drone', 5, X(110), X(65), 1.7, { item: 'power' })),
+        S(380, () => F.sine('fighter', 4, X(120), X(80), 2.0)),
+        S(560, () => F.col('drone', 6, X(90), 22, { pat: 'sine', amp: 50 })),
+        S(700, () => F.col('drone', 6, X(390), 22, { pat: 'sine', amp: 50 })),
         S(860, () => F.ground('tank', 3, 70, { item: 'power' })),
         S(1020, () => F.dive('fighter', 4, -1, 26)),
-        S(1180, () => F.line('fighter', 5, 90, 70, 1.8, { item: 'weapon' })),
-        S(1360, () => F.vee('drone', 7, 240, 40, 2.2)),
+        S(1180, () => F.line('fighter', 5, X(90), X(70), 1.8, { item: 'weapon' })),
+        S(1360, () => F.vee('drone', 7, X(240), X(40), 2.2)),
         S(1560, () => F.ground('tank', 4, 55, { item: 'bomb' })),
-        S(1760, () => F.sine('fighter', 5, 90, 75, 2.2)),
-        S(1960, () => { F.col('drone', 5, 150, 20); F.col('drone', 5, 330, 20); }),
-        S(2180, () => F.hover('gunship', 2, [140, 340], 170, { item: 'power' })),
+        S(1760, () => F.sine('fighter', 5, X(90), X(75), 2.2)),
+        S(1960, () => { F.col('drone', 5, X(150), 20); F.col('drone', 5, X(330), 20); }),
+        S(2180, () => F.hover('gunship', 2, [X(140), X(340)], 170, { item: 'power' })),
         S(2480, () => F.ground('tank', 4, 50)),
-        S(2700, () => F.line('fighter', 6, 70, 68, 2.0, { item: 'medal' })),
+        S(2700, () => F.line('fighter', 6, X(70), X(68), 2.0, { item: 'medal' })),
       ],
       len: 2900,
     },
@@ -195,20 +202,20 @@
       name: '云海要塞', sub: 'Cloud Fortress', tint: '#0a1a2e', star: '#bfe4ff',
       boss: 1,
       script: [
-        S(40, () => F.line('drone', 6, 70, 68, 2.0)),
-        S(220, () => F.sine('fighter', 5, 80, 80, 2.2)),
-        S(420, () => F.turret([110, 240, 370], 200, { item: 'power' })),
+        S(40, () => F.line('drone', 6, X(70), X(68), 2.0)),
+        S(220, () => F.sine('fighter', 5, X(80), X(80), 2.2)),
+        S(420, () => F.turret([X(110), X(240), X(370)], 200, { item: 'power' })),
         S(700, () => F.ground('tank', 4, 60, { item: 'weapon' })),
         S(900, () => F.dive('fighter', 5, 1, 22)),
-        S(1080, () => F.col('drone', 7, 120, 18, { pat: 'sine', amp: 60 })),
-        S(1240, () => F.col('drone', 7, 360, 18, { pat: 'sine', amp: 60 })),
-        S(1420, () => F.hover('gunship', 3, [90, 240, 390], 160, { item: 'power' })),
-        S(1720, () => F.vee('fighter', 7, 240, 52, 2.4)),
+        S(1080, () => F.col('drone', 7, X(120), 18, { pat: 'sine', amp: 60 })),
+        S(1240, () => F.col('drone', 7, X(360), 18, { pat: 'sine', amp: 60 })),
+        S(1420, () => F.hover('gunship', 3, [X(90), X(240), X(390)], 160, { item: 'power' })),
+        S(1720, () => F.vee('fighter', 7, X(240), X(52), 2.4)),
         S(1920, () => F.ground('tank', 5, 48, { item: 'bomb' })),
-        S(2140, () => F.turret([80, 180, 300, 400], 230)),
-        S(2440, () => F.line('bomber', 2, 150, 180, 1.3, { item: 'power', fire: 'bomb' })),
-        S(2700, () => F.sine('fighter', 6, 70, 70, 2.5)),
-        S(2900, () => { F.col('drone', 6, 100, 16); F.col('drone', 6, 380, 16); F.dive('fighter', 4, -1, 24); }),
+        S(2140, () => F.turret([X(80), X(180), X(300), X(400)], 230)),
+        S(2440, () => F.line('bomber', 2, X(150), X(180), 1.3, { item: 'power', fire: 'bomb' })),
+        S(2700, () => F.sine('fighter', 6, X(70), X(70), 2.5)),
+        S(2900, () => { F.col('drone', 6, X(100), 16); F.col('drone', 6, X(380), 16); F.dive('fighter', 4, -1, 24); }),
       ],
       len: 3150,
     },
@@ -216,20 +223,20 @@
       name: '赤色峡谷', sub: 'Crimson Canyon', tint: '#200a12', star: '#ffc9b0',
       boss: 2,
       script: [
-        S(40, () => F.vee('fighter', 7, 240, 50, 2.4)),
+        S(40, () => F.vee('fighter', 7, X(240), X(50), 2.4)),
         S(240, () => F.ground('tank', 5, 52, { item: 'power' })),
-        S(460, () => F.turret([100, 240, 380], 190, { fire: 'spread5' })),
+        S(460, () => F.turret([X(100), X(240), X(380)], 190, { fire: 'spread5' })),
         S(720, () => F.dive('fighter', 6, -1, 20)),
         S(900, () => F.dive('fighter', 6, 1, 20)),
-        S(1100, () => F.line('bomber', 3, 90, 150, 1.4, { item: 'weapon' })),
-        S(1400, () => F.hover('gunship', 3, [80, 240, 400], 150, { item: 'power', fire: 'ring12' })),
-        S(1720, () => F.sine('fighter', 7, 70, 62, 2.6)),
-        S(1960, () => F.col('drone', 8, 140, 14, { pat: 'sine', amp: 70 })),
-        S(2140, () => F.col('drone', 8, 340, 14, { pat: 'sine', amp: 70 })),
+        S(1100, () => F.line('bomber', 3, X(90), X(150), 1.4, { item: 'weapon' })),
+        S(1400, () => F.hover('gunship', 3, [X(80), X(240), X(400)], 150, { item: 'power', fire: 'ring12' })),
+        S(1720, () => F.sine('fighter', 7, X(70), X(62), 2.6)),
+        S(1960, () => F.col('drone', 8, X(140), 14, { pat: 'sine', amp: 70 })),
+        S(2140, () => F.col('drone', 8, X(340), 14, { pat: 'sine', amp: 70 })),
         S(2360, () => F.ground('tank', 6, 44, { item: 'bomb' })),
-        S(2620, () => F.line('bomber', 3, 110, 130, 1.5, { item: 'medal' })),
-        S(2880, () => F.turret([70, 170, 310, 410], 240, { fire: 'spread5' })),
-        S(3150, () => F.vee('fighter', 9, 240, 44, 2.7)),
+        S(2620, () => F.line('bomber', 3, X(110), X(130), 1.5, { item: 'medal' })),
+        S(2880, () => F.turret([X(70), X(170), X(310), X(410)], 240, { fire: 'spread5' })),
+        S(3150, () => F.vee('fighter', 9, X(240), X(44), 2.7)),
       ],
       len: 3400,
     },
@@ -237,19 +244,19 @@
       name: '极地轨道', sub: 'Polar Orbit', tint: '#071c1e', star: '#b6fbff',
       boss: 3,
       script: [
-        S(40, () => F.col('drone', 9, 130, 13, { pat: 'sine', amp: 80 })),
-        S(200, () => F.col('drone', 9, 350, 13, { pat: 'sine', amp: 80 })),
-        S(420, () => F.hover('gunship', 4, [70, 180, 300, 410], 150, { item: 'power', fire: 'ring12' })),
+        S(40, () => F.col('drone', 9, X(130), 13, { pat: 'sine', amp: 80 })),
+        S(200, () => F.col('drone', 9, X(350), 13, { pat: 'sine', amp: 80 })),
+        S(420, () => F.hover('gunship', 4, [X(70), X(180), X(300), X(410)], 150, { item: 'power', fire: 'ring12' })),
         S(760, () => F.dive('fighter', 7, -1, 18)),
         S(940, () => F.dive('fighter', 7, 1, 18)),
         S(1160, () => F.ground('tank', 6, 42, { item: 'weapon' })),
-        S(1400, () => F.line('bomber', 3, 100, 140, 1.5, { item: 'power' })),
-        S(1680, () => F.turret([60, 160, 320, 420], 210, { fire: 'spread5' })),
-        S(1960, () => F.sine('fighter', 8, 60, 55, 2.8)),
-        S(2200, () => F.vee('fighter', 9, 240, 46, 2.8, { item: 'medal' })),
+        S(1400, () => F.line('bomber', 3, X(100), X(140), 1.5, { item: 'power' })),
+        S(1680, () => F.turret([X(60), X(160), X(320), X(420)], 210, { fire: 'spread5' })),
+        S(1960, () => F.sine('fighter', 8, X(60), X(55), 2.8)),
+        S(2200, () => F.vee('fighter', 9, X(240), X(46), 2.8, { item: 'medal' })),
         S(2460, () => F.ground('tank', 7, 40, { item: 'bomb' })),
-        S(2740, () => F.hover('gunship', 4, [90, 190, 290, 390], 140, { fire: 'ring12' })),
-        S(3060, () => F.line('bomber', 4, 70, 115, 1.6, { item: 'power' })),
+        S(2740, () => F.hover('gunship', 4, [X(90), X(190), X(290), X(390)], 140, { fire: 'ring12' })),
+        S(3060, () => F.line('bomber', 4, X(70), X(115), 1.6, { item: 'power' })),
       ],
       len: 3350,
     },
@@ -257,17 +264,17 @@
       name: '敌旗舰队', sub: 'Flagship Fleet', tint: '#1a0e26', star: '#e0c9ff',
       boss: 4,
       script: [
-        S(40, () => F.vee('fighter', 9, 240, 46, 2.8)),
-        S(240, () => { F.col('drone', 8, 110, 12, { pat: 'sine', amp: 80 }); F.col('drone', 8, 370, 12, { pat: 'sine', amp: 80 }); }),
-        S(520, () => F.hover('gunship', 4, [70, 180, 300, 410], 145, { item: 'power', fire: 'ring12' })),
+        S(40, () => F.vee('fighter', 9, X(240), X(46), 2.8)),
+        S(240, () => { F.col('drone', 8, X(110), 12, { pat: 'sine', amp: 80 }); F.col('drone', 8, X(370), 12, { pat: 'sine', amp: 80 }); }),
+        S(520, () => F.hover('gunship', 4, [X(70), X(180), X(300), X(410)], 145, { item: 'power', fire: 'ring12' })),
         S(860, () => F.ground('tank', 7, 38, { item: 'weapon' })),
-        S(1120, () => F.line('bomber', 4, 80, 110, 1.6, { item: 'power' })),
+        S(1120, () => F.line('bomber', 4, X(80), X(110), 1.6, { item: 'power' })),
         S(1440, () => { F.dive('fighter', 7, -1, 16); F.dive('fighter', 7, 1, 16); }),
-        S(1700, () => F.turret([60, 160, 320, 420], 200, { fire: 'spread5' })),
-        S(1980, () => F.sine('fighter', 9, 55, 48, 3.0)),
-        S(2260, () => F.line('bomber', 4, 90, 110, 1.7, { item: 'bomb' })),
-        S(2540, () => F.hover('gunship', 5, [60, 150, 240, 330, 420], 140, { fire: 'ring12', item: 'medal' })),
-        S(2860, () => F.vee('fighter', 11, 240, 40, 3.0)),
+        S(1700, () => F.turret([X(60), X(160), X(320), X(420)], 200, { fire: 'spread5' })),
+        S(1980, () => F.sine('fighter', 9, X(55), X(48), 3.0)),
+        S(2260, () => F.line('bomber', 4, X(90), X(110), 1.7, { item: 'bomb' })),
+        S(2540, () => F.hover('gunship', 5, [X(60), X(150), X(240), X(330), X(420)], 140, { fire: 'ring12', item: 'medal' })),
+        S(2860, () => F.vee('fighter', 11, X(240), X(40), 3.0)),
         S(3120, () => F.ground('tank', 8, 34, { item: 'power' })),
       ],
       len: 3400,
@@ -378,8 +385,8 @@
     /* 入场 */
     if (b.y < 130) { b.y += 1.6; }
     else {
-      b.x = b.cx + Math.sin(b.t * 0.013) * 105;
-      b.cx = W / 2 + Math.sin(b.t * 0.005) * 28;
+      b.x = b.cx + Math.sin(b.t * 0.013) * Math.min(150, 105 * W / RW);
+      b.cx = W / 2 + Math.sin(b.t * 0.005) * Math.min(42, 28 * W / RW);
     }
 
     /* 阶段切换 */

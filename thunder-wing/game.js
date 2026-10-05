@@ -2,30 +2,51 @@
    竖版卷轴弹幕射击。固定步长 60Hz 逻辑 + rAF 渲染。 */
 (function () {
   const TW = window.TW || (window.TW = {});
-  const W = 480, H = 800;
-  const VERSION = 'v1.1.0';
 
-  /* ==================== 画布 ==================== */
+  /* ==================== 画布尺寸 ====================
+     纵向高度恒定 800，横向宽度按屏幕比例自适应：
+     宽屏摊宽到 MAX_W（视野更大、闪避空间更足），手机保持 480 竖屏手感不缩水。 */
+  const H = 800, MIN_W = 420, MAX_W = 720;
+  let W = MIN_W;
+  /* 战场越宽，自机速度等比补偿，避免横向机动变迟钝 */
+  function fieldSpd() { return Math.min(1.25, Math.max(1, W / MIN_W)); }
+  const VERSION = 'v1.2.0';
+
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d', { alpha: false });
   let Q = 1;
   function resize() {
     const vw = window.innerWidth, vh = window.innerHeight;
+    if (vh > 0) W = Math.round(Math.max(MIN_W, Math.min(MAX_W, (vw / vh) * H)));
     const scale = Math.min(vw / W, vh / H);
     Q = Math.min(2, Math.max(1, scale) * Math.min(window.devicePixelRatio || 1, 2));
     cv.width = Math.round(W * Q); cv.height = Math.round(H * Q);
     cv.style.width = Math.round(W * scale) + 'px'; cv.style.height = Math.round(H * scale) + 'px';
+    if (TW.setWidth) TW.setWidth(W);
+    initStars();
+    if (G) G.players.forEach((pl) => { if (pl) pl.x = Math.min(pl.x, W - 16); });
   }
   window.addEventListener('resize', resize);
-  resize();
 
   /* ==================== 武器 ==================== */
   const WEAPONS = [
     { name: '火神炮', en: 'VULCAN', spr: 'vulcan', dmg: 1, interval: 7, color: '#7fe8ff' },
     { name: '激光炮', en: 'LASER', spr: 'laser', dmg: 4, interval: 11, color: '#5fb0ff', pierce: 2 },
-    { name: '追踪导弹', en: 'MISSILE', spr: 'missile', dmg: 3, interval: 14, color: '#b98cff', homing: true },
+    { name: '追踪导弹', en: 'MISSILE', spr: 'missile', dmg: 3, interval: 14, color: '#5ce8b4', homing: true },
   ];
   TW.WEAPONS = WEAPONS;
+
+  /* ==================== 道具外观 ====================
+     硬规则：有利 = 白色圆环徽章 + 呼吸光环 + 中心符号（圆形 = 安全）
+             有害 = 暖色尖锐星芒 + 暗描边（尖角 = 危险）
+     两套语言在颜色、形状、描边三个维度上都相反，余光也能分辨。 */
+  const ITEM_LOOK = {
+    power: { ring: '#7fe8ff', glyph: 'P', core: '#0b3242' },   // 火力
+    bomb: { ring: '#ffe9a8', glyph: 'B', core: '#433208' },    // 大招
+    speed: { ring: '#a8ffe0', glyph: 'S', core: '#08382b' },   // 速度
+    life: { ring: '#ffc6e0', glyph: '♥', core: '#401028' },    // 残机
+    medal: { ring: '#cfeaff', glyph: '★', core: '#10303f' },   // 加分
+  };
 
   /* ==================== 玩家配色 / 构造 ==================== */
   const PCFG = [
@@ -117,7 +138,7 @@
       }
     }
   }
-  initStars();
+  resize();   /* 依赖 initStars / G，必须在二者都定义之后调用 */
 
   /* ==================== 输入 ====================
      每人只要三个键：方向 + 射击 + 大招；暂停全局共用。
@@ -226,7 +247,7 @@
       if (held(m.up)) dy -= 1;
       if (held(m.dn)) dy += 1;
       if (dx && dy) { const k = Math.SQRT1_2; dx *= k; dy *= k; }
-      const sp = 3.6 + pl.spd * 0.35;
+      const sp = (3.6 + pl.spd * 0.35) * fieldSpd();
       pl.x += dx * sp; pl.y += dy * sp;
       pl.tilt += ((dx * 0.22) - pl.tilt) * 0.18;
     }
@@ -335,7 +356,7 @@
       for (let j = 0; j < G.players.length; j++) {
         const pl = G.players[j];
         if (pl.out || pl.dead) continue;
-        if (Math.hypot(it.x - pl.x, it.y - pl.y) < 26) {
+        if (Math.hypot(it.x - pl.x, it.y - pl.y) < 30) {
           applyItem(it, pl); G.items.splice(i, 1); break;
         }
       }
@@ -725,7 +746,7 @@
     ctx.drawImage(img, -sw / 2, -sh / 2, sw, sh);
     if (flash && wimg) {
       ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = 0.62;
+      ctx.globalAlpha = 0.45;   // 受击白闪：过强会把暖色涂装刷成灰白，丢掉敌我色号
       ctx.drawImage(wimg, -sw / 2, -sh / 2, sw, sh);
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over';
@@ -760,21 +781,41 @@
     }
     ctx.globalAlpha = 1;
 
-    /* 道具 */
+    /* 道具：白色圆环徽章 + 呼吸光环（敌弹是暖色尖芒，二者不会混） */
     for (let i = 0; i < G.items.length; i++) {
       const it = G.items[i];
-      const c = it.kind === 'power' ? '#7fe8ff' : it.kind === 'weapon' ? WEAPONS[it.w].color
-        : it.kind === 'bomb' ? '#ffd27a' : it.kind === 'speed' ? '#9ff0ff'
-          : it.kind === 'life' ? '#ff9ad6' : '#ffe9a8';
-      ctx.save(); ctx.translate(it.x, it.y);
-      ctx.fillStyle = 'rgba(0,0,0,0.45)';
-      ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = c; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.stroke();
-      ctx.fillStyle = c; ctx.font = '600 13px system-ui, sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(it.kind === 'weapon' ? 'W' : it.kind === 'power' ? 'P' : it.kind === 'bomb' ? 'B'
-        : it.kind === 'speed' ? 'S' : it.kind === 'life' ? '♥' : '★', 0, 5);
+      const L = it.kind === 'weapon'
+        ? { ring: WEAPONS[it.w].color, glyph: 'W', core: '#111a2c' }
+        : (ITEM_LOOK[it.kind] || ITEM_LOOK.medal);
+      const R = 13;
+      ctx.save();
+      ctx.translate(it.x, it.y);
+      /* 呼吸光环：白色，和敌弹的暖色形成互补 */
+      const pw = 0.32 + Math.sin(it.t * 0.12) * 0.16;
+      const pr = R * (1.5 + Math.sin(it.t * 0.09) * 0.16);
+      ctx.strokeStyle = 'rgba(255,255,255,' + Math.max(0.08, pw) + ')';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, 0, pr, 0, Math.PI * 2); ctx.stroke();
+      /* 柔和冷光 */
+      const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 1.5);
+      grd.addColorStop(0, 'rgba(180,235,255,0.42)');
+      grd.addColorStop(1, 'rgba(180,235,255,0)');
+      ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.arc(0, 0, R * 1.5, 0, Math.PI * 2); ctx.fill();
+      /* 徽章本体：实心圆 + 白色粗环 + 内部彩色细环 */
+      ctx.fillStyle = L.core;
+      ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = L.ring; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(0, 0, R - 3.4, 0, Math.PI * 2); ctx.stroke();
+      /* 中心符号 */
+      ctx.fillStyle = L.ring;
+      ctx.font = '700 13px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(L.glyph, 0, L.glyph === '♥' || L.glyph === '★' ? 5 : 4.5);
       ctx.restore();
+      ctx.textAlign = 'left';
     }
 
     /* 敌人 */
@@ -805,12 +846,17 @@
       drawSpr(img, b.x, b.y, b.w, b.h, Math.atan2(b.vy, b.vx) + Math.PI / 2, false);
     }
 
-    /* 敌弹 */
+    /* 敌弹：暖色尖芒。刚出膛的几帧套一圈收缩白环，给密集弹幕一个「入屏预警」 */
     for (let i = 0; i < G.ebullets.length; i++) {
       const b = G.ebullets[i];
       const img = TW.BULLET[b.kind] || TW.BULLET.red;
-      const s = b.r * 3.4;
+      const s = b.r * 4.2;
       drawSpr(img, b.x, b.y, s, s, 0, false);
+      if (b.t < 7) {
+        ctx.strokeStyle = 'rgba(255,255,255,' + ((1 - b.t / 7) * 0.75) + ')';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.arc(b.x, b.y, s * 0.6 + (7 - b.t) * 1.8, 0, Math.PI * 2); ctx.stroke();
+      }
     }
 
     /* 玩家 */
@@ -1074,7 +1120,8 @@
 
   /* ==================== 测试句柄 ==================== */
   window.__twGame = {
-    VERSION: VERSION, W: W, H: H,
+    VERSION: VERSION, H: H,
+    get W() { return W; },
     get G() { return G; },
     state: () => G.state,
     start: (m, two) => startGame(m || 'story', !!two),
