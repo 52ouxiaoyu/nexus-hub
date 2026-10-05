@@ -92,27 +92,27 @@ class HauntedDorm {
                              shoot: { dmg: 150, cd: 0.6, n: 12, range: 450, img: 'Plants/PB01.gif', slow: true, fan: 0.35, homing: true } },
 
             // —— 坚果系 (10级，肉盾) ——
-            wallnut:       { name: '坚果',       img: 'Plants/WallNut/0.gif',       card: 'WallNut.png',     hp: 4000,  cost: 50,
+            wallnut:       { tier: 1, name: '坚果',       img: 'Plants/WallNut/0.gif',       card: 'WallNut.png',     hp: 4000,  cost: 50,
                              up: { cost: 40, cur: 'sun', to: 'nutshooter' } },
-            nutshooter:    { name: '豌豆坚果',   img: 'Plants/WallNut/0.gif', overlay: 'Plants/Peashooter/0.gif',      card: 'WallNut.png',  hp: 5000,  cost: 0, scale: 1.05,
+            nutshooter:    { tier: 2, name: '豌豆坚果',   img: 'Plants/WallNut/0.gif', overlay: 'Plants/Peashooter/0.gif',      card: 'WallNut.png',  hp: 5000,  cost: 0, scale: 1.05,
                              overTransform: 'translate(-50%, -50%) translate(2px, -28px) scale(0.6)',
                              shoot: { dmg: 20, cd: 1.6, n: 1, range: 320, img: 'Plants/PB00.gif', homing: true }, up: { cost: 100, cur: 'sun', to: 'nutgunner' } },
-            nutgunner:     { name: '射手坚果',   img: 'Plants/WallNut/0.gif', overlay: 'Plants/Repeater/0.gif',      hp: 6500,  cost: 0, scale: 1.1, tint: 'saturate(1.4) brightness(1.12)',
+            nutgunner:     { tier: 3, name: '射手坚果',   img: 'Plants/WallNut/0.gif', overlay: 'Plants/Repeater/0.gif',      hp: 6500,  cost: 0, scale: 1.1, tint: 'saturate(1.4) brightness(1.12)',
                              overTransform: 'translate(-50%, -50%) translate(2px, -28px) scale(0.6)',
                              shoot: { dmg: 20, cd: 1.3, n: 2, range: 320, img: 'Plants/PB00.gif', homing: true }, up: { cost: 160, cur: 'sun', to: 'cabbagenut' } },
-            cabbagenut:    { name: '卷心菜坚果', img: 'Plants/WallNut/0.gif',       hp: 8500,  cost: 0, scale: 1.15, hat: 'Plants/CabbagePult/Cabbage.png',
+            cabbagenut:    { tier: 4, name: '卷心菜坚果', img: 'Plants/WallNut/0.gif',       hp: 8500,  cost: 0, scale: 1.15, hat: 'Plants/CabbagePult/Cabbage.png',
                              lob: { dmg: 45, cd: 2.2, range: 420, aoe: 70, img: 'Plants/CabbagePult/Cabbage.png' }, up: { cost: 260, cur: 'sun', to: 'melonnut' } },
-            melonnut:      { name: '西瓜坚果',   img: 'Plants/WallNut/0.gif',       hp: 12000, cost: 0, scale: 1.2, hat: 'Plants/MelonPult/Melon.png',
+            melonnut:      { tier: 5, name: '西瓜坚果',   img: 'Plants/WallNut/0.gif',       hp: 12000, cost: 0, scale: 1.2, hat: 'Plants/MelonPult/Melon.png',
                              lob: { dmg: 80, cd: 2.0, range: 450, aoe: 100, img: 'Plants/MelonPult/Melon.png' }, up: { cost: 450, cur: 'sun', to: 'wintermelonnut' } },
-            wintermelonnut:{ name: '冰瓜坚果',   img: 'Plants/WallNut/0.gif',       hp: 18000, cost: 0, scale: 1.25, hat: 'Plants/WinterMelon/WinterMelon.png',
+            wintermelonnut:{ tier: 6, name: '冰瓜坚果',   img: 'Plants/WallNut/0.gif',       hp: 18000, cost: 0, scale: 1.25, hat: 'Plants/WinterMelon/WinterMelon.png',
                              lob: { dmg: 100, cd: 1.8, range: 480, aoe: 120, img: 'Plants/WinterMelon/WinterMelon.png', slow: true }, up: { cost: 800, cur: 'sun', to: 'tallnut' } },
-            tallnut:       { name: '高坚果',     img: 'Plants/TallNut/0.gif',       card: 'TallNut.png',     hp: 30000, cost: 0, scale: 1.3,
+            tallnut:       { tier: 7, name: '高坚果',     img: 'Plants/TallNut/0.gif',       card: 'TallNut.png',     hp: 30000, cost: 0, scale: 1.3,
                              up: { cost: 0, sporeCost: 5, cur: 'sun', to: 'pumpkin' } },
-            pumpkin:       { name: '南瓜高坚果', img: 'Plants/TallNut/0.gif',       hp: 50000, cost: 0, scale: 1.4, hat: 'Plants/PumpkinHead/0.gif',
+            pumpkin:       { tier: 8, name: '南瓜高坚果', img: 'Plants/TallNut/0.gif',       hp: 50000, cost: 0, scale: 1.4, hat: 'Plants/PumpkinHead/0.gif',
                              up: { cost: 0, sporeCost: 25, cur: 'sun', to: 'doomtallnut' } },
-            doomtallnut:   { name: '毁灭高坚果', img: 'Plants/TallNut/0.gif',       hp: 90000, cost: 0, scale: 1.5, overlays: ['Plants/PumpkinHead/0.gif', 'Plants/DoomShroom/0.gif'], tint: 'hue-rotate(240deg)',
+            doomtallnut:   { tier: 9, name: '毁灭高坚果', img: 'Plants/TallNut/0.gif',       hp: 90000, cost: 0, scale: 1.5, overlays: ['Plants/PumpkinHead/0.gif', 'Plants/DoomShroom/0.gif'], tint: 'hue-rotate(240deg)',
                              spike: { dps: 200, r: 80 }, up: { cost: 0, sporeCost: 125, cur: 'sun', to: 'holotallnut' } },
-            holotallnut:   { name: '神界高坚果', img: 'Plants/TallNut/0.gif',       hp: 200000, cost: 0, scale: 1.7, tint: 'drop-shadow(0 0 20px #ff0) brightness(2)',
+            holotallnut:   { tier: 10, name: '神界高坚果', img: 'Plants/TallNut/0.gif',       hp: 200000, cost: 0, scale: 1.7, tint: 'drop-shadow(0 0 20px #ff0) brightness(2)',
                              spike: { dps: 500, r: 100 } },
 
             // —— 特殊 ——
@@ -709,10 +709,10 @@ class HauntedDorm {
             const rm = ai.room;
             if (!rm) continue;
 
-                const myPlants = this.plants.filter(p => p.c >= rm.x && p.c < rm.x + rm.w && p.r >= rm.y && p.r < rm.y + rm.h);
+                const myPlants = this.plants.filter(p => (p.c >= rm.x && p.c < rm.x + rm.w && p.r >= rm.y && p.r < rm.y + rm.h) || (p.c === rm.doorCol && p.r === rm.doorRow));
                 const shrooms = myPlants.filter(p => p.def.produce && p.def.produce.sun);
-                const door = myPlants.find(p => p.def.isDoor);
-                const peas = myPlants.filter(p => p.def.shoot && !p.def.isDoor);
+                const door = myPlants.find(p => p.isDoor);
+                const peas = myPlants.filter(p => p.def.shoot && !p.isDoor);
 
                 // Priority 1: Plant a Sunshroom if none
                 if (shrooms.length === 0) {
@@ -736,12 +736,12 @@ class HauntedDorm {
                             const targetTier = HauntedDorm.DEFS[p.def.up.to].tier || 1;
                             const zLv = this.ghostLevel || 1;
                             if (targetTier <= zLv) {
-                                let weight = p.def.isDoor ? 3 : (p.def.produce ? 2 : 1);
-                                if (p.def.isDoor && p.hp < p.maxHp * 0.6) weight += 20; // 门血量低时极高优先级升级补血
+                                let weight = p.isDoor ? 3 : (p.def.produce ? 2 : 1);
+                                if (p.isDoor && p.hp < p.maxHp * 0.6) weight += 20; // 门血量低时极高优先级升级补血
                                 actions.push({ type: 'up', pl: p, cost: c, sporeCost: sc, to: p.def.up.to, weight: weight });
                             }
                         }
-                    } else if (p.def.isDoor && p.hp < p.maxHp * 0.9 && ai.sun >= 20) {
+                    } else if (p.isDoor && p.hp < p.maxHp * 0.9 && ai.sun >= 20) {
                         // 增加“修门”逻辑：如果无法升级或无需升级，花20阳光修500血
                         actions.push({ type: 'repair', pl: p, cost: 20, weight: 15 });
                     }
@@ -1523,7 +1523,7 @@ class HauntedDorm {
 
         // 【植物和门】
         for (const pl of this.plants) {
-            if (pl.def.isDoor) {
+            if (pl.isDoor) {
                 ctx.fillStyle = '#ffa040'; // 门是橙黄色
             } else {
                 ctx.fillStyle = '#a0ffa0'; // 其他植物浅绿色
