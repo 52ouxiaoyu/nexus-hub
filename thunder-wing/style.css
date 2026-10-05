@@ -55,7 +55,7 @@ html, body {
 .overlay.hidden { display: none; }
 
 .panel {
-  width: min(88%, 420px);
+  width: min(92%, 452px);
   padding: 28px 26px 22px;
   border-radius: 18px;
   background: rgba(10, 18, 32, 0.92);
@@ -99,10 +99,10 @@ html, body {
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  text-align: left; font-size: 11px; line-height: 1.5;
+  text-align: left; font-size: 10.5px; line-height: 1.55;
   color: rgba(255, 255, 255, 0.6);
 }
-.legend .lg-row { display: flex; gap: 8px; align-items: flex-start; padding: 3px 0; }
+.legend .lg-row { display: flex; gap: 8px; align-items: flex-start; padding: 2px 0; }
 .legend b { font-weight: 600; }
 .legend .lg-bad b { color: #ff8f9a; }
 .legend .lg-good b { color: #bff6ff; }
@@ -162,6 +162,11 @@ html, body {
   font-size: 36px; font-weight: 600; color: #ffe9a8;
 }
 .detail { margin-top: 10px; font-size: 12px; line-height: 1.7; color: rgba(255, 255, 255, 0.55); }
+
+/* 宽屏才允许单行显示图例，窄屏（手机）让它自然折行，避免文字溢出面板 */
+@media (min-width: 520px) {
+  .legend .lg-row { white-space: nowrap; }
+}
 
 @media (pointer: coarse) {
   .touch-only { display: flex; }
