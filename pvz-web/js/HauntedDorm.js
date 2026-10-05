@@ -125,17 +125,19 @@ class HauntedDorm {
 
     // ===== 僵尸升级链（10级）=====
     static get GHOST_LEVELS() {
+        // 用户要求：智力等各项属性跟玩家一样（速度全统一为 150，玩家移速就是 150）
+        // 等级顺序：1 普通，2 路障，3 铁桶，4 橄榄球，后续铁门舞王等
         return [
-            { name: '普通僵尸',   img: 'Zombies/Zombie/Zombie.gif',                    hp: 300,   speed: 85 },
-            { name: '路障僵尸',   img: 'Zombies/ConeheadZombie/ConeheadZombie.gif',    hp: 800,   speed: 90 },
-            { name: '铁门僵尸',   img: 'Zombies/ScreenDoorZombie/ScreenDoorZombie.gif', hp: 1600,  speed: 95 },
-            { name: '铁桶僵尸',   img: 'Zombies/BucketheadZombie/BucketheadZombie.gif', hp: 2800,  speed: 95 },
-            { name: '橄榄球僵尸', img: 'Zombies/FootballZombie/FootballZombie.gif',    hp: 4800,  speed: 135 },
-            { name: '舞王僵尸',   img: 'Zombies/DancingZombie/0.gif',                  hp: 8000,  speed: 100 },
-            { name: '冰车僵尸',   img: 'Zombies/Zomboni/1.gif',                        hp: 13000, speed: 80 },
-            { name: '小丑僵尸',   img: 'Zombies/JackinTheBoxZombie/0.gif',             hp: 22000, speed: 110 },
-            { name: '气球僵尸',   img: 'Zombies/BalloonZombie/0.gif',                  hp: 40000, speed: 120 },
-            { name: '机甲僵王',   img: 'Zombies/LGBOSS/0.gif',                         hp: 100000, speed: 100 }
+            { name: '普通僵尸',   img: 'Zombies/Zombie/Zombie.gif',                    hp: 500,   speed: 150 },
+            { name: '路障僵尸',   img: 'Zombies/ConeheadZombie/ConeheadZombie.gif',    hp: 1200,  speed: 150 },
+            { name: '铁桶僵尸',   img: 'Zombies/BucketheadZombie/BucketheadZombie.gif', hp: 3000,  speed: 150 },
+            { name: '橄榄球僵尸', img: 'Zombies/FootballZombie/FootballZombie.gif',    hp: 5000,  speed: 150 },
+            { name: '铁门僵尸',   img: 'Zombies/ScreenDoorZombie/ScreenDoorZombie.gif', hp: 8000,  speed: 150 },
+            { name: '舞王僵尸',   img: 'Zombies/DancingZombie/0.gif',                  hp: 12000, speed: 150 },
+            { name: '冰车僵尸',   img: 'Zombies/Zomboni/1.gif',                        hp: 18000, speed: 150 },
+            { name: '小丑僵尸',   img: 'Zombies/JackinTheBoxZombie/0.gif',             hp: 28000, speed: 150 },
+            { name: '气球僵尸',   img: 'Zombies/BalloonZombie/0.gif',                  hp: 50000, speed: 150 },
+            { name: '机甲僵王',   img: 'Zombies/LGBOSS/0.gif',                         hp: 100000, speed: 150 }
         ];
     }
     static get GHOST_MAX_LV() { return HauntedDorm.GHOST_LEVELS.length; }
@@ -781,8 +783,17 @@ class HauntedDorm {
             }
             return;
         }
-        // 僵尸升级改为咬破门触发。这里保留重生逻辑即可。
-        // 一条命，不再重生
+        // 僵尸等级按时间升级逻辑（刚开始30秒升2，1分钟升3，再1分钟升4）
+        if (!this.over && this.zombies.length > 0 && !this.zombies[0].dead) {
+            const activeSeconds = (time - this.ghostSpawnAt) / 1000;
+            if (activeSeconds >= 30 && this.ghostLevel === 1) {
+                this._levelUpGhostDirect();
+            } else if (activeSeconds >= 90 && this.ghostLevel === 2) {
+                this._levelUpGhostDirect();
+            } else if (activeSeconds >= 150 && this.ghostLevel === 3) {
+                this._levelUpGhostDirect();
+            }
+        }
     }
 
     _spawnGhost() {
@@ -1770,7 +1781,7 @@ class HauntedDorm {
                             atkPlant.el1.remove();
                             if (atkPlant.txtEl) atkPlant.txtEl.remove();
                             this.plants = this.plants.filter(p => p !== atkPlant);
-                            if (atkPlant.isDoor) this._levelUpGhostDirect();
+                            // if (atkPlant.isDoor) this._levelUpGhostDirect(); // 用户要求：破门不再升级，只有按时间和击杀玩家升级
                         }
                     }
                     moved = false; // 啃食时不挪窝
@@ -1800,6 +1811,10 @@ class HauntedDorm {
                             p.dead = true;
                             p.el1.classList.add('dead-slash');
                             p.el1.style.filter = 'grayscale(1) ' + (p.color ? `drop-shadow(0 0 10px ${p.color})` : '');
+                            // 【击杀玩家升级】
+                            if (this.ghostLevel >= 4) {
+                                this._levelUpGhostDirect();
+                            }
                         }
                     }
                 }
