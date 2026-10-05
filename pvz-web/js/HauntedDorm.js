@@ -466,12 +466,11 @@ class HauntedDorm {
                 x: sx,
                 y: sy,
                 path: p,
-                sun: 0, spore: 0, hp: 100, maxHp: 100, actTimer: 2.0 + Math.random() * 3.0,
-                isAi: true, room: rm, roleDef: roleDef,
+                sun: 0, spore: 0, hp: 100, maxHp: 100, actTimer: 5.0 + Math.random() * 3.0,
+                isAi: true, targetRoom: rm, room: null, roleDef: roleDef,
                 icon: roleDef.icon, dead: false,
                 el1: document.createElement('div')
             };
-            rm.owner = ai; // AI 预占领房间
             ai.el1.className = 'entity avatar';
             const colors = ['#ff7777', '#77ff77', '#7777ff', '#ffff77', '#ff77ff'];
             const color = colors[i % colors.length];
@@ -682,8 +681,8 @@ class HauntedDorm {
             ai.actTimer = (ai.actTimer || 0) - dt;
             if (ai.actTimer > 0) continue;
             
-            // 设定下一次行动间隔：3~5秒（比原来统一的2秒更慢，且异步，不显得像作弊机器）
-            ai.actTimer = 3.0 + Math.random() * 2.0;
+            // 设定下一次行动间隔：5~8秒（大大降低人机建造频率，更符合真实玩家的手速）
+            ai.actTimer = 5.0 + Math.random() * 3.0;
             
             const rm = ai.room;
             if (!rm) continue;
@@ -752,9 +751,10 @@ class HauntedDorm {
                     if (puffs.length < 4) {
                         actions.push({ type: 'plant', id: 'puffshroom', cost: 0, c: frontTile.c, r: frontTile.r, weight: 2 });
                     }
-                    // 补种阳光菇
+                    // 限制人机种阳光菇的数量（最多1个，防止满屋子全造阳光菇导致经济爆炸）
+                    const numSun = myPlants.filter(p => p.def.produce && p.def.produce.sun).length;
                     const sunCost = HauntedDorm.DEFS['sunshroom'].cost || 0;
-                    if (ai.sun >= sunCost) {
+                    if (ai.sun >= sunCost && numSun < 1) {
                         actions.push({ type: 'plant', id: 'sunshroom', cost: sunCost, c: backTile.c, r: backTile.r, weight: 1.5 });
                     }
                 }
@@ -1554,6 +1554,18 @@ class HauntedDorm {
         // 人机开局自动寻路（按路点走到床位，避免穿模穿墙）
         for (const ai of this.ais) {
             if (ai.path && ai.path.length > 0) {
+                // 动态查房：如果目标房间已经被玩家抢了，立刻换房
+                if (ai.targetRoom && ai.targetRoom.owner && ai.targetRoom.owner !== ai) {
+                    const emptyRooms = this.rooms.filter(r => !r.owner && !this.ais.some(a => a !== ai && a.targetRoom === r));
+                    if (emptyRooms.length > 0) {
+                        ai.targetRoom = emptyRooms[Math.floor(Math.random() * emptyRooms.length)];
+                        const p = this._findPath(ai.x, ai.y, ai.targetRoom.frontX, ai.targetRoom.frontY);
+                        p.push({ x: (ai.targetRoom.x + ai.targetRoom.tpl.bed.c) * this.gridSize + 40, y: (ai.targetRoom.y + ai.targetRoom.tpl.bed.r) * this.gridSize + 40 });
+                        ai.path = p;
+                        continue;
+                    }
+                }
+
                 const target = ai.path[0];
                 const dx = target.x - ai.x;
                 const dy = target.y - ai.y;
@@ -1563,6 +1575,11 @@ class HauntedDorm {
                     ai.y += (dy / dist) * 200 * dt;
                 } else {
                     ai.path.shift(); // 抵达当前路点，切下一个
+                    // 彻底抵达床位，宣誓主权
+                    if (ai.path.length === 0 && ai.targetRoom && !ai.targetRoom.owner) {
+                        ai.targetRoom.owner = ai;
+                        ai.room = ai.targetRoom;
+                    }
                 }
                 ai.el1.style.left = ai.x + 'px';
                 ai.el1.style.top = ai.y + 'px';
