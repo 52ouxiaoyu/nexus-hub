@@ -23,23 +23,29 @@ class HauntedDorm {
                              produce: { sun: 4, every: 2.0 },  up: { cost: 270, cur: 'sun', to: 'twinsunflower' } },
             twinsunflower: { tier: 4, name: '双子向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 450,  cost: 0,   scale: 1.2,
                              produce: { sun: 8, every: 2.0 }, up: { cost: 810, sporeCost: 1, cur: 'sun', to: 'sunpea' } },
-            sunpea:        { tier: 5, name: '豌豆向日葵', img: 'Plants/Fusions/peaflower.png', blend: true, hp: 550, cost: 0, scale: 1.2,
-                                                                                                                    produce: { sun: 16, every: 2.0 }, shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, 
+            sunpea:        { tier: 5, name: '豌豆向日葵', img: 'Plants/TwinSunflower/0.gif', overlay: 'Plants/Peashooter/0.gif', hp: 550, cost: 0, scale: 1.2,
+                             overTransform: 'translate(-50%, -50%) translate(0, -28px) scale(0.6)',
+                             produce: { sun: 16, every: 2.0 }, shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, 
                              up: { cost: 2430, sporeCost: 10, cur: 'sun', to: 'sunnut' } },
             sunnut:        { tier: 6, name: '坚果向日葵', img: 'Plants/WallNut/0.gif', hp: 2000, cost: 0, scale: 1.2, 
-                                                          produce: { sun: 32, every: 2.0 }, shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, 
+                             overlay: 'Plants/TwinSunflower/0.gif',
+                             produce: { sun: 32, every: 2.0 }, shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, 
                              up: { cost: 7290, sporeCost: 50, cur: 'sun', to: 'suncherry' } },
             suncherry:     { tier: 7, name: '樱桃向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 3000, cost: 0, scale: 1.3,
-                                                          produce: { sun: 64, every: 2.0 }, shoot: { dmg: 40, cd: 1.0, n: 3, range: 400, img: 'Plants/PB00.gif', back: true },
+                             overlay: 'Plants/CherryBomb/0.gif',
+                             produce: { sun: 64, every: 2.0 }, shoot: { dmg: 40, cd: 1.0, n: 3, range: 400, img: 'Plants/PB00.gif', back: true },
                              up: { cost: 21870, sporeCost: 250, cur: 'sun', to: 'sunjala' } },
             sunjala:       { tier: 8, name: '火爆向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 5000, cost: 0, scale: 1.4,
-                                                          produce: { sun: 128, every: 2.0 }, shoot: { dmg: 50, cd: 0.8, n: 4, range: 500, img: 'Plants/PB00.gif', homing: true },
+                             overlay: 'Plants/Jalapeno/0.gif',
+                             produce: { sun: 128, every: 2.0 }, shoot: { dmg: 50, cd: 0.8, n: 4, range: 500, img: 'Plants/PB00.gif', homing: true },
                              up: { cost: 65610, sporeCost: 1000, cur: 'sun', to: 'sundoom' } },
             sundoom:       { tier: 9, name: '毁灭向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 8000, cost: 0, scale: 1.5, tint: 'hue-rotate(240deg)',
-                                                          produce: { sun: 256, every: 2.0 }, shoot: { dmg: 70, cd: 0.6, n: 6, range: 600, img: 'Plants/PB00.gif', homing: true, aoe: 50 },
+                             overlay: 'Plants/DoomShroom/0.gif',
+                             produce: { sun: 256, every: 2.0 }, shoot: { dmg: 70, cd: 0.6, n: 6, range: 600, img: 'Plants/PB00.gif', homing: true, aoe: 50 },
                              up: { cost: 196830, sporeCost: 5000, cur: 'sun', to: 'sungatling' } },
             sungatling:    { tier: 10, name: '机枪向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 15000, cost: 0, scale: 1.6,
-                                                          produce: { sun: 512, every: 2.0 }, shoot: { dmg: 100, cd: 0.4, n: 8, range: 800, img: 'Plants/PB00.gif', homing: true } },
+                             overlay: 'Plants/GatlingPea/0.gif',
+                             produce: { sun: 512, every: 2.0 }, shoot: { dmg: 100, cd: 0.4, n: 8, range: 800, img: 'Plants/PB00.gif', homing: true } },
 
             // —— 孢子系 (10级，纯产包子) ——
             puffshroom:    { tier: 1, name: '小喷菇', img: 'Plants/PuffShroom/0.gif',     card: 'PuffShroom.png',     hp: 300, cost: 200, scale: 0.9,
@@ -88,10 +94,12 @@ class HauntedDorm {
             // —— 坚果系 (10级，肉盾) ——
             wallnut:       { name: '坚果',       img: 'Plants/WallNut/0.gif',       card: 'WallNut.png',     hp: 4000,  cost: 50,
                              up: { cost: 40, cur: 'sun', to: 'nutshooter' } },
-            nutshooter:    { name: '豌豆坚果',   img: 'Plants/Fusions/nutshooter.png', blend: true,      card: 'WallNut.png',  hp: 5000,  cost: 0, scale: 1.05,
-                                                                                                                    shoot: { dmg: 20, cd: 1.6, n: 1, range: 320, img: 'Plants/PB00.gif', homing: true }, up: { cost: 100, cur: 'sun', to: 'nutgunner' } },
-            nutgunner:     { name: '射手坚果',   img: 'Plants/WallNut/0.gif',       hp: 6500,  cost: 0, scale: 1.1, tint: 'saturate(1.4) brightness(1.12)',
-                                                                                                                                                 shoot: { dmg: 20, cd: 1.3, n: 2, range: 320, img: 'Plants/PB00.gif', homing: true }, up: { cost: 160, cur: 'sun', to: 'cabbagenut' } },
+            nutshooter:    { name: '豌豆坚果',   img: 'Plants/WallNut/0.gif', overlay: 'Plants/Peashooter/0.gif',      card: 'WallNut.png',  hp: 5000,  cost: 0, scale: 1.05,
+                             overTransform: 'translate(-50%, -50%) translate(2px, -28px) scale(0.6)',
+                             shoot: { dmg: 20, cd: 1.6, n: 1, range: 320, img: 'Plants/PB00.gif', homing: true }, up: { cost: 100, cur: 'sun', to: 'nutgunner' } },
+            nutgunner:     { name: '射手坚果',   img: 'Plants/WallNut/0.gif', overlay: 'Plants/Repeater/0.gif',      hp: 6500,  cost: 0, scale: 1.1, tint: 'saturate(1.4) brightness(1.12)',
+                             overTransform: 'translate(-50%, -50%) translate(2px, -28px) scale(0.6)',
+                             shoot: { dmg: 20, cd: 1.3, n: 2, range: 320, img: 'Plants/PB00.gif', homing: true }, up: { cost: 160, cur: 'sun', to: 'cabbagenut' } },
             cabbagenut:    { name: '卷心菜坚果', img: 'Plants/WallNut/0.gif',       hp: 8500,  cost: 0, scale: 1.15, hat: 'Plants/CabbagePult/Cabbage.png',
                              lob: { dmg: 45, cd: 2.2, range: 420, aoe: 70, img: 'Plants/CabbagePult/Cabbage.png' }, up: { cost: 260, cur: 'sun', to: 'melonnut' } },
             melonnut:      { name: '西瓜坚果',   img: 'Plants/WallNut/0.gif',       hp: 12000, cost: 0, scale: 1.2, hat: 'Plants/MelonPult/Melon.png',
@@ -510,7 +518,16 @@ class HauntedDorm {
         const baseClip = def.baseClip ? `clip-path:${def.baseClip}; -webkit-clip-path:${def.baseClip};` : '';
         let inner = `<img src="assets/images/${def.img}" style="width:100%; height:100%; object-fit:contain; transform: scale(${1.2 * scale}) translateY(-10px); ${tint}${doorOpacity}${blend} ${baseClip}">`;
         
-        // 用户要求：不要自己进行抽象的拼接（移除了所有 overlay 拼接代码）
+        if (def.overlay) {
+            const overClip = def.overClip ? `clip-path:${def.overClip}; -webkit-clip-path:${def.overClip};` : '';
+            const overTrans = def.overTransform || 'translate(-50%, -50%) translate(2px, -26px) scale(0.6)';
+            inner += `<img src="assets/images/${def.overlay}" style="position:absolute; left:50%; top:50%; width:100%; height:100%; object-fit:contain; pointer-events:none; transform: ${overTrans}; ${overClip}">`;
+        }
+        if (def.overlays) {
+            def.overlays.forEach((ov, i) => {
+                inner += `<img src="assets/images/${ov}" style="position:absolute; left:50%; top:50%; width:100%; height:100%; object-fit:contain; pointer-events:none; transform: translate(-50%, -50%) translate(${10 + i*15}px, ${-15 - i*10}px) scale(0.6);">`;
+            });
+        }
         if (def.hat) {
             inner += `<img src="assets/images/${def.hat}" style="position:absolute; left:50%; top:50%; width:100%; height:100%; object-fit:contain; pointer-events:none; transform: translate(-50%, -50%) translate(0, -45px) scale(0.5);">`;
         }
