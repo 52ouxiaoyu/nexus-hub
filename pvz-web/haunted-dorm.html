@@ -150,8 +150,11 @@
             <div id="wave-chip">👻 准备中…</div>
 
             <canvas id="minimap" width="320" height="240"></canvas>
-            <button class="back-btn" style="top:280px;" onclick="location.href='index.html'">返回主菜单</button>
-            <button class="back-btn" style="top:326px;" onclick="document.getElementById('dorm-help').style.display='flex'">玩法说明</button>
+            
+            <div style="position: absolute; bottom: 20px; left: 20px; display: flex; flex-direction: column; gap: 12px; pointer-events: none;">
+                <button class="back-btn" style="position: static; pointer-events: auto;" onclick="document.getElementById('dorm-help').style.display='flex'">玩法说明</button>
+                <button class="back-btn" style="position: static; pointer-events: auto;" onclick="location.href='index.html'">返回主菜单</button>
+            </div>
 
             <!-- 种植菜单（选项由 HauntedDorm.js 按图鉴数据生成） -->
             <div id="plant-menu"></div>
@@ -210,6 +213,6 @@
         </div>
     </div>
 
-    <script src="js/HauntedDorm.js?v=1791193045"></script>
+    <script src="js/HauntedDorm.js?v=1791193369"></script>
 </body>
 </html>

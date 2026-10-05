@@ -420,6 +420,16 @@ class HauntedDorm {
             this.spawnPlant(rm.x + rm.tpl.bed.c, rm.y + rm.tpl.bed.r, 'sunshroom');
         }
 
+        // 添加地图边界的河道墙，防止玩家走到地图边缘时撞上无形的“空气墙”
+        for (let c = 0; c < this.cols; c++) {
+            this.walls.add(`${c},0`);
+            this.walls.add(`${c},${this.rows - 1}`);
+        }
+        for (let r = 0; r < this.rows; r++) {
+            this.walls.add(`0,${r}`);
+            this.walls.add(`${this.cols - 1},${r}`);
+        }
+
         // 第二遍遍历：根据相邻关系渲染墙面，只让外侧角圆润
         for (const key of this.walls) {
             const [cStr, rStr] = key.split(',');
@@ -1489,21 +1499,24 @@ class HauntedDorm {
         const sx = W / this.worldWidth, sy = H / this.worldHeight;
         ctx.clearRect(0, 0, W, H);
         
-        // 【背景】河道
-        ctx.fillStyle = 'rgba(46, 109, 168, 0.9)'; // #2e6da8
+        // 【背景】整个地图默认都是草地
+        ctx.fillStyle = 'rgba(53, 133, 62, 0.95)';
         ctx.fillRect(0, 0, W, H);
 
-        // 【房间地形】草地
-        for (const rm of this.rooms) {
-            ctx.fillStyle = 'rgba(53, 133, 62, 0.95)'; // #35853e 草地绿
-            ctx.fillRect(rm.x * this.gridSize * sx, rm.y * this.gridSize * sy, rm.w * this.gridSize * sx, rm.h * this.gridSize * sy);
-            
-            // 墙面/边框略微加深一点，更清晰
-            ctx.strokeStyle = '#225522';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(rm.x * this.gridSize * sx, rm.y * this.gridSize * sy, rm.w * this.gridSize * sx, rm.h * this.gridSize * sy);
+        // 【墙体】河道（障碍物，严格按照物理碰撞矩阵绘制，杜绝空气墙/假墙）
+        ctx.fillStyle = 'rgba(46, 109, 168, 0.9)'; // 蓝色河道
+        for (const key of this.walls) {
+            const [cStr, rStr] = key.split(',');
+            const c = parseInt(cStr);
+            const r = parseInt(rStr);
+            ctx.fillRect(c * this.gridSize * sx, r * this.gridSize * sy, this.gridSize * sx, this.gridSize * sy);
+        }
 
-            // 床位示意
+        // 门（木桥）和床位示意
+        for (const rm of this.rooms) {
+            ctx.fillStyle = '#ffa040';
+            ctx.fillRect((rm.x + rm.tpl.door.c) * this.gridSize * sx, (rm.y + rm.tpl.door.r) * this.gridSize * sy, this.gridSize * sx, this.gridSize * sy);
+            
             ctx.fillStyle = 'rgba(255,255,255,0.3)';
             ctx.fillRect((rm.x + rm.tpl.bed.c) * this.gridSize * sx, (rm.y + rm.tpl.bed.r) * this.gridSize * sy, this.gridSize * sx, this.gridSize * sy);
         }
