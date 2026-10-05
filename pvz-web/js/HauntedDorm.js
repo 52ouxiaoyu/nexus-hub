@@ -23,7 +23,10 @@ class HauntedDorm {
                              produce: { sun: 90, every: 0.5 },  up: { cost: 270, cur: 'sun', to: 'twinsunflower' } },
             twinsunflower: { tier: 4, name: '双子向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 450,  cost: 0,   scale: 1.2,
                              produce: { sun: 270, every: 0.5 }, up: { cost: 810, sporeCost: 1, cur: 'sun', to: 'sunpea' } },
-            sunpea:        { tier: 5, name: '豌豆向日葵', img: 'Plants/Fusions/peaflower.png', hp: 550, cost: 0, scale: 1.2,
+            sunpea:        { tier: 5, name: '豌豆向日葵', img: 'Plants/TwinSunflower/0.gif', overlay: 'Plants/Peashooter/0.gif', hp: 550, cost: 0, scale: 1.2,
+                             baseClip: 'polygon(0 35%, 100% 35%, 100% 100%, 0 100%)',
+                             overClip: 'polygon(0 0, 100% 0, 100% 40%, 0 40%)',
+                             overTransform: 'translate(-50%, -50%) translate(0, -30px) scale(0.8)',
                              produce: { sun: 810, every: 0.5 }, shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, 
                              up: { cost: 2430, sporeCost: 10, cur: 'sun', to: 'sunnut' } },
             sunnut:        { tier: 6, name: '坚果向日葵', img: 'Plants/WallNut/0.gif', hp: 2000, cost: 0, scale: 1.2, 
@@ -93,10 +96,16 @@ class HauntedDorm {
             // —— 坚果系 (10级，肉盾) ——
             wallnut:       { name: '坚果',       img: 'Plants/WallNut/0.gif',       card: 'WallNut.png',     hp: 4000,  cost: 50,
                              up: { cost: 40, cur: 'sun', to: 'nutshooter' } },
-            nutshooter:    { name: '豌豆坚果',   img: 'Plants/Fusions/nutshooter.png',       card: 'WallNut.png',  hp: 5000,  cost: 0, scale: 1.05,
+            nutshooter:    { name: '豌豆坚果',   img: 'Plants/WallNut/0.gif', overlay: 'Plants/Peashooter/0.gif',      card: 'WallNut.png',  hp: 5000,  cost: 0, scale: 1.05,
+                             baseClip: 'polygon(0 35%, 100% 35%, 100% 100%, 0 100%)',
+                             overClip: 'polygon(0 0, 100% 0, 100% 40%, 0 40%)',
+                             overTransform: 'translate(-50%, -50%) translate(15px, -30px) scale(0.9)',
                              shoot: { dmg: 20, cd: 1.6, n: 1, range: 320, img: 'Plants/PB00.gif', homing: true }, up: { cost: 100, cur: 'sun', to: 'nutgunner' } },
             nutgunner:     { name: '射手坚果',   img: 'Plants/WallNut/0.gif',       hp: 6500,  cost: 0, scale: 1.1, tint: 'saturate(1.4) brightness(1.12)',
                              overlay: 'Plants/Repeater/0.gif',
+                             baseClip: 'polygon(0 35%, 100% 35%, 100% 100%, 0 100%)',
+                             overClip: 'polygon(0 0, 100% 0, 100% 40%, 0 40%)',
+                             overTransform: 'translate(-50%, -50%) translate(15px, -30px) scale(0.9)',
                              shoot: { dmg: 20, cd: 1.3, n: 2, range: 320, img: 'Plants/PB00.gif', homing: true }, up: { cost: 160, cur: 'sun', to: 'cabbagenut' } },
             cabbagenut:    { name: '卷心菜坚果', img: 'Plants/WallNut/0.gif',       hp: 8500,  cost: 0, scale: 1.15, hat: 'Plants/CabbagePult/Cabbage.png',
                              lob: { dmg: 45, cd: 2.2, range: 420, aoe: 70, img: 'Plants/CabbagePult/Cabbage.png' }, up: { cost: 260, cur: 'sun', to: 'melonnut' } },
@@ -511,11 +520,13 @@ class HauntedDorm {
         const doorOpacity = isDoor ? 'opacity:0.85;' : '';
         // blend：白底融合素材（Fusions 系列）用 multiply 吃掉白底，避免草地上出现白色方块
         const blend = def.blend ? 'mix-blend-mode:multiply;' : '';
-        let inner = `<img src="assets/images/${def.img}" style="width:100%; height:100%; object-fit:contain; transform: scale(${1.2 * scale}) translateY(-10px); ${tint}${doorOpacity}${blend}">`;
-        // v3.92.1：overlay——原版素材组装（主游戏融合同款）：第二张贴图居中叠放，上移缩小
-        // 定位对齐主游戏 fusion_nutshooter（Plant.js: translate(2px,-28px) scale(0.6)，此处按 80px 格换算）
+        const baseClip = def.baseClip ? `clip-path:${def.baseClip}; -webkit-clip-path:${def.baseClip};` : '';
+        let inner = `<img src="assets/images/${def.img}" style="width:100%; height:100%; object-fit:contain; transform: scale(${1.2 * scale}) translateY(-10px); ${tint}${doorOpacity}${blend} ${baseClip}">`;
+        
         if (def.overlay) {
-            inner += `<img src="assets/images/${def.overlay}" style="position:absolute; left:50%; top:50%; width:100%; height:100%; object-fit:contain; pointer-events:none; transform: translate(-50%, -50%) translate(2px, -26px) scale(0.6);">`;
+            const overClip = def.overClip ? `clip-path:${def.overClip}; -webkit-clip-path:${def.overClip};` : '';
+            const overTrans = def.overTransform || 'translate(-50%, -50%) translate(2px, -26px) scale(0.6)';
+            inner += `<img src="assets/images/${def.overlay}" style="position:absolute; left:50%; top:50%; width:100%; height:100%; object-fit:contain; pointer-events:none; transform: ${overTrans}; ${overClip}">`;
         }
         if (def.overlays) {
             def.overlays.forEach((ov, i) => {
@@ -913,10 +924,20 @@ class HauntedDorm {
         document.getElementById('ov-waves').innerText = this.ghostLevel;
         
         let mvp = this.player;
-        let maxScore = this.player.sun + this.player.spore * 100;
-        for (const ai of this.ais) {
-            const score = ai.sun + ai.spore * 100;
-            if (score > maxScore) { maxScore = score; mvp = ai; }
+        let maxScore = -1;
+        const actors = [this.player, ...this.ais];
+        for (const a of actors) {
+            let score = a.sun + a.spore * 100;
+            // 加上他们的资产估值（建造的植物）
+            if (a.room) {
+                for (const pl of this.plants) {
+                    if (pl.c >= a.room.x && pl.c < a.room.x + a.room.w && pl.r >= a.room.y && pl.r < a.room.y + a.room.h) {
+                        score += (pl.def.tier || 1) * 300;
+                        if (pl.def.spore) score += 500;
+                    }
+                }
+            }
+            if (score > maxScore) { maxScore = score; mvp = a; }
         }
         const mvpEl = document.getElementById('ov-mvp');
         if (mvpEl) {
