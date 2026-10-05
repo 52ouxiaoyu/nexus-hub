@@ -2228,8 +2228,9 @@ function kbShootUp() {          // 松开：用屏幕上显示的当前力度出
     if (state === 'charge' && !players[current].isAI) shoot(clamp(power, 0.05, 1));
 }
 
-// 软启动斜坡：刚按下时极慢起步（轻点=微调），按住约 0.9s 平滑加速到全速（长按=快转）
-const KB_ROT = { min: 0.15, max: 1.6, ramp: 0.9 };   // rad/s 与加速时长
+// 软启动斜坡：刚按下时极慢起步（轻点=微调），按住约 1.1s 平滑加速到全速（长按=快转）
+// v2.8.2：用户反馈轻点还是重 → 起步 0.15→0.05 rad/s，ramp 0.9→1.1s（70ms 轻点≈0.2°）
+const KB_ROT = { min: 0.05, max: 1.6, ramp: 1.1 };   // rad/s 与加速时长
 let kbRotSince = -1;    // 旋转键开始按住的时刻（performance.now ms），未按住 = -1
 
 function kbUpdate(dt) {         // 每帧：按住的方向键持续旋转瞄准 / 移动母球（v2.8.1 软启动手感）
