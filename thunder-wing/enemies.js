@@ -380,7 +380,7 @@
       TW.FX.bigBoom(b.x, b.y, 2.4, '#ffd27a');
       TW.FX.text(W / 2, 340, '形态切换', '#ffd27a', 20);
       TW.Audio.bigExplode();
-      g.addScore(3000, b.x, b.y - 40);
+      g.addScore(3000);
     }
 
     /* 攻击编排 */

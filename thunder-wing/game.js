@@ -3,7 +3,7 @@
 (function () {
   const TW = window.TW || (window.TW = {});
   const W = 480, H = 800;
-  const VERSION = 'v1.0.0';
+  const VERSION = 'v1.0.1';
 
   /* ==================== 画布 ==================== */
   const cv = document.getElementById('cv');
@@ -337,7 +337,7 @@
     b.dying = true; b.dyT = 0; b.invuln = 99999;
     TW.FX.stop(12); TW.FX.quake(9, 30);
     TW.Audio.bigExplode();
-    G.addScore(b.score, b.x, b.y - 30);
+    G.addScore(b.score, b.x, b.y + 90);
     for (let i = 0; i < b.parts.length; i++) {
       if (b.parts[i].alive) { b.parts[i].alive = false; TW.dropItem(b.x + b.parts[i].ox, b.y + b.parts[i].oy, 'power'); }
     }
