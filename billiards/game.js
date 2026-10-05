@@ -297,9 +297,9 @@ function buildTable() {
                         : { x: 0, z: sz * (T + eS) };
     }
 
-    // 库边 6 段（v2.1.1）。角袋端面 = 沿洞圆的圆弧：绿色 jaw 包着黑洞转圆口（用户要求"出口成圆形"）；
-    // 圆弧相对直弦向台面侧外凸 → 天然压住黑色喉部四边形的直弦边，无 AA 裂缝。
-    // 中袋端面仍为直斜面，向洞心延伸 2.5mm 盖缝。
+    // 库边 6 段（v2.8.4）。角袋端面 = 直切面（v2.8.4：不再沿洞圆包弧，与中袋端面一致，
+    // 弦与洞圆之间的月牙由黑色洞盘填充——真实球桌的口袋背衬就是暗色）。中袋端面仍为直斜面。
+    // 直弦严格位于洞圆内侧 → 洞盘连续覆盖边界，无 AA 裂缝。
     const TAU = Math.PI * 2;
     const normA = a => ((a % TAU) + TAU) % TAU;
     // 洞圆弧采样：pFrom → pTo，取经过 midAng（洞心指向台面内的方向）的那条弧；含终点不含起点
@@ -325,9 +325,9 @@ function buildTable() {
         if (px * mx + pz * mz < 0) { px = -px; pz = -pz; }   // 法线取指向洞心一侧
         return [[P[0] + px * amt, P[1] + pz * amt], [Q[0] + px * amt, Q[1] + pz * amt]];
     }
-    // 角袋嘴：绿 jaw 沿洞圆包 ~308°，只留朝台面的圆形开口（用户要求"出口成圆形"）。
-    // 嘴半角 26° → 嘴宽 2·rC·sin26° ≈ 8.3cm；嘴尖过鼻线 ~1.6cm（真实球台 jaw 微微盖住台呢）
-    const MOUTH_HALF = 26 * Math.PI / 180;
+    // 角袋嘴：v2.8.4 绿 jaw 端面改直线（与中带一致，贴近真实球桌的直切 jaw），洞圆处由黑色洞盘填充。
+    // 嘴半角 28°（v2.8.4 微扩：26°→28°，嘴宽 2·rC·sin28° ≈ 8.9cm）
+    const MOUTH_HALF = 28 * Math.PI / 180;
     function mouthAngles(sx, sz) {
         const diag = Math.atan2(-sz, -sx);                  // 洞心指向台面的对角方向
         const a1 = diag - MOUTH_HALF, a2 = diag + MOUTH_HALF;
@@ -338,22 +338,19 @@ function buildTable() {
         return { aLong, aShort: aLong === a1 ? a2 : a1 };
     }
     const tipAt = (Cc, a) => [Cc.x + rC * Math.cos(a), Cc.z + rC * Math.sin(a)];
-    // 长边库边 ×4：中袋端(直) → 角袋端 jaw 弧包到嘴缘 → 钩回鼻线
+    // 长边库边 ×4：中袋端(直) → 角袋端直切面到嘴缘 → 钩回鼻线（v2.8.4 直边）
     for (const sz of [-1, 1]) for (const sx of [-1, 1]) {
         const Cc = { x: sx * (L + eC), z: sz * (T + eC) };
         const Cs = { x: 0, z: sz * (T + eS) };
         const backC = [sx * (L + eC - dxc), sz * wB];   // 角袋端背线交点（洞圆上）
         const { aLong } = mouthAngles(sx, sz);
         const tipL = tipAt(Cc, aLong);
-        const cornerJaw = arcPts(Cc, rC, backC, tipL, sx > 0 ? Math.PI : 0, 14);
         const [ns, bs] = jawPts([sx * sg, sz * T], [sx * dxs, sz * wB], Cs);
-        prism([bs, backC, ...cornerJaw, [tipL[0], sz * T], ns], ch, cushMat);
+        prism([bs, backC, tipL, [tipL[0], sz * T], ns], ch, cushMat);
     }
-    // 短边库边 ×2：主体 + 两端嘴尖小片（v2.7.0 拆分修复自相交）。
-    // 旧版把「弧包 + 钩回鼻线」塞进一个多边形：jaw 弧从背线（鼻线外侧）走到越过鼻线的嘴尖，
-    // 必然横穿沿库边长轴的鼻线段（交点 x=±L）→ 多边形自相交 → earcut 剖分崩坏
-    // （顶面缺块，台呢透出形成"凸起"条带）。拆成 3 个简单多边形后轮廓与设计一致。
-    const zCross = Math.sqrt(rC * rC - eC * eC);   // jaw 弧与鼻线交点相对洞心的 |Δz|
+    // 短边库边 ×2（v2.8.4 直边）：主体四边形 + 两端嘴尖直切三角片。
+    // 旧版端面沿洞圆包弧（用户反馈"绿色半圈是曲面"）——v2.8.4 全部改直线，与中带观感一致。
+    const zCross = Math.sqrt(rC * rC - eC * eC);   // 洞圆与鼻线交点相对洞心的 |Δz|（嘴尖定位仍用）
     for (const sx of [-1, 1]) {
         const CcT = { x: sx * (L + eC), z: T + eC };
         const CcB = { x: sx * (L + eC), z: -(T + eC) };
@@ -361,14 +358,11 @@ function buildTable() {
         const cT = [sx * L, T + eC - zCross], cB = [sx * L, -(T + eC - zCross)];
         const tipT = tipAt(CcT, mouthAngles(sx, 1).aShort);
         const tipB = tipAt(CcB, mouthAngles(sx, -1).aShort);
-        // 主体：背线起点 + 两端 jaw 弧（止于弧∩鼻线交点）+ 鼻线直行 + 背线闭合
-        prism([bT, ...arcPts(CcT, rC, bT, cT, -Math.PI / 2, 14), cB,
-               ...arcPts(CcB, rC, cB, bB, Math.PI / 2, 14)], ch, cushMat);
-        // 嘴尖小片 ×2：鼻线交点 → 弧到嘴尖 → 钩回鼻线（mid 取弦中点方向，保证走短弧）
-        for (const [C, c, tip] of [[CcT, cT, tipT], [CcB, cB, tipB]]) {
-            const mid = Math.atan2((c[1] + tip[1]) / 2 - C.z, (c[0] + tip[0]) / 2 - C.x);
-            prism([c, ...arcPts(C, rC, c, tip, mid, 6), tip, [sx * L, tip[1]]], ch, cushMat);
-        }
+        // 主体：背线两端 + 鼻线（端面 = 背线交点到鼻线交点的直弦）
+        prism([bT, cT, cB, bB], ch, cushMat);
+        // 嘴尖小片 ×2：直切三角（鼻线交点 → 嘴尖 → 鼻线），形成朝台面的 jaw 斜面
+        prism([cT, tipT, [sx * L, tipT[1]]], ch, cushMat);
+        prism([cB, tipB, [sx * L, tipB[1]]], ch, cushMat);
     }
 
     // ---- 木边外框：外轮廓八角形（45° 斜切角），内边界沿背线行走、6 个洞口绕洞圆外弧 ----
