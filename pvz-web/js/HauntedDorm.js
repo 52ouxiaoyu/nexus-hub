@@ -629,8 +629,10 @@ class HauntedDorm {
         if (this.role === 'zombie') return;
         
         // 禁止跨房间操作：不能帮人机或其他人升级植物
-        const room = this.rooms.find(rm => pl.c >= rm.x && pl.c < rm.x + rm.w && pl.r >= rm.y && pl.r < rm.y + rm.h);
-        if (room && room.owner && room.owner !== this.player) {
+        // 门和周围地刺也算在该房间的归属内
+        let room = this.rooms.find(rm => pl.c >= rm.x && pl.c < rm.x + rm.w && pl.r >= rm.y && pl.r < rm.y + rm.h);
+        if (!room) room = this.rooms.find(rm => Math.abs(pl.c - rm.doorCol) + Math.abs(pl.r - rm.doorRow) <= 1);
+        if (room && room.owners && room.owners.length > 0 && !room.owners.includes(this.player)) {
             this._flyText(pl.c * 80 + 40, pl.r * 80 + 40, '不能操作别人的设备！', '#ff4b4b');
             return;
         }
@@ -851,12 +853,12 @@ class HauntedDorm {
                         ai.sun -= chosen.cost;
                         this.spawnPlant(chosen.c, chosen.r, chosen.id);
                         this._flyText(chosen.c * 80 + 40, chosen.r * 80, `AI 种植！`, '#bfa8e0');
-                        if (Math.random() < 0.1) this._say(ai, ["多种点豌豆！", "只要门够厚，僵尸就进不来！", "搞快点搞快点！", "僵尸别来找我！", "一起守护这间房！"][Math.floor(Math.random()*5)]);
+                        if (Math.random() < 0.15) this._say(ai, ["门再厚点！僵尸你过来啊！", "阳光怎么这么少，搞快点！", "只要我跑得快，僵尸就吃不到我脑子！", "这局带飞！稳住我们能赢！", "吓死宝宝了，多种点豌豆压压惊！", "僵尸大哥别杀我，我肉酸！", "我这房间风水好，僵尸看不见我！"][Math.floor(Math.random()*7)]);
                     } else if (chosen.type === 'repair') {
                         ai.sun -= chosen.cost;
                         chosen.pl.hp = Math.min(chosen.pl.maxHp, chosen.pl.hp + 800);
                         this._flyText(chosen.pl.c * 80 + 40, chosen.pl.r * 80, "AI 修补！", "#0f0");
-                        if (Math.random() < 0.2) this._say(ai, "门快碎了，赶紧修修！");
+                        if (Math.random() < 0.3) this._say(ai, ["门快碎了，吓尿了，赶紧修修！", "僵尸牙口真好，门都啃秃了！", "门在人在，门亡我跑！"][Math.floor(Math.random()*3)]);
                     }
                 }
         }
@@ -1103,11 +1105,12 @@ class HauntedDorm {
         let targetRm = this._insideRoom(col, row);
         let isSpikeTile = false;
         if (!targetRm) {
-            targetRm = this.rooms.find(rm => col === rm.doorCol && row === rm.doorRow + 1);
+            // 允许地刺种在门的上下左右相邻一格（适应各种朝向的门）
+            targetRm = this.rooms.find(rm => Math.abs(col - rm.doorCol) + Math.abs(row - rm.doorRow) <= 1);
             if (targetRm) {
                 isSpikeTile = true;
             } else {
-                this._flyText(col * this.gridSize + 40, row * this.gridSize, '只能种房内，或门外一格种地刺', '#ff8a8a');
+                this._flyText(col * this.gridSize + 40, row * this.gridSize, '只能种房内，或门周围一格种地刺', '#ff8a8a');
                 return;
             }
         }
@@ -1968,6 +1971,9 @@ class HauntedDorm {
                     isWellDeveloped = (ai.sun > 1000 || (doorPlant && (!doorPlant.def.up || doorPlant.maxHp > 10000)));
                 }
                 
+                if (ai.room && (!ai.path || ai.path.length === 0) && Math.random() < 0.001) {
+                    this._say(ai, ["好无聊啊，僵尸怎么还不来？", "谁敢跟我比阳光多？", "外面的世界太危险，还是床舒服~", "睡一觉醒来，希望能赢！", "室友别抢我阳光啊！"][Math.floor(Math.random()*5)]);
+                }
                 if (isWellDeveloped && ai.room && (!ai.path || ai.path.length === 0) && !zombieNear && Math.random() < 0.005) {
                     const drop = this.airdrops[Math.floor(Math.random() * this.airdrops.length)];
                     ai.targetDrop = drop;
