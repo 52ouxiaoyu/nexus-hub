@@ -266,6 +266,47 @@ class HauntedDorm {
     initDOM() {
         this.world1 = document.getElementById('world1');
         this.vp1 = document.getElementById('vp1');
+        
+        // 动态创建键盘 UI 元素（如果不存在）
+        const createKUI = (id, html, z) => {
+            let el = document.getElementById(id);
+            if (!el) {
+                el = document.createElement('div');
+                el.id = id;
+                this.world1.appendChild(el); // append to world1 so it scrolls with the map
+            }
+            el.style = `position:absolute; display:none; z-index:${z};`;
+            el.innerHTML = html;
+            return el;
+        };
+        
+        this.p1Cursor = createKUI('p1-cursor', '', 500);
+        this.p2Cursor = createKUI('p2-cursor', '', 500);
+        this.p1Cursor.style.border = '3px solid #ffeb3b';
+        this.p1Cursor.style.width = '80px'; this.p1Cursor.style.height = '80px';
+        this.p1Cursor.style.boxSizing = 'border-box';
+        this.p1Cursor.style.transition = 'all 0.1s';
+        
+        this.p2Cursor.style.border = '3px solid #4fc3f7';
+        this.p2Cursor.style.width = '80px'; this.p2Cursor.style.height = '80px';
+        this.p2Cursor.style.boxSizing = 'border-box';
+        this.p2Cursor.style.transition = 'all 0.1s';
+        
+        this.p1Kmenu = createKUI('p1-kmenu', '', 600);
+        this.p2Kmenu = createKUI('p2-kmenu', '', 600);
+        this.p1Kmenu.style.background = 'rgba(0,0,0,0.8)';
+        this.p1Kmenu.style.border = '2px solid #ffeb3b';
+        this.p1Kmenu.style.borderRadius = '5px';
+        this.p1Kmenu.style.padding = '5px';
+        this.p1Kmenu.style.minWidth = '120px';
+        this.p1Kmenu.style.fontFamily = 'Kaiti SC, serif';
+        
+        this.p2Kmenu.style.background = 'rgba(0,0,0,0.8)';
+        this.p2Kmenu.style.border = '2px solid #4fc3f7';
+        this.p2Kmenu.style.borderRadius = '5px';
+        this.p2Kmenu.style.padding = '5px';
+        this.p2Kmenu.style.minWidth = '120px';
+        this.p2Kmenu.style.fontFamily = 'Kaiti SC, serif';
 
         this.world1.style.width = this.worldWidth + 'px';
         this.world1.style.height = this.worldHeight + 'px';
@@ -311,10 +352,7 @@ class HauntedDorm {
             document.getElementById('p2-hud').style.display = 'none';
         }
         
-        this.p1Cursor = document.getElementById('p1-cursor');
-        this.p2Cursor = document.getElementById('p2-cursor');
-        this.p1Kmenu = document.getElementById('p1-kmenu');
-        this.p2Kmenu = document.getElementById('p2-kmenu');
+
 
         this.plantMenu = document.getElementById('plant-menu');
         this.minimap = document.getElementById('minimap').getContext('2d');
