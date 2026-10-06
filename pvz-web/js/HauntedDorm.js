@@ -2322,7 +2322,16 @@ class HauntedDorm {
             for (const p of this.allPlayers) {
                 if (p.dead) continue;
                 if (Math.hypot(p.x - zb.x, p.y - zb.y) < 48) {
-                    if (p === this.player && (!this.player.invincibleT || this.player.invincibleT <= 0)) playerHurt += touchDps * dt;
+                    if (p === this.player && (!this.player.invincibleT || this.player.invincibleT <= 0)) {
+                        playerHurt += touchDps * dt;
+                        // 用户反馈：被僵尸压在身上会动不了，增加受击微击退机制，防止被挤进墙角卡死
+                        const angle = Math.atan2(p.y - zb.y, p.x - zb.x);
+                        const pushSpd = 200;
+                        const nx = p.x + Math.cos(angle) * pushSpd * dt;
+                        const ny = p.y + Math.sin(angle) * pushSpd * dt;
+                        if (!this.checkCollision(nx, p.y, 10)) p.x = nx;
+                        if (!this.checkCollision(p.x, ny, 10)) p.y = ny;
+                    }
                     else if (p !== this.player) {
                         p.hp -= touchDps * dt;
                         if (p.hp <= 0 && !p.dead) {
