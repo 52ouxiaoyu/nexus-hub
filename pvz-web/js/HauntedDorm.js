@@ -334,6 +334,7 @@ class HauntedDorm {
         this.world1.appendChild(this.player.el1);
         
         if (this.gameMode === '2p') {
+            document.getElementById('p2-hud').style.display = 'flex';
             this.player2.el1 = document.createElement('div');
             this.player2.el1.className = 'entity avatar';
             this.player2.el1.innerHTML = `<img src="${this.player2.icon}" style="${this.playerRoleDef2.imgStyle || ''}">` + 
@@ -2200,9 +2201,11 @@ class HauntedDorm {
     }
 
     _tick(dt, time) {
-        if (this.player.skillCd > 0) {
-            this.player.skillCd -= dt;
-            if (this.player.skillCd <= 0) this._refreshHud(); // 冷却完毕刷新一下UI
+        for (const p of this.allPlayers) {
+            if (p.skillCd > 0) {
+                p.skillCd -= dt;
+                if (p.skillCd <= 0) this._refreshHud();
+            }
         }
         for (const zb of this.zombies) { if (zb.hitFlashT > 0) zb.hitFlashT -= dt; }
         this._updateGhostDirector(time);
