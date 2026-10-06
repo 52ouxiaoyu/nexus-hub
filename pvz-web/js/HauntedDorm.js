@@ -1291,6 +1291,12 @@ class HauntedDorm {
             this.keys[e.key.toLowerCase()] = false;
             this.keys[e.code] = false;
         });
+        
+        // 【优化1】防卡键：当浏览器失去焦点（如弹窗、切屏、硬件冲突导致系统级中断）时，强制清空所有按键状态
+        window.addEventListener('blur', () => {
+            this.keys = {};
+            this.keysJustPressed = {};
+        });
 
         this.vp1.addEventListener('mousedown', e => {
             if (e.target.closest('#plant-menu')) return;
@@ -1970,23 +1976,31 @@ class HauntedDorm {
 
 
     _updateKMenus() {
-        this._handleKMenu(1, this.player, ' ', 'altright', 'w', 's', this.p1Kmenu, this.p1Cursor);
-        this._handleKMenu(2, this.player2, 'delete', 'enter', 'arrowup', 'arrowdown', this.p2Kmenu, this.p2Cursor);
+        // 【优化3】冗余按键映射：为每个操作提供2-3个备用键。如果主键被硬件冲突屏蔽，玩家可以下意识用备用键
+        // P1 OK: Space 或 F 或 J | P1 Cancel: AltRight 或 G 或 K
+        this._handleKMenu(1, this.player, [' ', 'f', 'j'], ['altright', 'g', 'k'], ['w'], ['s'], this.p1Kmenu, this.p1Cursor);
+        
+        // P2 OK: Delete 或 右Shift 或 Numpad1 | P2 Cancel: Enter 或 右Ctrl 或 Numpad2
+        this._handleKMenu(2, this.player2, ['delete', 'shiftright', '1'], ['enter', 'controlright', '2'], ['arrowup'], ['arrowdown'], this.p2Kmenu, this.p2Cursor);
     }
     
-    _handleKMenu(pId, p, keyOk, keyCancel, keyUp, keyDown, uiEl, cursorEl) {
+    _checkAnyKey(keyArr) {
+        return keyArr.some(k => this.keysJustPressed[k] || this.keysJustPressed['Key'+k.toUpperCase()]);
+    }
+    
+    _handleKMenu(pId, p, keysOk, keysCancel, keysUp, keysDown, uiEl, cursorEl) {
         const menu = this.kmenus[pId];
         
-        if (this.keysJustPressed[keyCancel]) {
+        if (this._checkAnyKey(keysCancel)) {
             menu.active = false;
             uiEl.style.display = 'none';
         }
         
         if (menu.active) {
-            if (this.keysJustPressed[keyUp]) { menu.index = Math.max(0, menu.index - 1); this._renderKMenu(menu, uiEl); }
-            if (this.keysJustPressed[keyDown]) { menu.index = Math.min(menu.options.length - 1, menu.index + 1); this._renderKMenu(menu, uiEl); }
+            if (this._checkAnyKey(keysUp)) { menu.index = Math.max(0, menu.index - 1); this._renderKMenu(menu, uiEl); }
+            if (this._checkAnyKey(keysDown)) { menu.index = Math.min(menu.options.length - 1, menu.index + 1); this._renderKMenu(menu, uiEl); }
             
-            if (this.keysJustPressed[keyOk]) {
+            if (this._checkAnyKey(keysOk)) {
                 const opt = menu.options[menu.index];
                 if (opt) this._execKMenu(p, menu, opt);
                 menu.active = false;
@@ -1995,7 +2009,7 @@ class HauntedDorm {
             return;
         }
         
-        if (this.keysJustPressed[keyOk]) {
+        if (this._checkAnyKey(keysOk)) {
             const col = Math.floor(p.x / this.gridSize);
             const row = Math.floor(p.y / this.gridSize);
             const pl = this.plants.find(x => x.c === col && x.r === row);
