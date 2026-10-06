@@ -133,19 +133,19 @@ class HauntedDorm {
 
     // ===== 僵尸升级链（10级）=====
     static get GHOST_LEVELS() {
-        // 用户要求：智力等各项属性跟玩家一样（速度全统一为 150，玩家移速就是 150）
+        // 用户要求：僵尸速度变成原来的 3 倍（原来150 -> 450），比玩家还快！
         // 等级顺序：1 普通，2 路障，3 铁桶，4 橄榄球，后续铁门舞王等
         return [
-            { name: '普通僵尸',   img: 'Zombies/Zombie/Zombie.gif',                    hp: 500,   speed: 150 },
-            { name: '路障僵尸',   img: 'Zombies/ConeheadZombie/ConeheadZombie.gif',    hp: 1200,  speed: 150 },
-            { name: '铁桶僵尸',   img: 'Zombies/BucketheadZombie/BucketheadZombie.gif', hp: 3000,  speed: 150 },
-            { name: '橄榄球僵尸', img: 'Zombies/FootballZombie/FootballZombie.gif',    hp: 5000,  speed: 150 },
-            { name: '铁门僵尸',   img: 'Zombies/ScreenDoorZombie/ScreenDoorZombie.gif', hp: 8000,  speed: 150 },
-            { name: '舞王僵尸',   img: 'Zombies/DancingZombie/0.gif',                  hp: 12000, speed: 150 },
-            { name: '冰车僵尸',   img: 'Zombies/Zomboni/1.gif',                        hp: 18000, speed: 150 },
-            { name: '小丑僵尸',   img: 'Zombies/JackinTheBoxZombie/0.gif',             hp: 28000, speed: 150 },
-            { name: '气球僵尸',   img: 'Zombies/BalloonZombie/0.gif',                  hp: 50000, speed: 150 },
-            { name: '机甲僵王',   img: 'Zombies/LGBOSS/0.gif',                         hp: 100000, speed: 150 }
+            { name: '普通僵尸',   img: 'Zombies/Zombie/Zombie.gif',                    hp: 500,   speed: 450 },
+            { name: '路障僵尸',   img: 'Zombies/ConeheadZombie/ConeheadZombie.gif',    hp: 1200,  speed: 450 },
+            { name: '铁桶僵尸',   img: 'Zombies/BucketheadZombie/BucketheadZombie.gif', hp: 3000,  speed: 450 },
+            { name: '橄榄球僵尸', img: 'Zombies/FootballZombie/FootballZombie.gif',    hp: 5000,  speed: 450 },
+            { name: '铁门僵尸',   img: 'Zombies/ScreenDoorZombie/ScreenDoorZombie.gif', hp: 8000,  speed: 450 },
+            { name: '舞王僵尸',   img: 'Zombies/DancingZombie/0.gif',                  hp: 12000, speed: 450 },
+            { name: '冰车僵尸',   img: 'Zombies/Zomboni/1.gif',                        hp: 18000, speed: 450 },
+            { name: '小丑僵尸',   img: 'Zombies/JackinTheBoxZombie/0.gif',             hp: 28000, speed: 450 },
+            { name: '气球僵尸',   img: 'Zombies/BalloonZombie/0.gif',                  hp: 50000, speed: 450 },
+            { name: '机甲僵王',   img: 'Zombies/LGBOSS/0.gif',                         hp: 100000, speed: 450 }
         ];
     }
     static get GHOST_MAX_LV() { return HauntedDorm.GHOST_LEVELS.length; }
@@ -930,11 +930,16 @@ class HauntedDorm {
     }
 
     _flyText(x, y, text, color) {
+        const offsetX = (Math.random() - 0.5) * 80; // 左右随机偏移，防重叠
+        const offsetY = (Math.random() - 0.5) * 60; // 上下随机偏移，防重叠
+        const flyX = x + offsetX;
+        const flyY = y + offsetY - 30;
+        
         const fly = document.createElement('div');
         fly.innerText = text;
-        fly.style = `position:absolute; color:${color || 'yellow'}; font-weight:bold; font-size:22px; left:${x}px; top:${y - 30}px; transition:all 1s; pointer-events:none; z-index:500; text-shadow:1px 1px 2px #000; transform:translate(-50%,-50%); white-space:nowrap;`;
+        fly.style = `position:absolute; color:${color || 'yellow'}; font-weight:bold; font-size:22px; left:${flyX}px; top:${flyY}px; transition:all 1s; pointer-events:none; z-index:500; text-shadow:1px 1px 2px #000; transform:translate(-50%,-50%); white-space:nowrap;`;
         this.world1.appendChild(fly);
-        setTimeout(() => { fly.style.top = (y - 90) + 'px'; fly.style.opacity = 0; }, 40);
+        setTimeout(() => { fly.style.top = (flyY - 60) + 'px'; fly.style.opacity = 0; }, 40);
         setTimeout(() => fly.remove(), 1050);
     }
 
