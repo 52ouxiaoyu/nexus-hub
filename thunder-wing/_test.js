@@ -31,7 +31,7 @@ function ok(name, cond, extra) {
   console.log('\n--- 加载与句柄 ---');
   ok('无页面异常', errors.length === 0, errors.slice(0, 3));
   const ver = await page.evaluate(() => window.__twGame && window.__twGame.VERSION);
-  ok('句柄存在且版本 v1.4.2', ver === 'v1.4.2', ver);
+  ok('句柄存在且版本 v1.4.3', ver === 'v1.4.3', ver);
   ok('初始为菜单态', await page.evaluate(() => window.__twGame.state()) === 'MENU');
   await page.screenshot({ path: OUT + '/_shot_menu.png' });
 
@@ -53,7 +53,7 @@ function ok(name, cond, extra) {
   ok('D 键右移生效', x2 > x1 + 20, { x1, x2 });
 
   console.log('\n--- 射击与蓄力 ---');
-  await page.evaluate(() => { window.__twGame.key('j', true); window.__twGame.frame(20); });
+  await page.evaluate(() => { window.__twGame.key(' ', true); window.__twGame.frame(20); });
   const c2 = await page.evaluate(() => window.__twGame.counts());
   ok('射击产生子弹', c2.pb > 0, c2);
   await page.evaluate(() => window.__twGame.frame(60));
@@ -142,7 +142,7 @@ function ok(name, cond, extra) {
   ok('复活后有无敌时间', await page.evaluate(() => window.__twGame.G.player.invuln) > 0);
 
   console.log('\n--- 渲染像素断言 ---');
-  await page.evaluate(() => { window.__twGame.start('story'); window.__twGame.frame(300); window.__twGame.key('j', true); window.__twGame.frame(30); window.__twGame.render(); });
+  await page.evaluate(() => { window.__twGame.start('story'); window.__twGame.frame(300); window.__twGame.key(' ', true); window.__twGame.frame(30); window.__twGame.render(); });
   const lit = await page.evaluate(() => {
     const cv = document.getElementById('cv');
     const g = cv.getContext('2d');
@@ -178,7 +178,7 @@ function ok(name, cond, extra) {
   console.log('\n--- 流程连通性（脚本推进到 Boss） ---');
   await page.evaluate(() => {
     window.__twGame.start('story');
-    window.__twGame.key('j', true);
+    window.__twGame.key(' ', true);
     window.__twGame.setPower(5);
   });
   let bossSeen = false, cleared = false, nextStage = false;
@@ -204,7 +204,7 @@ function ok(name, cond, extra) {
     window.__twGame.start('story');
     window.__twGame.gotoStage(4);
     window.__twGame.spawnBoss(4);
-    window.__twGame.key('j', true);
+    window.__twGame.key(' ', true);
     window.__twGame.setPower(5);
   });
   for (let i = 0; i < 6; i++) {
@@ -242,7 +242,7 @@ function ok(name, cond, extra) {
     const S = window.__twGame;
     S.G.pbullets.length = 0;
     S.key('d', false);
-    S.key('Enter', true); S.frame(12); S.key('Enter', false);
+    S.key('numpadenter', true); S.frame(12); S.key('numpadenter', false);
     return S.G.pbullets.filter((b) => b.owner === 1).length;
   });
   ok('2P 回车键独立射击', shoot2 > 0, { shoot2 });
@@ -304,16 +304,16 @@ function ok(name, cond, extra) {
   }));
   ok('结算面板弹出并区分 1P / 2P 战绩', res2.ov && res2.has1p && res2.has2p, res2);
 
-  await page.evaluate(() => { window.__twGame.start('story', true); window.__twGame.setPower(5, 0); window.__twGame.setPower(4, 1); window.__twGame.key('j', true); window.__twGame.key('Enter', true); window.__twGame.frame(420); window.__twGame.render(); });
+  await page.evaluate(() => { window.__twGame.start('story', true); window.__twGame.setPower(5, 0); window.__twGame.setPower(4, 1); window.__twGame.key(' ', true); window.__twGame.key('numpadenter', true); window.__twGame.frame(420); window.__twGame.render(); });
   await page.screenshot({ path: OUT + '/_shot_coop.png' });
   ok('双人实战推进无异常', errors.length === 0, errors.slice(0, 3));
-  await page.evaluate(() => { window.__twGame.key('j', false); window.__twGame.key('Enter', false); });
+  await page.evaluate(() => { window.__twGame.key(' ', false); window.__twGame.key('numpadenter', false); });
 
   console.log('\n--- 双人流程连通性 ---');
   await page.evaluate(() => {
     const S = window.__twGame;
     S.start('story', true); S.setPower(5, 0); S.setPower(5, 1);
-    S.key('j', true); S.key('Enter', true);
+    S.key(' ', true); S.key('numpadenter', true);
   });
   let boss2 = false, next2 = false;
   for (let k = 0; k < 30; k++) {
@@ -328,7 +328,7 @@ function ok(name, cond, extra) {
   }
   ok('双人共同推进到关底 Boss 并进入第 2 关', boss2 && next2,
     await page.evaluate(() => ({ st: window.__twGame.G.state, stage: window.__twGame.G.stage })));
-  await page.evaluate(() => { window.__twGame.key('j', false); window.__twGame.key('Enter', false); });
+  await page.evaluate(() => { window.__twGame.key(' ', false); window.__twGame.key('numpadenter', false); });
 
   console.log('\n--- 画面自适应 ---');
   // 走真实关卡脚本：第 1 关 t=40 的 V 字编队是以参考坐标 240（=中轴）生成的
@@ -403,7 +403,7 @@ function ok(name, cond, extra) {
     const oneShot = (perks) => {
       window.TW.FX.hitstop = 0;
       g.player.perks = perks; g.player.fireT = 0; g.pbullets.length = 0;
-      S.key('j', true); S.frame(1); S.key('j', false);
+      S.key(' ', true); S.frame(1); S.key(' ', false);
       return g.pbullets.length;
     };
     return { before: oneShot({}), after: oneShot({ twin: 2 }) };
@@ -417,7 +417,7 @@ function ok(name, cond, extra) {
     const oneShot = (od) => {
       window.TW.FX.hitstop = 0;
       g.player.od = od; g.player.fireT = 0; g.pbullets.length = 0;
-      S.key('j', true); S.frame(1); S.key('j', false);
+      S.key(' ', true); S.frame(1); S.key(' ', false);
       return g.pbullets.length;
     };
     const normal = oneShot(0);

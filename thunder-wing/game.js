@@ -19,7 +19,7 @@
   let W = MIN_W;
   /* 战场越宽，自机速度等比补偿，避免横向机动变迟钝 */
   function fieldSpd() { return Math.min(1.25, Math.max(1, W / MIN_W)); }
-  const VERSION = 'v1.4.2';
+  const VERSION = 'v1.4.3';
 
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d', { alpha: false });
@@ -185,9 +185,11 @@
   const keys = {};
   let touch = false, dragLast = null;
   const KEYMAP = [
-    { lf: ['a'], rt: ['d'], up: ['w'], dn: ['s'], fire: [' ', 'j', 'z'], bomb: ['k', 'x', 'q', 'shiftleft'] },
+    /* 1P：WASD 移动 · 空格射击 · M 大招 */
+    { lf: ['a'], rt: ['d'], up: ['w'], dn: ['s'], fire: [' '], bomb: ['m'] },
+    /* 2P：方向键移动 · 小键盘回车射击 · 小键盘加号大招（全在空格/M 右侧，互不串台） */
     { lf: ['arrowleft'], rt: ['arrowright'], up: ['arrowup'], dn: ['arrowdown'],
-      fire: ['enter', 'numpadenter'], bomb: ['slash', 'period', 'numpad0', 'shiftright'] },
+      fire: ['numpadenter'], bomb: ['numpadadd'] },
   ];
   function held(list) {
     for (let i = 0; i < list.length; i++) if (keys[list[i]]) return true;
