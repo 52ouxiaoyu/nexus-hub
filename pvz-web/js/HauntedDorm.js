@@ -1317,6 +1317,11 @@ class HauntedDorm {
         const startIdx = sr * this.cols + sc;
         const targetIdx = tr * this.cols + tc;
         
+        const plantMap = new Uint8Array(MAX_CELLS);
+        for (const pl of this.plants) {
+            if (!pl.def.ground) plantMap[pl.r * this.cols + pl.c] = 1; // 所有的非地刺植物都视为障碍物，用于寻路绕行
+        }
+        
         const q = new Int32Array(MAX_CELLS);
         let head = 0;
         let tail = 0;
@@ -1347,7 +1352,7 @@ class HauntedDorm {
                 const nc = nextIdx % this.cols;
                 const nr = Math.floor(nextIdx / this.cols);
                 
-                if (this.walls.has(`${nc},${nr}`) && nextIdx !== targetIdx) continue;
+                if ((this.walls.has(`${nc},${nr}`) || plantMap[nextIdx]) && nextIdx !== targetIdx) continue;
                 
                 visited[nextIdx] = 1;
                 parent[nextIdx] = currIdx;
@@ -1368,7 +1373,7 @@ class HauntedDorm {
         return path;
     }
 
-    checkCollision(x, y, r = 20) {
+    checkCollision(x, y, r = 20, isZombie = false) {
         // 彻底修复穿墙：不仅查四个角，还查中心，确保绝对实体
         r = 15; // 强制半径 15，避免过小导致在角落漏检
         const corners = [
@@ -1387,14 +1392,19 @@ class HauntedDorm {
             
             // 实体碰撞逻辑优化：大门是绝对的物理阻挡
             const plant = this.getPlantAt(p.c * this.gridSize, p.r * this.gridSize);
-            if (plant && plant.isDoor) {
-                // 如果是僵尸玩家，绝不允许穿透大门，必须老老实实啃碎
-                if (this.isZombieFaction) return true;
+            if (plant && !plant.def.ground) {
+                // 如果是僵尸阵营（包括僵尸玩家和AI僵尸），所有植物（门、塔等）都是绝对实体，绝不允许穿透！
+                if (this.isZombieFaction || isZombie) return true;
                 
-                // 如果是幸存者玩家，空房间的门可以自由进出；
-                // 但一旦房间被任何人占领入住，大门就会变成死实体，无法穿模进出！
-                const rm = this._insideRoom(plant.c, plant.r);
-                if (rm && rm.owners && rm.owners.length > 0) return true;
+                // 以下逻辑针对人类幸存者阵营玩家：
+                if (plant.isDoor) {
+                    // 空房间的门可以进出，但一旦有人入住则变成死实体
+                    const rm = this._insideRoom(plant.c, plant.r);
+                    if (rm && rm.owners && rm.owners.length > 0) return true;
+                } else {
+                    // 人类自己种的其他植物可以走过去（除非以后有特殊要求）
+                    // 暂时只阻挡僵尸
+                }
             }
             return false;
         });
@@ -1515,7 +1525,7 @@ class HauntedDorm {
             // 命中检测（34px）
             const targets = this.isZombieFaction ? [this.player] : this.zombies;
             for (const zb of targets) {
-                if (zb.dead || zb.retreating) continue; // 撤退中的幽灵僵尸直接免疫子弹
+                if (zb.dead) continue; // 撤退时不再免疫，可以被击杀
                 if (Math.hypot(zb.x - pea.x, zb.y - pea.y) < 34) {
                     pea.life = 0;
                     const hits = pea.aoe > 0
@@ -2407,7 +2417,7 @@ class HauntedDorm {
                 zb.slowT = 0; // 逃跑时免疫减速
                 zb.stunT = 0; // 逃跑时免疫眩晕
                 targetX = this.worldWidth / 2;
-                targetY = this.worldHeight / 2;
+                targetY = 200; // 回到地图上方主干道，而不是中心（中心可能是墙壁）
                 if (Math.hypot(targetX - zb.x, targetY - zb.y) < 120) {
                     zb.hp = Math.min(zb.maxHp, zb.hp + zb.maxHp * 0.25 * dt); // 回血变快
                     if (zb.hpBg) zb.hpBg.style.display = 'block';
@@ -2495,8 +2505,8 @@ class HauntedDorm {
                     moved = false; // 啃食时不挪窝
                 } else {
                     // 撤退时也不再无脑穿墙，老老实实寻路走路
-                    const bx = !this.checkCollision(nzx, zb.y);
-                    const by = !this.checkCollision(zb.x, nzy);
+                    const bx = !this.checkCollision(nzx, zb.y, 15, true);
+                    const by = !this.checkCollision(zb.x, nzy, 15, true);
                     if (bx) { zb.x = nzx; moved = true; }
                     if (by) { zb.y = nzy; moved = true; }
                     if (!moved) {
