@@ -1038,22 +1038,7 @@ class HauntedDorm {
         document.getElementById('ov-time').innerText = `${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}`;
         document.getElementById('ov-waves').innerText = this.ghostLevel;
         
-        let mvp = this.player;
-        let maxScore = -1;
-        const actors = [this.player, ...this.ais];
-        for (const a of actors) {
-            let score = a.sun + a.spore * 100;
-            // 加上他们的资产估值（建造的植物）
-            if (a.room) {
-                for (const pl of this.plants) {
-                    if (pl.c >= a.room.x && pl.c < a.room.x + a.room.w && pl.r >= a.room.y && pl.r < a.room.y + a.room.h) {
-                        score += (pl.def.tier || 1) * 300;
-                        if (pl.def.spore) score += 500;
-                    }
-                }
-            }
-            if (score > maxScore) { maxScore = score; mvp = a; }
-        }
+        let mvp = this.lastKiller || this.player; // 最终击杀者直接成为MVP
         const mvpEl = document.getElementById('ov-mvp');
         if (mvpEl) {
             mvpEl.innerText = mvp === this.player ? '你' : `人机-${mvp.roleDef.name}`;
@@ -1369,7 +1354,8 @@ class HauntedDorm {
             x: px, y: py, vx: Math.cos(angle) * sp, vy: Math.sin(angle) * sp,
             el, life: (opts.range || 320) / sp + 0.3, dmg: dmg,
             slow: !!opts.slow, aoe: opts.aoe || 0,
-            homing: !!opts.homing, homeR: 260  // 跟踪区：260px 内追踪僵尸，出了区域变直线
+            homing: !!opts.homing, homeR: 260,  // 跟踪区：260px 内追踪僵尸，出了区域变直线
+            owner: opts.owner
         });
     }
 
@@ -1390,26 +1376,29 @@ class HauntedDorm {
             }
             if (!best) continue;
 
+            const rm = this._insideRoom(pl.c, pl.r);
+            const owner = rm ? rm.owner : this.player;
+
             if (lob) {
                 pl.shootCd = lob.cd;
                 this._firePea(px, py, Math.atan2(best.y - py, best.x - px), lob.dmg,
-                    { img: lob.img, range: lob.range, aoe: lob.aoe, speed: 300, size: 34 });
+                    { img: lob.img, range: lob.range, aoe: lob.aoe, speed: 300, size: 34, owner });
             } else {
                 pl.shootCd = sh.cd;
                 const base = Math.atan2(best.y - py, best.x - px);
                 if (sh.fan) { // 三线/忧郁菇：扇形多向
                     for (let i = 0; i < sh.n; i++) {
                         const a = base + (i - (sh.n - 1) / 2) * sh.fan;
-                        this._firePea(px, py, a, sh.dmg, { img: sh.img, range: sh.range, slow: sh.slow, homing: sh.homing });
+                        this._firePea(px, py, a, sh.dmg, { img: sh.img, range: sh.range, slow: sh.slow, homing: sh.homing, owner });
                     }
                 } else { // 连发：同向串行
                     for (let i = 0; i < sh.n; i++) {
                         this._firePea(px - Math.cos(base) * i * 22, py - Math.sin(base) * i * 22, base, sh.dmg,
-                            { img: sh.img, range: sh.range, slow: sh.slow, homing: sh.homing });
+                            { img: sh.img, range: sh.range, slow: sh.slow, homing: sh.homing, owner });
                     }
                 }
                 if (sh.back) { // 双向射手：脑后再补一发
-                    this._firePea(px, py, base + Math.PI, sh.dmg, { img: sh.img, range: sh.range, slow: sh.slow });
+                    this._firePea(px, py, base + Math.PI, sh.dmg, { img: sh.img, range: sh.range, slow: sh.slow, owner });
                 }
             }
             this.playSfx('ballooninflate.mp3', 0.15);
@@ -1472,7 +1461,7 @@ class HauntedDorm {
                         }
                         z.el1.style.filter = pea.slow ? 'saturate(0.4) brightness(1.5)' : 'brightness(2.2)';
                         setTimeout(() => { if (z.el1) z.el1.style.filter = ''; }, 90);
-                        if (z.hp <= 0) this._killZombie(z);
+                        if (z.hp <= 0) this._killZombie(z, pea.owner);
                     }
                     this.playSfx('bowlingimpact2.mp3', 0.22);
                     break;
@@ -1488,10 +1477,12 @@ class HauntedDorm {
         });
     }
 
-    _killZombie(zb) {
+    _killZombie(zb, killer = null) {
         if (zb.dead) return;
         zb.dead = true;
         this.kills++;
+        this.lastKiller = killer; // 记录击杀者
+
         
         zb.el1.style.transition = 'all 0.45s ease-in';
         zb.el1.style.transform = 'translate(-50%, -50%) scale(1.25) rotate(12deg)';
@@ -1577,7 +1568,10 @@ class HauntedDorm {
                         zb.hpBg.style.display = 'block';
                         zb.hpFg.style.width = Math.max(0, zb.hp / zb.maxHp * 100) + '%';
                     }
-                    if (zb.hp <= 0) this._killZombie(zb);
+                    if (zb.hp <= 0) {
+                        const rm = this._insideRoom(pl.c, pl.r);
+                        this._killZombie(zb, rm ? rm.owner : this.player);
+                    }
                 }
             }
         }
@@ -1600,7 +1594,7 @@ class HauntedDorm {
                 zb.slowT = 0.5;
                 zb.hp -= dps * dt;
                 zb.el1.querySelector('img').style.filter = 'saturate(0.35) brightness(1.5) drop-shadow(0 0 8px #7fd8ff)';
-                if (zb.hp <= 0) this._killZombie(zb);
+                if (zb.hp <= 0) this._killZombie(zb, this.player); // 冰阵是全局的，算在玩家头上，或者暂不追究
             } else {
                 if (zb.slowT <= 0 && zb.el1) zb.el1.querySelector('img').style.filter = '';
             }
@@ -1662,7 +1656,10 @@ class HauntedDorm {
             this.world1.appendChild(boom);
             setTimeout(() => boom.remove(), 500);
             for (const zb of [...this.zombies]) {
-                if (!zb.dead && Math.hypot(zb.x - px, zb.y - py) < 130) this._killZombie(zb);
+                if (!zb.dead && Math.hypot(zb.x - px, zb.y - py) < 130) {
+                    const rm = this._insideRoom(pl.c, pl.r);
+                    this._killZombie(zb, rm ? rm.owner : this.player);
+                }
             }
             pl.el1.remove();
             this.plants = this.plants.filter(p => p !== pl);
