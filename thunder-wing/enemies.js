@@ -18,18 +18,18 @@
 
   /* ==================== 敌人定义 ==================== */
   const ED = {
-    drone: { spr: 'drone', hp: 4, r: 12, score: 100, fire: 'aimed', every: 110 },
-    fighter: { spr: 'fighter', hp: 8, r: 13, score: 150, fire: 'spread3', every: 130 },
-    gunship: { spr: 'gunship', hp: 22, r: 19, score: 400, fire: 'ring8', every: 150 },
-    bomber: { spr: 'bomber', hp: 32, r: 24, score: 600, fire: 'bomb', every: 120 },
-    tank: { spr: 'tank', hp: 14, r: 15, score: 200, fire: 'aimed', every: 95 },
-    turret: { spr: 'turret', hp: 15, r: 15, score: 250, fire: 'spread3', every: 80 },
-    elite: { spr: 'elite', hp: 95, r: 27, score: 2500, fire: 'ring12', every: 78 },
+    drone: { spr: 'drone', hp: 4, r: 12, score: 100, fire: 'aimed', every: 200 },
+    fighter: { spr: 'fighter', hp: 8, r: 13, score: 150, fire: 'spread3', every: 240 },
+    gunship: { spr: 'gunship', hp: 22, r: 19, score: 400, fire: 'ring6', every: 280 },
+    bomber: { spr: 'bomber', hp: 32, r: 24, score: 600, fire: 'bomb', every: 200 },
+    tank: { spr: 'tank', hp: 14, r: 15, score: 200, fire: 'aimed', every: 200 },
+    turret: { spr: 'turret', hp: 15, r: 15, score: 250, fire: 'spread3', every: 180 },
+    elite: { spr: 'elite', hp: 95, r: 27, score: 2500, fire: 'ring6', every: 160 },
     /* v1.4.4 新敌机：更聪明、更有想象力的外星 / 高科技单位 */
-    ufo: { spr: 'ufo', hp: 10, r: 15, score: 350, fire: 'ring5', every: 105 },        // 折跃飞碟：瞬移到玩家头上
+    ufo: { spr: 'ufo', hp: 10, r: 15, score: 350, fire: 'ring5', every: 200 },        // 折跃飞碟：瞬移到玩家头上
     sniper: { spr: 'sniper', hp: 12, r: 14, score: 400, fire: 'none', every: 170 },   // 激光狙击机：锁定→预警→光束
-    launcher: { spr: 'launcher', hp: 16, r: 15, score: 380, fire: 'missile2', every: 175 }, // 挂弹机：追踪导弹
-    splitter: { spr: 'splitter', hp: 9, r: 14, score: 300, fire: 'aimed', every: 130 },     // 外星分裂体：死亡一分为二
+    launcher: { spr: 'launcher', hp: 16, r: 15, score: 380, fire: 'missile2', every: 240 }, // 挂弹机：追踪导弹
+    splitter: { spr: 'splitter', hp: 9, r: 14, score: 300, fire: 'aimed', every: 220 },     // 外星分裂体：死亡一分为二
     mini: { spr: 'splitter', hp: 2, r: 8, score: 80, fire: 'none', every: 999 },            // 分裂体子细胞（高速冲撞）
   };
   TW.ED = ED;
@@ -37,7 +37,7 @@
   /* ==================== 敌方弹幕 ==================== */
   TW.enemyShot = function (x, y, ang, sp, kind) {
     const g = G();
-    if (g.ebullets.length > 420) return;
+    if (g.ebullets.length > 120) return;   // 密集恐惧症保险丝：同屏敌弹硬上限
     const k = g.rankSpd();
     g.ebullets.push({
       x: x, y: y, vx: Math.cos(ang) * sp * k, vy: Math.sin(ang) * sp * k,
@@ -120,7 +120,7 @@
     },
     /* 固定炮台（停在指定位置射击） */
     turret(xs, ty, opt) {
-      xs.forEach((x) => TW.spawn('turret', x, -30, Object.assign({ pat: 'hover', ty: ty, vy: 3.2, fire: 'spread3', every: 70 }, opt)));
+      xs.forEach((x) => TW.spawn('turret', x, -30, Object.assign({ pat: 'hover', ty: ty, vy: 3.2, fire: 'spread3', every: 160 }, opt)));
     },
   };
   TW.F = F;
@@ -205,7 +205,7 @@
   /* 敌方追踪导弹：曲线逼近玩家，飞行约 5 秒后燃料耗尽改直线 */
   TW.enemyMissile = function (x, y, ang, sp) {
     const g = G();
-    if (g.ebullets.length > 420) return;
+    if (g.ebullets.length > 120) return;   // 密集恐惧症保险丝：同屏敌弹硬上限
     g.ebullets.push({
       x: x, y: y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
       r: 5, kind: 'missileH', t: 0, grazed: false, warn: 0,
@@ -217,23 +217,20 @@
     const a0 = aimAt(e.x, e.y);
     switch (e.fire) {
       case 'aimed':
-        TW.enemyShot(e.x, e.y + 10, a0, 2.6, e.type === 'tank' ? 'amber' : 'red'); break;
+        TW.enemyShot(e.x, e.y + 10, a0, 2.2, e.type === 'tank' ? 'amber' : 'red'); break;
       case 'spread3':
-        for (let i = -1; i <= 1; i++) TW.enemyShot(e.x, e.y + 10, a0 + i * 0.22, 2.5, 'amber'); break;
+        for (let i = -1; i <= 1; i += 2) TW.enemyShot(e.x, e.y + 10, a0 + i * 0.26, 2.0, 'amber'); break;
       case 'spread5':
-        for (let i = -2; i <= 2; i++) TW.enemyShot(e.x, e.y + 10, a0 + i * 0.18, 2.4, 'magenta'); break;
+        for (let i = -1; i <= 1; i++) TW.enemyShot(e.x, e.y + 10, a0 + i * 0.3, 2.0, 'magenta'); break;
       case 'ring5':
-        for (let i = 0; i < 5; i++) TW.enemyShot(e.x, e.y, (Math.PI * 2 / 5) * i + e.t * 0.02, 2.3, 'purple'); break;
-      case 'ring8':
-        for (let i = 0; i < 8; i++) TW.enemyShot(e.x, e.y, (Math.PI * 2 / 8) * i + e.t * 0.01, 2.2, 'purple'); break;
-      case 'ring12':
-        for (let i = 0; i < 12; i++) TW.enemyShot(e.x, e.y, (Math.PI * 2 / 12) * i, 1.9, 'magenta'); break;
+        for (let i = 0; i < 5; i++) TW.enemyShot(e.x, e.y, (Math.PI * 2 / 5) * i + e.t * 0.02, 1.8, 'purple'); break;
+      case 'ring6':
+        for (let i = 0; i < 6; i++) TW.enemyShot(e.x, e.y, (Math.PI * 2 / 6) * i + e.t * 0.012, 1.7, 'purple'); break;
       case 'bomb':
-        TW.enemyShot(e.x - 12, e.y + 14, Math.PI / 2, 1.7, 'big');
-        TW.enemyShot(e.x + 12, e.y + 14, Math.PI / 2, 1.7, 'big'); break;
+        TW.enemyShot(e.x, e.y + 14, Math.PI / 2, 1.4, 'big'); break;
       case 'missile2':
-        TW.enemyMissile(e.x - 9, e.y + 12, a0 - 0.5, 1.7);
-        TW.enemyMissile(e.x + 9, e.y + 12, a0 + 0.5, 1.7); break;
+        TW.enemyMissile(e.x - 9, e.y + 12, a0 - 0.5, 1.4);
+        TW.enemyMissile(e.x + 9, e.y + 12, a0 + 0.5, 1.4); break;
       case 'none': break;
       default: break;
     }
@@ -333,7 +330,7 @@
         S(720, () => F.dive('fighter', 6, -1, 20)),
         S(900, () => F.dive('fighter', 6, 1, 20)),
         S(1100, () => F.line('bomber', 3, X(90), X(150), 1.4, { item: 'weapon' })),
-        S(1400, () => F.hover('gunship', 3, [X(80), X(240), X(400)], 150, { item: 'power', fire: 'ring12' })),
+        S(1400, () => F.hover('gunship', 3, [X(80), X(240), X(400)], 150, { item: 'power', fire: 'ring6' })),
         S(1720, () => F.sine('fighter', 7, X(70), X(62), 2.6)),
         S(1960, () => F.col('drone', 8, X(140), 14, { pat: 'sine', amp: 70 })),
         S(2140, () => F.col('drone', 8, X(340), 14, { pat: 'sine', amp: 70 })),
@@ -353,7 +350,7 @@
       script: [
         S(40, () => F.col('drone', 9, X(130), 13, { pat: 'sine', amp: 80 })),
         S(200, () => F.col('drone', 9, X(350), 13, { pat: 'sine', amp: 80 })),
-        S(420, () => F.hover('gunship', 4, [X(70), X(180), X(300), X(410)], 150, { item: 'power', fire: 'ring12' })),
+        S(420, () => F.hover('gunship', 4, [X(70), X(180), X(300), X(410)], 150, { item: 'power', fire: 'ring6' })),
         S(760, () => F.dive('fighter', 7, -1, 18)),
         S(940, () => F.dive('fighter', 7, 1, 18)),
         S(1160, () => F.ground('tank', 6, 42, { item: 'weapon' })),
@@ -363,7 +360,7 @@
         S(2200, () => F.vee('fighter', 9, X(240), X(46), 2.8, { item: 'medal' })),
         S(2460, () => F.ground('tank', 7, 40, { item: 'bomb' })),
         S(2560, () => { F.hover('launcher', 2, [X(150), X(330)], 140, {}); F.hover('ufo', 1, [X(240)], 110, {}); }),
-        S(2740, () => F.hover('gunship', 4, [X(90), X(190), X(290), X(390)], 140, { fire: 'ring12' })),
+        S(2740, () => F.hover('gunship', 4, [X(90), X(190), X(290), X(390)], 140, { fire: 'ring6' })),
         S(3060, () => F.line('bomber', 4, X(70), X(115), 1.6, { item: 'power' })),
       ],
       len: 3350,
@@ -376,14 +373,14 @@
       script: [
         S(40, () => F.vee('fighter', 9, X(240), X(46), 2.8)),
         S(240, () => { F.col('drone', 8, X(110), 12, { pat: 'sine', amp: 80 }); F.col('drone', 8, X(370), 12, { pat: 'sine', amp: 80 }); }),
-        S(520, () => F.hover('gunship', 4, [X(70), X(180), X(300), X(410)], 145, { item: 'power', fire: 'ring12' })),
+        S(520, () => F.hover('gunship', 4, [X(70), X(180), X(300), X(410)], 145, { item: 'power', fire: 'ring6' })),
         S(860, () => F.ground('tank', 7, 38, { item: 'weapon' })),
         S(1120, () => F.line('bomber', 4, X(80), X(110), 1.6, { item: 'power' })),
         S(1440, () => { F.dive('fighter', 7, -1, 16); F.dive('fighter', 7, 1, 16); }),
         S(1700, () => F.turret([X(60), X(160), X(320), X(420)], 200, { fire: 'spread5' })),
         S(1980, () => F.sine('fighter', 9, X(55), X(48), 3.0)),
         S(2260, () => F.line('bomber', 4, X(90), X(110), 1.7, { item: 'bomb' })),
-        S(2540, () => F.hover('gunship', 5, [X(60), X(150), X(240), X(330), X(420)], 140, { fire: 'ring12', item: 'medal' })),
+        S(2540, () => F.hover('gunship', 5, [X(60), X(150), X(240), X(330), X(420)], 140, { fire: 'ring6', item: 'medal' })),
         S(2700, () => { F.hover('sniper', 2, [X(110), X(370)], 170, {}); F.hover('launcher', 2, [X(200), X(280)], 120, {}); }),
         S(2860, () => F.vee('splitter', 5, X(240), X(60), 1.6)),
         S(3120, () => F.ground('tank', 8, 34, { item: 'power' })),
@@ -396,7 +393,7 @@
      血厚、环形弹幕、必掉火力与大量经验 —— 给每关切出三个节奏高点。 */
   TW.spawnElite = function () {
     const e = TW.spawn('elite', X(240), -44, {
-      pat: 'hover', ty: 185, vy: 1.7, item: 'power', fire: 'ring12', every: 78,
+      pat: 'hover', ty: 185, vy: 1.7, item: 'power', fire: 'ring6', every: 160,
     });
     e.elite = true;
     return e;
@@ -482,12 +479,12 @@
       /* Boss 版追踪导弹：真正的曲线导弹（v1.4.4 与杂兵挂弹机同款武器） */
       for (let i = 0; i < n; i++) {
         const a = aimAt(b.x, b.y) + (i - (n - 1) / 2) * 0.5;
-        TW.enemyMissile(b.x + (i - (n - 1) / 2) * 22, b.y + 20, a, 2.0);
+        TW.enemyMissile(b.x + (i - (n - 1) / 2) * 22, b.y + 20, a, 1.5);
       }
     },
     laser(b) {
       for (let k = -1; k <= 1; k += 2) {
-        for (let i = 0; i < 9; i++) TW.enemyShot(b.x + k * 46, b.y + 10, Math.PI / 2, 4.2 + i * 0.18, 'amber');
+        for (let i = 0; i < 5; i++) TW.enemyShot(b.x + k * 46, b.y + 10, Math.PI / 2, 2.6 + i * 0.3, 'amber');
       }
     },
   };
@@ -514,30 +511,30 @@
 
   /* 每关 Boss 的攻击编排：[攻击名, 参数数组, 重复次数, 间隔帧] */
   const BOSS_PLANS = [
-    [ // 阶段 0/1/2
-      [['fan', [5, 0.2, 2.6, 'amber'], 3, 70], ['ring', [14, 2.2, 'purple'], 3, 66], ['rain', [10, 2.4, 'red'], 2, 80]],
-      [['fan', [7, 0.16, 2.8, 'amber'], 3, 60], ['spiral', [3, 2.0, 'green'], 6, 34], ['wall', [11, 2.6], 3, 74]],
-      [['ring', [18, 2.5, 'purple'], 3, 58], ['spiral', [4, 2.2, 'magenta'], 6, 30], ['fan', [7, 0.14, 3.0, 'amber'], 4, 54], ['rain', [12, 2.6, 'red'], 2, 70]],
+    [ // 阶段 0/1/2（v1.4.5 减量版：弹少而慢，每发都可读）
+      [['fan', [3, 0.26, 1.9, 'amber'], 2, 130], ['ring', [7, 1.7, 'purple'], 2, 140], ['rain', [4, 1.6, 'red'], 2, 160]],
+      [['fan', [4, 0.22, 2.0, 'amber'], 2, 120], ['spiral', [2, 1.5, 'green'], 3, 85], ['wall', [7, 1.7], 2, 150]],
+      [['ring', [9, 1.8, 'purple'], 3, 120], ['spiral', [2, 1.6, 'magenta'], 3, 80], ['fan', [4, 0.2, 2.1, 'amber'], 3, 110], ['rain', [5, 1.7, 'red'], 2, 140]],
     ],
     [
-      [['wall', [10, 2.4], 3, 76], ['fan', [5, 0.22, 2.7, 'amber'], 3, 66], ['homing', [3], 2, 90]],
-      [['rain', [12, 2.6, 'red'], 3, 68], ['ring', [16, 2.4, 'purple'], 3, 60], ['spiral', [3, 2.1, 'green'], 6, 32]],
-      [['wall', [12, 2.8], 4, 62], ['spiral', [4, 2.3, 'magenta'], 8, 28], ['fan', [9, 0.14, 3.0, 'amber'], 4, 52], ['homing', [4], 2, 80]],
+      [['wall', [7, 1.7], 2, 150], ['fan', [3, 0.28, 1.9, 'amber'], 2, 130], ['homing', [2], 2, 160]],
+      [['rain', [5, 1.7, 'red'], 2, 140], ['ring', [8, 1.7, 'purple'], 2, 130], ['spiral', [2, 1.5, 'green'], 3, 85]],
+      [['wall', [8, 1.8], 3, 130], ['spiral', [2, 1.7, 'magenta'], 3, 75], ['fan', [4, 0.2, 2.1, 'amber'], 3, 105], ['homing', [3], 2, 140]],
     ],
     [
-      [['ring', [16, 2.5, 'purple'], 3, 62], ['laser', [], 3, 78], ['rain', [12, 2.7, 'red'], 2, 70]],
-      [['spiral', [4, 2.2, 'green'], 7, 30], ['wall', [12, 2.7], 3, 66], ['laser', [], 3, 70]],
-      [['ring', [20, 2.7, 'magenta'], 4, 54], ['spiral', [5, 2.4, 'green'], 8, 26], ['laser', [], 4, 62], ['fan', [9, 0.13, 3.1, 'amber'], 4, 50]],
+      [['ring', [8, 1.8, 'purple'], 2, 130], ['laser', [], 2, 150], ['rain', [5, 1.8, 'red'], 2, 140]],
+      [['spiral', [2, 1.6, 'green'], 3, 80], ['wall', [8, 1.8], 2, 135], ['laser', [], 2, 140]],
+      [['ring', [10, 1.9, 'magenta'], 3, 115], ['spiral', [2, 1.7, 'green'], 3, 75], ['laser', [], 3, 125], ['fan', [4, 0.19, 2.1, 'amber'], 3, 105]],
     ],
     [
-      [['spiral', [3, 2.1, 'green'], 6, 32], ['fan', [7, 0.18, 2.8, 'amber'], 4, 58], ['rain', [14, 2.8, 'red'], 2, 66]],
-      [['wall', [13, 2.8], 3, 60], ['ring', [18, 2.6, 'purple'], 3, 58], ['homing', [4], 3, 74]],
-      [['spiral', [5, 2.4, 'magenta'], 9, 24], ['laser', [], 4, 64], ['ring', [20, 2.8, 'magenta'], 4, 52], ['wall', [13, 3.0], 3, 58]],
+      [['spiral', [2, 1.5, 'green'], 3, 85], ['fan', [4, 0.24, 2.0, 'amber'], 3, 115], ['rain', [6, 1.8, 'red'], 2, 130]],
+      [['wall', [9, 1.8], 2, 125], ['ring', [9, 1.8, 'purple'], 2, 120], ['homing', [3], 2, 140]],
+      [['spiral', [2, 1.7, 'magenta'], 3, 70], ['laser', [], 3, 125], ['ring', [10, 1.9, 'magenta'], 3, 110], ['wall', [9, 1.9], 2, 120]],
     ],
     [
-      [['ring', [18, 2.6, 'purple'], 4, 56], ['laser', [], 3, 72], ['rain', [14, 2.8, 'red'], 3, 62]],
-      [['wall', [13, 2.9], 4, 58], ['spiral', [5, 2.3, 'green'], 8, 26], ['fan', [9, 0.15, 3.0, 'amber'], 4, 52]],
-      [['ring', [22, 2.9, 'magenta'], 4, 50], ['spiral', [6, 2.5, 'green'], 10, 22], ['laser', [], 5, 58], ['homing', [5], 3, 70], ['wall', [14, 3.1], 3, 56]],
+      [['ring', [9, 1.8, 'purple'], 3, 115], ['laser', [], 2, 140], ['rain', [6, 1.8, 'red'], 2, 125]],
+      [['wall', [9, 1.9], 3, 120], ['spiral', [2, 1.6, 'green'], 3, 75], ['fan', [4, 0.21, 2.1, 'amber'], 3, 105]],
+      [['ring', [11, 2.0, 'magenta'], 3, 105], ['spiral', [2, 1.8, 'green'], 4, 68], ['laser', [], 3, 115], ['homing', [3], 2, 135], ['wall', [10, 2.0], 2, 115]],
     ],
   ];
 
