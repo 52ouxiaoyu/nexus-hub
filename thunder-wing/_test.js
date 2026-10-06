@@ -279,7 +279,7 @@ function ok(name, cond, extra) {
     g.ebullets.push({ x: g.players[i].x, y: g.players[i].y, vx: 0, vy: 0, r: 5, kind: 'red', t: 0, gz: [false, false] });
     S.frame(2);
     return { before: before, after: g.players.map((p) => p.lives),
-             out: g.players[i].out, alive: g.alive().length, st: g.state };
+             out: g.players[i].out, alive: g.alive().length, st: g.state, pod: g.pods.length };
   }, idx);
 
   await page.evaluate(() => {
@@ -292,17 +292,39 @@ function ok(name, cond, extra) {
   await page.evaluate(() => {
     const g = window.__twGame.G;
     g.players[0].lives = 0; g.players[1].lives = 0;
+    g.players[0].x = 100; g.players[0].y = 610;
+    g.players[1].x = 400; g.players[1].y = 610;
+    g.players.forEach((p) => { p.ai = false; p.idle = 0; });
   });
   const k2b = await killOne(1);
-  ok('一方出局后游戏继续（另一位仍可战）', k2b.st === 'PLAYING' && k2b.out && k2b.alive === 1, k2b);
+  ok('一方坠机 → 待救援信标 + 游戏继续（另一位仍可战）', k2b.st === 'PLAYING' && k2b.out && k2b.pod === 1 && k2b.alive === 1, k2b);
   const k1 = await killOne(0);
   ok('两人全灭进入结算', k1.st === 'OVER', k1);
+
   const res2 = await page.evaluate(() => ({
     ov: !document.getElementById('ov-result').classList.contains('hidden'),
     has1p: document.getElementById('res-detail').innerHTML.indexOf('1P') >= 0,
     has2p: document.getElementById('res-detail').innerHTML.indexOf('2P') >= 0,
   }));
   ok('结算面板弹出并区分 1P / 2P 战绩', res2.ov && res2.has1p && res2.has2p, res2);
+
+  /* v1.4.7 救援：接触信标把队友拉回战场 */
+  const res3 = await page.evaluate(() => {
+    const S = window.__twGame, g = S.G;
+    S.start('story', true);
+    g.enemies.length = 0; g.ebullets.length = 0; g.pods.length = 0;
+    const p1 = g.players[0], p2 = g.players[1];
+    p1.ai = false; p1.idle = 0; p2.ai = false; p2.idle = 0;
+    p2.lives = 0; p2.invuln = 0;
+    g.ebullets.push({ x: p2.x, y: p2.y, vx: 0, vy: 0, r: 5, kind: 'red', t: 0, gz: [false, false] });
+    S.frame(2);
+    const pod = g.pods[0];
+    if (!pod) return { revived: false, pods: 0 };
+    p1.x = pod.x; p1.y = pod.y;
+    S.frame(3);
+    return { revived: !p2.out, lives: p2.lives, invuln: p2.invuln, pods: g.pods.length };
+  });
+  ok('接触信标救回队友（2 残机 + 无敌 + 信标消失）', res3.revived && res3.lives === 2 && res3.invuln > 0 && res3.pods === 0, res3);
 
   await page.evaluate(() => { window.__twGame.start('story', true); window.__twGame.setPower(5, 0); window.__twGame.setPower(4, 1); window.__twGame.key(' ', true); window.__twGame.key('numpadenter', true); window.__twGame.frame(420); window.__twGame.render(); });
   await page.screenshot({ path: OUT + '/_shot_coop.png' });
