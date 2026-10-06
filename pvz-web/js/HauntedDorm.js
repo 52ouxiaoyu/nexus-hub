@@ -2159,7 +2159,8 @@ class HauntedDorm {
                 continue;
             }
             if (zb.slowT > 0) zb.slowT -= dt;
-            const spd = zb.retreating ? 1000 : (zb.speed * (zb.slowT > 0 ? 0.5 : 1));
+            // 根据用户要求，撤退时不再使用 1000 冲刺速度，而是保持普通走路速度
+            const spd = zb.retreating ? zb.speed : (zb.speed * (zb.slowT > 0 ? 0.5 : 1));
 
             // 找综合仇恨值最高的目标（距离、门血量、门等级综合判断）
             let closestTarget = null;
