@@ -156,7 +156,9 @@ class HauntedDorm {
         const cy = this.worldHeight / 2;
 
         const urlParams = new URLSearchParams(window.location.search);
-        this.role = urlParams.get('role') || 'peashooter'; // Default to peashooter if missing
+        this.gameMode = urlParams.get('mode') || '1p'; // '1p' or '2p'
+        this.role1 = urlParams.get('role1') || urlParams.get('role') || 'peashooter';
+        this.role2 = urlParams.get('role2') || 'peashooter';
         this.faction = urlParams.get('faction') || 'plant';
         this.isZombieFaction = (this.faction === 'zombie');
         
@@ -168,24 +170,31 @@ class HauntedDorm {
             { id: 'squash', name: '倭瓜', icon: 'assets/images/Plants/Squash/0.gif', skillDesc: '【M键】重创僵尸半血 (CD:60s)', imgStyle: 'width: 200%; height: 200%; margin-left: -50%; margin-top: -50%;' }
         ];
         
-        this.playerRoleDef = this.playerRoles.find(r => r.id === this.role) || this.playerRoles[1];
+        this.playerRoleDef1 = this.playerRoles.find(r => r.id === this.role1) || this.playerRoles[1];
+        this.playerRoleDef2 = this.playerRoles.find(r => r.id === this.role2) || this.playerRoles[1];
 
         this.player = {
             id: 1,
-            x: cx - 40, y: cy, sun: 0, spore: 0, hp: 100, maxHp: 100,
-            icon: this.playerRoleDef.icon,
-            roleDef: this.playerRoleDef,
+            x: this.gameMode === '2p' ? cx - 40 : cx, y: cy, sun: 0, spore: 0, hp: 100, maxHp: 100,
+            icon: this.playerRoleDef1.icon,
+            roleDef: this.playerRoleDef1,
             camX: 0, camY: 0, skillCd: 0, sunBuffT: 0, atkBuffT: 0,
             biteT: 0, level: 1, speedBuffT: 0
         };
-        this.player2 = {
-            id: 2,
-            x: cx + 40, y: cy, sun: 0, spore: 0, hp: 100, maxHp: 100,
-            icon: this.playerRoleDef.icon,
-            roleDef: this.playerRoleDef,
-            camX: 0, camY: 0, skillCd: 0, sunBuffT: 0, atkBuffT: 0,
-            biteT: 0, level: 1, speedBuffT: 0
-        };
+        
+        if (this.gameMode === '2p') {
+            this.player2 = {
+                id: 2,
+                x: cx + 40, y: cy, sun: 0, spore: 0, hp: 100, maxHp: 100,
+                icon: this.playerRoleDef2.icon,
+                roleDef: this.playerRoleDef2,
+                camX: 0, camY: 0, skillCd: 0, sunBuffT: 0, atkBuffT: 0,
+                biteT: 0, level: 1, speedBuffT: 0
+            };
+            
+        } else {
+            this.allPlayers = [this.player];
+        }
         this.kmenus = {
             1: { active: false, type: '', options: [], index: 0, c: 0, r: 0 },
             2: { active: false, type: '', options: [], index: 0, c: 0, r: 0 }
@@ -210,7 +219,7 @@ class HauntedDorm {
         this.zombies = [];   // 永远最多 1 只（单僵尸体系）
         this.peas = [];
         this.ais = [];
-        this.allPlayers = [this.player, this.player2];
+        
         this.suns = [];      // 僵尸掉落的阳光袋
 
         // ===== 单僵尸导演系统 =====
@@ -269,8 +278,9 @@ class HauntedDorm {
                                         `<div style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); color:#ff5252; font-size:24px; font-weight:bold; text-shadow:1px 1px 2px black, -1px -1px 2px black; white-space:nowrap;">你 (僵尸)</div>`;
             this.player.el1.style.filter = `drop-shadow(0 0 10px #ff0000)`;
         } else {
-            this.player.el1.innerHTML = `<img src="${this.player.icon}" style="${this.playerRoleDef.imgStyle || ''}">` + 
-                                        `<div style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); color:#00ff00; font-size:24px; font-weight:bold; text-shadow:1px 1px 2px black, -1px -1px 2px black; white-space:nowrap;">你 (${this.playerRoleDef.name})</div>`;
+            const p1Name = this.gameMode === '2p' ? `P1 (${this.playerRoleDef1.name})` : `你 (${this.playerRoleDef1.name})`;
+        this.player.el1.innerHTML = `<img src="${this.player.icon}" style="${this.playerRoleDef1.imgStyle || ''}">` + 
+                                        `<div style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); color:#ffeb3b; font-size:24px; font-weight:bold; text-shadow:1px 1px 2px black, -1px -1px 2px black; white-space:nowrap;">${p1Name}</div>`;
             this.player.el1.style.filter = `drop-shadow(0 0 10px #00ff00)`;
         }
         // v3.92.0：浇水开启时头顶显示 🚿 标志（跟随玩家移动）
@@ -282,18 +292,24 @@ class HauntedDorm {
         this.player.el1.appendChild(wb);
         this.world1.appendChild(this.player.el1);
         
-        this.player2.el1 = document.createElement('div');
-        this.player2.el1.className = 'entity avatar';
-        this.player2.el1.innerHTML = `<img src="${this.player2.icon}" style="${this.playerRoleDef.imgStyle || ''}">` + 
-                                     `<div style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); color:#00ffff; font-size:24px; font-weight:bold; text-shadow:1px 1px 2px black, -1px -1px 2px black; white-space:nowrap;">P2 (${this.playerRoleDef.name})</div>`;
-        this.player2.el1.style.filter = `drop-shadow(0 0 10px #00ffff)`;
-        const wb2 = document.createElement('div');
-        wb2.id = 'water-badge2';
-        wb2.className = 'water-badge';
-        wb2.innerText = '🚿';
-        wb2.style.display = 'none';
-        this.player2.el1.appendChild(wb2);
-        this.world1.appendChild(this.player2.el1);
+        if (this.gameMode === '2p') {
+            this.player2.el1 = document.createElement('div');
+            this.player2.el1.className = 'entity avatar';
+            this.player2.el1.innerHTML = `<img src="${this.player2.icon}" style="${this.playerRoleDef2.imgStyle || ''}">` + 
+                                         `<div style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); color:#4fc3f7; font-size:24px; font-weight:bold; text-shadow:1px 1px 2px black, -1px -1px 2px black; white-space:nowrap;">P2 (${this.playerRoleDef2.name})</div>`;
+            this.player2.el1.style.filter = `drop-shadow(0 0 10px #4fc3f7)`;
+            const wb2 = document.createElement('div');
+            wb2.id = 'water-badge2';
+            wb2.className = 'water-badge';
+            wb2.innerText = '🚿';
+            wb2.style.display = 'none';
+            this.player2.el1.appendChild(wb2);
+            this.world1.appendChild(this.player2.el1);
+        } else {
+            // 隐藏 P2 相关的 UI
+            document.getElementById('p2-cursor').style.display = 'none';
+            document.getElementById('p2-hud').style.display = 'none';
+        }
         
         this.p1Cursor = document.getElementById('p1-cursor');
         this.p2Cursor = document.getElementById('p2-cursor');
@@ -1937,8 +1953,10 @@ class HauntedDorm {
                 pea.el.style.top = pea.y + 'px';
             }
         }
-        this.player2.el1.style.left = this.player2.x + 'px';
-        this.player2.el1.style.top = this.player2.y + 'px';
+        if (this.player2 && this.player2.el1 && !this.player2.dead) {
+            this.player2.el1.style.left = this.player2.x + 'px';
+            this.player2.el1.style.top = this.player2.y + 'px';
+        }
         
         // 渲染高亮光标
         const c1 = Math.floor(this.player.x / this.gridSize) * this.gridSize;
@@ -1948,25 +1966,30 @@ class HauntedDorm {
             this.p1Cursor.style.left = c1 + 'px';
             this.p1Cursor.style.top = r1 + 'px';
         }
-        const c2 = Math.floor(this.player2.x / this.gridSize) * this.gridSize;
-        const r2 = Math.floor(this.player2.y / this.gridSize) * this.gridSize;
-        if (this.p2Cursor) {
+        if (this.player2 && this.p2Cursor) {
+            const c2 = Math.floor(this.player2.x / this.gridSize) * this.gridSize;
+            const r2 = Math.floor(this.player2.y / this.gridSize) * this.gridSize;
             this.p2Cursor.style.display = 'block';
             this.p2Cursor.style.left = c2 + 'px';
             this.p2Cursor.style.top = r2 + 'px';
         }
 
-        // 双人共享摄像机缩放跟随
+        // 摄像机逻辑
         const vpw = this.vp1.clientWidth;
         const vph = this.vp1.clientHeight;
-        const midX = (this.player.x + this.player2.x) / 2;
-        const midY = (this.player.y + this.player2.y) / 2;
-        const dx = Math.abs(this.player.x - this.player2.x) + 300;
-        const dy = Math.abs(this.player.y - this.player2.y) + 300;
+        let midX = this.player.x, midY = this.player.y, scale = 1;
         
-        const scaleX = vpw / dx;
-        const scaleY = vph / dy;
-        const scale = Math.max(0.4, Math.min(1.2, scaleX, scaleY));
+        if (this.player2 && !this.player2.dead) {
+            midX = (this.player.x + this.player2.x) / 2;
+            midY = (this.player.y + this.player2.y) / 2;
+            const dx = Math.abs(this.player.x - this.player2.x) + 300;
+            const dy = Math.abs(this.player.y - this.player2.y) + 300;
+            const scaleX = vpw / dx;
+            const scaleY = vph / dy;
+            scale = Math.max(0.4, Math.min(1.2, scaleX, scaleY));
+        }
+        
+
         
         const cx = Math.max(0, Math.min(this.worldWidth - vpw / scale, midX - vpw / 2 / scale));
         const cy = Math.max(0, Math.min(this.worldHeight - vph / scale, midY - vph / 2 / scale));
@@ -1977,11 +2000,10 @@ class HauntedDorm {
 
     _updateKMenus() {
         // 【优化3】冗余按键映射：为每个操作提供2-3个备用键。如果主键被硬件冲突屏蔽，玩家可以下意识用备用键
-        // P1 OK: Space 或 F 或 J | P1 Cancel: AltRight 或 G 或 K
         this._handleKMenu(1, this.player, [' ', 'f', 'j'], ['altright', 'g', 'k'], ['w'], ['s'], this.p1Kmenu, this.p1Cursor);
-        
-        // P2 OK: Delete 或 右Shift 或 Numpad1 | P2 Cancel: Enter 或 右Ctrl 或 Numpad2
-        this._handleKMenu(2, this.player2, ['delete', 'shiftright', '1'], ['enter', 'controlright', '2'], ['arrowup'], ['arrowdown'], this.p2Kmenu, this.p2Cursor);
+        if (this.gameMode === '2p' && this.player2) {
+            this._handleKMenu(2, this.player2, ['delete', 'shiftright', '1'], ['enter', 'controlright', '2'], ['arrowup'], ['arrowdown'], this.p2Kmenu, this.p2Cursor);
+        }
     }
     
     _checkAnyKey(keyArr) {
@@ -2163,23 +2185,24 @@ class HauntedDorm {
         if (ny1 > 30 && ny1 < this.worldHeight - 10 && !this.checkCollision(nx1, ny1, 10)) this.player.y = ny1;
 
         // P2 Movement - 【SOC防冲突】
-        let vx2 = 0, vy2 = 0;
-        // P2如果在房间内也要应用移速衰减
-        let moveSpeed2 = baseSpeed;
-        const p2PhysRoom = this._insideRoom(Math.floor(this.player2.x/this.gridSize), Math.floor(this.player2.y/this.gridSize));
-        if (p2PhysRoom) moveSpeed2 = baseSpeed / this.timeScale;
-        
-        const p2L = this.keys['arrowleft'], p2R = this.keys['arrowright'], p2U = this.keys['arrowup'], p2D = this.keys['arrowdown'];
-        if (p2L && !p2R) vx2 -= moveSpeed2;
-        if (p2R && !p2L) vx2 += moveSpeed2;
-        if (p2U && !p2D) vy2 -= moveSpeed2;
-        if (p2D && !p2U) vy2 += moveSpeed2;
+        if (this.player2 && !this.player2.dead) {
+            let vx2 = 0, vy2 = 0;
+            let moveSpeed2 = baseSpeed;
+            const p2PhysRoom = this._insideRoom(Math.floor(this.player2.x/this.gridSize), Math.floor(this.player2.y/this.gridSize));
+            if (p2PhysRoom) moveSpeed2 = baseSpeed / this.timeScale;
+            
+            const p2L = this.keys['arrowleft'], p2R = this.keys['arrowright'], p2U = this.keys['arrowup'], p2D = this.keys['arrowdown'];
+            if (p2L && !p2R) vx2 -= moveSpeed2;
+            if (p2R && !p2L) vx2 += moveSpeed2;
+            if (p2U && !p2D) vy2 -= moveSpeed2;
+            if (p2D && !p2U) vy2 += moveSpeed2;
 
-        let nx2 = this.player2.x + vx2 * dt;
-        let ny2 = this.player2.y;
-        if (nx2 > 20 && nx2 < this.worldWidth - 20 && !this.checkCollision(nx2, ny2, 10)) this.player2.x = nx2;
-        nx2 = this.player2.x; ny2 = this.player2.y + vy2 * dt;
-        if (ny2 > 30 && ny2 < this.worldHeight - 10 && !this.checkCollision(nx2, ny2, 10)) this.player2.y = ny2;
+            let nx2 = this.player2.x + vx2 * dt;
+            let ny2 = this.player2.y;
+            if (nx2 > 20 && nx2 < this.worldWidth - 20 && !this.checkCollision(nx2, ny2, 10)) this.player2.x = nx2;
+            nx2 = this.player2.x; ny2 = this.player2.y + vy2 * dt;
+            if (ny2 > 30 && ny2 < this.worldHeight - 10 && !this.checkCollision(nx2, ny2, 10)) this.player2.y = ny2;
+        }
         
         this._updateKMenus();
         this.keysJustPressed = {}; // 清空单帧按键缓存

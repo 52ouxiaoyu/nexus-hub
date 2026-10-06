@@ -20,7 +20,7 @@
   let W = MIN_W;
   /* 战场越宽，自机速度等比补偿，避免横向机动变迟钝 */
   function fieldSpd() { return Math.min(1.25, Math.max(1, W / MIN_W)); }
-  const VERSION = 'v1.4.10';
+  const VERSION = 'v1.4.11';
 
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d', { alpha: false });
@@ -182,14 +182,16 @@
 
   /* ==================== 输入 ====================
      每人只要三个键：方向 + 射击 + 大招；暂停全局共用。
-     1P = WASD / 空格(J) / K(左Shift)
-     2P = ↑↓←→ / 回车 / 右Shift(/)
+     1P = WASD / 空格 / M
+     2P = ↑↓←→ / 小键盘回车 / 小键盘+
      单人模式下方向键同样控制 1P。 */
   const keys = {};
   let touch = false, dragLast = null;
   const KEYMAP = [
-    /* 1P：WASD 移动 · 空格射击 · M 大招 */
-    { lf: ['a'], rt: ['d'], up: ['w'], dn: ['s'], fire: [' '], bomb: ['m'] },
+    /* 1P：WASD 移动 · 空格射击 · M 大招（每键第二个元素是 e.code 兜底：
+       中文输入法/非英文布局会改变 e.key 甚至吞成 'Process'，e.code 恒定不变） */
+    { lf: ['a', 'keya'], rt: ['d', 'keyd'], up: ['w', 'keyw'], dn: ['s', 'keys'],
+      fire: [' ', 'space'], bomb: ['m', 'keym'] },
     /* 2P：方向键移动 · 小键盘回车射击 · 小键盘加号大招（全在空格/M 右侧，互不串台） */
     { lf: ['arrowleft'], rt: ['arrowright'], up: ['arrowup'], dn: ['arrowdown'],
       fire: ['numpadenter'], bomb: ['numpadadd'] },
@@ -251,6 +253,19 @@
     const k = e.key.toLowerCase();
     pressKey(k, (e.code || '').toLowerCase(), false);
   });
+
+  /* v1.4.11 防卡键：窗口失焦 / 切后台时，按住中的键永远收不到 keyup，
+     keys[] 残留 true 会让飞机持续漂移、永远开火，且 hmv 恒真挡住 AI 接管。
+     blur / 切到后台时把所有按键状态与开火状态全部释放。 */
+  function releaseAllKeys() {
+    for (const k in keys) keys[k] = false;
+    for (let i = 0; i < G.players.length; i++) {
+      const pl = G.players[i];
+      if (pl) pl.firing = false;
+    }
+  }
+  window.addEventListener('blur', releaseAllKeys);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAllKeys(); });
 
   function toLogical(cx, cy) {
     const r = cv.getBoundingClientRect();

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1791284056">
+    <link rel="stylesheet" href="css/style.css?v=1791284303">
 </head>
 <body>
     <div id="game-container">
@@ -397,10 +397,33 @@
             </div>
         </div>
 
+        <!-- 猛鬼宿舍：模式选择弹窗 -->
+        <div id="dorm-mode-modal" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.78); z-index:2400; align-items:center; justify-content:center; flex-direction:column;">
+            <div class="diff-panel">
+                <div class="diff-title">守屋大作战<span>HOUSE GUARD · 模式选择</span></div>
+                <div class="diff-sub">选择游玩人数，双人同屏乐趣翻倍！</div>
+                <div class="diff-row">
+                    <button id="btn-dorm-1p" class="diff-btn diff-easy">
+                        <span class="diff-name">单人模式</span>
+                        <span class="diff-en">1 PLAYER</span>
+                        <span class="diff-desc">一人对抗僵尸<br>鼠标/键盘操作</span>
+                    </button>
+                    <button id="btn-dorm-2p" class="diff-btn diff-hard">
+                        <span class="diff-name">双人同屏</span>
+                        <span class="diff-en">2 PLAYERS</span>
+                        <span class="diff-desc">双人合作求生<br>纯键盘独立操作</span>
+                    </button>
+                </div>
+                <div class="diff-foot">
+                    <button id="dorm-mode-back">返回主菜单</button>
+                </div>
+            </div>
+        </div>
+
         <!-- v3.94.7 猛鬼宿舍：皮肤选择弹窗 -->
         <div id="dorm-role-modal" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.78); z-index:2400; align-items:center; justify-content:center; flex-direction:column;">
             <div class="diff-panel" style="width: auto;">
-                <div class="diff-title">守屋大作战<span>HOUSE GUARD · 选择你的专属皮肤</span></div>
+                <div class="diff-title">守屋大作战<span id="dorm-role-title">HOUSE GUARD · 选择你的专属皮肤</span></div>
                 <div class="diff-sub">每个皮肤都有独特的【M键】专属技能！</div>
                 <div class="diff-row" style="gap: 12px;">
                     <button class="diff-btn diff-easy dorm-skin-btn" data-role="sunflower" style="width:140px;">
@@ -520,19 +543,54 @@
         window.addEventListener('resize', resizeGame);
         resizeGame();
 
-        // ===== v3.86.0 猛鬼宿舍：与其他模式统一的进入方式（JS 绑定 + 同款面板弹窗）=====
+        // ===== 猛鬼宿舍：模式选择与皮肤选择流程 =====
         (function bindDorm() {
             const btn = document.getElementById('btn-dorm');
-            const modal = document.getElementById('dorm-role-modal');
-            if (btn && modal) btn.addEventListener('click', () => { modal.style.display = 'flex'; });
+            const modeModal = document.getElementById('dorm-mode-modal');
+            const roleModal = document.getElementById('dorm-role-modal');
+            const roleTitle = document.getElementById('dorm-role-title');
+            
+            let currentMode = '1p';
+            let p1Role = null;
+            
+            if (btn && modeModal) btn.addEventListener('click', () => { modeModal.style.display = 'flex'; });
+            
+            document.getElementById('btn-dorm-1p')?.addEventListener('click', () => {
+                currentMode = '1p';
+                modeModal.style.display = 'none';
+                roleTitle.innerText = 'HOUSE GUARD · 选择你的专属皮肤';
+                roleModal.style.display = 'flex';
+            });
+            
+            document.getElementById('btn-dorm-2p')?.addEventListener('click', () => {
+                currentMode = '2p';
+                p1Role = null;
+                modeModal.style.display = 'none';
+                roleTitle.innerText = 'HOUSE GUARD · P1 请选择皮肤 (WASD移动)';
+                roleTitle.style.color = '#ffeb3b';
+                roleModal.style.display = 'flex';
+            });
+            
+            document.getElementById('dorm-mode-back')?.addEventListener('click', () => { modeModal.style.display = 'none'; });
+            document.getElementById('dorm-back')?.addEventListener('click', () => { roleModal.style.display = 'none'; });
+            
             const skinBtns = document.querySelectorAll('.dorm-skin-btn');
             skinBtns.forEach(sb => {
                 sb.addEventListener('click', () => {
-                    location.href = 'haunted-dorm.html?role=' + sb.getAttribute('data-role');
+                    const role = sb.getAttribute('data-role');
+                    if (currentMode === '1p') {
+                        location.href = `haunted-dorm.html?mode=1p&role1=${role}`;
+                    } else if (currentMode === '2p') {
+                        if (!p1Role) {
+                            p1Role = role;
+                            roleTitle.innerText = 'HOUSE GUARD · P2 请选择皮肤 (方向键移动)';
+                            roleTitle.style.color = '#4fc3f7';
+                        } else {
+                            location.href = `haunted-dorm.html?mode=2p&role1=${p1Role}&role2=${role}`;
+                        }
+                    }
                 });
             });
-            const back = document.getElementById('dorm-back');
-            if (back) back.addEventListener('click', () => { modal.style.display = 'none'; });
         })();
 
         // ===== v3.89.1 返回按钮防白屏：../games.html（hub 门户）只在"整个 hub 为站点根"时存在；
@@ -572,17 +630,17 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1791284056"></script>
-    <script src="js/Board.js?v=1791284056"></script>
-    <script src="js/entities/Entity.js?v=1791284056"></script>
-    <script src="js/entities/Plant.js?v=1791284056"></script>
-    <script src="js/entities/Zombie.js?v=1791284056"></script>
-    <script src="js/entities/Projectile.js?v=1791284056"></script>
-    <script src="js/entities/Sun.js?v=1791284056"></script>
-    <script src="js/managers/WaveManager.js?v=1791284056"></script>
-    <script src="js/managers/CollisionManager.js?v=1791284056"></script>
-    <script src="js/managers/EventManager.js?v=1791284056"></script>
-    <script src="js/GameLoop.js?v=1791284056"></script>
-    <script src="js/HelpGuide.js?v=1791284056"></script>
+    <script src="js/InputManager.js?v=1791284303"></script>
+    <script src="js/Board.js?v=1791284303"></script>
+    <script src="js/entities/Entity.js?v=1791284303"></script>
+    <script src="js/entities/Plant.js?v=1791284303"></script>
+    <script src="js/entities/Zombie.js?v=1791284303"></script>
+    <script src="js/entities/Projectile.js?v=1791284303"></script>
+    <script src="js/entities/Sun.js?v=1791284303"></script>
+    <script src="js/managers/WaveManager.js?v=1791284303"></script>
+    <script src="js/managers/CollisionManager.js?v=1791284303"></script>
+    <script src="js/managers/EventManager.js?v=1791284303"></script>
+    <script src="js/GameLoop.js?v=1791284303"></script>
+    <script src="js/HelpGuide.js?v=1791284303"></script>
 </body>
 </html>

@@ -31,7 +31,7 @@ function ok(name, cond, extra) {
   console.log('\n--- 加载与句柄 ---');
   ok('无页面异常', errors.length === 0, errors.slice(0, 3));
   const ver = await page.evaluate(() => window.__twGame && window.__twGame.VERSION);
-  ok('句柄存在且版本 v1.4.10', ver === 'v1.4.10', ver);
+  ok('句柄存在且版本 v1.4.11', ver === 'v1.4.11', ver);
   ok('初始为菜单态', await page.evaluate(() => window.__twGame.state()) === 'MENU');
   await page.screenshot({ path: OUT + '/_shot_menu.png' });
 
@@ -246,6 +246,29 @@ function ok(name, cond, extra) {
     return S.G.pbullets.filter((b) => b.owner === 1).length;
   });
   ok('2P 回车键独立射击', shoot2 > 0, { shoot2 });
+
+  /* v1.4.11 输入健壮性：e.code 兜底 + 失焦防卡键 */
+  const codeMove = await page.evaluate(() => {
+    const S = window.__twGame, g = S.G;
+    g.players.forEach((p) => { p.ai = false; });
+    S.press('PROCESS', true, 'KeyD'); S.frame(20); S.press('PROCESS', false, 'KeyD');
+    return S.playerInfo()[0].x;
+  });
+  ok('e.key 被输入法吞掉时 e.code 仍可移动', codeMove > 200, { codeMove });
+
+  const stuckKey = await page.evaluate(() => {
+    const S = window.__twGame, g = S.G;
+    g.players.forEach((p) => { p.ai = false; });
+    g.players[0].x = 120; g.players[1].x = 420;
+    S.key('d', true); S.key(' ', true); S.frame(5);
+    const A = S.playerInfo();
+    window.dispatchEvent(new Event('blur'));
+    S.frame(30);
+    const B = S.playerInfo();
+    return { dx: B[0].x - A[0].x, firing: g.players[0].firing };
+  });
+  ok('窗口失焦后卡键被释放（不再漂移）', Math.abs(stuckKey.dx) < 5, stuckKey);
+  ok('窗口失焦后开火状态复位', stuckKey.firing === false, stuckKey);
 
   const p2Item = await page.evaluate(() => {
     const S = window.__twGame, g = S.G;
