@@ -1329,37 +1329,62 @@ class HauntedDorm {
         const tc = Math.floor(targetX / this.gridSize);
         const tr = Math.floor(targetY / this.gridSize);
         
-        const q = [[sc, sr]];
-        const visited = new Set();
-        visited.add(`${sc},${sr}`);
-        const parent = {};
+        if (sc === tc && sr === tr) return [{x: targetX, y: targetY}];
+
+        // 使用 1D 数组代替 Set 和 Object，极大提升寻路性能，解决画面卡顿（尤其是僵尸盯人时）
+        const MAX_CELLS = this.cols * this.rows;
+        const visited = new Uint8Array(MAX_CELLS);
+        const parent = new Int32Array(MAX_CELLS);
         
-        const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
+        const startIdx = sr * this.cols + sc;
+        const targetIdx = tr * this.cols + tc;
+        
+        const q = new Int32Array(MAX_CELLS);
+        let head = 0;
+        let tail = 0;
+        
+        q[tail++] = startIdx;
+        visited[startIdx] = 1;
+        
+        const dirs = [-this.cols, this.cols, -1, 1]; // 上, 下, 左, 右
         let found = false;
         
-        while(q.length > 0) {
-            const [c, r] = q.shift();
-            if (c === tc && r === tr) { found = true; break; }
-            for (const [dc, dr] of dirs) {
-                const nc = c + dc, nr = r + dr;
-                if (nc < 0 || nc >= this.cols || nr < 0 || nr >= this.rows) continue;
-                if (this.walls.has(`${nc},${nr}`) && !(nc === tc && nr === tr)) continue; // Allow entering the door tile itself if it's considered a wall temporarily, though doors are usually not in this.walls
-                const key = `${nc},${nr}`;
-                if (!visited.has(key)) {
-                    visited.add(key);
-                    parent[key] = `${c},${r}`;
-                    q.push([nc, nr]);
-                }
+        while(head < tail) {
+            const currIdx = q[head++];
+            if (currIdx === targetIdx) { found = true; break; }
+            
+            const c = currIdx % this.cols;
+            const r = Math.floor(currIdx / this.cols);
+            
+            for (let i = 0; i < 4; i++) {
+                // 防止左右跨行
+                if (i === 2 && c === 0) continue;
+                if (i === 3 && c === this.cols - 1) continue;
+                
+                const nextIdx = currIdx + dirs[i];
+                if (nextIdx < 0 || nextIdx >= MAX_CELLS) continue;
+                
+                if (visited[nextIdx]) continue;
+                
+                const nc = nextIdx % this.cols;
+                const nr = Math.floor(nextIdx / this.cols);
+                
+                if (this.walls.has(`${nc},${nr}`) && nextIdx !== targetIdx) continue;
+                
+                visited[nextIdx] = 1;
+                parent[nextIdx] = currIdx;
+                q[tail++] = nextIdx;
             }
         }
         
         if (!found) return [{x: targetX, y: targetY}];
         
         const path = [];
-        let curr = `${tc},${tr}`;
-        while(curr !== `${sc},${sr}`) {
-            const [c, r] = curr.split(',');
-            path.unshift({ x: parseInt(c) * this.gridSize + 40, y: parseInt(r) * this.gridSize + 40 });
+        let curr = targetIdx;
+        while (curr !== startIdx) {
+            const c = curr % this.cols;
+            const r = Math.floor(curr / this.cols);
+            path.unshift({ x: c * this.gridSize + 40, y: r * this.gridSize + 40 });
             curr = parent[curr];
         }
         return path;

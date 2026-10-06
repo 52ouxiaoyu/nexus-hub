@@ -19,7 +19,7 @@
   let W = MIN_W;
   /* 战场越宽，自机速度等比补偿，避免横向机动变迟钝 */
   function fieldSpd() { return Math.min(1.25, Math.max(1, W / MIN_W)); }
-  const VERSION = 'v1.4.6';
+  const VERSION = 'v1.4.7';
 
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d', { alpha: false });
@@ -94,6 +94,7 @@
     two: false,              // 是否双人同屏
     frame: 0, stage: 0, stageT: 0, scriptI: 0, pending: [],
     enemies: [], ebullets: [], pbullets: [], items: [], exps: [], rocks: [], beams: [],
+    pods: [],               /* 救援信标（v1.4.7）：队友待救援 */
     boss: null,
     players: [],             // 玩家对象数组（1 或 2 个）
     score: 0, rank: 0, kills: 0,
@@ -107,7 +108,7 @@
     reset() {
       this.enemies.length = 0; this.ebullets.length = 0; this.pbullets.length = 0;
       this.items.length = 0; this.pending.length = 0; this.exps.length = 0;
-      this.rocks.length = 0; this.beams.length = 0;
+      this.rocks.length = 0; this.beams.length = 0; this.pods.length = 0;
       this.frame = 0; this.stageT = 0; this.scriptI = 0; this.boss = null;
       this.score = 0; this.rank = 0; this.kills = 0;
       this.enemySlow = 0;
@@ -641,12 +642,57 @@
         finishRun(false);
         showOverlay('result');
       } else {
-        TW.FX.text(W / 2, H / 2, pl.tag + ' 已出局', PCFG[pl.id].color, 22);
+        /* v1.4.7 双人互助：残机耗尽不掉出场，留下救援信标等队友来救 */
+        G.pods.push({
+          x0: Math.max(50, Math.min(W - 50, pl.x)), x: pl.x, y: pl.y,
+          vy: 0.85, owner: pl.id, t: 0, wait: 0,
+        });
+        TW.FX.text(W / 2, H / 2, pl.tag + ' 已坠机 · 去接触信标营救！', PCFG[pl.id].color, 22);
       }
       return;
     }
     pl.dead = true; pl.invuln = 150;
     G.deathT = 40;
+  }
+
+  /* ==================== 救援信标（v1.4.7 双人互助） ==================== */
+  /* 残机耗尽不掉出场：留下信标缓缓下落，队友冒险接触即可把人拉回战场。
+     信标漏出屏底会从顶部重新入场 —— 救援永远有机会，但要去弹幕里拿。 */
+  function updatePods() {
+    for (let i = G.pods.length - 1; i >= 0; i--) {
+      const pod = G.pods[i];
+      pod.t++;
+      if (pod.wait > 0) {
+        pod.wait--;
+        if (pod.wait === 0) { pod.y = -36; pod.x0 = 60 + Math.random() * Math.max(1, W - 120); }
+        continue;
+      }
+      pod.y += pod.vy;
+      pod.x = pod.x0 + Math.sin(pod.t * 0.02) * 22;
+      if (pod.y > H + 40) { pod.wait = 180; continue; }
+      for (let k = 0; k < G.players.length; k++) {
+        const pl = G.players[k];
+        if (pl.out || pl.dead) continue;
+        if (Math.hypot(pl.x - pod.x, pl.y - pod.y) < 46) { rescue(pl, pod, i); break; }
+      }
+    }
+  }
+
+  function rescue(pl, pod, idx) {
+    const owner = G.players[pod.owner];
+    if (!owner) { G.pods.splice(idx, 1); return; }
+    owner.out = false; owner.dead = false; owner.firing = false;
+    owner.lives = 2; owner.invuln = 210; owner.idle = 0; owner.ai = false;
+    owner.combo = 0; owner.comboT = 0;
+    owner.x = Math.max(40, Math.min(W - 40, pod.x));
+    owner.y = Math.max(120, Math.min(H - 130, pod.y + 50));
+    G.pods.splice(idx, 1);
+    G.clearBullets(false);
+    G.addScore(5000, owner.x, owner.y - 46, pl);
+    TW.FX.ring(owner.x, owner.y, 20, PCFG[owner.id].color, 40);
+    TW.FX.ring(owner.x, owner.y, 44, '#ffffff', 26);
+    TW.FX.text(W / 2, H / 2 - 60, owner.tag + ' 归队！', PCFG[owner.id].color, 24);
+    TW.Audio.extend(); TW.Audio.pickup();
   }
 
   /* ==================== 碰撞 ==================== */
@@ -1009,6 +1055,7 @@
     }
 
     updateItems();
+    updatePods();
     collide();
     TW.updateExp();
     TW.updateRocks();
@@ -1281,6 +1328,38 @@
       ctx.textAlign = 'left';
     }
 
+    /* 救援信标（v1.4.7） */
+    for (let i = 0; i < G.pods.length; i++) {
+      const pod = G.pods[i];
+      const col = PCFG[pod.owner].color;
+      const pulse = 1 + Math.sin(pod.t * 0.12) * 0.18;
+      ctx.save();
+      ctx.translate(pod.x, pod.y);
+      ctx.strokeStyle = col;
+      ctx.globalAlpha = 0.9;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(0, 0, 20 * pulse, 0, 6.29); ctx.stroke();
+      ctx.globalAlpha = 0.4;
+      ctx.beginPath(); ctx.arc(0, 0, 30 * pulse, 0, 6.29); ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = col;
+      ctx.font = '700 17px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('+', 0, 6);
+      ctx.font = '600 10px system-ui, sans-serif';
+      ctx.fillText('RESCUE', 0, -26);
+      ctx.restore();
+      ctx.textAlign = 'left';
+    }
+    if (G.state === 'PLAYING' && G.pods.length) {
+      const pod = G.pods[0];
+      ctx.textAlign = 'center';
+      ctx.font = '600 15px system-ui, sans-serif';
+      ctx.fillStyle = PCFG[pod.owner].color;
+      ctx.fillText((pod.owner === 0 ? '1P' : '2P') + ' 已坠机 — 接触信标营救！', W / 2, H - 84);
+      ctx.textAlign = 'left';
+    }
+
     drawHUD();
   }
 
@@ -1301,7 +1380,7 @@
       if (G.two) {
         ctx.font = '600 13px system-ui, sans-serif';
         ctx.fillStyle = PCFG[i].color;
-        ctx.fillText(pl.tag + (pl.out ? ' OUT' : ' 残机 ' + Math.max(0, pl.lives) + '  大招 ' + pl.bombs),
+        ctx.fillText(pl.tag + (pl.out ? (G.pods.some(p => p.owner === pl.id) ? ' 待救援' : ' OUT') : ' 残机 ' + Math.max(0, pl.lives) + '  大招 ' + pl.bombs),
           W - 12, 26 + i * 20);
       } else {
         ctx.fillStyle = '#9ff0ff';

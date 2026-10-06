@@ -111,6 +111,14 @@
         }
       }
 
+      /* ---- 4.8 救援信标：队友待救援时优先营救（威胁规避仍生效，v1.4.7） ---- */
+      if (g.pods && g.pods.length) {
+        const pod = g.pods[0];
+        const dx = pod.x - cx, dy = pod.y - cy;
+        const d = Math.sqrt(dx * dx + dy * dy) || 0.001;
+        fx += (dx / d) * 2.6; fy += (dy / d) * 2.6;
+      }
+
       /* ---- 5. 拾取：威胁低才去拿，命比资源重要 ---- */
       if (threat < 1.4) {
         let tx = 0, ty = 0, tw = 0;
