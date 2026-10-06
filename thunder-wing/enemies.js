@@ -18,10 +18,10 @@
   const ED = {
     drone: { spr: 'drone', hp: 4, r: 12, score: 100, fire: 'aimed', every: 110 },
     fighter: { spr: 'fighter', hp: 8, r: 13, score: 150, fire: 'spread3', every: 130 },
-    gunship: { spr: 'gunship', hp: 26, r: 19, score: 400, fire: 'ring8', every: 150 },
-    bomber: { spr: 'bomber', hp: 40, r: 24, score: 600, fire: 'bomb', every: 120 },
+    gunship: { spr: 'gunship', hp: 22, r: 19, score: 400, fire: 'ring8', every: 150 },
+    bomber: { spr: 'bomber', hp: 32, r: 24, score: 600, fire: 'bomb', every: 120 },
     tank: { spr: 'tank', hp: 14, r: 15, score: 200, fire: 'aimed', every: 95 },
-    turret: { spr: 'turret', hp: 18, r: 15, score: 250, fire: 'spread3', every: 80 },
+    turret: { spr: 'turret', hp: 15, r: 15, score: 250, fire: 'spread3', every: 80 },
   };
   TW.ED = ED;
 
@@ -283,11 +283,11 @@
 
   /* ==================== Boss ==================== */
   const BOSS_DEF = [
-    { name: '赤鲨级战舰', hp: 400, score: 20000, r: 62 },
-    { name: '苍穹母舰', hp: 520, score: 26000, r: 66 },
-    { name: '深渊要塞', hp: 650, score: 32000, r: 68 },
-    { name: '钢蜈蚣', hp: 780, score: 38000, r: 64 },
-    { name: '终焉旗舰', hp: 950, score: 50000, r: 72 },
+    { name: '赤鲨级战舰', hp: 620, score: 20000, r: 62 },
+    { name: '苍穹母舰', hp: 820, score: 26000, r: 66 },
+    { name: '深渊要塞', hp: 1020, score: 32000, r: 68 },
+    { name: '钢蜈蚣', hp: 1240, score: 38000, r: 64 },
+    { name: '终焉旗舰', hp: 1500, score: 50000, r: 72 },
   ];
   TW.BOSS_DEF = BOSS_DEF;
 

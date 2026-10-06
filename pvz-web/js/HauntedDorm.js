@@ -25,27 +25,27 @@ class HauntedDorm {
                              produce: { sun: 8, every: 2.0 }, up: { cost: 810, sporeCost: 1, cur: 'sun', to: 'sunpea' } },
             sunpea:        { tier: 5, name: '豌豆向日葵', img: 'Plants/TwinSunflower/0.gif', overlay: 'Plants/Peashooter/0.gif', hp: 550, cost: 0, scale: 1.2,
                              overTransform: 'translate(-50%, -50%) translate(0, -28px) scale(0.6)',
-                             produce: { sun: 16, every: 2.0 }, shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, 
+                             produce: { sun: 16, every: 2.0 }, shoot: { dmg: 12, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, 
                              up: { cost: 2430, sporeCost: 10, cur: 'sun', to: 'sunnut' } },
             sunnut:        { tier: 6, name: '坚果向日葵', img: 'Plants/WallNut/0.gif', hp: 2000, cost: 0, scale: 1.2, 
                              overlay: 'Plants/TwinSunflower/0.gif',
-                             produce: { sun: 32, every: 2.0 }, shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, 
+                             produce: { sun: 32, every: 2.0 }, shoot: { dmg: 12, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, 
                              up: { cost: 7290, sporeCost: 50, cur: 'sun', to: 'suncherry' } },
             suncherry:     { tier: 7, name: '樱桃向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 3000, cost: 0, scale: 1.3,
                              overlay: 'Plants/CherryBomb/0.gif',
-                             produce: { sun: 64, every: 2.0 }, shoot: { dmg: 40, cd: 1.0, n: 3, range: 400, img: 'Plants/PB00.gif', back: true },
+                             produce: { sun: 64, every: 2.0 }, shoot: { dmg: 20, cd: 1.0, n: 3, range: 400, img: 'Plants/PB00.gif', back: true },
                              up: { cost: 21870, sporeCost: 250, cur: 'sun', to: 'sunjala' } },
             sunjala:       { tier: 8, name: '火爆向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 5000, cost: 0, scale: 1.4,
                              overlay: 'Plants/Jalapeno/0.gif',
-                             produce: { sun: 128, every: 2.0 }, shoot: { dmg: 50, cd: 0.8, n: 4, range: 500, img: 'Plants/PB00.gif', homing: true },
+                             produce: { sun: 128, every: 2.0 }, shoot: { dmg: 25, cd: 0.8, n: 4, range: 500, img: 'Plants/PB00.gif', homing: true },
                              up: { cost: 65610, sporeCost: 1000, cur: 'sun', to: 'sundoom' } },
             sundoom:       { tier: 9, name: '毁灭向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 8000, cost: 0, scale: 1.5, tint: 'hue-rotate(240deg)',
                              overlay: 'Plants/DoomShroom/0.gif',
-                             produce: { sun: 256, every: 2.0 }, shoot: { dmg: 70, cd: 0.6, n: 6, range: 600, img: 'Plants/PB00.gif', homing: true, aoe: 50 },
+                             produce: { sun: 256, every: 2.0 }, shoot: { dmg: 35, cd: 0.6, n: 6, range: 600, img: 'Plants/PB00.gif', homing: true, aoe: 50 },
                              up: { cost: 196830, sporeCost: 5000, cur: 'sun', to: 'sungatling' } },
             sungatling:    { tier: 10, name: '机枪向日葵', img: 'Plants/TwinSunflower/0.gif', hp: 15000, cost: 0, scale: 1.6,
                              overlay: 'Plants/GatlingPea/0.gif',
-                             produce: { sun: 512, every: 2.0 }, shoot: { dmg: 100, cd: 0.4, n: 8, range: 800, img: 'Plants/PB00.gif', homing: true } },
+                             produce: { sun: 512, every: 2.0 }, shoot: { dmg: 50, cd: 0.4, n: 8, range: 800, img: 'Plants/PB00.gif', homing: true } },
 
             // —— 孢子系 (10级，纯产包子) ——
             puffshroom:    { tier: 1, name: '小喷菇', img: 'Plants/PuffShroom/0.gif',     card: 'PuffShroom.png',     hp: 300, cost: 200, scale: 0.9,
@@ -71,35 +71,35 @@ class HauntedDorm {
 
             // —— 豌豆系 (10级，纯输出，阳光升级) ——
             peashooter:    { tier: 1, name: '豌豆射手', img: 'Plants/Peashooter/0.gif',   card: 'Peashooter.png',  hp: 300, cost: 10,
-                             shoot: { dmg: 20, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, up: { cost: 30, cur: 'sun', to: 'repeater' } },
+                             shoot: { dmg: 12, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif' }, up: { cost: 30, cur: 'sun', to: 'repeater' } },
             repeater:      { tier: 2, name: '双发射手', img: 'Plants/Repeater/0.gif',     card: 'Repeater.png',    hp: 350, cost: 0,
-                             shoot: { dmg: 20, cd: 1.5, n: 2, range: 320, img: 'Plants/PB00.gif' }, up: { cost: 90, cur: 'sun', to: 'threepeater' } },
+                             shoot: { dmg: 12, cd: 1.5, n: 2, range: 320, img: 'Plants/PB00.gif' }, up: { cost: 90, cur: 'sun', to: 'threepeater' } },
             threepeater:   { tier: 3, name: '三线射手', img: 'Plants/Threepeater/0.gif',  card: 'Threepeater.png', hp: 450, cost: 0,   scale: 1.15,
-                             shoot: { dmg: 20, cd: 1.5, n: 3, range: 320, img: 'Plants/PB00.gif', fan: 0.35 }, up: { cost: 270, cur: 'sun', to: 'splitpea' } },
+                             shoot: { dmg: 12, cd: 1.5, n: 3, range: 320, img: 'Plants/PB00.gif', fan: 0.35 }, up: { cost: 270, cur: 'sun', to: 'splitpea' } },
             splitpea:      { tier: 4, name: '双向射手', img: 'Plants/SplitPea/0.gif',     card: 'SplitPea.png',    hp: 550, cost: 0,
-                             shoot: { dmg: 25, cd: 1.3, n: 4, range: 320, img: 'Plants/PB00.gif', back: true }, up: { cost: 810, cur: 'sun', to: 'gatlingpea' } },
+                             shoot: { dmg: 15, cd: 1.3, n: 4, range: 320, img: 'Plants/PB00.gif', back: true }, up: { cost: 810, cur: 'sun', to: 'gatlingpea' } },
             gatlingpea:    { tier: 5, name: '机枪射手', img: 'Plants/GatlingPea/0.gif',   card: 'GatlingPea.png',  hp: 700, cost: 0,   scale: 1.15,
-                             shoot: { dmg: 25, cd: 1.0, n: 4, range: 340, img: 'Plants/PB00.gif' }, up: { cost: 2430, cur: 'sun', to: 'snowpea' } },
+                             shoot: { dmg: 15, cd: 1.0, n: 4, range: 340, img: 'Plants/PB00.gif' }, up: { cost: 2430, cur: 'sun', to: 'snowpea' } },
             snowpea:       { tier: 6, name: '寒冰射手', img: 'Plants/SnowPea/0.gif',      card: 'SnowPea.png',     hp: 1000, cost: 0,
-                             shoot: { dmg: 35, cd: 1.2, n: 4, range: 350, img: 'Plants/PB01.gif', slow: true }, up: { cost: 7290, cur: 'sun', to: 'firepea' } },
+                             shoot: { dmg: 20, cd: 1.2, n: 4, range: 350, img: 'Plants/PB01.gif', slow: true }, up: { cost: 7290, cur: 'sun', to: 'firepea' } },
             firepea:       { tier: 7, name: '火焰豌豆', img: 'Plants/Peashooter/0.gif',   hp: 1500, cost: 0, scale: 1.2, hat: 'Plants/Torchwood/0.gif',
-                             shoot: { dmg: 80, cd: 1.2, n: 4, range: 380, img: 'Plants/PB10.gif', aoe: 50 }, up: { cost: 21870, cur: 'sun', to: 'firerepeater' } },
+                             shoot: { dmg: 45, cd: 1.2, n: 4, range: 380, img: 'Plants/PB10.gif', aoe: 50 }, up: { cost: 21870, cur: 'sun', to: 'firerepeater' } },
             firerepeater:  { tier: 8, name: '火焰双发', img: 'Plants/Repeater/0.gif',     hp: 2200, cost: 0, scale: 1.3, hat: 'Plants/Torchwood/0.gif',
-                             shoot: { dmg: 80, cd: 1.0, n: 6, range: 400, img: 'Plants/PB10.gif', aoe: 50 }, up: { cost: 65610, cur: 'sun', to: 'firethreepeater' } },
+                             shoot: { dmg: 45, cd: 1.0, n: 6, range: 400, img: 'Plants/PB10.gif', aoe: 50 }, up: { cost: 65610, cur: 'sun', to: 'firethreepeater' } },
             firethreepeater:{tier: 9, name: '火焰三线', img: 'Plants/Threepeater/0.gif',  hp: 3500, cost: 0, scale: 1.4, hat: 'Plants/Torchwood/0.gif',
-                             shoot: { dmg: 80, cd: 0.8, n: 9, range: 420, img: 'Plants/PB10.gif', aoe: 50, fan: 0.35 }, up: { cost: 196830, cur: 'sun', to: 'snowthreepeater' } },
+                             shoot: { dmg: 45, cd: 0.8, n: 9, range: 420, img: 'Plants/PB10.gif', aoe: 50, fan: 0.35 }, up: { cost: 196830, cur: 'sun', to: 'snowthreepeater' } },
             snowthreepeater:{tier: 10, name: '寒冰三线', img: 'Plants/Threepeater/0.gif',  hp: 6000, cost: 0, scale: 1.5, hat: 'Plants/IceShroom/0.gif',
-                             shoot: { dmg: 150, cd: 0.6, n: 12, range: 450, img: 'Plants/PB01.gif', slow: true, fan: 0.35, homing: true } },
+                             shoot: { dmg: 80, cd: 0.6, n: 12, range: 450, img: 'Plants/PB01.gif', slow: true, fan: 0.35, homing: true } },
 
             // —— 坚果系 (10级，肉盾) ——
             wallnut:       { tier: 1, name: '坚果',       img: 'Plants/WallNut/0.gif',       card: 'WallNut.png',     hp: 4000,  cost: 50,
                              up: { cost: 40, cur: 'sun', to: 'nutshooter' } },
             nutshooter:    { tier: 2, name: '豌豆坚果',   img: 'Plants/WallNut/0.gif', overlay: 'Plants/Peashooter/0.gif',      card: 'WallNut.png',  hp: 5000,  cost: 0, scale: 1.05,
                              overTransform: 'translate(-50%, -50%) translate(2px, -28px) scale(0.6)',
-                             shoot: { dmg: 20, cd: 1.6, n: 1, range: 320, img: 'Plants/PB00.gif', homing: true }, up: { cost: 100, cur: 'sun', to: 'nutgunner' } },
+                             shoot: { dmg: 12, cd: 1.6, n: 1, range: 320, img: 'Plants/PB00.gif', homing: true }, up: { cost: 100, cur: 'sun', to: 'nutgunner' } },
             nutgunner:     { tier: 3, name: '射手坚果',   img: 'Plants/WallNut/0.gif', overlay: 'Plants/Repeater/0.gif',      hp: 6500,  cost: 0, scale: 1.1, tint: 'saturate(1.4) brightness(1.12)',
                              overTransform: 'translate(-50%, -50%) translate(2px, -28px) scale(0.6)',
-                             shoot: { dmg: 20, cd: 1.3, n: 2, range: 320, img: 'Plants/PB00.gif', homing: true }, up: { cost: 160, cur: 'sun', to: 'cabbagenut' } },
+                             shoot: { dmg: 12, cd: 1.3, n: 2, range: 320, img: 'Plants/PB00.gif', homing: true }, up: { cost: 160, cur: 'sun', to: 'cabbagenut' } },
             cabbagenut:    { tier: 4, name: '卷心菜坚果', img: 'Plants/WallNut/0.gif',       hp: 8500,  cost: 0, scale: 1.15, hat: 'Plants/CabbagePult/Cabbage.png',
                              lob: { dmg: 45, cd: 2.2, range: 420, aoe: 70, img: 'Plants/CabbagePult/Cabbage.png' }, up: { cost: 260, cur: 'sun', to: 'melonnut' } },
             melonnut:      { tier: 5, name: '西瓜坚果',   img: 'Plants/WallNut/0.gif',       hp: 12000, cost: 0, scale: 1.2, hat: 'Plants/MelonPult/Melon.png',
@@ -1968,7 +1968,7 @@ class HauntedDorm {
             }
 
             // 残血回城逻辑
-            if (zb.hp < zb.maxHp * 0.1) zb.retreating = true;
+            if (zb.hp < zb.maxHp * 0.3) zb.retreating = true;
             if (zb.hp >= zb.maxHp) zb.retreating = false;
             
             if (zb.retreating) {
@@ -2039,7 +2039,7 @@ class HauntedDorm {
 
                 // 先看目标格有没有植物（啃食优先；地刺贴地不挡路不被啃）
                 const atkPlant = this.getPlantAt(nzx, nzy);
-                if (atkPlant && !atkPlant.def.ground) {
+                if (atkPlant && !atkPlant.def.ground && !zb.retreating) {
                     // 站定慢啃：每 2.4s 一口，一口一口咬
                     zb.biteT = (zb.biteT || 0) + dt;
                     if (zb.biteT >= BITE_CD) {

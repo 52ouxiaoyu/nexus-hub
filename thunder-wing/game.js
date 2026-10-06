@@ -7,6 +7,13 @@
      纵向高度恒定 800，横向宽度按屏幕比例自适应：
      宽屏摊宽到 MAX_W（视野更大、闪避空间更足），手机保持 480 竖屏手感不缩水。 */
   const H = 800, MIN_W = 420, MAX_W = 720;
+
+  /* ---- 节奏常量（v1.3.0 实测调优）----
+     COMBO_WIN：连击窗口。原 100 帧(1.67s) 短于击破间隔，连击必然断、倍率形同虚设。
+     COMBO_CAP：倍率封顶所需连击数，x4.00 上限不变。
+     BOSS_GRACE：脚本跑完后等待清场的宽限帧，超时强制 Boss 登场（防炮台卡关）。 */
+  const COMBO_WIN = 210, COMBO_CAP = 30, BOSS_GRACE = 240;
+  const PICK_LIFE = 180;   /* 三选一自动锁定前的思考帧数（3 秒） */
   let W = MIN_W;
   /* 战场越宽，自机速度等比补偿，避免横向机动变迟钝 */
   function fieldSpd() { return Math.min(1.25, Math.max(1, W / MIN_W)); }
@@ -30,9 +37,9 @@
 
   /* ==================== 武器 ==================== */
   const WEAPONS = [
-    { name: '火神炮', en: 'VULCAN', spr: 'vulcan', dmg: 1, interval: 7, color: '#7fe8ff' },
-    { name: '激光炮', en: 'LASER', spr: 'laser', dmg: 4, interval: 11, color: '#5fb0ff', pierce: 2 },
-    { name: '追踪导弹', en: 'MISSILE', spr: 'missile', dmg: 3, interval: 14, color: '#5ce8b4', homing: true },
+    { name: '火神炮', en: 'VULCAN', spr: 'vulcan', dmg: 2, interval: 6, color: '#7fe8ff' },
+    { name: '激光炮', en: 'LASER', spr: 'laser', dmg: 7, interval: 10, color: '#5fb0ff', pierce: 2 },
+    { name: '追踪导弹', en: 'MISSILE', spr: 'missile', dmg: 5, interval: 12, color: '#5ce8b4', homing: true },
   ];
   TW.WEAPONS = WEAPONS;
 
@@ -62,6 +69,13 @@
       fireT: 0, charge: 0, invuln: 0, firing: false,
       lives: 3, bombs: 3, power: 1, weapon: 0, spd: 3,
       combo: 0, comboT: 0, graze: 0, kills: 0,
+      /* Build（v1.3.0）：局内成长 */
+      perks: {}, exp: 0, level: 0, nextExp: 5, queue: [],
+      pick: null, pickIdx: 1, pickT: 0, pickMove: 0,
+      satN: 0, satA: 0, satT: 0,
+      /* 超载 OVERDRIVE（v1.3.0）：擦弹充能换即时战力 */
+      od: 0, odCharge: 0, shieldT: 0,
+      pk(n) { return this.perks[n] || 0; },
     };
   }
 
@@ -71,7 +85,7 @@
     mode: 'story',           // story / endless
     two: false,              // 是否双人同屏
     frame: 0, stage: 0, stageT: 0, scriptI: 0, pending: [],
-    enemies: [], ebullets: [], pbullets: [], items: [],
+    enemies: [], ebullets: [], pbullets: [], items: [], exps: [],
     boss: null,
     players: [],             // 玩家对象数组（1 或 2 个）
     score: 0, rank: 0, kills: 0,
@@ -81,7 +95,7 @@
 
     reset(two) {
       this.enemies.length = 0; this.ebullets.length = 0; this.pbullets.length = 0;
-      this.items.length = 0; this.pending.length = 0;
+      this.items.length = 0; this.pending.length = 0; this.exps.length = 0;
       this.frame = 0; this.stageT = 0; this.scriptI = 0; this.boss = null;
       this.score = 0; this.rank = 0; this.kills = 0;
       this.nextExtend = 80000; this.wave = 0; this.clearT = 0; this.flash = 0; this.deathT = 0;
@@ -93,7 +107,7 @@
     },
     rankSpd() { return 1 + this.rank * 0.0025; },
     rankRate() { return 1 + this.rank * 0.004; },
-    mult(pl) { const p = pl || this.players[0]; return p ? 1 + Math.min(p.combo, 60) * 0.05 : 1; },
+    mult(pl) { const p = pl || this.players[0]; return p ? 1 + Math.min(p.combo, COMBO_CAP) * (3 / COMBO_CAP) : 1; },
     alive() { const a = []; for (let i = 0; i < this.players.length; i++) if (!this.players[i].out) a.push(this.players[i]); return a; },
     grazeTotal() { let n = 0; for (let i = 0; i < this.players.length; i++) n += this.players[i].graze; return n; },
     bombTotal() { let n = 0; for (let i = 0; i < this.players.length; i++) n += Math.max(0, this.players[i].bombs); return n; },
@@ -187,7 +201,10 @@
     }
     if (G.state === 'PLAYING') {
       for (let i = 0; i < G.players.length; i++) {
-        if (!e.repeat && isBomb(i, k, code)) useBomb(G.players[i]);
+        if (e.repeat) continue;
+        const pl = G.players[i];
+        if (pl && pl.pick && (isBomb(i, k, code) || isFire(i, k, code))) { TW.confirmPick(pl); continue; }
+        if (isBomb(i, k, code)) useBomb(pl);
       }
     }
     if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].indexOf(k) >= 0) e.preventDefault();
@@ -256,16 +273,67 @@
 
     if (pl.invuln > 0 && pl.invuln % 8 < 4) { /* 闪烁 */ }
 
+    /* 三选一：左右移动改高亮，超时自动锁定（不新增按键、不打断节奏） */
+    if (TW.updatePick(pl, dx)) {
+      if (pl.pickT >= PICK_LIFE) TW.confirmPick(pl);
+      updateSats(pl);
+      return;
+    }
+    if (pl.shieldT > 0) pl.shieldT--;
+    if (pl.od > 0) pl.od--;
+
     /* 射击 */
     const wp = WEAPONS[pl.weapon];
     const shooting = pl.firing || (touch && pl.id === 0);
     if (shooting && G.state === 'PLAYING') {
       pl.fireT--;
-      if (pl.fireT <= 0) { shoot(pl, wp); pl.fireT = wp.interval; }
+      if (pl.fireT <= 0) {
+        shoot(pl, wp);
+        /* 射速：词条 +18%/级，超载时再 ×1.35 */
+        const k = (1 + 0.18 * pl.pk('rapid')) * (pl.od > 0 ? 1.35 : 1);
+        pl.fireT = Math.max(3, Math.round(wp.interval / k));
+      }
       pl.charge++;
       if (pl.charge >= 48) { pl.charge = 0; fireCharge(pl, wp); }
     } else if (pl.charge > 0) {
       pl.charge = Math.max(0, pl.charge - 1.5);
+    }
+    updateSats(pl);
+  }
+
+  function pickActive() {
+    for (let i = 0; i < G.players.length; i++) if (G.players[i] && G.players[i].pick) return true;
+    return false;
+  }
+
+  /* 环绕炮台：自动锁定最近敌人开火 */
+  function updateSats(pl) {
+    if (!pl.satN) return;
+    pl.satA += 0.05;
+    if (pl.satT > 0) { pl.satT--; return; }
+    let best = null, bd = Infinity;
+    for (let i = 0; i < G.enemies.length; i++) {
+      const e = G.enemies[i];
+      if (e.dead || e.dying) continue;
+      const d = Math.hypot(e.x - pl.x, e.y - pl.y);
+      if (d < bd) { bd = d; best = e; }
+    }
+    if (!best) return;
+    pl.satT = 26;
+    for (let i = 0; i < pl.satN; i++) {
+      const a = pl.satA + (Math.PI * 2 / pl.satN) * i;
+      const sx = pl.x + Math.cos(a) * 46, sy = pl.y + Math.sin(a) * 46;
+      addBullet(pl, sx, sy, Math.atan2(best.y - sy, best.x - sx), 9, 2, 'wing', 0);
+    }
+  }
+
+  /* 击破溅射：向四周喷弹片，制造连锁清屏的爽点 */
+  function splashOnKill(e, pl) {
+    const lv = pl ? pl.pk('splash') : 0;
+    if (!lv) return;
+    const n = 4 + lv * 2;
+    for (let i = 0; i < n; i++) {
+      addBullet(pl, e.x, e.y, (Math.PI * 2 / n) * i, 7, 2, 'wing', 0);
     }
   }
 
@@ -273,18 +341,18 @@
     const lv = pl.power;
     const ang = -Math.PI / 2;
     if (pl.weapon === 0) {
-      const n = [1, 2, 3, 3, 5][lv - 1];
-      const spread = [0, 0.07, 0.14, 0.16, 0.15][lv - 1];
+      const n = [2, 3, 4, 5, 7][lv - 1];
+      const spread = [0.05, 0.09, 0.14, 0.17, 0.16][lv - 1];
       for (let i = 0; i < n; i++) {
         const off = (i - (n - 1) / 2) * spread;
         addBullet(pl, pl.x, pl.y - 14, ang + off, 11, wp.dmg, wp.spr, 0);
       }
     } else if (pl.weapon === 1) {
-      const n = [1, 1, 2, 2, 3][lv - 1];
-      const offs = n === 1 ? [0] : n === 2 ? [-8, 8] : [-12, 0, 12];
+      const n = [1, 2, 2, 3, 4][lv - 1];
+      const offs = n === 1 ? [0] : n === 2 ? [-8, 8] : n === 3 ? [-12, 0, 12] : [-18, -6, 6, 18];
       for (let i = 0; i < n; i++) addBullet(pl, pl.x + offs[i], pl.y - 16, ang, 15, wp.dmg, wp.spr, 2);
     } else {
-      const n = [1, 2, 2, 3, 3][lv - 1];
+      const n = [2, 2, 3, 4, 5][lv - 1];
       for (let i = 0; i < n; i++) {
         const off = n === 1 ? 0 : (i - (n - 1) / 2) * 0.5;
         addBullet(pl, pl.x, pl.y - 12, ang + off * 0.25, 7.5, wp.dmg, wp.spr, 0, true);
@@ -432,11 +500,13 @@
     TW.FX.boom(e.x, e.y, e.type === 'bomber' || e.type === 'gunship' ? 1.7 : 1, '#ffb04a');
     TW.Audio.explode();
     G.kills++;
-    if (pl) { pl.kills++; pl.combo++; pl.comboT = 100; }
+    if (pl) { pl.kills++; pl.combo++; pl.comboT = COMBO_WIN; }
     G.rank = Math.min(100, G.rank + 0.18);
     G.addScore(e.score, e.x, e.y - 10, pl);
+    TW.spawnExp(e.x, e.y, (e.type === 'gunship' || e.type === 'bomber') ? 3 : 1);
+    splashOnKill(e, pl);
     if (e.item) TW.dropItem(e.x, e.y, e.item);
-    else if (Math.random() < (G.two ? 0.1 : 0.06)) TW.dropItem(e.x, e.y, 'medal');
+    else if (Math.random() < (G.two ? 0.18 : 0.14)) TW.dropItem(e.x, e.y, 'medal');
   }
 
   function bossDown(b, pl) {
@@ -620,11 +690,23 @@
       st.script[G.scriptI].fn();
       G.scriptI++;
     }
-    if (G.scriptI >= st.script.length && G.stageT >= st.len && !G.boss &&
-      G.enemies.length === 0 && G.pending.length === 0) {
-      TW.spawnBoss(st.boss);
-      G.msgText = 'WARNING';
-      G.waveMsg = 110;
+    if (G.scriptI >= st.script.length && G.stageT >= st.len && !G.boss && G.pending.length === 0) {
+      /* 原逻辑要求场上敌人全部清零才出 Boss；turret / hover 不会自己离场，
+         漏掉一个角落炮台就会无限拖住关卡。改为：清场即触发，超时 4 秒强制触发并让残敌撤离。 */
+      const forced = G.stageT >= st.len + BOSS_GRACE && G.enemies.length > 0;
+      if (G.enemies.length === 0 || forced) {
+        if (forced) {
+          for (let i = 0; i < G.enemies.length; i++) {
+            const e = G.enemies[i];
+            if (e.boss) continue;
+            e.vy = 3.2; e.fireT = 99999; e.leaving = true;
+          }
+          G.enemies.length = 0;
+        }
+        TW.spawnBoss(st.boss);
+        G.msgText = 'WARNING';
+        G.waveMsg = 110;
+      }
     }
   }
 
@@ -702,8 +784,13 @@
       if (e.dead && !e.boss) G.enemies.splice(i, 1);
     }
 
-    updateItems();
-    collide();
+    /* 三选一期间世界降速到 1/3（玩家照常操作），既保留紧张感又不打断节奏 */
+    const slow = pickActive();
+    if (!slow || (G.frame % 3 === 0)) {
+      updateItems();
+      collide();
+    }
+    TW.updateExp();
     TW.FX.update();
 
     /* 背景 */
