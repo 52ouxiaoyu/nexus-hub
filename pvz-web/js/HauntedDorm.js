@@ -119,9 +119,8 @@ class HauntedDorm {
             potatomine:    { name: '土豆雷', img: 'Plants/PotatoMine/0.gif', card: 'PotatoMine.png', hp: 300, cost: 25, mine: true },
             spikeweed:     { name: '地刺',   img: 'Plants/Spikeweed/0.gif',  card: 'Spikeweed.png',  hp: 99999, cost: 50, sporeCost: 50, ground: true,
                              spike: { dps: 200, r: 55 } },
-            iceshroom:     { name: '极寒冰阵', img: 'Plants/IceShroom/0.gif',  card: 'IceShroom.png',  hp: 2000,  cost: 100, sporeCost: 100,
-                             freeze: { aura: true, slow: 0.5, dps: 80 } },
-            doomshroom:    { name: '毁灭重炮', img: 'Plants/DoomShroom/0.gif', card: 'DoomShroom.png', hp: 2000,  cost: 200, sporeCost: 200,
+            iceshroom:     { name: '寒冰菇', img: 'Plants/IceShroom/0.gif',  card: 'IceShroom.png',  hp: 99999,  cost: 0, sporeCost: 50, instant: true },
+            doomshroom:    { name: '毁灭重炮', img: 'Plants/DoomShroom/0.gif', card: 'DoomShroom.png', hp: 2000,  cost: 200, sporeCost: 500,
                              nuke: { lob: true, dmg: 800, pct: 0.04, cd: 4.0, img: 'Plants/DoomShroom/0.gif' } }
         };
     }
@@ -512,6 +511,24 @@ class HauntedDorm {
     }
 
     spawnPlant(col, row, type, isDoor = false) {
+        if (type === 'iceshroom') {
+            if (this.zombies[0] && !this.zombies[0].dead) {
+                const zb = this.zombies[0];
+                zb.stunT = 5.0; // 冰冻 5 秒
+                this._flyText(zb.x, zb.y, '❄️ 极寒冰封 (5秒)', '#7fd8ff');
+                this.playSfx('frozen.mp3', 0.5);
+                const iceEl = document.createElement('div');
+                iceEl.className = 'entity';
+                iceEl.style.cssText = `width:100px; height:100px; left:${zb.x}px; top:${zb.y}px; z-index:200; pointer-events:none;`;
+                iceEl.innerHTML = '<img src="assets/images/Plants/IceShroom/0.gif" style="width:100%;height:100%; transform:translate(-50%,-50%);">';
+                this.world1.appendChild(iceEl);
+                setTimeout(() => iceEl.remove(), 1000);
+            } else {
+                this._flyText(this.player.x, this.player.y, '僵尸未出笼或已死', '#ff8a8a');
+            }
+            return;
+        }
+
         if (this.plants.some(pl => pl.c === col && pl.r === row)) return;
         const rm = this._insideRoom(col, row);
         if (rm && !rm.owner && !this.player.room) {
@@ -1703,6 +1720,28 @@ class HauntedDorm {
         for (const ai of this.ais) {
             if (ai.dead) continue;
             
+            // 【新增】人机抢盲盒机制
+            if (!ai.dead && this.ghostSpawned && this.airdrops && this.airdrops.length > 0) {
+                // 如果在自己房间待命，有概率出门抢盲盒
+                if (ai.room && (!ai.path || ai.path.length === 0) && Math.random() < 0.005) {
+                    const drop = this.airdrops[Math.floor(Math.random() * this.airdrops.length)];
+                    ai.targetDrop = drop;
+                    ai.path = this._findPath(ai.x, ai.y, drop.x, drop.y);
+                    this._flyText(ai.x, ai.y - 30, "冲鸭！抢盲盒！", "#aaa");
+                }
+                // 如果盲盒消失了，放弃目标回家
+                if (ai.targetDrop && ai.path && ai.path.length > 0) {
+                    if (!this.airdrops.includes(ai.targetDrop)) {
+                        ai.targetDrop = null;
+                        if (ai.room) {
+                            const p = this._findPath(ai.x, ai.y, ai.room.frontX, ai.room.frontY);
+                            p.push({ x: (ai.room.x + ai.room.tpl.bed.c) * 80 + 40, y: (ai.room.y + ai.room.tpl.bed.r) * 80 + 40 });
+                            ai.path = p;
+                        }
+                    }
+                }
+            }
+
             // 【新增】人机逃生机制
             if (ai.room && this.ghostSpawned) {
                 const door = this.getPlantAt(ai.room.doorCol * 80, ai.room.doorRow * 80);
@@ -1845,6 +1884,32 @@ class HauntedDorm {
                     this.airdrops.splice(i, 1);
                     continue;
                 }
+                
+                // AI 抢夺检测
+                let pickedByAI = null;
+                for (const ai of this.ais) {
+                    if (!ai.dead && Math.hypot(ai.x - a.x, ai.y - a.y) < 50) {
+                        pickedByAI = ai;
+                        break;
+                    }
+                }
+                if (pickedByAI) {
+                    pickedByAI.sun += 1000;
+                    pickedByAI.spore += 100;
+                    this._flyText(a.x, a.y, '🤖 盲盒被AI抢走了！', '#aaa');
+                    this.playSfx('sun.mp3', 0.5);
+                    a.el.remove();
+                    this.airdrops.splice(i, 1);
+                    // AI 抢到后回家
+                    if (pickedByAI.room) {
+                        const p = this._findPath(pickedByAI.x, pickedByAI.y, pickedByAI.room.frontX, pickedByAI.room.frontY);
+                        p.push({ x: (pickedByAI.room.x + pickedByAI.room.tpl.bed.c) * 80 + 40, y: (pickedByAI.room.y + pickedByAI.room.tpl.bed.r) * 80 + 40 });
+                        pickedByAI.path = p;
+                        pickedByAI.targetDrop = null;
+                    }
+                    continue;
+                }
+
                 if (Math.hypot(this.player.x - a.x, this.player.y - a.y) < 50) {
                     const r = Math.floor(Math.random() * 15);
                     switch(r) {
