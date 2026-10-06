@@ -16,77 +16,119 @@ class HauntedDorm {
         return {
             // —— 阳光系 (产阳光) ——
             sunshroom:     { tier: 1, name: '阳光菇',   img: 'Plants/SunShroom/0.gif',   hp: 1000, cost: 0,
-                             produce: { sun: 1, every: 2.0 }, up: { cost: 30, cur: 'sun', to: 'sunflower' } },
-            sunflower:     { tier: 2, name: '向日葵',   img: 'Plants/SunFlower/0.gif',   hp: 1500, cost: 0, scale: 1.1,
-                             produce: { sun: 4, every: 2.0 }, up: { cost: 90, cur: 'sun', to: 'twinsunflower' } },
-            twinsunflower: { tier: 3, name: '双子向日葵',img: 'Plants/TwinSunflower/0.gif', hp: 2000, cost: 0, scale: 1.2,
-                             produce: { sun: 12, every: 2.0 }, up: { cost: 270, cur: 'sun', to: 'twinsunflower2' } },
-            twinsunflower2:{ tier: 4, name: '双子向日葵 Lv2',img: 'Plants/TwinSunflower/0.gif', hp: 2500, cost: 0, scale: 1.3, tint: 'brightness(1.2)',
-                             produce: { sun: 32, every: 2.0 }, up: { cost: 810, cur: 'sun', to: 'twinsunflower3' } },
-            twinsunflower3:{ tier: 5, name: '双子向日葵 Lv3',img: 'Plants/TwinSunflower/0.gif', hp: 3000, cost: 0, scale: 1.4, tint: 'brightness(1.5)',
-                             produce: { sun: 80, every: 2.0 } },
+                             produce: { sun: 1, every: 2.0 }, up: { cost: 30, to: 'bigsunshroom' } },
+            bigsunshroom:  { tier: 2, name: '大阳光菇', img: 'Plants/SunShroom/0.gif',   hp: 1500, cost: 0, scale: 1.2,
+                             produce: { sun: 2, every: 2.0 }, up: { cost: 90, to: 'sunflower' } },
+            sunflower:     { tier: 3, name: '向日葵',   img: 'Plants/SunFlower/0.gif',   hp: 2000, cost: 0, scale: 1.0,
+                             produce: { sun: 4, every: 2.0 }, up: { cost: 150, to: 'peasunflower' } },
+            peasunflower:  { tier: 4, name: '豌豆向日葵',img: 'Plants/SunFlower/0.gif', overlay: 'Plants/Peashooter/0.gif', hp: 2500, cost: 0, scale: 1.1,
+                             overTransform: 'translate(-50%, -50%) translate(2px, -18px) scale(0.7)',
+                             produce: { sun: 6, every: 2.0 }, shoot: {dmg: 15, cd: 2.0, n: 1, range: 450, img: 'Plants/PB00.gif', homing: true}, up: { cost: 400, sporeCost: 50, to: 'hypnosunflower' } },
+            hypnosunflower:{ tier: 5, name: '魅惑向日葵',img: 'Plants/SunFlower/0.gif', hp: 3000, cost: 0, scale: 1.2, tint: 'hue-rotate(280deg) saturate(1.5)',
+                             produce: { sun: 10, every: 2.0 }, shoot: {dmg: 20, cd: 1.5, n: 1, range: 450, img: 'Plants/PB00.gif', homing: true}, up: { cost: 1000, sporeCost: 100, to: 'crystalsunflower' } },
+            crystalsunflower:{ tier: 6, name: '水晶向日葵',img: 'Plants/SunFlower/0.gif', hp: 4000, cost: 0, scale: 1.3, tint: 'brightness(1.8) contrast(1.2) drop-shadow(0 0 10px #fff)',
+                             produce: { sun: 20, every: 2.0 }, shoot: {dmg: 30, cd: 1.5, n: 1, range: 450, img: 'Plants/PB01.gif', homing: true}, up: { cost: 3000, sporeCost: 300, to: 'twinsunflower' } },
+            twinsunflower: { tier: 7, name: '双子向日葵',img: 'Plants/TwinSunflower/0.gif', hp: 5000, cost: 0, scale: 1.1,
+                             produce: { sun: 50, every: 2.0 }, shoot: {dmg: 45, cd: 1.2, n: 2, range: 450, img: 'Plants/PB00.gif', homing: true}, up: { cost: 8000, sporeCost: 800, to: 'doomsunflower' } },
+            doomsunflower: { tier: 8, name: '毁灭向日葵',img: 'Plants/TwinSunflower/0.gif', hp: 8000, cost: 0, scale: 1.2, tint: 'brightness(0.5) contrast(1.5) drop-shadow(0 0 15px #f00)',
+                             produce: { sun: 100, every: 2.0 }, shoot: {dmg: 80, cd: 1.0, n: 2, range: 450, img: 'Plants/PB10.gif', homing: true}, up: { cost: 20000, sporeCost: 2000, to: 'fourheadsunflower' } },
+            fourheadsunflower:{ tier: 9, name: '四头向日葵',img: 'Plants/TwinSunflower/0.gif', hp: 12000, cost: 0, scale: 1.4, overlays: ['Plants/TwinSunflower/0.gif'], tint: 'drop-shadow(0 0 20px #ff0)',
+                             overTransform: 'translate(-50%, -50%) translate(0, -25px) scale(0.9)',
+                             produce: { sun: 250, every: 2.0 }, shoot: {dmg: 150, cd: 0.8, n: 4, range: 450, img: 'Plants/PB10.gif', homing: true} },
 
-            // —— 豌豆系 (常规单体输出) ——
+            // —— 豌豆系 (常规单体输出，单线升级) ——
             peashooter:    { tier: 1, name: '豌豆射手', img: 'Plants/Peashooter/0.gif',   card: 'Peashooter.png', hp: 300, cost: 30,
                              shoot: { dmg: 15, cd: 1.5, n: 1, range: 450, img: 'Plants/PB00.gif', homing: true },
-                             up: { cost: 40, cur: 'sun', to: 'repeater' }, up2: { cost: 40, cur: 'spore', to: 'snowpea' }, up3: { cost: 50, cur: 'spore', to: 'splitpea' } },
-            repeater:      { tier: 2, name: '双发射手', img: 'Plants/Repeater/0.gif',      hp: 500, cost: 0, scale: 1.1,
-                             shoot: { dmg: 15, cd: 1.2, n: 2, range: 450, img: 'Plants/PB00.gif', homing: true }, up: { cost: 60, cur: 'spore', to: 'gatlingpea' } },
-            gatlingpea:    { tier: 3, name: '机枪射手', img: 'Plants/GatlingPea/0.gif',    hp: 800, cost: 0, scale: 1.2,
-                             shoot: { dmg: 18, cd: 0.8, n: 4, range: 450, img: 'Plants/PB00.gif', homing: true } },
+                             up: { cost: 80, to: 'cabbagepult' } },
+            cabbagepult:   { tier: 2, name: '卷心菜投手', img: 'Plants/CabbagePult/0.gif',   hp: 400, cost: 0,
+                             lob: { dmg: 45, cd: 2.2, range: 450, aoe: 50, img: 'Plants/CabbagePult/Cabbage.png' },
+                             up: { cost: 160, to: 'kernelpult' } },
+            kernelpult:    { tier: 3, name: '玉米投手',   img: 'Plants/KernelPult/0.gif',    hp: 500, cost: 0,
+                             lob: { dmg: 30, cd: 2.0, range: 450, aoe: 50, img: 'Plants/KernelPult/0.gif', stunChance: 0.2, stunTime: 2.5 },
+                             up: { cost: 250, to: 'dualpea' } },
+            dualpea:       { tier: 4, name: '双向(融合)', img: 'Plants/SplitPea/0.gif',      hp: 600, cost: 0,
+                             shoot: { dmg: 15, cd: 1.5, n: 1, range: 450, img: 'Plants/PB00.gif', homing: true, dualChance: 0.5 },
+                             up: { cost: 500, to: 'snowpea' } },
+            snowpea:       { tier: 5, name: '寒冰射手', img: 'Plants/SnowPea/0.gif',       hp: 800, cost: 0, scale: 1.1,
+                             shoot: { dmg: 20, cd: 1.5, n: 1, range: 450, img: 'Plants/PB01.gif', slow: true, homing: true },
+                             up: { cost: 1000, sporeCost: 50, to: 'repeater' } },
+            repeater:      { tier: 6, name: '双发射手', img: 'Plants/Repeater/0.gif',      hp: 1000, cost: 0, scale: 1.1,
+                             shoot: { dmg: 15, cd: 1.2, n: 2, range: 450, img: 'Plants/PB00.gif', homing: true },
+                             up: { cost: 2000, sporeCost: 150, to: 'threepeater' } },
+            threepeater:   { tier: 7, name: '三线射手', img: 'Plants/Threepeater/0.gif',   hp: 1500, cost: 0, scale: 1.2,
+                             shoot: { dmg: 20, cd: 1.2, n: 3, range: 450, img: 'Plants/PB00.gif', fan: 0.35, homing: true, focus: true },
+                             up: { cost: 5000, sporeCost: 500, to: 'gatlingpea' } },
+            gatlingpea:    { tier: 8, name: '机枪射手', img: 'Plants/GatlingPea/0.gif',    hp: 2500, cost: 0, scale: 1.2,
+                             shoot: { dmg: 15, cd: 1.0, n: 4, range: 450, img: 'Plants/PB00.gif', homing: true, crazySpray: 0.05 } },
 
-            snowpea:       { tier: 2, name: '寒冰射手', img: 'Plants/SnowPea/0.gif',       hp: 500, cost: 0, scale: 1.1,
-                             shoot: { dmg: 20, cd: 1.5, n: 1, range: 450, img: 'Plants/PB01.gif', slow: true, homing: true }, up: { cost: 80, cur: 'spore', to: 'wintermelon' } },
-            wintermelon:   { tier: 3, name: '冰瓜投手', img: 'Plants/WinterMelon/0.gif',   hp: 1000, cost: 0, scale: 1.2,
-                             lob: { dmg: 50, cd: 2.0, range: 450, aoe: 100, img: 'Plants/WinterMelon/WinterMelon.png', slow: true } },
+            // —— 坚果系 (肉盾防线) ——
+            wallnut:       { tier: 1, name: '坚果墙',     img: 'Plants/WallNut/0.gif',       card: 'WallNut.png',     hp: 4000,  cost: 50,
+                             up: { cost: 80, to: 'nutshooter' } },
+            nutshooter:    { tier: 2, name: '坚果射手',   img: 'Plants/WallNut/0.gif',       overlay: 'Plants/Peashooter/0.gif', hp: 6000,  cost: 0, scale: 1.05,
+                             overTransform: 'translate(-50%, -50%) translate(2px, -28px) scale(0.6)',
+                             shoot: { dmg: 15, cd: 1.5, n: 1, range: 400, img: 'Plants/PB00.gif', homing: true }, up: { cost: 160, to: 'cabbagefort' } },
+            cabbagefort:   { tier: 3, name: '卷心菜堡垒', img: 'Plants/WallNut/0.gif',       hp: 8500,  cost: 0, scale: 1.1, hat: 'Plants/CabbagePult/Cabbage.png',
+                             lob: { dmg: 45, cd: 2.2, range: 450, aoe: 70, img: 'Plants/CabbagePult/Cabbage.png' }, up: { cost: 300, to: 'spikeweednut' } },
+            spikeweednut:  { tier: 4, name: '地刺坚果',   img: 'Plants/WallNut/0.gif',       hp: 12000, cost: 0, scale: 1.15, tint: 'sepia(1) hue-rotate(90deg) saturate(3)',
+                             spike: { dps: 30, r: 80 }, up: { cost: 600, to: 'tallnut' } },
+            tallnut:       { tier: 5, name: '高坚果',     img: 'Plants/TallNut/0.gif',       card: 'TallNut.png',     hp: 24000, cost: 0, scale: 1.2,
+                             up: { cost: 1200, to: 'spikerocknut' } },
+            spikerocknut:  { tier: 6, name: '钢刺坚果',   img: 'Plants/TallNut/0.gif',       hp: 24000, cost: 0, scale: 1.25, tint: 'grayscale(0.8) brightness(1.2)',
+                             spike: { dps: 60, r: 80 }, up: { cost: 2500, to: 'tallnutfort' } },
+            tallnutfort:   { tier: 7, name: '高坚果堡垒', img: 'Plants/TallNut/0.gif',       hp: 48000, cost: 0, scale: 1.3, tint: 'brightness(1.5)',
+                             up: { cost: 5000, to: 'spikeweedtallnut' } },
+            spikeweedtallnut:{ tier: 8, name: '地刺高坚果',img: 'Plants/TallNut/0.gif',      hp: 48000, cost: 0, scale: 1.4, tint: 'sepia(1) hue-rotate(90deg) saturate(3) brightness(1.5)',
+                             spike: { dps: 60, r: 90 } },
 
-            splitpea:      { tier: 2, name: '双向射手', img: 'Plants/SplitPea/0.gif',      hp: 500, cost: 0, scale: 1.1,
-                             shoot: { dmg: 15, cd: 1.2, n: 2, range: 450, img: 'Plants/PB00.gif', homing: true }, up: { cost: 80, cur: 'spore', to: 'threepeater' } },
-            threepeater:   { tier: 3, name: '三线射手', img: 'Plants/Threepeater/0.gif',   hp: 800, cost: 0, scale: 1.2,
-                             shoot: { dmg: 20, cd: 1.2, n: 3, range: 450, img: 'Plants/PB00.gif', fan: 0.35, homing: true }, up: { cost: 150, cur: 'spore', to: 'starfruit' } },
-            starfruit:     { tier: 4, name: '杨桃',     img: 'Plants/Starfruit/0.gif',     hp: 1000, cost: 0, scale: 1.3,
-                             shoot: { dmg: 35, cd: 1.0, n: 5, range: 500, img: 'Plants/star.gif', fan: 0.8, homing: true } },
-
-            // —— 坚果系 (肉盾，不带攻击) ——
-            wallnut:       { tier: 1, name: '坚果',     img: 'Plants/WallNut/0.gif',       card: 'WallNut.png',     hp: 4000,  cost: 50,
-                             up: { cost: 80, cur: 'sun', to: 'wallnut2' } },
-            wallnut2:      { tier: 2, name: '坚果 Lv2', img: 'Plants/WallNut/0.gif',       hp: 8000,  cost: 0, scale: 1.1, tint: 'brightness(0.8)',
-                             up: { cost: 160, cur: 'sun', to: 'tallnut' } },
-            tallnut:       { tier: 3, name: '高坚果',   img: 'Plants/TallNut/0.gif',       card: 'TallNut.png',     hp: 16000, cost: 0, scale: 1.2,
-                             up: { cost: 400, cur: 'sun', to: 'tallnut2' } },
-            tallnut2:      { tier: 4, name: '高坚果 Lv2', img: 'Plants/TallNut/0.gif',     hp: 32000, cost: 0, scale: 1.3, tint: 'brightness(0.8)',
-                             up: { cost: 800, cur: 'sun', to: 'pumpkin' } },
-            pumpkin:       { tier: 5, name: '南瓜头',   img: 'Plants/PumpkinHead/0.gif',   hp: 60000, cost: 0, scale: 1.4,
-                             up: { cost: 1600, cur: 'sun', to: 'pumpkin2' } },
-            pumpkin2:      { tier: 6, name: '南瓜头 Lv2', img: 'Plants/PumpkinHead/0.gif', hp: 120000, cost: 0, scale: 1.5, tint: 'brightness(1.5)' },
-
-            // —— 孢子系 (纯产孢子，全部是原版蘑菇) ——
+            // —— 孢子系 (不产阳光，专产孢子) ——
             puffshroom:    { tier: 1, name: '小喷菇', img: 'Plants/PuffShroom/0.gif',     card: 'PuffShroom.png',     hp: 300, cost: 200, scale: 0.9,
-                             spore: { n: 1, every: 2.0 }, up: { cost: 50, cur: 'sun', to: 'fumeshroom' } },
-            fumeshroom:    { tier: 2, name: '大喷菇', img: 'Plants/FumeShroom/0.gif',     card: 'FumeShroom.png',     hp: 500, cost: 0,   scale: 1.1,
-                             spore: { n: 3, every: 2.0 }, up: { cost: 200, cur: 'sun', to: 'gloomshroom' } },
-            gloomshroom:   { tier: 3, name: '忧郁菇', img: 'Plants/GloomShroom/0.gif',    card: 'GloomShroom.png',    hp: 800, cost: 0,   scale: 1.2,
-                             spore: { n: 8, every: 2.0 }, up: { cost: 800, cur: 'sun', to: 'scaredyshroom' } },
-            scaredyshroom: { tier: 4, name: '胆小菇', img: 'Plants/ScaredyShroom/0.gif',  hp: 1200, cost: 0, scale: 1.3,
-                             spore: { n: 12, every: 2.0 }, up: { cost: 3200, cur: 'sun', to: 'hypnoshroom' } },
-            hypnoshroom:   { tier: 5, name: '魅惑菇', img: 'Plants/HypnoShroom/0.gif',    hp: 1800, cost: 0, scale: 1.35,
-                             spore: { n: 20, every: 2.0 }, up: { cost: 12800, cur: 'sun', to: 'magnetshroom' } },
-            magnetshroom:  { tier: 6, name: '磁力菇', img: 'Plants/MagneticmuShroom/0.gif', hp: 3000, cost: 0, scale: 1.4,
-                             spore: { n: 30, every: 2.0 } },
+                             spore: { n: 1, every: 2.0 }, up: { cost: 400, to: 'scaredyshroom' } },
+            scaredyshroom: { tier: 2, name: '胆小菇', img: 'Plants/ScaredyShroom/0.gif',  hp: 500, cost: 0, scale: 1.1,
+                             spore: { n: 2, every: 2.0 }, up: { cost: 800, to: 'fumeshroom' } },
+            fumeshroom:    { tier: 3, name: '大喷菇', img: 'Plants/FumeShroom/0.gif',     card: 'FumeShroom.png',     hp: 800, cost: 0,   scale: 1.2,
+                             spore: { n: 4, every: 2.0 }, up: { cost: 1600, to: 'hypnoshroom' } },
+            hypnoshroom:   { tier: 4, name: '魅惑菇', img: 'Plants/HypnoShroom/0.gif',    hp: 1200, cost: 0, scale: 1.3,
+                             spore: { n: 8, every: 2.0 }, up: { cost: 3200, to: 'sporemine' } },
+            sporemine:     { tier: 5, name: '孢子地雷', img: 'Plants/PotatoMine/0.gif',   hp: 2000, cost: 0, scale: 1.4, tint: 'hue-rotate(280deg)',
+                             spore: { n: 16, every: 2.0 }, mine: true, up: { cost: 6400, to: 'icefogpuff' } },
+            icefogpuff:    { tier: 6, name: '冰雾小喷菇', img: 'Plants/PuffShroom/0.gif', hp: 3000, cost: 0, scale: 1.5, tint: 'saturate(0.5) drop-shadow(0 0 10px #0ff)',
+                             spore: { n: 32, every: 2.0 }, auraSlow: true, up: { cost: 12800, to: 'garlicpuff' } },
+            garlicpuff:    { tier: 7, name: '蒜味喷菇', img: 'Plants/PuffShroom/0.gif',   hp: 4000, cost: 0, scale: 1.6, hat: 'Plants/Garlic/0.gif',
+                             spore: { n: 64, every: 2.0 }, repelChance: 0.05, up: { cost: 25600, to: 'gloompuff' } },
+            gloompuff:     { tier: 8, name: '忧郁喷菇', img: 'Plants/GloomShroom/0.gif',  hp: 6000, cost: 0, scale: 1.7,
+                             spore: { n: 128, every: 2.0 } },
+
+            // —— 地刺系 (仅用孢子) ——
+            spikeweed:     { name: '地刺',   img: 'Plants/Spikeweed/0.gif',  card: 'Spikeweed.png',  hp: 99999, cost: 0, sporeCost: 50, ground: true,
+                             spike: { dps: 20, r: 55 }, up: { sporeCost: 100, to: 'firespikeweed' } },
+            firespikeweed: { name: '火焰地刺',img: 'Plants/Spikeweed/0.gif', hp: 99999, cost: 0, scale: 1.1, tint: 'hue-rotate(-50deg) saturate(2)', ground: true,
+                             spike: { dps: 40, r: 55 }, up: { sporeCost: 200, to: 'spikerock' } },
+            spikerock:     { name: '钢地刺', img: 'Plants/Spikerock/0.gif', hp: 99999, cost: 0, scale: 1.2, ground: true,
+                             spike: { dps: 60, r: 55 }, up: { sporeCost: 400, to: 'ultimatefirespikeweed' } },
+            ultimatefirespikeweed: { name: '终极火焰地刺', img: 'Plants/Spikerock/0.gif', hp: 99999, cost: 0, scale: 1.3, tint: 'hue-rotate(-50deg) saturate(3) drop-shadow(0 0 10px #f00)', ground: true,
+                             spike: { dps: 100, r: 60 } },
+
+            // —— 路灯花 (产阳光，只耗孢子升级) ——
+            plantern:      { name: '路灯花', img: 'Plants/Plantern/0.gif', card: 'Plantern.png', hp: 2000, cost: 0, sporeCost: 50,
+                             produce: { sun: 4, every: 2.0 }, up: { sporeCost: 100, to: 'plantern2' } },
+            plantern2:     { name: '路灯花 Lv2', img: 'Plants/Plantern/0.gif', hp: 2500, cost: 0, produce: { sun: 6, every: 2.0 }, tint: 'brightness(1.1)', up: { sporeCost: 200, to: 'plantern3' } },
+            plantern3:     { name: '路灯花 Lv3', img: 'Plants/Plantern/0.gif', hp: 3000, cost: 0, produce: { sun: 10, every: 2.0 }, tint: 'brightness(1.2)', up: { sporeCost: 400, to: 'plantern4' } },
+            plantern4:     { name: '路灯花 Lv4', img: 'Plants/Plantern/0.gif', hp: 4000, cost: 0, produce: { sun: 20, every: 2.0 }, tint: 'brightness(1.4) drop-shadow(0 0 10px #ff0)', up: { sporeCost: 800, to: 'plantern5' } },
+            plantern5:     { name: '路灯花 Lv5', img: 'Plants/Plantern/0.gif', hp: 5000, cost: 0, produce: { sun: 50, every: 2.0 }, tint: 'brightness(1.6) drop-shadow(0 0 15px #ff0)', up: { sporeCost: 1600, to: 'plantern6' } },
+            plantern6:     { name: '路灯花 Lv6', img: 'Plants/Plantern/0.gif', hp: 6000, cost: 0, produce: { sun: 100, every: 2.0 }, tint: 'brightness(1.8) drop-shadow(0 0 20px #ff0)', up: { sporeCost: 3200, to: 'plantern7' } },
+            plantern7:     { name: '路灯花 Lv7', img: 'Plants/Plantern/0.gif', hp: 8000, cost: 0, produce: { sun: 250, every: 2.0 }, tint: 'brightness(2.0) drop-shadow(0 0 25px #ff0)' },
 
             // —— 特殊 ——
-            potatomine:    { name: '土豆雷', img: 'Plants/PotatoMine/0.gif', card: 'PotatoMine.png', hp: 300, cost: 25, mine: true },
-            spikeweed:     { name: '地刺',   img: 'Plants/Spikeweed/0.gif',  card: 'Spikeweed.png',  hp: 99999, cost: 50, sporeCost: 50, ground: true,
-                             spike: { dps: 200, r: 55 } },
             iceshroom:     { name: '寒冰菇', img: 'Plants/IceShroom/0.gif',  card: 'IceShroom.png',  hp: 99999,  cost: 0, sporeCost: 50, instant: true },
-            doomshroom:    { name: '毁灭菇', img: 'Plants/DoomShroom/0.gif', card: 'DoomShroom.png', hp: 2000,  cost: 0, sporeCost: 200,
-                             nuke: { lob: true, dmg: 1000, pct: 0.05, cd: 4.0, img: 'Plants/DoomShroom/0.gif' } }
+            doomshroom:    { name: '毁灭菇', img: 'Plants/DoomShroom/0.gif', card: 'DoomShroom.png', hp: 2000,  cost: 0, sporeCost: 1000,
+                             nuke: { lob: true, dmg: 1000, pct: 0.05, cd: 4.0, img: 'Plants/DoomShroom/0.gif' } },
+            garlic:        { name: '大蒜',   img: 'Plants/Garlic/0.gif',     card: 'Garlic.png',     hp: 1000,  cost: 100, isGarlic: true },
+            blindbox:      { name: '植物盲盒',img: 'Plants/FlowerPot/0.gif', card: 'PlantBox.png', hp: 100,  cost: 100, sporeCost: 5, isBlindBox: true }
         };
     }
-
     // 商店可购清单（阳光 / 孢子两种货币）
     static get MENU() {
-        return ['puffshroom', 'peashooter', 'potatomine', 'spikeweed', 'iceshroom', 'doomshroom'];
+        return ['puffshroom', 'peashooter', 'plantern', 'spikeweed', 'iceshroom', 'doomshroom', 'garlic', 'blindbox'];
     }
 
     // ===== 僵尸升级链（10级）=====
@@ -492,6 +534,12 @@ class HauntedDorm {
     }
 
     spawnPlant(col, row, type, isDoor = false) {
+        if (type === 'blindbox') {
+            const pool = ['peashooter', 'cabbagepult', 'kernelpult', 'dualpea', 'snowpea', 'repeater', 'threepeater', 'gatlingpea', 'puffshroom', 'scaredyshroom', 'fumeshroom', 'hypnoshroom', 'sporemine', 'icefogpuff', 'garlicpuff', 'gloompuff', 'plantern', 'doomshroom', 'iceshroom', 'garlic'];
+            type = pool[Math.floor(Math.random() * pool.length)];
+            this._flyText(col * 80 + 40, row * 80, '盲盒开出了：' + HauntedDorm.DEFS[type].name, '#fff');
+            this.playSfx('plant2.mp3', 0.5);
+        }
         if (type === 'iceshroom') {
             if (this.zombies[0] && !this.zombies[0].dead) {
                 const zb = this.zombies[0];
@@ -919,9 +967,10 @@ class HauntedDorm {
     // v3.90.0：弹窗开着时阳光/孢子变动 → 实时刷新升级按钮的置灰状态（原先只在打开瞬间判断一次）
     _refreshPopupCurrency() {
         if (this.popup && this.popup.style.display === 'block' && this.popupPlant && this.popupPlant.def.up) {
-            const up = this.popupPlant.def.up;
-            const have = up.cur === 'sun' ? this.player.sun : this.player.spore;
-            this.ppUp.classList.toggle('pp-disabled', have < up.cost);
+            const cost = this.popupPlant.def.up.cost || 0;
+            const sporeCost = this.popupPlant.def.up.sporeCost || 0;
+            const canAfford = this.player.sun >= cost && this.player.spore >= sporeCost;
+            this.ppUp.classList.toggle('pp-disabled', !canAfford);
         }
     }
 
@@ -1355,7 +1404,7 @@ class HauntedDorm {
             el, life: (opts.range || 320) / sp + 0.3, dmg: dmg,
             slow: !!opts.slow, aoe: opts.aoe || 0,
             homing: !!opts.homing, homeR: 260,  // 跟踪区：260px 内追踪僵尸，出了区域变直线
-            owner: opts.owner
+            owner: opts.owner, stunTime: opts.stunTime || 0
         });
     }
 
@@ -1381,18 +1430,31 @@ class HauntedDorm {
 
             if (lob) {
                 pl.shootCd = lob.cd;
+                const isButter = lob.stunChance && Math.random() < lob.stunChance;
                 this._firePea(px, py, Math.atan2(best.y - py, best.x - px), lob.dmg,
-                    { img: lob.img, range: lob.range, aoe: lob.aoe, speed: 300, size: 34, owner });
+                    { img: isButter ? 'Plants/KernelPult/butter.png' : lob.img, range: lob.range, aoe: lob.aoe, speed: 300, size: 34, owner, stunTime: isButter ? lob.stunTime : 0 });
             } else {
-                pl.shootCd = sh.cd;
+                if (sh.crazySpray && Math.random() < sh.crazySpray) {
+                    pl.crazySpray = 10;
+                }
+                
+                if (pl.crazySpray > 0) {
+                    pl.shootCd = 0.1;
+                    pl.crazySpray--;
+                } else {
+                    pl.shootCd = sh.cd;
+                }
+                
+                let isFocus = sh.focus && (best.lockedTarget === this.player || (best.lockedTarget && best.lockedTarget === owner));
                 const base = Math.atan2(best.y - py, best.x - px);
                 if (sh.fan) { // 三线/忧郁菇：扇形多向
                     for (let i = 0; i < sh.n; i++) {
-                        const a = base + (i - (sh.n - 1) / 2) * sh.fan;
+                        const a = isFocus ? base : base + (i - (sh.n - 1) / 2) * sh.fan;
                         this._firePea(px, py, a, sh.dmg, { img: sh.img, range: sh.range, slow: sh.slow, homing: sh.homing, owner });
                     }
                 } else { // 连发：同向串行
-                    for (let i = 0; i < sh.n; i++) {
+                    const actualN = (sh.dualChance && Math.random() < sh.dualChance) ? 2 : sh.n;
+                    for (let i = 0; i < actualN; i++) {
                         this._firePea(px - Math.cos(base) * i * 22, py - Math.sin(base) * i * 22, base, sh.dmg,
                             { img: sh.img, range: sh.range, slow: sh.slow, homing: sh.homing, owner });
                     }
@@ -1455,6 +1517,7 @@ class HauntedDorm {
                             this.playSfx('explosion.mp3', 0.4);
                         }
                         if (pea.slow) z.slowT = 2.5;
+                        if (pea.stunTime) z.stunT = pea.stunTime;
                         if (z.hpBg) {
                             z.hpBg.style.display = 'block';
                             z.hpFg.style.width = Math.max(0, z.hp / z.maxHp * 100) + '%';
