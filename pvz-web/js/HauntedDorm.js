@@ -869,10 +869,12 @@ class HauntedDorm {
                         ai.sun -= chosen.cost;
                         this.spawnPlant(chosen.c, chosen.r, chosen.id);
                         this._flyText(chosen.c * 80 + 40, chosen.r * 80, `AI 种植！`, '#bfa8e0');
+                        if (Math.random() < 0.2) this._say(ai, ["多种点豌豆！", "只要我门够厚，僵尸就进不来！", "搞快点搞快点！", "僵尸别来找我！", "发育发育！"][Math.floor(Math.random()*5)]);
                     } else if (chosen.type === 'repair') {
                         ai.sun -= chosen.cost;
                         chosen.pl.hp = Math.min(chosen.pl.maxHp, chosen.pl.hp + 800);
                         this._flyText(chosen.pl.c * 80 + 40, chosen.pl.r * 80, "AI 修补！", "#0f0");
+                        if (Math.random() < 0.2) this._say(ai, "门快碎了，赶紧修修！");
                     }
                 }
         }
@@ -991,6 +993,41 @@ class HauntedDorm {
         f.style.opacity = 1;
         setTimeout(() => f.style.opacity = 0, 180);
         this.playSfx('chompsoft.mp3', 0.6);
+    }
+
+    _say(entity, text, duration = 3000) {
+        if (!entity || !entity.el1) return;
+        if (entity.chatBubble) entity.chatBubble.remove();
+        
+        const bubble = document.createElement('div');
+        bubble.innerText = text;
+        bubble.style.cssText = `
+            position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95); color: #333; padding: 6px 14px;
+            border-radius: 12px; font-size: 14px; font-weight: bold; white-space: nowrap;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); border: 2px solid #555;
+            z-index: 500; opacity: 0; transition: opacity 0.2s; pointer-events: none;
+            font-family: 'Kaiti SC', serif;
+        `;
+        const arrow = document.createElement('div');
+        arrow.style.cssText = `
+            position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+            border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid #555;
+        `;
+        bubble.appendChild(arrow);
+        
+        entity.el1.appendChild(bubble);
+        entity.chatBubble = bubble;
+        setTimeout(() => bubble.style.opacity = 1, 10);
+        setTimeout(() => {
+            if (bubble.parentNode) {
+                bubble.style.opacity = 0;
+                setTimeout(() => {
+                    if (bubble.parentNode) bubble.remove();
+                    if (entity.chatBubble === bubble) entity.chatBubble = null;
+                }, 200);
+            }
+        }, duration);
     }
 
     _flyText(x, y, text, color) {
@@ -1778,23 +1815,32 @@ class HauntedDorm {
         for (const ai of this.ais) {
             if (ai.dead) continue;
             
+            // 发现僵尸逻辑
+            let zombieNear = false;
+            const zbTarget = this.isZombieFaction ? this.player : this.zombies[0];
+            if (zbTarget && !zbTarget.dead && Math.hypot(ai.x - zbTarget.x, ai.y - zbTarget.y) < 350) {
+                zombieNear = true;
+            }
+
             // 【新增】人机抢盲盒机制
             if (!ai.dead && this.ghostSpawned && this.airdrops && this.airdrops.length > 0) {
-                // 如果在自己房间待命，有概率出门抢盲盒
-                if (ai.room && (!ai.path || ai.path.length === 0) && Math.random() < 0.005) {
+                // 如果在自己房间待命，且僵尸不在附近，才有概率出门抢盲盒
+                if (ai.room && (!ai.path || ai.path.length === 0) && !zombieNear && Math.random() < 0.005) {
                     const drop = this.airdrops[Math.floor(Math.random() * this.airdrops.length)];
                     ai.targetDrop = drop;
                     ai.path = this._findPath(ai.x, ai.y, drop.x, drop.y);
                     this._flyText(ai.x, ai.y - 30, "冲鸭！抢盲盒！", "#aaa");
                 }
-                // 如果盲盒消失了，放弃目标回家
+                // 如果盲盒消失了，或者碰到僵尸靠近，立刻放弃目标回家！
                 if (ai.targetDrop && ai.path && ai.path.length > 0) {
-                    if (!this.airdrops.includes(ai.targetDrop)) {
+                    if (!this.airdrops.includes(ai.targetDrop) || zombieNear) {
+                        if (zombieNear) this._say(ai, "僵尸来了，快撤！放弃盲盒保命！", 2500);
                         ai.targetDrop = null;
                         if (ai.room) {
                             const p = this._findPath(ai.x, ai.y, ai.room.frontX, ai.room.frontY);
                             p.push({ x: (ai.room.x + ai.room.tpl.bed.c) * 80 + 40, y: (ai.room.y + ai.room.tpl.bed.r) * 80 + 40 });
                             ai.path = p;
+                            if (zombieNear) ai.speed = 300; // 吓得跑快点
                         }
                     }
                 }
@@ -1915,6 +1961,7 @@ class HauntedDorm {
                     if (Math.hypot(this.player.x - px, this.player.y - py) < 80) { // 稍微大一点的判定范围
                         p.hp -= 100; // 玩家僵尸基础伤害100
                         this.playSfx('chomp.mp3', 0.25);
+                        if (Math.random() < 0.1) this._say(this.player, ["太美味了！", "门像纸一样脆！", "我要吃光你们！"][Math.floor(Math.random()*3)]);
                         bitten = true;
                         const bg = p.el1.querySelector('.hp-bar-bg');
                         const fg = p.el1.querySelector('.hp-bar-fg');
@@ -2163,23 +2210,41 @@ class HauntedDorm {
             const spd = zb.retreating ? zb.speed : (zb.speed * (zb.slowT > 0 ? 0.5 : 1));
 
             // 找综合仇恨值最高的目标（距离、门血量、门等级综合判断）
-            let closestTarget = null;
-            let minScore = Infinity;
-            for (const p of this.allPlayers) {
-                if (p.hp <= 0 || p.dead) continue;
-                if (p === this.player && this.player.stealthT > 0) continue; // 隐身免疫仇恨
-                let score = Math.hypot(p.x - zb.x, p.y - zb.y);
-                const rm = p.room || this.rooms.find(r => p.x >= r.x*80 && p.x <= (r.x+r.w)*80 && p.y >= r.y*80 && p.y <= (r.y+r.h)*80);
-                if (rm) {
-                    const doorPlant = this.getPlantAt(rm.doorCol * 80, rm.doorRow * 80);
-                    if (doorPlant) {
-                        score += (doorPlant.hp * 0.05); // 门血越厚，越不想打
-                        score += (doorPlant.def.tier || 1) * 300; // 门等级越高，越不想打
-                    } else {
-                        score -= 1000; // 门破了！优先干他！
+            zb.targetEvalT = (zb.targetEvalT || 0) + dt;
+            let closestTarget = zb.lockedTarget;
+            
+            // 每 8 秒或者当前目标死亡，强制重新评估全场最弱的人
+            if (!closestTarget || closestTarget.dead || zb.targetEvalT > 8) {
+                zb.targetEvalT = 0;
+                let minScore = Infinity;
+                let weakestTarget = null;
+                for (const p of this.allPlayers) {
+                    if (p.hp <= 0 || p.dead) continue;
+                    if (p === this.player && this.player.stealthT > 0) continue; 
+                    let score = Math.hypot(p.x - zb.x, p.y - zb.y);
+                    const rm = p.room || this.rooms.find(r => p.x >= r.x*80 && p.x <= (r.x+r.w)*80 && p.y >= r.y*80 && p.y <= (r.y+r.h)*80);
+                    let doorHpScore = 0;
+                    if (rm) {
+                        const doorPlant = this.getPlantAt(rm.doorCol * 80, rm.doorRow * 80);
+                        if (doorPlant) {
+                            // 极大地增加防御设施的权重，确保僵尸主动换线去抓防御薄弱的人
+                            doorHpScore = (doorPlant.hp * 0.2) + (doorPlant.def.tier || 1) * 2500; 
+                        } else {
+                            doorHpScore = -50000; // 门破了！绝对优先干他！
+                        }
+                    }
+                    score += doorHpScore;
+                    if (score < minScore) { minScore = score; weakestTarget = p; }
+                }
+                
+                if (weakestTarget && weakestTarget !== closestTarget) {
+                    zb.lockedTarget = weakestTarget;
+                    closestTarget = weakestTarget;
+                    if (Math.random() < 0.6) {
+                        const zLines = ["发现软柿子！", "那个门最破，就你了！", "让我尝尝你的脑子！", "我要去吃最弱的那个！", "这扇门看起来一碰就碎！"];
+                        this._say(zb, zLines[Math.floor(Math.random() * zLines.length)], 4000);
                     }
                 }
-                if (score < minScore) { minScore = score; closestTarget = p; }
             }
             if (!closestTarget) closestTarget = this.player;
 
@@ -2286,6 +2351,7 @@ class HauntedDorm {
                         zb.biteT = 0;
                         atkPlant.hp -= biteDmg;
                         this.playSfx('chomp.mp3', 0.25);
+                        if (Math.random() < 0.05) this._say(zb, ["这门真硬！", "看我咬碎它！", "饿饿饿饿饿！", "别以为躲在里面就安全！"][Math.floor(Math.random()*4)]);
                         const bg = atkPlant.el1.querySelector('.hp-bar-bg');
                         const fg = atkPlant.el1.querySelector('.hp-bar-fg');
                         if (bg) {
