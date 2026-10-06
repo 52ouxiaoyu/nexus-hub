@@ -1141,6 +1141,25 @@ class HauntedDorm {
         }, duration);
     }
 
+    _getDomElement(type) {
+        if (!this.domPool) this.domPool = { pea: [], flyText: [], boom: [] };
+        if (this.domPool[type] && this.domPool[type].length > 0) {
+            const el = this.domPool[type].pop();
+            el.style.display = 'block';
+            el.style.opacity = '1';
+            el.style.transition = 'none'; // reset transition when borrowing
+            return el;
+        }
+        const el = document.createElement('div');
+        this.world1.appendChild(el);
+        return el;
+    }
+
+    _recycleDomElement(type, el) {
+        el.style.display = 'none';
+        this.domPool[type].push(el);
+    }
+
     _flyText(x, y, text, color) {
         const now = performance.now();
         if (!this.activeTexts) this.activeTexts = [];
@@ -1148,7 +1167,6 @@ class HauntedDorm {
         if (this.activeTexts.length > 30) return; // v3.97.13 限制同屏文字数量防卡顿
         
         let flyY = y - 30;
-        // 彻底防重叠堆叠逻辑 (Vertical stacking loop)
         let overlap = true;
         let attempts = 0;
         while (overlap && attempts < 15) {
@@ -1164,12 +1182,14 @@ class HauntedDorm {
         }
         this.activeTexts.push({ x: x, y: flyY, t: now });
 
-        const fly = document.createElement('div');
+        const fly = this._getDomElement('flyText');
         fly.innerText = text;
-        fly.style = `position:absolute; color:${color || 'yellow'}; font-weight:bold; font-size:22px; left:${x}px; top:${flyY}px; transition:all 2s ease-out; pointer-events:none; z-index:500; text-shadow:1px 1px 2px #000; transform:translate(-50%,-50%); white-space:nowrap;`;
-        this.world1.appendChild(fly);
-        setTimeout(() => { fly.style.top = (flyY - 80) + 'px'; fly.style.opacity = 0; }, 50);
-        setTimeout(() => fly.remove(), 2050);
+        fly.style = `position:absolute; color:${color || 'yellow'}; font-weight:bold; font-size:22px; left:${x}px; top:${flyY}px; transition:none; pointer-events:none; z-index:500; text-shadow:1px 1px 2px #000; transform:translate(-50%,-50%); white-space:nowrap;`;
+        // Force reflow
+        void fly.offsetWidth;
+        fly.style.transition = 'all 2s ease-out';
+        setTimeout(() => { fly.style.top = (flyY - 80) + 'px'; fly.style.opacity = '0'; }, 50);
+        setTimeout(() => this._recycleDomElement('flyText', fly), 2050);
     }
 
     gameOver(win) {
@@ -1435,6 +1455,19 @@ class HauntedDorm {
         if (badge) badge.style.display = this.waterOn ? 'block' : 'none';
     }
 
+    _getBfsArrays(MAX_CELLS) {
+        if (!this._bfsVisited || this._bfsVisited.length !== MAX_CELLS) {
+            this._bfsVisited = new Uint8Array(MAX_CELLS);
+            this._bfsParent = new Int32Array(MAX_CELLS);
+            this._bfsQ = new Int32Array(MAX_CELLS);
+            this._bfsPlantMap = new Uint8Array(MAX_CELLS);
+        } else {
+            this._bfsVisited.fill(0);
+            this._bfsPlantMap.fill(0);
+        }
+        return { visited: this._bfsVisited, parent: this._bfsParent, q: this._bfsQ, plantMap: this._bfsPlantMap };
+    }
+
     _findPath(startX, startY, targetX, targetY) {
         const sc = Math.floor(startX / this.gridSize);
         const sr = Math.floor(startY / this.gridSize);
@@ -1443,20 +1476,17 @@ class HauntedDorm {
         
         if (sc === tc && sr === tr) return [{x: targetX, y: targetY}];
 
-        // 使用 1D 数组代替 Set 和 Object，极大提升寻路性能，解决画面卡顿（尤其是僵尸盯人时）
+        // 使用 1D 数组且复用全局内存代替每次 new，彻底消除寻路 GC 造成的卡顿
         const MAX_CELLS = this.cols * this.rows;
-        const visited = new Uint8Array(MAX_CELLS);
-        const parent = new Int32Array(MAX_CELLS);
+        const { visited, parent, q, plantMap } = this._getBfsArrays(MAX_CELLS);
         
         const startIdx = sr * this.cols + sc;
         const targetIdx = tr * this.cols + tc;
         
-        const plantMap = new Uint8Array(MAX_CELLS);
         for (const pl of this.plants) {
-            if (!pl.def.ground) plantMap[pl.r * this.cols + pl.c] = 1; // 所有的非地刺植物都视为障碍物，用于寻路绕行
+            if (!pl.def.ground) plantMap[pl.r * this.cols + pl.c] = 1;
         }
         
-        const q = new Int32Array(MAX_CELLS);
         let head = 0;
         let tail = 0;
         
@@ -1555,19 +1585,19 @@ class HauntedDorm {
         let finalDmg = dmg;
         if (opts.owner && opts.owner.atkBuffT > 0) finalDmg *= 2;
         dmg = finalDmg;
-        const el = document.createElement('div');
+        const el = this._getDomElement('pea');
         el.className = 'entity';
         const size = (opts.size || 26) * 1.8; // 放大 1.8 倍
         el.style.cssText = `width:${size}px;height:${size}px;z-index:90;`;
         el.innerHTML = `<img src="assets/images/${opts.img}" style="width:100%;height:100%;object-fit:contain;">`;
-        this.world1.appendChild(el);
         const sp = opts.speed || 500;
         this.peas.push({
             x: px, y: py, vx: Math.cos(angle) * sp, vy: Math.sin(angle) * sp,
             el, life: (opts.range || 320) / sp + 0.3, dmg: dmg,
             slow: !!opts.slow, aoe: opts.aoe || 0,
             homing: !!opts.homing, homeR: 260,  // 跟踪区：260px 内追踪僵尸，出了区域变直线
-            owner: opts.owner, stunTime: opts.stunTime || 0
+            owner: opts.owner, stunTime: opts.stunTime || 0,
+            pctDmg: opts.pctDmg || 0
         });
     }
 
@@ -1674,10 +1704,9 @@ class HauntedDorm {
                         if (pea.pctDmg) z.hp -= z.maxHp * pea.pctDmg;
                         if (pea.pctDmg) {
                             // 毁灭大炮特效
-                            const boom = document.createElement('div');
+                            const boom = this._getDomElement('boom');
                             boom.style.cssText = `position:absolute; left:${pea.x-100}px; top:${pea.y-100}px; width:200px; height:200px; border-radius:50%; background:radial-gradient(circle, rgba(190,120,255,0.9) 0%, rgba(255,0,0,0) 70%); z-index:600; pointer-events:none;`;
-                            this.world1.appendChild(boom);
-                            setTimeout(() => boom.remove(), 400);
+                            setTimeout(() => this._recycleDomElement('boom', boom), 400);
                             this.playSfx('explosion.mp3', 0.4);
                         }
                         if (pea.slow) z.slowT = 2.5;
@@ -1693,7 +1722,7 @@ class HauntedDorm {
         }
         this.peas = this.peas.filter(p => {
             if (p.life > 0) return true;
-            p.el.remove();
+            this._recycleDomElement('pea', p.el);
             return false;
         });
     }
@@ -2397,7 +2426,18 @@ class HauntedDorm {
                             ai.speed = 200;
                         } else {
                             // 如果到了床边发现玩家站在这里或满员了，触发重新寻路
-                            ai.path = [{x: ai.x, y: ai.y}]; 
+                            let foundNew = false;
+                            for (const rm of this.rooms) {
+                                if (rm.owners.length < rm.capacity && rm !== this.player.room) {
+                                    ai.targetRoom = rm;
+                                    const p = this._findPath(ai.x, ai.y, rm.frontX, rm.frontY);
+                                    p.push({ x: (rm.x + rm.tpl.beds[0].c) * this.gridSize + 40, y: (rm.y + rm.tpl.beds[0].r) * this.gridSize + 40 });
+                                    ai.path = p;
+                                    foundNew = true;
+                                    break;
+                                }
+                            }
+                            if (!foundNew) ai.path = [{x: ai.x, y: ai.y}]; 
                         }
                     }
                 }
