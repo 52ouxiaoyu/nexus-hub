@@ -690,9 +690,9 @@ class HauntedDorm {
             if (zb.hpBg) zb.hpBg.style.display = 'none';
             const bdg = zb.el1.querySelector('.lv-badge');
             if (bdg) bdg.innerText = 'Lv.' + this.ghostLevel;
-            this._announce(`👻 僵尸咬破门，升级为【${cfg.name}】！`, 'finalwave.mp3');
+            this._announce(`👻 僵尸升级为【${cfg.name}】！`, 'finalwave.mp3', true);
         } else {
-            this._announce(`👻 僵尸成长为【${cfg.name}】…`, 'finalwave.mp3');
+            this._announce(`👻 僵尸成长为【${cfg.name}】…`, 'finalwave.mp3', true);
         }
         this._updateGhostChip();
     }
@@ -717,14 +717,38 @@ class HauntedDorm {
         return { x: 100, y: 100 };
     }
 
-    _announce(text, sfx) {
+    _announce(text, sfx, priority = false) {
+        if (!this.announceQueue) this.announceQueue = [];
+        if (priority) {
+            this.announceQueue.unshift({ text, sfx });
+        } else {
+            this.announceQueue.push({ text, sfx });
+        }
+        this._processAnnounceQueue();
+    }
+
+    _processAnnounceQueue() {
+        if (this.isAnnouncing || !this.announceQueue || this.announceQueue.length === 0) return;
+        
+        this.isAnnouncing = true;
+        const current = this.announceQueue.shift();
+        
         const msg = document.createElement('div');
         msg.id = 'wave-announce';
-        msg.style = "position:absolute; top:38%; left:50%; transform:translate(-50%,-50%); color:#ff4b4b; font-size:44px; font-weight:bold; text-shadow:3px 3px 0 #000; z-index:9999; font-family:'Kaiti SC',serif; letter-spacing:6px;";
-        msg.innerText = text;
+        msg.style = "position:absolute; top:38%; left:50%; transform:translate(-50%,-50%); color:#ff4b4b; font-size:44px; font-weight:bold; text-shadow:3px 3px 0 #000; z-index:9999; font-family:'Kaiti SC',serif; letter-spacing:6px; text-align:center; white-space:nowrap; pointer-events:none; transition: opacity 0.3s;";
+        msg.innerText = current.text;
         document.body.appendChild(msg);
-        setTimeout(() => msg.remove(), 2600);
-        if (sfx) this.playSfx(sfx, 0.55);
+        
+        if (current.sfx) this.playSfx(current.sfx, 0.55);
+        
+        setTimeout(() => {
+            msg.style.opacity = '0';
+            setTimeout(() => {
+                msg.remove();
+                this.isAnnouncing = false;
+                this._processAnnounceQueue();
+            }, 300);
+        }, 2200);
     }
 
     _updateAIs(dt) {
