@@ -350,76 +350,65 @@ class HauntedDorm {
         this.world1.appendChild(center1);
 
         this.rooms = [];
-
-        // 房间形状模板 (1=地面) - 尺寸翻倍
-        const templates = [
-            { // 8x8 矩形
-                grid: [
-                    [1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],
-                    [1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1]
-                ],
-                door: {r: 8, c: 4}, bed: {r: 2, c: 4}
-            },
-            { // L型 10x10
-                grid: [
-                    [1,1,1,1,0,0,0,0],[1,1,1,1,0,0,0,0],[1,1,1,1,0,0,0,0],[1,1,1,1,0,0,0,0],
-                    [1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1]
-                ],
-                door: {r: 8, c: 2}, bed: {r: 2, c: 1}
-            },
-            { // 凹型 10x8
-                grid: [
-                    [1,1,1,0,0,1,1,1],[1,1,1,0,0,1,1,1],[1,1,1,0,0,1,1,1],
-                    [1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1]
-                ],
-                door: {r: 6, c: 4}, bed: {r: 4, c: 4}
-            },
-            { // 长条型 6x12
-                grid: [
-                    [1,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1],
-                    [1,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1]
-                ],
-                door: {r: 10, c: 2}, bed: {r: 2, c: 2}
-            }
+        const makeGrid = (w, h) => Array.from({length: h}, () => Array(w).fill(1));
+        
+        // 5对门对门的对称房间布局 (共10个房间)
+        const pairCoords = [
+            {x: 4, y: 6},   // 左上
+            {x: 36, y: 6},  // 右上
+            {x: 4, y: 28},  // 左下
+            {x: 36, y: 28}, // 右下
+            {x: 20, y: 17}  // 中间
         ];
 
-        for (let i = 0; i < 10; i++) {
-            let tpl, rx, ry, valid = false;
-            let attempts = 0;
-            while (!valid && attempts < 1000) {
-                attempts++;
-                tpl = templates[Math.floor(Math.random() * templates.length)];
-                const rw = tpl.grid[0].length;
-                const rh = tpl.grid.length;
+        pairCoords.forEach(p => {
+            // 左边房间，门朝右
+            this.rooms.push({
+                x: p.x, y: p.y, w: 8, h: 8,
+                tpl: { grid: makeGrid(8,8), door: {r: 4, c: 8}, beds: [{r: 4, c: 2}] }
+            });
+            // 右边房间，门朝左
+            this.rooms.push({
+                x: p.x + 12, y: p.y, w: 8, h: 8,
+                tpl: { grid: makeGrid(8,8), door: {r: 4, c: -1}, beds: [{r: 4, c: 5}] }
+            });
+        });
 
-                rx = Math.floor(Math.random() * (this.cols - rw - 4)) + 2;
-                ry = Math.floor(Math.random() * (this.rows - rh - 4)) + 2;
+        // 较高几率刷出有一个双床房间（他们共同守护这一个房间）
+        if (Math.random() < 0.3) {
+            const idx = Math.floor(Math.random() * this.rooms.length);
+            const baseBed = this.rooms[idx].tpl.beds[0];
+            // 在上或下加一张床
+            this.rooms[idx].tpl.beds.push({ r: baseBed.r === 4 ? 2 : 6, c: baseBed.c });
+        }
 
-                
-                // 确保房间不会覆盖中心回血区（以中心点为圆心，半径约 4 格的区域必须空出）
-                const centerLeft = this.cols/2 - 4;
-                const centerRight = this.cols/2 + 4;
-                const centerTop = this.rows/2 - 4;
-                const centerBottom = this.rows/2 + 4;
-                if (!(rx + rw < centerLeft || rx > centerRight || ry + rh < centerTop || ry > centerBottom)) {
-                    continue;
-                }
+        for (const rm of this.rooms) {
+            rm.doorCol = rm.x + rm.tpl.door.c;
+            rm.doorRow = rm.y + rm.tpl.door.r;
+            // 确保AI寻路用的门前坐标(frontX, frontY)被正确初始化
+            rm.frontX = rm.doorCol * 80 + 40;
+            rm.frontY = rm.doorRow * 80 + 40;
+        }
 
+        // 初始化所有房间归属信息
+        for (const rm of this.rooms) {
+            rm.owners = [];
+            rm.capacity = rm.tpl.beds.length;
+        }
 
-                valid = true;
-                for (const rm of this.rooms) {
-                    if (!(rx + rw + 2 < rm.x || rx - 2 > rm.x + rm.w ||
-                          ry + rh + 2 < rm.y || ry - 2 > rm.y + rm.h)) {
-                        valid = false;
-                        break;
+        this.walls = new Set();
+        // 渲染地面
+        for (const rm of this.rooms) {
+            for (let r = 0; r < rm.h; r++) {
+                for (let c = 0; c < rm.w; c++) {
+                    if (rm.tpl.grid[r][c] === 1) {
+                        const tile = document.createElement('div');
+                        tile.className = 'tile room';
+                        tile.style.left = ((rm.x + c) * this.gridSize) + 'px';
+                        tile.style.top = ((rm.y + r) * this.gridSize) + 'px';
+                        this.world1.appendChild(tile);
                     }
                 }
-            }
-            if (valid) {
-                this.rooms.push({ 
-                    x: rx, y: ry, w: tpl.grid[0].length, h: tpl.grid.length, tpl: tpl,
-                    frontX: (rx + tpl.door.c) * 80 + 40, frontY: (ry + tpl.door.r) * 80 + 40 
-                });
             }
         }
 
@@ -441,8 +430,6 @@ class HauntedDorm {
                             bridge.style.top = ((rm.y + r) * this.gridSize) + 'px';
                             this.world1.appendChild(bridge);
                             this.spawnPlant(rm.x + c, rm.y + r, 'wallnut', true);
-                            rm.doorCol = rm.x + c;
-                            rm.doorRow = rm.y + r;
                             continue;
                         }
 
@@ -452,11 +439,11 @@ class HauntedDorm {
                 }
             }
 
-
             // 生成床(阳光菇)
-            this.spawnPlant(rm.x + rm.tpl.bed.c, rm.y + rm.tpl.bed.r, 'sunshroom');
+            rm.tpl.beds.forEach(b => {
+                this.spawnPlant(rm.x + b.c, rm.y + b.r, 'sunshroom');
+            });
         }
-
         // 添加地图边界的河道墙，防止玩家走到地图边缘时撞上无形的“空气墙”
         for (let c = 0; c < this.cols; c++) {
             this.walls.add(`${c},0`);
@@ -497,20 +484,28 @@ class HauntedDorm {
 
         // 修复：清除在生成门和床时被错误赋予给玩家的房间归属
         this.player.room = null;
-        for (const rm of this.rooms) rm.owner = null;
+        for (const rm of this.rooms) {
+            rm.owners = [];
+            rm.capacity = rm.tpl.beds.length;
+        }
 
         // v3.93.0 安排 5 个人机，所有人都出生在地图正中央，然后走向各自房间
-        let shuffledRooms = [...this.rooms].sort(() => Math.random() - 0.5);
-        // 分配给人机的皮肤（不包含玩家当前选的那个，保证 1+5 刚好凑齐 6 个但不全部重复）
-        // 或者直接给5个人机分配 5 个标准皮肤
+        // v3.97.18 让人机按床位分配，如果有个房间有2张床，他们就能共享房间
+        let allBeds = [];
+        for (const rm of this.rooms) {
+            rm.tpl.beds.forEach((bed, idx) => allBeds.push({ room: rm, bedIdx: idx, bedCoords: bed }));
+        }
+        let shuffledBeds = allBeds.sort(() => Math.random() - 0.5);
+        
         for (let i = 0; i < 5; i++) {
-            if (i >= shuffledRooms.length) break;
-            const rm = shuffledRooms[i];
-            const roleDef = this.playerRoles[i]; // 5个人机刚好一人分一个固定皮肤，涵盖全部5种
+            if (i >= shuffledBeds.length) break;
+            const bedChoice = shuffledBeds[i];
+            const rm = bedChoice.room;
+            const roleDef = this.playerRoles[i];
             const sx = (this.worldWidth / 2) + (Math.random() * 40 - 20);
             const sy = (this.worldHeight / 2) + (Math.random() * 40 - 20);
             const p = this._findPath(sx, sy, rm.frontX, rm.frontY);
-            p.push({ x: (rm.x + rm.tpl.bed.c) * this.gridSize + 40, y: (rm.y + rm.tpl.bed.r) * this.gridSize + 40 }); // 最后走到床位
+            p.push({ x: (rm.x + bedChoice.bedCoords.c) * this.gridSize + 40, y: (rm.y + bedChoice.bedCoords.r) * this.gridSize + 40 }); // 走到专属床位
             const ai = {
                 x: sx,
                 y: sy,
@@ -560,8 +555,8 @@ class HauntedDorm {
 
         if (this.plants.some(pl => pl.c === col && pl.r === row)) return;
         const rm = this._insideRoom(col, row);
-        if (rm && !rm.owner && !this.player.room) {
-            rm.owner = this.player;
+        if (rm && rm.owners.length < rm.capacity && !this.player.room) {
+            rm.owners.push(this.player);
             this.player.room = rm; // 玩家占领该房间
         }
 
@@ -806,7 +801,7 @@ class HauntedDorm {
                     const cost = HauntedDorm.DEFS['sunshroom'].cost || 0;
                     if (ai.sun >= cost) {
                         ai.sun -= cost;
-                        this.spawnPlant(rm.x + rm.tpl.bed.c, rm.y + rm.tpl.bed.r, 'sunshroom');
+                        this.spawnPlant(rm.x + rm.tpl.beds[0].c, rm.y + rm.tpl.beds[0].r, 'sunshroom');
                     }
                     continue; // 一次只做一个动作
                 }
@@ -878,7 +873,7 @@ class HauntedDorm {
                         ai.sun -= chosen.cost;
                         this.spawnPlant(chosen.c, chosen.r, chosen.id);
                         this._flyText(chosen.c * 80 + 40, chosen.r * 80, `AI 种植！`, '#bfa8e0');
-                        if (Math.random() < 0.2) this._say(ai, ["多种点豌豆！", "只要我门够厚，僵尸就进不来！", "搞快点搞快点！", "僵尸别来找我！", "发育发育！"][Math.floor(Math.random()*5)]);
+                        if (Math.random() < 0.1) this._say(ai, ["多种点豌豆！", "只要门够厚，僵尸就进不来！", "搞快点搞快点！", "僵尸别来找我！", "一起守护这间房！"][Math.floor(Math.random()*5)]);
                     } else if (chosen.type === 'repair') {
                         ai.sun -= chosen.cost;
                         chosen.pl.hp = Math.min(chosen.pl.maxHp, chosen.pl.hp + 800);
@@ -1396,7 +1391,7 @@ class HauntedDorm {
                 // 如果是幸存者玩家，空房间的门可以自由进出；
                 // 但一旦房间被任何人占领入住，大门就会变成死实体，无法穿模进出！
                 const rm = this._insideRoom(plant.c, plant.r);
-                if (rm && rm.owner) return true;
+                if (rm && rm.owners && rm.owners.length > 0) return true;
             }
             return false;
         });
@@ -1444,7 +1439,7 @@ class HauntedDorm {
             if (!best) continue;
 
             const rm = this._insideRoom(pl.c, pl.r);
-            const owner = rm ? rm.owner : this.player;
+            const owner = (rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : this.player;
 
             if (lob) {
                 pl.shootCd = lob.cd;
@@ -1595,7 +1590,7 @@ class HauntedDorm {
     _updateProduce(dt) {
         for (const pl of this.plants) {
             const rm = this._insideRoom(pl.c, pl.r);
-            const owner = rm ? rm.owner : null;
+            const owner = (rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : null;
             if (!owner || owner.dead) continue;
             
             const def = pl.def;
@@ -1645,7 +1640,7 @@ class HauntedDorm {
                     }
                     if (zb.hp <= 0) {
                         const rm = this._insideRoom(pl.c, pl.r);
-                        this._killZombie(zb, rm ? rm.owner : this.player);
+                        this._killZombie(zb, (rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : this.player);
                     }
                 }
             }
@@ -1733,7 +1728,7 @@ class HauntedDorm {
             for (const zb of [...this.zombies]) {
                 if (!zb.dead && Math.hypot(zb.x - px, zb.y - py) < 130) {
                     const rm = this._insideRoom(pl.c, pl.r);
-                    this._killZombie(zb, rm ? rm.owner : this.player);
+                    this._killZombie(zb, (rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : this.player);
                 }
             }
             pl.el1.remove();
@@ -1766,7 +1761,7 @@ class HauntedDorm {
             ctx.fillRect((rm.x + rm.tpl.door.c) * this.gridSize * sx, (rm.y + rm.tpl.door.r) * this.gridSize * sy, this.gridSize * sx, this.gridSize * sy);
             
             ctx.fillStyle = 'rgba(255,255,255,0.3)';
-            ctx.fillRect((rm.x + rm.tpl.bed.c) * this.gridSize * sx, (rm.y + rm.tpl.bed.r) * this.gridSize * sy, this.gridSize * sx, this.gridSize * sy);
+            ctx.fillRect((rm.x + rm.tpl.beds[0].c) * this.gridSize * sx, (rm.y + rm.tpl.beds[0].r) * this.gridSize * sy, this.gridSize * sx, this.gridSize * sy);
         }
 
         // 【植物和门】
@@ -1944,11 +1939,17 @@ class HauntedDorm {
             // 【新增】人机抢盲盒机制
             if (!ai.dead && this.ghostSpawned && this.airdrops && this.airdrops.length > 0) {
                 // 如果在自己房间待命，且僵尸不在附近，才有概率出门抢盲盒
-                if (ai.room && (!ai.path || ai.path.length === 0) && !zombieNear && Math.random() < 0.005) {
+                let isWellDeveloped = false;
+                if (ai.room) {
+                    const doorPlant = this.getPlantAt(ai.room.doorCol * 80, ai.room.doorRow * 80);
+                    isWellDeveloped = (ai.sun > 1000 || (doorPlant && (!doorPlant.def.up || doorPlant.maxHp > 10000)));
+                }
+                
+                if (isWellDeveloped && ai.room && (!ai.path || ai.path.length === 0) && !zombieNear && Math.random() < 0.005) {
                     const drop = this.airdrops[Math.floor(Math.random() * this.airdrops.length)];
                     ai.targetDrop = drop;
                     ai.path = this._findPath(ai.x, ai.y, drop.x, drop.y);
-                    this._flyText(ai.x, ai.y - 30, "冲鸭！抢盲盒！", "#aaa");
+                    if (Math.random() < 0.5) this._say(ai, "发育好了！去抢盲盒！");
                 }
                 // 如果盲盒消失了，或者碰到僵尸靠近，立刻放弃目标回家！
                 if (ai.targetDrop && ai.path && ai.path.length > 0) {
@@ -1957,7 +1958,7 @@ class HauntedDorm {
                         ai.targetDrop = null;
                         if (ai.room) {
                             const p = this._findPath(ai.x, ai.y, ai.room.frontX, ai.room.frontY);
-                            p.push({ x: (ai.room.x + ai.room.tpl.bed.c) * 80 + 40, y: (ai.room.y + ai.room.tpl.bed.r) * 80 + 40 });
+                            p.push({ x: (ai.room.x + ai.room.tpl.beds[0].c) * 80 + 40, y: (ai.room.y + ai.room.tpl.beds[0].r) * 80 + 40 });
                             ai.path = p;
                             if (zombieNear) ai.speed = 300; // 吓得跑快点
                         }
@@ -1970,20 +1971,20 @@ class HauntedDorm {
                 const door = this.getPlantAt(ai.room.doorCol * 80, ai.room.doorRow * 80);
                 if (!door && Math.random() < 0.05) { // 门破了，5%概率触发逃跑（防扎堆计算）
                     const oldRoom = ai.room;
-                    ai.room.owner = null;
+                    ai.room.owners = ai.room.owners.filter(o => o !== ai);
                     ai.room = null;
                     this._flyText(ai.x, ai.y, "门破了！快跑！", "#ff5252");
                     
                     const candidateRooms = this.rooms.filter(r => {
                         if (r === oldRoom) return false;
                         const hasDoor = this.getPlantAt(r.doorCol*80, r.doorRow*80);
-                        if (r.owner && !hasDoor) return false; // 不去没门且被占的死胡同
+                        if (r.owners.length >= r.capacity && !hasDoor) return false; // 不去没门且被占的死胡同
                         return true;
                     });
                     if (candidateRooms.length > 0) {
                         ai.targetRoom = candidateRooms[Math.floor(Math.random() * candidateRooms.length)];
                         const p = this._findPath(ai.x, ai.y, ai.targetRoom.frontX, ai.targetRoom.frontY);
-                        p.push({ x: (ai.targetRoom.x + ai.targetRoom.tpl.bed.c) * this.gridSize + 40, y: (ai.targetRoom.y + ai.targetRoom.tpl.bed.r) * this.gridSize + 40 });
+                        p.push({ x: (ai.targetRoom.x + ai.targetRoom.tpl.beds[0].c) * this.gridSize + 40, y: (ai.targetRoom.y + ai.targetRoom.tpl.beds[0].r) * this.gridSize + 40 });
                         ai.speed = 300; // 极速逃生
                         ai.path = p;
                     }
@@ -1997,16 +1998,21 @@ class HauntedDorm {
                 const playerPhysicalRoom = this._insideRoom(playerCol, playerRow);
                 
                 // 房间被占用的条件：有owner，或者是玩家正站在里面的房间，或者是玩家已经绑定的房间
-                const isTaken = (rm) => rm.owner || rm === playerPhysicalRoom || rm === this.player.room;
+                const isTaken = (rm) => rm.owners.length >= rm.capacity || (rm === this.player.room && rm.owners.length >= rm.capacity);
 
                 const isFleeing = ai.speed === 300;
                 // 动态查房：如果目标房间已经被玩家抢了或玩家正站在里面，立刻换房（逃跑时不介意房间有人，直接躲进去共享）
-                if (!isFleeing && ai.targetRoom && (isTaken(ai.targetRoom) && ai.targetRoom.owner !== ai)) {
-                    const emptyRooms = this.rooms.filter(r => !isTaken(r) && !this.ais.some(a => a !== ai && a.targetRoom === r));
+                if (!isFleeing && ai.targetRoom && (isTaken(ai.targetRoom) && !ai.targetRoom.owners.includes(ai))) {
+                    // Find a room where (current owners + AIs targeting it) < capacity
+                    const emptyRooms = this.rooms.filter(r => {
+                        if (isTaken(r)) return false;
+                        const incoming = this.ais.filter(a => a !== ai && a.targetRoom === r).length;
+                        return (r.owners.length + incoming) < r.capacity;
+                    });
                     if (emptyRooms.length > 0) {
                         ai.targetRoom = emptyRooms[Math.floor(Math.random() * emptyRooms.length)];
                         const p = this._findPath(ai.x, ai.y, ai.targetRoom.frontX, ai.targetRoom.frontY);
-                        p.push({ x: (ai.targetRoom.x + ai.targetRoom.tpl.bed.c) * this.gridSize + 40, y: (ai.targetRoom.y + ai.targetRoom.tpl.bed.r) * this.gridSize + 40 });
+                        p.push({ x: (ai.targetRoom.x + ai.targetRoom.tpl.beds[0].c) * this.gridSize + 40, y: (ai.targetRoom.y + ai.targetRoom.tpl.beds[0].r) * this.gridSize + 40 });
                         ai.path = p;
                         continue;
                     }
@@ -2021,17 +2027,17 @@ class HauntedDorm {
                     ai.y += (dy / dist) * 200 * dt;
                 } else {
                     ai.path.shift(); // 抵达当前路点，切下一个
-                    // 彻底抵达床位，宣誓主权 (需要最终确认玩家没站在里面)
+                    // 彻底抵达床位，宣誓主权
                     if (ai.path.length === 0 && ai.targetRoom) {
-                        if (!ai.targetRoom.owner && ai.targetRoom !== playerPhysicalRoom && ai.targetRoom !== this.player.room) {
-                            ai.targetRoom.owner = ai;
+                        if (ai.targetRoom.owners.length < ai.targetRoom.capacity && !(ai.targetRoom === this.player.room && ai.targetRoom.owners.length >= ai.targetRoom.capacity)) {
+                            ai.targetRoom.owners.push(ai);
                             ai.room = ai.targetRoom;
                             ai.speed = 200;
                         } else if (isFleeing) {
-                            ai.room = ai.targetRoom; // 躲进别人的房间，不占owner，但认定为自己的房间并开始帮忙修墙
+                            ai.room = ai.targetRoom; // 躲进别人的房间，如果满了就不进owners，但认定为避难所
                             ai.speed = 200;
-                        } else if (ai.targetRoom === playerPhysicalRoom || ai.targetRoom === this.player.room) {
-                            // 如果到了床边发现玩家站在这里或这是玩家的房间，假装没看到，给自己分配个假路径触发重新寻路
+                        } else {
+                            // 如果到了床边发现玩家站在这里或满员了，触发重新寻路
                             ai.path = [{x: ai.x, y: ai.y}]; 
                         }
                     }
@@ -2205,7 +2211,7 @@ class HauntedDorm {
                     // AI 抢到后回家
                     if (pickedByAI.room) {
                         const p = this._findPath(pickedByAI.x, pickedByAI.y, pickedByAI.room.frontX, pickedByAI.room.frontY);
-                        p.push({ x: (pickedByAI.room.x + pickedByAI.room.tpl.bed.c) * 80 + 40, y: (pickedByAI.room.y + pickedByAI.room.tpl.bed.r) * 80 + 40 });
+                        p.push({ x: (pickedByAI.room.x + pickedByAI.room.tpl.beds[0].c) * 80 + 40, y: (pickedByAI.room.y + pickedByAI.room.tpl.beds[0].r) * 80 + 40 });
                         pickedByAI.path = p;
                         pickedByAI.targetDrop = null;
                     }

@@ -52,7 +52,7 @@
 - 车对车=Game.carVsCar 动量守恒；碰撞扣速一次性冲量+冷却；AI 冲量/位移换算到 (s,lane)
 - 输入隔离：frame() 给 P2 的 in_ 必须显式传 Input.p2；隔离性用「只按一方键另一方不动」断言；键盘断言优先 e.code 桩
 
-## thunder-wing（v1.4.4）
+## thunder-wing（v1.4.6）
 - 纯 Canvas2D 零外部素材（程序化精灵 + WebAudio 合成音）；模块 sprites.js / fx.js / enemies.js / build.js / meta.js / ultimate.js / ai.js / game.js + index.html/style.css（**script 顺序：sprites→fx→enemies→build→meta→ultimate→ai→game**，ultimate/ai 在 game 前**且必须在 meta 后**）；测试句柄 window.__twGame（start(mode) / frame / render / key / press / playerInfo / setPower(p,i) / castUlt(i) / setAI(i,on) / idle(i) / nextUlt(i) / enemySlow()）
 - 玩家状态下沉：`G.players[]`（1 或 2 个），每人独立 lives/bombs/power/weapon/spd/combo/comboT/graze/kills；分数与关卡共享。旧全局 G.lives 等用 defineProperty 代理到 1P——**新增玩家属性要同时改 makePlayer + 代理名单 + HUD**
 - **键位铁律（v1.4.3 用户定稿，每人严格三键）**：1P `WASD`/`空格(射击)`/`M(大招)`；2P `方向键`/`小键盘回车(射击)`/`小键盘+(大招)`；暂停 `P/Esc` 全局。冗余键（J/Z/K/X/Q/左Shift/主回车/右Shift/slash 等）已全部删除；**NumpadEnter 的 e.key='Enter' 与主回车相同，必须靠 e.code（小写 'numpadenter'）区分**——主回车现不触发 2P 射击
@@ -60,6 +60,8 @@
 - 我方子弹带 owner → 连击与倍率归属开枪者；敌弹用 `b.gz[j]` 逐玩家记擦弹（兼容老数据要兜底初始化）
 - 添加第二玩家要点：2P 精灵（SPR.player2 = hue-rotate + source-atop 叠色）、识别环与 1P/2P 标记、敌人取 nearest 存活玩家、公平掉落（power 成对 / weapon 三种各一）、一方 out 后另一方可续战
 - **v1.4.4 智能敌机**：ufo（pat:'ufo' 折跃：fade -1→0→1 + alpha，瞬移到玩家侧翼 x0±70~120）、sniper（e.snip 状态机 lock 46f 预警线跟随→fire 15f 冻结角度光束，伤害在 collide 里点线距判定，绘制走 TW.drawEnemyFx）、launcher（fire:'missile2'）、splitter（killEnemy 里 !isMini 一分为二 spawn mini）。敌弹真追踪：ebullet {home:true,turn:0.032,fuel:300}，ebullet 循环内限速转向最近玩家。WEAPONS 第4把 rail（穿透4），dropItem 池 (base+i)%4
+
+- **弹幕契约（v1.4.5/4.6，用户密集恐惧症）**：同屏敌弹硬上限 120 / 我方 80（addBullet 与 enemyShot 的 length 检查）；敌弹速 1.4~2.2 / 我方 5~7（量级统一，用户明确要求）；出弹间隔约×2（ring6=6发/spread3=2发/spread5=3发/bomb=1发）；BOSS_PLANS 全面减密度；我方"少而重"（射速减半伤害翻倍 DPS 持平）；品红弹带蛇行 b.x += sin(t*0.11)*1.1。**改弹幕数值先看这段**；实测脚本 /tmp/tw18.js 量同屏峰值
 
 - 测试：_test.js（46 项）+ _shot.js 不入库；改键位/输入必跑真实键盘事件用例（page.keyboard.down('ShiftRight')）；测"再挨一发"要先 frame(1) 消化复活帧再置 invuln=0，且先把 hitstop 清零
 - **画面自适应（v1.2.0）**：纵向恒定 800，横向 `W = clamp(vw/vh*800, 420, 720)`；`W` 在 game.js 是 `let`，resize 里算完后经 `TW.setWidth(w)` 广播给 enemies.js（那边同样是 `let W`）。**关卡脚本里的横向字面量必须包 `X(v)=v/480*W`**（已用脚本批量包好 line/vee/sine 的 x0,dx、col 的 x、hover/turret 的 xs 数组）；F.ground / F.dive / ATK.wall / ATK.rain 内部用 W 已是动态。自机速度乘 `fieldSpd()=min(1.25, W/480)`。resize 里调用 initStars 重建星空
