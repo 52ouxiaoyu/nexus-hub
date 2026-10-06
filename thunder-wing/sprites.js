@@ -259,4 +259,29 @@
     });
     g.globalCompositeOperation = 'source-over';
   });
+
+  /* 精英机（v1.3.0 段末 Boss 级小高潮）：暖橙涂装 + 尖角剪影，符合有害语言 */
+  TW.SPR.elite = sp(58, 52, (g, w, h) => {
+    g.translate(w / 2, h / 2);
+    poly(g, [[0, -25], [11, -12], [27, -8], [31, 7], [22, 19], [8, 23], [0, 18],
+             [-8, 23], [-22, 19], [-31, 7], [-27, -8], [-11, -12]],
+      '#3a1208', '#ff8a3c', 2);
+    poly(g, [[0, -13], [6, -4], [6, 10], [0, 16], [-6, 10], [-6, -4]], '#ffd9a8', '#fff0d0', 1.2);
+    g.strokeStyle = '#c9501a'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(-23, -6); g.lineTo(-9, -2); g.moveTo(23, -6); g.lineTo(9, -2); g.stroke();
+    glowDot(g, 0, 15, 7, 'rgba(255,160,80,0.9)', 'rgba(255,160,80,0)');
+  });
+
+  /* 陨石（关卡机制）：可击碎的障碍，同样走「暖色 + 尖角 + 暗描边」 */
+  TW.SPR.rock = sp(42, 42, (g, w, h) => {
+    g.translate(w / 2, h / 2);
+    const pts = [];
+    for (let i = 0; i < 9; i++) {
+      const ang = (Math.PI * 2 / 9) * i;
+      const r = 13 + ((i * 37) % 7) - 2;
+      pts.push([Math.cos(ang) * r, Math.sin(ang) * r]);
+    }
+    poly(g, pts, '#2a0f0a', '#c2562a', 2);
+    poly(g, [[-5, -4], [3, -6], [6, 2], [0, 6], [-6, 2]], '#3a1610', '#e07a44', 1);
+  });
 })();

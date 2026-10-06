@@ -17,7 +17,7 @@
   let W = MIN_W;
   /* 战场越宽，自机速度等比补偿，避免横向机动变迟钝 */
   function fieldSpd() { return Math.min(1.25, Math.max(1, W / MIN_W)); }
-  const VERSION = 'v1.2.0';
+  const VERSION = 'v1.3.0';
 
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d', { alpha: false });
@@ -85,20 +85,24 @@
     mode: 'story',           // story / endless
     two: false,              // 是否双人同屏
     frame: 0, stage: 0, stageT: 0, scriptI: 0, pending: [],
-    enemies: [], ebullets: [], pbullets: [], items: [], exps: [],
+    enemies: [], ebullets: [], pbullets: [], items: [], exps: [], rocks: [], beams: [],
     boss: null,
     players: [],             // 玩家对象数组（1 或 2 个）
     score: 0, rank: 0, kills: 0,
     nextExtend: 80000, wave: 0, clearT: 0, flash: 0, deathT: 0,
     best: 0, sfx: true, waveMsg: 0, msgText: '',
+    daily: false, perkPool: null, dailyPow: 1,
+    stats: { maxCombo: 0, deaths: 0, odTriggers: 0 },
     stars: [],
 
     reset(two) {
       this.enemies.length = 0; this.ebullets.length = 0; this.pbullets.length = 0;
       this.items.length = 0; this.pending.length = 0; this.exps.length = 0;
+      this.rocks.length = 0; this.beams.length = 0;
       this.frame = 0; this.stageT = 0; this.scriptI = 0; this.boss = null;
       this.score = 0; this.rank = 0; this.kills = 0;
       this.nextExtend = 80000; this.wave = 0; this.clearT = 0; this.flash = 0; this.deathT = 0;
+      this.stats.maxCombo = 0; this.stats.deaths = 0; this.stats.odTriggers = 0;
       TW.FX.reset();
       this.two = !!two;
       this.players.length = 0;
@@ -340,6 +344,7 @@
     TW.FX.text(pl.x, pl.y - 42, 'OVERDRIVE', '#ffe9a8', 17);
     TW.FX.quake(4, 12);
     TW.Audio.chargeFire();
+    G.stats.odTriggers++;
     G.rank = Math.min(100, G.rank + 2);
   }
   TW.tryOverdrive = tryOverdrive;
@@ -530,10 +535,17 @@
     TW.FX.boom(e.x, e.y, e.type === 'bomber' || e.type === 'gunship' ? 1.7 : 1, '#ffb04a');
     TW.Audio.explode();
     G.kills++;
-    if (pl) { pl.kills++; pl.combo++; pl.comboT = COMBO_WIN; }
+    if (pl) { pl.kills++; pl.combo++; pl.comboT = COMBO_WIN;
+      if (pl.combo > G.stats.maxCombo) G.stats.maxCombo = pl.combo; }
     G.rank = Math.min(100, G.rank + 0.18);
     G.addScore(e.score, e.x, e.y - 10, pl);
     TW.spawnExp(e.x, e.y, (e.type === 'gunship' || e.type === 'bomber') ? 3 : 1);
+    if (e.elite) {
+      TW.spawnExp(e.x, e.y, 10);
+      TW.dropItem(e.x - 24, e.y, 'weapon');
+      TW.FX.text(e.x, e.y - 34, 'ELITE DOWN', '#ffd27a', 16);
+      TW.FX.quake(5, 16);
+    }
     splashOnKill(e, pl);
     if (e.item) TW.dropItem(e.x, e.y, e.item);
     else if (Math.random() < (G.two ? 0.18 : 0.14)) TW.dropItem(e.x, e.y, 'medal');
@@ -556,6 +568,7 @@
 
   function playerDie(pl) {
     if (pl.invuln > 0 || G.state !== 'PLAYING' || pl.out) return;
+    G.stats.deaths++;
     /* 力场护盾：冷却就绪时吃掉这次致命伤 */
     if (pl.pk('shield') > 0 && pl.shieldT <= 0) {
       pl.shieldT = 1080;
@@ -577,7 +590,7 @@
       pl.out = true; pl.firing = false; pl.dead = false;
       if (G.alive().length === 0) {
         G.state = 'OVER';
-        if (G.score > G.best) { G.best = G.score; localStorage.setItem('tw_best', G.best); }
+        finishRun(false);
         showOverlay('result');
       } else {
         TW.FX.text(W / 2, H / 2, pl.tag + ' 已出局', PCFG[pl.id].color, 22);
@@ -654,10 +667,53 @@
           break;
         }
       }
+      /* 我方子弹 → 陨石（可击碎，掉经验） */
+      if (!consumed && G.rocks.length) {
+        for (let m = 0; m < G.rocks.length; m++) {
+          const rk = G.rocks[m];
+          if (Math.hypot(b.x - rk.x, b.y - rk.y) < rk.r + b.r) {
+            rk.hp -= b.dmg; rk.flash = 3;
+            TW.FX.hit(b.x, b.y, '#ffd08a');
+            consumed = true;
+            if (rk.hp <= 0) {
+              TW.FX.boom(rk.x, rk.y, 1.2, '#e07a44');
+              TW.Audio.explode();
+              TW.spawnExp(rk.x, rk.y, 2);
+              G.rocks.splice(m, 1);
+            }
+            break;
+          }
+        }
+      }
       if (consumed) G.pbullets.splice(i, 1);
     }
 
     if (G.players.length === 0) return;
+
+    /* 陨石 / 激光栅栏 → 玩家 */
+    for (let i = G.rocks.length - 1; i >= 0; i--) {
+      const rk = G.rocks[i];
+      for (let k = 0; k < G.players.length; k++) {
+        const pl = G.players[k];
+        if (pl.out || pl.dead) continue;
+        if (Math.hypot(pl.x - rk.x, pl.y - rk.y) < rk.r * 0.8 + pl.r) {
+          TW.FX.boom(rk.x, rk.y, 1.2, '#e07a44');
+          G.rocks.splice(i, 1);
+          playerDie(pl);
+          break;
+        }
+      }
+    }
+    for (let i = 0; i < G.beams.length; i++) {
+      const bm = G.beams[i];
+      if (bm.t < bm.warn) continue;
+      for (let k = 0; k < G.players.length; k++) {
+        const pl = G.players[k];
+        if (pl.out || pl.dead || pl.invuln > 0) continue;
+        const inGap = pl.x > bm.gapX - bm.gapW / 2 && pl.x < bm.gapX + bm.gapW / 2;
+        if (!inGap && Math.abs(pl.y - bm.y) < 12) playerDie(pl);
+      }
+    }
 
     /* 敌弹 → 玩家（逐在多玩家身上独立判定） */
     for (let i = G.ebullets.length - 1; i >= 0; i--) {
@@ -737,6 +793,7 @@
     G.stageT = 0; G.scriptI = 0;
     G.pending.length = 0;
     G.enemies.length = 0; G.ebullets.length = 0; G.items.length = 0;
+    G.rocks.length = 0; G.beams.length = 0;
     G.boss = null;
     if (n < TW.STAGES.length) {
       G.msgText = 'STAGE ' + (n + 1) + '  ' + TW.STAGES[n].name;
@@ -754,6 +811,22 @@
       st.script[G.scriptI].fn();
       G.scriptI++;
     }
+    /* 段末精英机：把每关切成三个节奏高点 */
+    if (st.elites) {
+      for (let i = 0; i < st.elites.length; i++) {
+        if (G.stageT === st.elites[i]) {
+          TW.spawnElite();
+          G.msgText = 'ELITE';
+          G.waveMsg = 80;
+        }
+      }
+    }
+    /* 关卡独有机制：陨石带 / 激光栅栏 */
+    if (st.gimmick === 'meteor' && G.stageT % 210 === 0 &&
+      G.stageT > 420 && G.stageT < st.len - 260) TW.spawnRock();
+    if (st.gimmick === 'beam' && G.stageT % 640 === 0 &&
+      G.stageT > 520 && G.stageT < st.len - 260) TW.spawnBeam();
+
     if (G.scriptI >= st.script.length && G.stageT >= st.len && !G.boss && G.pending.length === 0) {
       /* 原逻辑要求场上敌人全部清零才出 Boss；turret / hover 不会自己离场，
          漏掉一个角落炮台就会无限拖住关卡。改为：清场即触发，超时 4 秒强制触发并让残敌撤离。 */
@@ -855,6 +928,8 @@
       collide();
     }
     TW.updateExp();
+    TW.updateRocks();
+    TW.updateBeams();
     TW.FX.update();
 
     /* 背景 */
@@ -871,7 +946,7 @@
     G.score += bonus;
     if (G.stage + 1 >= TW.STAGES.length) {
       G.state = 'WIN';
-      if (G.score > G.best) { G.best = G.score; localStorage.setItem('tw_best', G.best); }
+      finishRun(true);
       showOverlay('result');
     } else {
       G.state = 'CLEAR';
@@ -1010,6 +1085,40 @@
       }
     }
 
+    /* 关卡机制实体 */
+    for (let i = 0; i < G.rocks.length; i++) {
+      const rk = G.rocks[i];
+      drawSpr(TW.SPR.rock, rk.x, rk.y, 38, 38, rk.rot, rk.flash > 0);
+    }
+    for (let i = 0; i < G.beams.length; i++) {
+      const bm = G.beams[i];
+      if (bm.t < bm.warn) {
+        ctx.strokeStyle = 'rgba(255,72,100,' + (0.35 + 0.35 * Math.sin(bm.t * 0.5)).toFixed(2) + ')';
+        ctx.lineWidth = 2; ctx.setLineDash([10, 8]);
+        ctx.beginPath(); ctx.moveTo(0, bm.y); ctx.lineTo(W, bm.y); ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        const a = Math.min(1, (bm.life - bm.t) / 30);
+        const gl = bm.gapX - bm.gapW / 2, gr = bm.gapX + bm.gapW / 2;
+        ctx.fillStyle = 'rgba(255,72,100,' + (0.2 * a).toFixed(2) + ')';
+        ctx.fillRect(0, bm.y - 15, W, 30);
+        ctx.fillStyle = 'rgba(255,72,100,' + (0.9 * a).toFixed(2) + ')';
+        ctx.fillRect(0, bm.y - 8, gl, 16);
+        ctx.fillRect(gr, bm.y - 8, W - gr, 16);
+        ctx.strokeStyle = 'rgba(255,200,215,' + (0.85 * a).toFixed(2) + ')'; ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, bm.y); ctx.lineTo(gl, bm.y);
+        ctx.moveTo(gr, bm.y); ctx.lineTo(W, bm.y);
+        ctx.stroke();
+        /* 缺口用冷色标出：这是「安全通道」，与有害的暖色带区分 */
+        ctx.strokeStyle = 'rgba(140,240,255,0.75)'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(gl, bm.y - 15); ctx.lineTo(gl, bm.y + 15);
+        ctx.moveTo(gr, bm.y - 15); ctx.lineTo(gr, bm.y + 15);
+        ctx.stroke();
+      }
+    }
+
     TW.drawExp(ctx);
 
     /* 玩家 */
@@ -1092,7 +1201,6 @@
     ctx.font = '600 15px system-ui, sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.fillText('SCORE ' + G.score, 12, 26);
-    drawBuildBars();
     ctx.font = '400 12px system-ui, sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.fillText('HI ' + Math.max(G.best, G.score), 12, 42);
@@ -1234,6 +1342,7 @@
     menu: document.getElementById('ov-menu'),
     pause: document.getElementById('ov-pause'),
     result: document.getElementById('ov-result'),
+    ach: document.getElementById('ov-ach'),
   };
   function hideAll() { for (const k in ov) if (ov[k]) ov[k].classList.add('hidden'); }
   function showOverlay(name) {
@@ -1243,6 +1352,7 @@
     if (name === 'menu') {
       const b = document.getElementById('menu-best');
       if (b) b.textContent = '最高分 ' + (localStorage.getItem('tw_best') || 0);
+      refreshMenuMeta();
     }
     if (name === 'result') fillResult();
   }
@@ -1267,14 +1377,67 @@
         ? (G.state === 'WIN' ? '双人合作通关全 5 关' : '到达 STAGE ' + (G.stage + 1))
         : '无尽模式 WAVE ' + G.wave)
         + '<br>' + lines.join('<br>')
-        + '<br>最高分 ' + G.best;
+        + '<br>最高分 ' + G.best
+        + (G.lastRun && G.lastRun.st ? '<br>等级 ' + G.lastRun.st.level + ' · 最高连击 ' + G.lastRun.st.maxCombo
+            + ' · 超载 ' + G.lastRun.st.odTriggers + ' 次' : '')
+        + (G.daily && TW.Meta ? '<br>今日最佳 ' + TW.Meta.dailyRecord().best
+            + (G.lastRun && G.lastRun.newRec ? ' <b style="color:#ffe9a8">新纪录</b>' : '') : '')
+        + (G.lastRun && G.lastRun.fresh && G.lastRun.fresh.length
+            ? '<br><b style="color:#ffe9a8">新成就：' + G.lastRun.fresh.map((a) => a.name).join(' · ') + '</b>' : '');
+    }
+  }
+
+  /* 一局结束：结算成就与每日挑战记录 */
+  function finishRun(win) {
+    let lv = 0;
+    for (let i = 0; i < G.players.length; i++) lv = Math.max(lv, G.players[i].level || 0);
+    const st = {
+      win: !!win, score: G.score, wave: G.wave, level: lv,
+      maxCombo: G.stats.maxCombo, deaths: G.stats.deaths,
+      odTriggers: G.stats.odTriggers, graze: G.grazeTotal(),
+    };
+    const fresh = TW.Meta ? TW.Meta.check(st) : [];
+    let newRec = false;
+    if (G.daily && TW.Meta) newRec = TW.Meta.submitDaily(G.score, G.wave);
+    if (G.score > G.best) { G.best = G.score; localStorage.setItem('tw_best', G.best); }
+    G.lastRun = { st: st, fresh: fresh, newRec: newRec };
+  }
+
+  function showAchievements() {
+    const list = document.getElementById('ach-list');
+    if (list && TW.Meta) {
+      const u = TW.Meta.unlocked();
+      list.innerHTML = TW.Meta.ACH.map((a) => {
+        const on = !!u[a.id];
+        return '<div class="ach-item' + (on ? ' on' : '') + '">' +
+          '<i class="ach-dot"></i><div><b>' + a.name + '</b><span>' + a.desc + '</span></div></div>';
+      }).join('');
+    }
+    showOverlay('ach');
+  }
+
+  /* 菜单上的成就进度与每日挑战副标题 */
+  function refreshMenuMeta() {
+    const as = document.getElementById('ach-sub');
+    const ds = document.getElementById('daily-sub');
+    if (as && TW.Meta) {
+      const u = TW.Meta.unlocked();
+      as.textContent = TW.Meta.ACH.filter((a) => u[a.id]).length + ' / ' + TW.Meta.ACH.length;
+    }
+    if (ds && TW.Meta) {
+      const r = TW.Meta.dailyRecord();
+      ds.textContent = r.best > 0 ? ('今日最佳 ' + r.best) : '今天固定词条池';
     }
   }
 
   function startGame(mode, two) {
     TW.Audio.init(); TW.Audio.resume();
-    G.mode = mode || 'story';
+    G.daily = (mode === 'daily');
+    G.mode = G.daily ? 'endless' : (mode || 'story');
+    G.perkPool = G.daily && TW.Meta ? TW.Meta.dailyPool() : null;
+    G.dailyPow = G.daily && TW.Meta ? TW.Meta.dailyPower() : 1;
     G.reset(two === undefined ? G.two : !!two);
+    if (G.daily) G.rank = 22;          /* 每日挑战：起步就更硬 */
     G.state = 'PLAYING';
     startStage(0);
     document.body.dataset.mode = G.mode;
@@ -1293,6 +1456,8 @@
       else if (a === 'start-coop') startGame('story', true);
       else if (a === 'start-endless') startGame('endless', false);
       else if (a === 'start-endless2') startGame('endless', true);
+      else if (a === 'start-daily') startGame('daily', false);
+      else if (a === 'show-ach') showAchievements();
       else if (a === 'resume') togglePause();
       else if (a === 'restart') startGame(G.mode, G.two);
       else if (a === 'menu') { G.state = 'MENU'; showOverlay('menu'); }
@@ -1332,6 +1497,15 @@
     spawnBoss: (s) => TW.spawnBoss(s || 0),
     killAll: () => { G.enemies.length = 0; G.boss = null; },
     gotoStage: (n) => { startStage(n); },
-    counts: () => ({ e: G.enemies.length, eb: G.ebullets.length, pb: G.pbullets.length, it: G.items.length, parts: TW.FX.parts.length }),
+    counts: () => ({ e: G.enemies.length, eb: G.ebullets.length, pb: G.pbullets.length,
+      it: G.items.length, ex: G.exps.length, rk: G.rocks.length, bm: G.beams.length,
+      parts: TW.FX.parts.length }),
+    gainExp: (v, i) => { const pl = G.players[i || 0]; if (pl) TW.gainExp(pl, v); },
+    confirmPick: (i) => TW.confirmPick(G.players[i || 0]),
+    overdrive: (i) => TW.tryOverdrive(G.players[i || 0]),
+    perks: (i) => { const pl = G.players[i || 0]; return pl ? pl.perks : {}; },
+    spawnElite: () => TW.spawnElite(),
+    spawnRock: () => TW.spawnRock(),
+    spawnBeam: () => TW.spawnBeam(),
   };
 })();

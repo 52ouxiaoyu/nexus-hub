@@ -174,3 +174,37 @@ html, body {
 @media (pointer: fine) {
   .touch-only { display: none; }
 }
+
+/* ==================== v1.3.0：每日挑战 / 成就 ==================== */
+.btn.daily {
+  border-color: rgba(255, 210, 122, 0.5);
+  background: rgba(255, 210, 122, 0.1);
+}
+.btn.daily span { color: rgba(255, 210, 122, 0.7); }
+
+.ach-list {
+  text-align: left;
+  max-height: 44vh;
+  overflow-y: auto;
+  margin: 10px 0 6px;
+}
+.ach-item {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 7px 9px; margin-bottom: 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  opacity: 0.45;
+}
+.ach-item.on {
+  opacity: 1;
+  border-color: rgba(255, 233, 168, 0.4);
+  background: rgba(255, 233, 168, 0.07);
+}
+.ach-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  margin-top: 5px; flex: 0 0 9px;
+  background: rgba(255, 255, 255, 0.22);
+}
+.ach-item.on .ach-dot { background: #ffe9a8; }
+.ach-item b { display: block; font-size: 13px; font-weight: 500; color: #dff6ff; }
+.ach-item span { font-size: 11px; color: rgba(255, 255, 255, 0.55); }

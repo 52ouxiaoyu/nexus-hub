@@ -168,6 +168,9 @@
     death() { this.burst(0.5, 0.28, 800, 1); this.tone(220, 0.6, 'sawtooth', 0.12, 40); },
     warn() { this.tone(520, 0.12, 'square', 0.08); setTimeout(() => this.tone(520, 0.12, 'square', 0.08), 160); },
     extend() { [660, 880, 1100, 1320].forEach((f, i) => setTimeout(() => this.tone(f, 0.13, 'square', 0.08), i * 90)); },
+    /* v1.3.0：升级三选一的上行音阶；超载触发的更亮更有力 */
+    levelup() { [784, 988, 1319].forEach((f, i) => setTimeout(() => this.tone(f, 0.1, 'square', 0.08), i * 70)); },
+    overdrive() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => this.tone(f, 0.12, 'sawtooth', 0.09), i * 58)); },
   };
   TW.Audio = A;
 })();

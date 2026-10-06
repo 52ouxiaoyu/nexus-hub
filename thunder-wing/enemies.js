@@ -11,6 +11,8 @@
   function X(v) { return v / RW * W; }
 
   function G() { return TW.G; }
+  /* 每日挑战的强度系数（1.0 - 1.35），每天固定 */
+  function dpow() { const g = TW.G; return (g && g.dailyPow) || 1; }
   function later(fr, fn) { if (fr <= 0) fn(); else G().pending.push({ t: G().frame + fr, fn: fn }); }
   TW.later = later;
 
@@ -22,6 +24,7 @@
     bomber: { spr: 'bomber', hp: 32, r: 24, score: 600, fire: 'bomb', every: 120 },
     tank: { spr: 'tank', hp: 14, r: 15, score: 200, fire: 'aimed', every: 95 },
     turret: { spr: 'turret', hp: 15, r: 15, score: 250, fire: 'spread3', every: 80 },
+    elite: { spr: 'elite', hp: 95, r: 27, score: 2500, fire: 'ring12', every: 78 },
   };
   TW.ED = ED;
 
@@ -60,7 +63,7 @@
     const e = {
       type: type, spr: d.spr, x: x, y: y, x0: x, y0: y,
       vx: opt.vx || 0, vy: opt.vy === undefined ? 1.6 : opt.vy,
-      hp: Math.round(d.hp * (opt.hpMul || 1)), maxhp: Math.round(d.hp * (opt.hpMul || 1)),
+      hp: Math.round(d.hp * (opt.hpMul || 1) * dpow()), maxhp: Math.round(d.hp * (opt.hpMul || 1) * dpow()),
       r: d.r, score: d.score, t: 0, pat: opt.pat || 'straight',
       amp: opt.amp || 60, w: opt.w || 0.045, ty: opt.ty || 180,
       fire: opt.fire || d.fire, every: opt.every || d.every, fireT: opt.delay || (40 + Math.random() * 50),
@@ -178,6 +181,7 @@
   TW.STAGES = [
     {
       name: '边境星域', sub: 'Frontier Belt', tint: '#071428', star: '#9fd8ff',
+      elites: [1100, 2200, 3120],
       boss: 0,
       script: [
         S(40, () => F.vee('drone', 5, X(240), X(46), 1.9)),
@@ -200,6 +204,7 @@
     },
     {
       name: '云海要塞', sub: 'Cloud Fortress', tint: '#0a1a2e', star: '#bfe4ff',
+      elites: [1100, 2200, 3120],
       boss: 1,
       script: [
         S(40, () => F.line('drone', 6, X(70), X(68), 2.0)),
@@ -221,6 +226,8 @@
     },
     {
       name: '赤色峡谷', sub: 'Crimson Canyon', tint: '#200a12', star: '#ffc9b0',
+      elites: [1100, 2200, 3120],
+      gimmick: 'meteor',
       boss: 2,
       script: [
         S(40, () => F.vee('fighter', 7, X(240), X(50), 2.4)),
@@ -242,6 +249,8 @@
     },
     {
       name: '极地轨道', sub: 'Polar Orbit', tint: '#071c1e', star: '#b6fbff',
+      elites: [1100, 2200, 3120],
+      gimmick: 'beam',
       boss: 3,
       script: [
         S(40, () => F.col('drone', 9, X(130), 13, { pat: 'sine', amp: 80 })),
@@ -262,6 +271,8 @@
     },
     {
       name: '敌旗舰队', sub: 'Flagship Fleet', tint: '#1a0e26', star: '#e0c9ff',
+      elites: [1100, 2200, 3120],
+      gimmick: 'meteor',
       boss: 4,
       script: [
         S(40, () => F.vee('fighter', 9, X(240), X(46), 2.8)),
@@ -280,6 +291,59 @@
       len: 3400,
     },
   ];
+
+  /* ==================== 精英机（段末小高潮） ====================
+     血厚、环形弹幕、必掉火力与大量经验 —— 给每关切出三个节奏高点。 */
+  TW.spawnElite = function () {
+    const e = TW.spawn('elite', X(240), -44, {
+      pat: 'hover', ty: 185, vy: 1.7, item: 'power', fire: 'ring12', every: 78,
+    });
+    e.elite = true;
+    return e;
+  };
+
+  /* ==================== 关卡机制：陨石带 ====================
+     可击碎的障碍。走「暖色 + 尖角 + 暗描边」，玩家一眼知道要躲或打掉。 */
+  TW.spawnRock = function (x) {
+    const g = G();
+    if (g.rocks.length > 24) return;
+    g.rocks.push({
+      x: x === undefined ? 30 + Math.random() * (W - 60) : x, y: -38,
+      vx: (Math.random() - 0.5) * 0.9, vy: 1.5 + Math.random() * 1.1,
+      r: 17, hp: 26, maxhp: 26, t: 0, flash: 0,
+      rot: Math.random() * 6.28, rs: (Math.random() - 0.5) * 0.05,
+    });
+  };
+
+  TW.updateRocks = function () {
+    const g = G();
+    for (let i = g.rocks.length - 1; i >= 0; i--) {
+      const r = g.rocks[i];
+      r.t++; r.rot += r.rs; r.x += r.vx; r.y += r.vy;
+      if (r.flash > 0) r.flash--;
+      if (r.y > 880 || r.x < -70 || r.x > W + 70) g.rocks.splice(i, 1);
+    }
+  };
+
+  /* ==================== 关卡机制：激光栅栏 ====================
+     横贯全屏的激光带，留一个缺口逼玩家走位穿过；有 46 帧预警。 */
+  TW.spawnBeam = function (y, life) {
+    const g = G();
+    const gapW = 78;
+    g.beams.push({
+      y: y === undefined ? 300 + Math.random() * 260 : y,
+      gapX: 44 + Math.random() * Math.max(1, W - 88), gapW: gapW,
+      t: 0, life: life || 210, warn: 46,
+    });
+  };
+
+  TW.updateBeams = function () {
+    const g = G();
+    for (let i = g.beams.length - 1; i >= 0; i--) {
+      g.beams[i].t++;
+      if (g.beams[i].t > g.beams[i].life) g.beams.splice(i, 1);
+    }
+  };
 
   /* ==================== Boss ==================== */
   const BOSS_DEF = [

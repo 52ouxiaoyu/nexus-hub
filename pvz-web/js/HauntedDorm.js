@@ -935,11 +935,19 @@ class HauntedDorm {
         this.activeTexts = this.activeTexts.filter(t => now - t.t < 2000); // 慢一点，保留2秒
         
         let flyY = y - 30;
-        // 防重叠堆叠逻辑 (Vertical stacking)
-        for (const t of this.activeTexts) {
-            if (Math.abs(t.x - x) < 50 && Math.abs(t.y - flyY) < 30) {
-                flyY -= 30; // 向上避让
+        // 彻底防重叠堆叠逻辑 (Vertical stacking loop)
+        let overlap = true;
+        let attempts = 0;
+        while (overlap && attempts < 15) {
+            overlap = false;
+            for (const t of this.activeTexts) {
+                if (Math.abs(t.x - x) < 60 && Math.abs(t.y - flyY) < 35) {
+                    flyY -= 30; // 向上避让
+                    overlap = true;
+                    break;
+                }
             }
+            attempts++;
         }
         this.activeTexts.push({ x: x, y: flyY, t: now });
 
@@ -1244,12 +1252,18 @@ class HauntedDorm {
     }
 
     checkCollision(x, y, r = 20) {
-        // v3.88.0：25 → 20，v3.96.0：支持动态半径，玩家设为10更容易进门
+        // 彻底修复穿墙：不仅查四个角，还查中心，确保绝对实体
+        r = 15; // 强制半径 15，避免过小导致在角落漏检
         const corners = [
+            { c: Math.floor(x/this.gridSize), r: Math.floor(y/this.gridSize) }, // 中心点
             { c: Math.floor((x-r)/this.gridSize), r: Math.floor((y-r)/this.gridSize) },
             { c: Math.floor((x+r)/this.gridSize), r: Math.floor((y-r)/this.gridSize) },
             { c: Math.floor((x-r)/this.gridSize), r: Math.floor((y+r)/this.gridSize) },
-            { c: Math.floor((x+r)/this.gridSize), r: Math.floor((y+r)/this.gridSize) }
+            { c: Math.floor((x+r)/this.gridSize), r: Math.floor((y+r)/this.gridSize) },
+            { c: Math.floor(x/this.gridSize), r: Math.floor((y-r)/this.gridSize) },
+            { c: Math.floor(x/this.gridSize), r: Math.floor((y+r)/this.gridSize) },
+            { c: Math.floor((x-r)/this.gridSize), r: Math.floor(y/this.gridSize) },
+            { c: Math.floor((x+r)/this.gridSize), r: Math.floor(y/this.gridSize) }
         ];
         return corners.some(p => this.walls.has(`${p.c},${p.r}`));
     }
@@ -1350,7 +1364,7 @@ class HauntedDorm {
             // if (this.walls.has(`${c},${r}`)) pea.life = 0; // 用户要求子弹能穿透墙壁
             // 命中检测（34px）
             for (const zb of this.zombies) {
-                if (zb.dead) continue;
+                if (zb.dead || zb.retreating) continue; // 撤退中的幽灵僵尸直接免疫子弹
                 if (Math.hypot(zb.x - pea.x, zb.y - pea.y) < 34) {
                     pea.life = 0;
                     const hits = pea.aoe > 0
@@ -1765,15 +1779,8 @@ class HauntedDorm {
             }
         }
 
-        // 防卡墙自救
-        if (this.checkCollision(this.player.x, this.player.y, 10)) {
-            // 被卡在墙内了，尝试推出去
-            const r = 10;
-            if (!this.checkCollision(this.player.x + r, this.player.y, 10)) this.player.x += r;
-            else if (!this.checkCollision(this.player.x - r, this.player.y, 10)) this.player.x -= r;
-            else if (!this.checkCollision(this.player.x, this.player.y + r, 10)) this.player.y += r;
-            else if (!this.checkCollision(this.player.x, this.player.y - r, 10)) this.player.y -= r;
-        }
+        // 移除卡墙推挤（这会导致高速贴墙时被硬挤出地图或穿墙）
+        // 墙永远是实体，不需要自救穿墙
 
         // 浇水（v3.89.0：1 秒才能浇一次——按再快也只按时间间隔计，杜绝拼手速；+1 阳光 / 催熟身边蘑菇）
         // 浇水（v3.92.0：空格开关式——按一下持续浇水不用按住，0.2 秒一次；+1 阳光 / 催熟身边蘑菇）
@@ -1951,7 +1958,7 @@ class HauntedDorm {
                 continue;
             }
             if (zb.slowT > 0) zb.slowT -= dt;
-            const spd = zb.speed * (zb.slowT > 0 ? 0.5 : 1);
+            const spd = zb.retreating ? 1000 : (zb.speed * (zb.slowT > 0 ? 0.5 : 1));
 
             // 找综合仇恨值最高的目标（距离、门血量、门等级综合判断）
             let closestTarget = null;
@@ -2001,10 +2008,12 @@ class HauntedDorm {
             if (zb.hp >= zb.maxHp) zb.retreating = false;
             
             if (zb.retreating) {
+                zb.slowT = 0; // 逃跑时免疫减速
+                zb.stunT = 0; // 逃跑时免疫眩晕
                 targetX = this.worldWidth / 2;
                 targetY = this.worldHeight / 2;
                 if (Math.hypot(targetX - zb.x, targetY - zb.y) < 120) {
-                    zb.hp = Math.min(zb.maxHp, zb.hp + zb.maxHp * 0.15 * dt);
+                    zb.hp = Math.min(zb.maxHp, zb.hp + zb.maxHp * 0.25 * dt); // 回血变快
                     if (zb.hpBg) {
                         zb.hpBg.style.display = 'block';
                         zb.hpFg.style.width = (zb.hp / zb.maxHp * 100) + '%';
