@@ -31,7 +31,7 @@ function ok(name, cond, extra) {
   console.log('\n--- 加载与句柄 ---');
   ok('无页面异常', errors.length === 0, errors.slice(0, 3));
   const ver = await page.evaluate(() => window.__twGame && window.__twGame.VERSION);
-  ok('句柄存在且版本 v1.4.8', ver === 'v1.4.8', ver);
+  ok('句柄存在且版本 v1.4.9', ver === 'v1.4.9', ver);
   ok('初始为菜单态', await page.evaluate(() => window.__twGame.state()) === 'MENU');
   await page.screenshot({ path: OUT + '/_shot_menu.png' });
 
@@ -308,7 +308,7 @@ function ok(name, cond, extra) {
   }));
   ok('结算面板弹出并区分 1P / 2P 战绩', res2.ov && res2.has1p && res2.has2p, res2);
 
-  /* v1.4.8 救援：接触信标把队友拉回战场 */
+  /* v1.4.9 救援：接触信标把队友拉回战场 */
   const res3 = await page.evaluate(() => {
     const S = window.__twGame, g = S.G;
     S.start('story', true);

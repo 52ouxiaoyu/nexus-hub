@@ -20,7 +20,7 @@
   let W = MIN_W;
   /* 战场越宽，自机速度等比补偿，避免横向机动变迟钝 */
   function fieldSpd() { return Math.min(1.25, Math.max(1, W / MIN_W)); }
-  const VERSION = 'v1.4.8';
+  const VERSION = 'v1.4.9';
 
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d', { alpha: false });
@@ -1383,34 +1383,21 @@
     drawHUD();
   }
 
+  /* ==================== HUD（v1.4.9：全部顶部、左右完全镜像） ==================== */
+  /* 顶部中央 = 共享信息（SCORE/HI/擦弹·RANK/连击/Boss 血条）；
+     左列 = 1P（左对齐），右列 = 2P（右对齐），逐行镜像：
+     残机+大招 → 武器+火力格 → LV+经验/超载条 → 下一发大招 */
   function drawHUD() {
-    ctx.textAlign = 'left';
+    /* ---- 顶部中央：共享信息 ---- */
+    ctx.textAlign = 'center';
     ctx.font = '600 15px system-ui, sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText('SCORE ' + G.score, 12, 26);
-    ctx.font = '400 12px system-ui, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.fillText('HI ' + Math.max(G.best, G.score), 12, 42);
+    ctx.fillText('SCORE ' + G.score, W / 2, 24);
+    ctx.font = '400 11px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillText('HI ' + Math.max(G.best, G.score) + ' · 擦弹 ' + G.grazeTotal() + ' · RANK ' + Math.round(G.rank), W / 2, 42);
 
-    /* 残机 / 炸弹（逐玩家分行） */
-    ctx.textAlign = 'right';
-    ctx.font = '600 13px system-ui, sans-serif';
-    for (let i = 0; i < G.players.length; i++) {
-      const pl = G.players[i];
-      if (G.two) {
-        ctx.font = '600 13px system-ui, sans-serif';
-        ctx.fillStyle = PCFG[i].color;
-        ctx.fillText(pl.tag + (pl.out ? (G.pods.some(p => p.owner === pl.id) ? ' 待救援' : ' OUT') : ' 残机 ' + Math.max(0, pl.lives) + '  大招 ' + pl.bombs),
-          W - 12, 26 + i * 20);
-      } else {
-        ctx.fillStyle = '#9ff0ff';
-        ctx.fillText('残机 ' + Math.max(0, pl.out ? 0 : pl.lives), W - 12, 26);
-        ctx.fillStyle = '#ffd27a';
-        ctx.fillText('大招 ' + pl.bombs, W - 12, 44);
-      }
-    }
-
-    /* 连击（单人取 1P，双人取连击更高者） */
+    /* ---- 连击（双人取连击更高者） ---- */
     let cl = null;
     for (let i = 0; i < G.players.length; i++) {
       const pl = G.players[i];
@@ -1418,106 +1405,85 @@
       if (pl.combo > 1 && (!cl || pl.combo > cl.combo)) cl = pl;
     }
     if (cl) {
-      ctx.textAlign = 'center';
       ctx.font = '600 18px system-ui, sans-serif';
       ctx.fillStyle = '#ffe9a8';
-      ctx.fillText('x' + G.mult(cl).toFixed(2) + '  ' + cl.combo + (G.two ? ' ' + cl.tag : '') + ' COMBO', W / 2, 26);
+      ctx.fillText('x' + G.mult(cl).toFixed(2) + '  ' + cl.combo + ' ' + cl.tag + ' COMBO', W / 2, 64);
     }
 
-    /* Build：等级 + 经验条 + 超载充能条（v1.3.0） */
+    /* ---- 左右两列：逐玩家完全镜像 ---- */
+    const bw = 104;
     for (let i = 0; i < G.players.length; i++) {
       const pl = G.players[i];
+      const right = i === 1;                      /* 右列 = 2P */
+      const ax = right ? W - 12 : 12;             /* 列锚点 */
+      const align = right ? 'right' : 'left';
+      const sgn = right ? -1 : 1;                 /* 横向增量方向 */
+
+      /* 行 1：称号 + 残机 + 大招（出局/待救援也显示在这行） */
+      ctx.textAlign = align;
+      ctx.font = '600 13px system-ui, sans-serif';
+      ctx.fillStyle = PCFG[i].color;
+      ctx.fillText(pl.tag + (pl.out ? (G.pods.some(p => p.owner === pl.id) ? ' 待救援' : ' OUT') : ' 残机 ' + Math.max(0, pl.lives) + '  大招 ' + pl.bombs), ax, 26);
+
       if (pl.out) continue;
-      const bw = 96;
-      const bx = i === 0 ? 12 : W - 12 - bw;
-      const by = H - 64;
-      ctx.textAlign = 'left';
+
+      /* 行 2：武器名 + 火力格（格子从锚点向屏内延伸） */
+      const wp = WEAPONS[pl.weapon];
+      ctx.font = '600 12px system-ui, sans-serif';
+      ctx.fillStyle = wp.color;
+      ctx.fillText((right ? '2P ' : '1P ') + wp.name, ax, 44);
+      for (let k = 0; k < 5; k++) {
+        ctx.fillStyle = k < pl.power ? wp.color : 'rgba(255,255,255,0.18)';
+        ctx.fillRect(ax + sgn * k * 14 - (right ? 11 : 0), 48, 11, 5);
+      }
+
+      /* 行 3：LV + 经验条（上行），超载条（下行）——右列条从锚点向左生长 */
+      ctx.textAlign = align;
       ctx.font = '600 11px system-ui, sans-serif';
-      ctx.fillStyle = G.two ? PCFG[i].color : '#9ff0ff';
-      ctx.fillText('LV ' + pl.level, bx, by + 8);
+      ctx.fillStyle = PCFG[i].color;
+      ctx.fillText('LV ' + pl.level, ax, 64);
+      const ex0 = right ? ax - bw : ax + 34;
       ctx.fillStyle = 'rgba(255,255,255,0.16)';
-      ctx.fillRect(bx + 36, by + 3, bw - 36, 5);
+      ctx.fillRect(ex0, 59, bw - 34, 5);
       ctx.fillStyle = '#5ce8b4';
-      ctx.fillRect(bx + 36, by + 3, (bw - 36) * Math.min(1, pl.exp / Math.max(1, pl.nextExp)), 5);
-      /* 超载条：满格自动触发，充能过程要显眼 */
-      ctx.fillStyle = 'rgba(255,255,255,0.16)';
-      ctx.fillRect(bx, by + 12, bw, 5);
+      ctx.fillRect(ex0, 59, (bw - 34) * Math.min(1, pl.exp / Math.max(1, pl.nextExp)), 5);
       const odMax = 180 + 72 * pl.pk('over');
+      const od0 = right ? ax - bw : ax;
+      ctx.fillStyle = 'rgba(255,255,255,0.16)';
+      ctx.fillRect(od0, 67, bw, 5);
       ctx.fillStyle = pl.od > 0 ? '#ffe9a8' : '#ffb84d';
-      ctx.fillRect(bx, by + 12, bw * (pl.od > 0 ? pl.od / odMax : Math.min(1, pl.odCharge / 100)), 5);
+      ctx.fillRect(od0, 67, bw * (pl.od > 0 ? pl.od / odMax : Math.min(1, pl.odCharge / 100)), 5);
       if (pl.od > 0) {
         ctx.font = '600 9px system-ui, sans-serif';
         ctx.fillStyle = '#ffe9a8';
-        ctx.fillText('OVERDRIVE', bx + 2, by + 26);
+        ctx.fillText('OVERDRIVE', right ? ax : ax + 2, 81);
       }
-    }
 
-    /* 武器 / 火力（逐玩家） */
-    for (let i = 0; i < G.players.length; i++) {
-      const pl = G.players[i];
-      if (pl.out) continue;
-      const wp = WEAPONS[pl.weapon];
-      if (i === 0) {
-        ctx.textAlign = 'left';
-        ctx.font = '600 14px system-ui, sans-serif';
-        ctx.fillStyle = wp.color;
-        ctx.fillText((G.two ? '1P ' : '') + wp.name, 12, H - 26);
-        for (let k = 0; k < 5; k++) {
-          ctx.fillStyle = k < pl.power ? wp.color : 'rgba(255,255,255,0.18)';
-          ctx.fillRect(12 + k * 14, H - 18, 11, 6);
-        }
-      } else {
-        ctx.textAlign = 'right';
-        ctx.font = '600 14px system-ui, sans-serif';
-        ctx.fillStyle = wp.color;
-        ctx.fillText('2P ' + wp.name, W - 12, H - 26);
-        for (let k = 0; k < 5; k++) {
-          ctx.fillStyle = k < pl.power ? wp.color : 'rgba(255,255,255,0.18)';
-          ctx.fillRect(W - 23 - k * 14, H - 18, 11, 6);
-        }
-      }
-    }
-
-    /* v1.4.0：下一发大招预告，让随机性变成期待感 */
-    for (let i = 0; i < G.players.length; i++) {
-      const pl = G.players[i];
-      if (pl.out) continue;
+      /* 行 4：下一发大招预告 */
       const nu = pl.nextUlt && TW.ULT_BY_ID ? TW.ULT_BY_ID[pl.nextUlt] : null;
-      if (!nu) continue;
-      ctx.font = '600 10px system-ui, sans-serif';
-      ctx.fillStyle = 'rgba(255,233,168,0.9)';
-      if (i === 0) { ctx.textAlign = 'left'; ctx.fillText('下一发 ' + nu.glyph + ' ' + nu.name, 12, H - 6); }
-      else { ctx.textAlign = 'right'; ctx.fillText('下一发 ' + nu.glyph + ' ' + nu.name, W - 12, H - 6); }
-    }
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
-    ctx.font = '400 11px system-ui, sans-serif';
-    if (G.two) {
-      ctx.textAlign = 'right';
-      ctx.fillText('擦弹 ' + G.grazeTotal() + '   RANK ' + Math.round(G.rank), W - 12, H - 46);
-    } else {
-      ctx.textAlign = 'left';
-      ctx.fillText('擦弹 ' + G.grazeTotal(), 12, H - 46);
-      ctx.textAlign = 'right';
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      ctx.fillText('RANK ' + Math.round(G.rank), W - 12, H - 26);
+      if (nu) {
+        ctx.font = '600 10px system-ui, sans-serif';
+        ctx.fillStyle = 'rgba(255,233,168,0.9)';
+        ctx.fillText('下一发 ' + nu.glyph + ' ' + nu.name, ax, pl.od > 0 ? 96 : 86);
+      }
     }
     ctx.textAlign = 'left';
 
-    /* Boss 血条 */
+    /* ---- Boss 血条（顶部中央，玩家列下方） ---- */
     const b = G.boss;
     if (b && !b.dying) {
       ctx.textAlign = 'center';
       ctx.font = '600 13px system-ui, sans-serif';
       ctx.fillStyle = '#ff9aa6';
-      ctx.fillText(b.name, W / 2, 62);
-      const bw = W - 80;
+      ctx.fillText(b.name, W / 2, 104);
+      const bw2 = W - 80;
       ctx.fillStyle = 'rgba(255,255,255,0.15)';
-      ctx.fillRect(40, 70, bw, 8);
+      ctx.fillRect(40, 112, bw2, 8);
       ctx.fillStyle = '#ff5a6e';
-      ctx.fillRect(40, 70, bw * Math.max(0, b.hp / b.maxhp), 8);
+      ctx.fillRect(40, 112, bw2 * Math.max(0, b.hp / b.maxhp), 8);
       ctx.fillStyle = 'rgba(255,255,255,0.35)';
-      ctx.fillRect(40 + bw * 0.66, 68, 1.5, 12);
-      ctx.fillRect(40 + bw * 0.33, 68, 1.5, 12);
+      ctx.fillRect(40 + bw2 * 0.66, 110, 1.5, 12);
+      ctx.fillRect(40 + bw2 * 0.33, 110, 1.5, 12);
       ctx.textAlign = 'left';
     }
   }
