@@ -1251,7 +1251,7 @@ class HauntedDorm {
     _firePea(px, py, angle, dmg, opts = {}) {
         const el = document.createElement('div');
         el.className = 'entity';
-        const size = opts.size || 26;
+        const size = (opts.size || 26) * 1.8; // 放大 1.8 倍
         el.style.cssText = `width:${size}px;height:${size}px;z-index:90;`;
         el.innerHTML = `<img src="assets/images/${opts.img}" style="width:100%;height:100%;object-fit:contain;">`;
         this.world1.appendChild(el);
@@ -1332,9 +1332,9 @@ class HauntedDorm {
             pea.x += pea.vx * dt;
             pea.y += pea.vy * dt;
             pea.life -= dt;
-            // 撞墙消失
+            // 撞墙消失 (被移除：允许子弹穿墙)
             const c = Math.floor(pea.x / this.gridSize), r = Math.floor(pea.y / this.gridSize);
-            if (this.walls.has(`${c},${r}`)) pea.life = 0;
+            // if (this.walls.has(`${c},${r}`)) pea.life = 0; // 用户要求子弹能穿透墙壁
             // 命中检测（34px）
             for (const zb of this.zombies) {
                 if (zb.dead) continue;
@@ -1512,7 +1512,7 @@ class HauntedDorm {
                 const px = pl.c * 80 + 40, py = pl.r * 80 + 40;
                 const el = document.createElement('div');
                 el.className = 'entity';
-                el.style.cssText = `width:40px;height:40px;z-index:150; transition: transform 0.1s linear;`;
+                el.style.cssText = `width:60px;height:60px;z-index:150; transition: transform 0.1s linear;`;
                 el.innerHTML = `<img src="assets/images/${nk.img}" style="width:100%;height:100%;object-fit:contain; filter:drop-shadow(0 0 5px #f00);">`;
                 this.world1.appendChild(el);
                 
