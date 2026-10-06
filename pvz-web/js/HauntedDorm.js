@@ -2148,19 +2148,41 @@ class HauntedDorm {
             moveSpeed = baseSpeed / this.timeScale;
         }
 
+        // P1 Movement - 【SOC防冲突】
         let vx1 = 0, vy1 = 0;
-        if (this.keys['a'] || this.keys['arrowleft']) vx1 -= moveSpeed;
-        if (this.keys['d'] || this.keys['arrowright']) vx1 += moveSpeed;
-        if (this.keys['w'] || this.keys['arrowup']) vy1 -= moveSpeed;
-        if (this.keys['s'] || this.keys['arrowdown']) vy1 += moveSpeed;
+        const p1L = this.keys['a'], p1R = this.keys['d'], p1U = this.keys['w'], p1D = this.keys['s'];
+        if (p1L && !p1R) vx1 -= moveSpeed;
+        if (p1R && !p1L) vx1 += moveSpeed;
+        if (p1U && !p1D) vy1 -= moveSpeed;
+        if (p1D && !p1U) vy1 += moveSpeed;
 
-        let nx = this.player.x + vx1 * dt;
-        let ny = this.player.y;
-        if (nx > 20 && nx < this.worldWidth - 20 && !this.checkCollision(nx, ny, 10)) this.player.x = nx;
+        let nx1 = this.player.x + vx1 * dt;
+        let ny1 = this.player.y;
+        if (nx1 > 20 && nx1 < this.worldWidth - 20 && !this.checkCollision(nx1, ny1, 10)) this.player.x = nx1;
+        nx1 = this.player.x; ny1 = this.player.y + vy1 * dt;
+        if (ny1 > 30 && ny1 < this.worldHeight - 10 && !this.checkCollision(nx1, ny1, 10)) this.player.y = ny1;
 
-        nx = this.player.x;
-        ny = this.player.y + vy1 * dt;
-        if (ny > 30 && ny < this.worldHeight - 10 && !this.checkCollision(nx, ny, 10)) this.player.y = ny;
+        // P2 Movement - 【SOC防冲突】
+        let vx2 = 0, vy2 = 0;
+        // P2如果在房间内也要应用移速衰减
+        let moveSpeed2 = baseSpeed;
+        const p2PhysRoom = this._insideRoom(Math.floor(this.player2.x/this.gridSize), Math.floor(this.player2.y/this.gridSize));
+        if (p2PhysRoom) moveSpeed2 = baseSpeed / this.timeScale;
+        
+        const p2L = this.keys['arrowleft'], p2R = this.keys['arrowright'], p2U = this.keys['arrowup'], p2D = this.keys['arrowdown'];
+        if (p2L && !p2R) vx2 -= moveSpeed2;
+        if (p2R && !p2L) vx2 += moveSpeed2;
+        if (p2U && !p2D) vy2 -= moveSpeed2;
+        if (p2D && !p2U) vy2 += moveSpeed2;
+
+        let nx2 = this.player2.x + vx2 * dt;
+        let ny2 = this.player2.y;
+        if (nx2 > 20 && nx2 < this.worldWidth - 20 && !this.checkCollision(nx2, ny2, 10)) this.player2.x = nx2;
+        nx2 = this.player2.x; ny2 = this.player2.y + vy2 * dt;
+        if (ny2 > 30 && ny2 < this.worldHeight - 10 && !this.checkCollision(nx2, ny2, 10)) this.player2.y = ny2;
+        
+        this._updateKMenus();
+        this.keysJustPressed = {}; // 清空单帧按键缓存
 
         // 人机开局自动寻路（按路点走到床位，避免穿模穿墙）
         for (const ai of this.ais) {
