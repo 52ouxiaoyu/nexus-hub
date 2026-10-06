@@ -1335,14 +1335,14 @@ class HauntedDorm {
         return corners.some(p => {
             if (this.walls.has(`${p.c},${p.r}`)) return true;
             
-            // 实体碰撞逻辑优化：给植物（特别是门）增加物理阻挡
+            // 实体碰撞逻辑优化：大门是绝对的物理阻挡
             const plant = this.getPlantAt(p.c * this.gridSize, p.r * this.gridSize);
-            if (plant && !plant.def.ground) {
-                // 如果是僵尸玩家，绝不允许穿透任何植物和门，必须老老实实啃过去
+            if (plant && plant.isDoor) {
+                // 如果是僵尸玩家，绝不允许穿透大门，必须老老实实啃碎
                 if (this.isZombieFaction) return true;
                 
                 // 如果是幸存者玩家，空房间的门可以自由进出；
-                // 但一旦房间被任何人（包括自己）占领入住，门和室内设施就会变成死实体，再也无法穿模通过！
+                // 但一旦房间被任何人占领入住，大门就会变成死实体，无法穿模进出！
                 const rm = this._insideRoom(plant.c, plant.r);
                 if (rm && rm.owner) return true;
             }
