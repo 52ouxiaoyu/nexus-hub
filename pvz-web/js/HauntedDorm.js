@@ -1810,13 +1810,20 @@ class HauntedDorm {
             this.player.el1.style.filter = '';
         }
 
-        const speed = this.isZombieFaction ? (HauntedDorm.GHOST_LEVELS[this.player.level-1].speed) : (this.player.speedBuffT > 0 ? 800 : 400);
+        const baseSpeed = this.isZombieFaction ? (HauntedDorm.GHOST_LEVELS[this.player.level-1].speed) : (this.player.speedBuffT > 0 ? 800 : 400);
+        let moveSpeed = baseSpeed;
+        
+        // 玩家如果在房间内，移动速度不吃时间倍速，防止10倍速下走位失控；在走廊则正常吃倍速（为了跑图快）
+        const playerPhysRoom = this._insideRoom(Math.floor(this.player.x/this.gridSize), Math.floor(this.player.y/this.gridSize));
+        if (playerPhysRoom) {
+            moveSpeed = baseSpeed / this.timeScale;
+        }
 
         let vx1 = 0, vy1 = 0;
-        if (this.keys['a'] || this.keys['arrowleft']) vx1 -= speed;
-        if (this.keys['d'] || this.keys['arrowright']) vx1 += speed;
-        if (this.keys['w'] || this.keys['arrowup']) vy1 -= speed;
-        if (this.keys['s'] || this.keys['arrowdown']) vy1 += speed;
+        if (this.keys['a'] || this.keys['arrowleft']) vx1 -= moveSpeed;
+        if (this.keys['d'] || this.keys['arrowright']) vx1 += moveSpeed;
+        if (this.keys['w'] || this.keys['arrowup']) vy1 -= moveSpeed;
+        if (this.keys['s'] || this.keys['arrowdown']) vy1 += moveSpeed;
 
         let nx = this.player.x + vx1 * dt;
         let ny = this.player.y;
@@ -2255,6 +2262,7 @@ class HauntedDorm {
                 if (weakestTarget && weakestTarget !== closestTarget) {
                     zb.lockedTarget = weakestTarget;
                     closestTarget = weakestTarget;
+                    zb.targetSwitched = true;
                     if (Math.random() < 0.6) {
                         const zLines = ["发现软柿子！", "那个门最破，就你了！", "让我尝尝你的脑子！", "我要去吃最弱的那个！", "这扇门看起来一碰就碎！"];
                         this._say(zb, zLines[Math.floor(Math.random() * zLines.length)], 4000);
@@ -2309,22 +2317,19 @@ class HauntedDorm {
                 zb.el1.style.filter = '';
                 zb.el1.style.opacity = '1';
             }
-            // 【新增】僵尸寻路逻辑：如果未撤退，每秒重算一次 BFS 路径
-            if (!zb.retreating) {
-                zb.pathTimer = (zb.pathTimer || 0) + dt;
-                if (zb.pathTimer > 1.0 || !zb.path || zb.path.length === 0) {
-                    zb.pathTimer = 0;
-                    zb.path = this._findPath(zb.x, zb.y, targetX, targetY);
-                    if (zb.path && zb.path.length > 0) {
-                        zb.path.push({x: targetX, y: targetY}); // 确保最后一步精确定位到玩家
-                    }
+            // 僵尸寻路逻辑：无论攻击还是撤退都走寻路，防止穿墙瞬移
+            zb.pathTimer = (zb.pathTimer || 0) + dt;
+            if (zb.pathTimer > 1.0 || !zb.path || zb.path.length === 0 || zb.targetSwitched) {
+                zb.pathTimer = 0;
+                zb.targetSwitched = false;
+                zb.path = this._findPath(zb.x, zb.y, targetX, targetY);
+                if (zb.path && zb.path.length > 0) {
+                    zb.path.push({x: targetX, y: targetY}); // 确保最后一步精确定位到玩家
                 }
-            } else {
-                zb.path = null;
             }
 
             let dx = 0, dy = 0;
-            if (zb.retreating || !zb.path || zb.path.length === 0) {
+            if (!zb.path || zb.path.length === 0) {
                 dx = targetX - zb.x;
                 dy = targetY - zb.y;
             } else {
@@ -2385,9 +2390,9 @@ class HauntedDorm {
                     }
                     moved = false; // 啃食时不挪窝
                 } else {
-                    // 穿墙逻辑：撤退回血时变为虚影，直接穿墙，防止卡死
-                    const bx = zb.retreating ? true : !this.checkCollision(nzx, zb.y);
-                    const by = zb.retreating ? true : !this.checkCollision(zb.x, nzy);
+                    // 撤退时也不再无脑穿墙，老老实实寻路走路
+                    const bx = !this.checkCollision(nzx, zb.y);
+                    const by = !this.checkCollision(zb.x, nzy);
                     if (bx) { zb.x = nzx; moved = true; }
                     if (by) { zb.y = nzy; moved = true; }
                     if (!moved) {
@@ -2430,6 +2435,51 @@ class HauntedDorm {
             zb.el1.style.left = zb.x + 'px'; zb.el1.style.top = zb.y + 'px';
         }
         this.zombies = this.zombies.filter(z => !z.dead || z.el1.parentNode); // 清理已完成动画的死尸
+
+        // 警告系统更新
+        let isTargeted = false;
+        if (!this.isZombieFaction && this.zombies.length > 0) {
+            const zb = this.zombies[0];
+            if (!zb.dead && zb.lockedTarget === this.player && !zb.retreating) {
+                isTargeted = true;
+            }
+        }
+        let warningOverlay = document.getElementById('zombie-warning');
+        let warningText = document.getElementById('zombie-warning-text');
+        if (!warningOverlay) {
+            warningOverlay = document.createElement('div');
+            warningOverlay.id = 'zombie-warning';
+            warningOverlay.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                pointer-events: none; z-index: 1000;
+                box-shadow: inset 0 0 100px rgba(255, 0, 0, 0);
+                transition: box-shadow 0.2s;
+                display: flex; align-items: flex-end; justify-content: center;
+                padding-bottom: 80px;
+            `;
+            warningText = document.createElement('div');
+            warningText.id = 'zombie-warning-text';
+            warningText.style.cssText = `
+                color: #ff3333; font-size: 36px; font-weight: bold; text-shadow: 0 0 15px #000, 2px 2px 6px #000;
+                opacity: 0; transition: opacity 0.2s;
+                font-family: 'Kaiti SC', 'SimHei', sans-serif;
+                letter-spacing: 2px;
+            `;
+            warningText.innerText = "僵尸已经盯上你了，请你注意！";
+            warningOverlay.appendChild(warningText);
+            document.body.appendChild(warningOverlay);
+        }
+
+        if (warningOverlay && warningText) {
+            if (isTargeted) {
+                const pulse = (Math.sin(performance.now() / 150) + 1) / 2;
+                warningOverlay.style.boxShadow = `inset 0 0 ${150 + pulse*100}px rgba(255, 0, 0, ${0.4 + pulse*0.3})`;
+                warningText.style.opacity = 0.6 + pulse * 0.4;
+            } else {
+                warningOverlay.style.boxShadow = `inset 0 0 100px rgba(255, 0, 0, 0)`;
+                warningText.style.opacity = 0;
+            }
+        }
 
         if (playerHurt > 0 && !this.player.dead) {
             this.player.hp -= playerHurt;
