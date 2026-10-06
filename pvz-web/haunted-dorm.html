@@ -142,7 +142,7 @@
         <!-- 全局 UI -->
         <div id="ui-layer">
             <div id="hud-p1" class="player-hud">
-                <div style="color:#4da6ff; margin-bottom: 4px;">移动: WASD | 浇水: 空格开关(0.2秒1次·+1☀·催熟蘑菇) | 点击植物: 升级/拆除</div>
+                <div style="color:#4da6ff; margin-bottom: 4px; font-weight:bold;">P1 面板 (WASD移动)</div>
                 <div style="display:flex; gap:18px; align-items:center;">
                     <span>阳光: <span id="sun1" class="sun-text">0</span></span>
                     <span>孢子: <span id="spore1" class="sun-text" style="color:#c79aff;">0</span></span>
@@ -162,6 +162,20 @@
                         <button class="speed-btn" onclick="window.game.setTimeScale(10)">10x</button>
                     </div>
                 </div>
+            </div>
+
+            <div id="p2-hud" class="player-hud" style="display:none; right:20px; left:auto;">
+                <div style="color:#4fc3f7; margin-bottom: 4px; font-weight:bold;">P2 面板 (方向键移动)</div>
+                <div style="display:flex; gap:18px; align-items:center;">
+                    <span>阳光: <span id="sun2" class="sun-text">0</span></span>
+                    <span>孢子: <span id="spore2" class="sun-text" style="color:#c79aff;">0</span></span>
+                </div>
+                <div id="hp-row2" style="display:flex; align-items:center; margin-top:8px;">
+                    <span class="hp-label">HP</span>
+                    <div id="hp-track" style="margin: 0 10px; flex: 1; height: 16px; background: rgba(0,0,0,0.8); border: 2px solid #fff; border-radius: 8px; overflow: hidden;"><div id="hp-fill2" style="height: 100%; width: 100%; background: linear-gradient(90deg, #ff5252, #ff0000);"></div></div>
+                    <span id="hp-num2" style="font-size:14px; color:#fff;">100</span>
+                </div>
+                <div id="skill-hud2" style="margin-top: 8px; font-size: 14px;"></div>
             </div>
 
             <div id="wave-chip">👻 准备中…</div>
@@ -230,6 +244,6 @@
         </div>
     </div>
 
-    <script src="js/HauntedDorm.js?v=1791286527"></script>
+    <script src="js/HauntedDorm.js?v=1791286666"></script>
 </body>
 </html>

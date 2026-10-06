@@ -1054,6 +1054,21 @@ class HauntedDorm {
                 }
             }
         }
+        
+        if (this.gameMode === '2p' && this.player2) {
+            const sun2El = document.getElementById('sun2');
+            if (sun2El) sun2El.innerText = this.player2.sun;
+            const spore2El = document.getElementById('spore2');
+            if (spore2El) spore2El.innerText = this.player2.spore;
+            const skillEl2 = document.getElementById('skill-hud2');
+            if (skillEl2 && this.player2.roleDef) {
+                if (this.player2.skillCd > 0) {
+                    skillEl2.innerHTML = `<span style="color:#aaa;"><s>被动技能自动生效中</s> (CD: ${Math.ceil(this.player2.skillCd)}s)</span>`;
+                } else {
+                    skillEl2.innerHTML = `<span style="color:#0f0;">${this.player2.roleDef.skillDesc}</span>`;
+                }
+            }
+        }
     }
 
     setHp() {
