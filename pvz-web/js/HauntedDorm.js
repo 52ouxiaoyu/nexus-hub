@@ -1003,7 +1003,7 @@ class HauntedDorm {
         }
         
         // 检查房间归属
-        if (this.ais.some(ai => ai.room === targetRm)) {
+        if (this.ais.some(ai => ai.room === targetRm) && targetRm !== this.player.room) {
             this._flyText(col * this.gridSize + 40, row * this.gridSize, '这是人机的房间！', '#ff8a8a');
             return;
         }
@@ -1707,8 +1707,8 @@ class HauntedDorm {
                 const playerRow = Math.floor(this.player.y / this.gridSize);
                 const playerPhysicalRoom = this._insideRoom(playerCol, playerRow);
                 
-                // 房间被占用的条件：有owner，或者是玩家正站在里面的房间
-                const isTaken = (rm) => rm.owner || rm === playerPhysicalRoom;
+                // 房间被占用的条件：有owner，或者是玩家正站在里面的房间，或者是玩家已经绑定的房间
+                const isTaken = (rm) => rm.owner || rm === playerPhysicalRoom || rm === this.player.room;
 
                 const isFleeing = ai.speed === 300;
                 // 动态查房：如果目标房间已经被玩家抢了或玩家正站在里面，立刻换房（逃跑时不介意房间有人，直接躲进去共享）
@@ -1734,15 +1734,15 @@ class HauntedDorm {
                     ai.path.shift(); // 抵达当前路点，切下一个
                     // 彻底抵达床位，宣誓主权 (需要最终确认玩家没站在里面)
                     if (ai.path.length === 0 && ai.targetRoom) {
-                        if (!ai.targetRoom.owner && ai.targetRoom !== playerPhysicalRoom) {
+                        if (!ai.targetRoom.owner && ai.targetRoom !== playerPhysicalRoom && ai.targetRoom !== this.player.room) {
                             ai.targetRoom.owner = ai;
                             ai.room = ai.targetRoom;
                             ai.speed = 200;
                         } else if (isFleeing) {
                             ai.room = ai.targetRoom; // 躲进别人的房间，不占owner，但认定为自己的房间并开始帮忙修墙
                             ai.speed = 200;
-                        } else if (ai.targetRoom === playerPhysicalRoom) {
-                            // 如果到了床边发现玩家站在这里，假装没看到，给自己分配个假路径触发重新寻路
+                        } else if (ai.targetRoom === playerPhysicalRoom || ai.targetRoom === this.player.room) {
+                            // 如果到了床边发现玩家站在这里或这是玩家的房间，假装没看到，给自己分配个假路径触发重新寻路
                             ai.path = [{x: ai.x, y: ai.y}]; 
                         }
                     }
