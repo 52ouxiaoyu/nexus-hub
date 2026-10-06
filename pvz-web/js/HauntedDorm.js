@@ -1207,7 +1207,7 @@ class HauntedDorm {
                 const doorPlant = this.getPlantAt(myRm.doorCol * this.gridSize, myRm.doorRow * this.gridSize);
                 if (doorPlant && doorPlant.def.up) {
                     p.skillCd = 60;
-                    this._upgradePlant(doorPlant, doorPlant.def.up.to);
+                    this._evolve(doorPlant, doorPlant.def.up.to);
                     this._announce('🌰 技能激活：大门免费升级完毕！', 'points.mp3');
                 } else {
                     this._announce('❌ 门不存在或无法再升级！', 'buzzer.mp3');
@@ -1418,6 +1418,9 @@ class HauntedDorm {
 
     // ===== 通用弹道 =====
     _firePea(px, py, angle, dmg, opts = {}) {
+        let finalDmg = dmg;
+        if (opts.owner === this.player && this.player.atkBuffT > 0) finalDmg *= 2;
+        dmg = finalDmg;
         const el = document.createElement('div');
         el.className = 'entity';
         const size = (opts.size || 26) * 1.8; // 放大 1.8 倍
@@ -1528,8 +1531,9 @@ class HauntedDorm {
                 if (zb.dead) continue; // 撤退时不再免疫，可以被击杀
                 if (Math.hypot(zb.x - pea.x, zb.y - pea.y) < 34) {
                     pea.life = 0;
+                    if (this.isZombieFaction && zb === this.player && this.player.speedBuffT > 0) continue; // 提速免疫技能生效
                     const hits = pea.aoe > 0
-                        ? this.zombies.filter(z => !z.dead && Math.hypot(z.x - pea.x, z.y - pea.y) < pea.aoe)
+                        ? targets.filter(z => !z.dead && Math.hypot(z.x - pea.x, z.y - pea.y) < pea.aoe)
                         : [zb];
                     for (const z of hits) {
                         z.hp -= pea.dmg;
@@ -1615,10 +1619,12 @@ class HauntedDorm {
                 pl.prodT += dt;
                 if (pl.prodT >= def.produce.every) {
                     pl.prodT = 0;
-                    owner.sun = (owner.sun || 0) + def.produce.sun;
+                    let sAmt = def.produce.sun;
+                    if (owner === this.player && owner.sunBuffT > 0) sAmt *= 2; // 向日葵技能生效
+                    owner.sun = (owner.sun || 0) + sAmt;
                     if (owner === this.player) {
-                        this.addSun(def.produce.sun); // 顺便更新UI
-                        this._flyText(wx, pl.r * 80, `+${def.produce.sun} ☀`, 'yellow');
+                        this.addSun(sAmt); // 顺便更新UI
+                        this._flyText(wx, pl.r * 80, `+${sAmt} ☀`, 'yellow');
                         this.playSfx('points.mp3', 0.25);
                     }
                 }
@@ -1646,7 +1652,11 @@ class HauntedDorm {
             for (const zb of this.zombies) {
                 if (zb.dead) continue;
                 if (Math.hypot(zb.x - px, zb.y - py) < sp.r) {
-                    zb.hp -= sp.dps * dt;
+                    const rm = this._insideRoom(pl.c, pl.r);
+                    const owner = (rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : this.player;
+                    let fdps = sp.dps;
+                    if (owner === this.player && owner.atkBuffT > 0) fdps *= 2;
+                    zb.hp -= fdps * dt;
                     if (zb.hpBg) {
                         zb.hpBg.style.display = 'block';
                         zb.hpFg.style.width = Math.max(0, zb.hp / zb.maxHp * 100) + '%';
@@ -1915,7 +1925,7 @@ class HauntedDorm {
             this.player.el1.style.filter = '';
         }
 
-        const baseSpeed = this.isZombieFaction ? (HauntedDorm.GHOST_LEVELS[this.player.level-1].speed) : (this.player.speedBuffT > 0 ? 800 : 400);
+        const baseSpeed = this.isZombieFaction ? (HauntedDorm.GHOST_LEVELS[this.player.level-1].speed * (this.player.speedBuffT > 0 ? 1.5 : 1)) : (this.player.speedBuffT > 0 ? 800 : 400);
         let moveSpeed = baseSpeed;
         
         // 玩家如果在房间内，移动速度不吃时间倍速，防止10倍速下走位失控；在走廊则正常吃倍速（为了跑图快）
