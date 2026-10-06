@@ -334,6 +334,11 @@ class HauntedDorm {
 
     // 简易音效（独立页面不引 AudioManager，直接用主素材库音频）
     playSfx(name, vol = 0.5) {
+        const now = performance.now();
+        this._sfxT = this._sfxT || {};
+        // 对极度频繁的音效进行节流 (50ms)
+        if (this._sfxT[name] && now - this._sfxT[name] < 50) return;
+        this._sfxT[name] = now;
         try {
             const a = new Audio('assets/audio/' + name);
             a.volume = vol;
@@ -1519,12 +1524,8 @@ class HauntedDorm {
                         }
                         if (pea.slow) z.slowT = 2.5;
                         if (pea.stunTime) z.stunT = pea.stunTime;
-                        if (z.hpBg) {
-                            z.hpBg.style.display = 'block';
-                            z.hpFg.style.width = Math.max(0, z.hp / z.maxHp * 100) + '%';
-                        }
-                        z.el1.style.filter = pea.slow ? 'saturate(0.4) brightness(1.5)' : 'brightness(2.2)';
-                        setTimeout(() => { if (z.el1) z.el1.style.filter = ''; }, 90);
+                        if (z.hpBg) z.hpBg.style.display = 'block';
+                        z.hitFlashT = 0.1; // 记录受击闪烁状态交由 _render 处理
                         if (z.hp <= 0) this._killZombie(z, pea.owner);
                     }
                     this.playSfx('bowlingimpact2.mp3', 0.22);
@@ -1831,7 +1832,24 @@ class HauntedDorm {
                 if (zb.hpBg) {
                     zb.hpBg.style.left = (zb.x - 30) + 'px';
                     zb.hpBg.style.top = (zb.y - 60) + 'px';
+                    zb.hpFg.style.width = Math.max(0, zb.hp / zb.maxHp * 100) + '%';
                 }
+                
+                // 统一处理僵尸滤镜（性能优化）
+                if (zb.hitFlashT > 0) {
+                    zb.el1.style.filter = zb.slowT > 0 ? 'saturate(0.4) brightness(1.5)' : 'brightness(2.2)';
+                } else if (zb.slowT > 0) {
+                    zb.el1.style.filter = 'saturate(0.4) brightness(1.2)';
+                } else if (zb.isHealing) {
+                    zb.el1.style.filter = 'drop-shadow(0 0 10px #0f0)';
+                } else if (zb.retreating) {
+                    zb.el1.style.filter = 'drop-shadow(0 0 10px #00f)';
+                } else {
+                    zb.el1.style.filter = '';
+                }
+                
+                // 统一处理僵尸透明度
+                zb.el1.style.opacity = zb.retreating ? '0.5' : '1';
             }
         }
         // 更新子弹
@@ -1850,6 +1868,7 @@ class HauntedDorm {
     }
 
     _tick(dt, time) {
+        for (const zb of this.zombies) { if (zb.hitFlashT > 0) zb.hitFlashT -= dt; }
         this._updateGhostDirector(time);
         this._updateAIs(dt);
         if (Math.floor(time / 500) !== Math.floor((time - dt * 1000) / 500)) this._updateGhostChip(); // 0.5s 刷一次信息牌
@@ -2365,18 +2384,13 @@ class HauntedDorm {
                 targetY = this.worldHeight / 2;
                 if (Math.hypot(targetX - zb.x, targetY - zb.y) < 120) {
                     zb.hp = Math.min(zb.maxHp, zb.hp + zb.maxHp * 0.25 * dt); // 回血变快
-                    if (zb.hpBg) {
-                        zb.hpBg.style.display = 'block';
-                        zb.hpFg.style.width = (zb.hp / zb.maxHp * 100) + '%';
-                    }
-                    zb.el1.style.filter = 'drop-shadow(0 0 10px #0f0)';
+                    if (zb.hpBg) zb.hpBg.style.display = 'block';
+                    zb.isHealing = true;
                 } else {
-                    zb.el1.style.filter = 'drop-shadow(0 0 10px #00f)';
+                    zb.isHealing = false;
                 }
-                zb.el1.style.opacity = '0.5'; // 灵体化
             } else {
-                zb.el1.style.filter = '';
-                zb.el1.style.opacity = '1';
+                zb.isHealing = false;
             }
             // 僵尸寻路逻辑：无论攻击还是撤退都走寻路，防止穿墙瞬移
             zb.pathTimer = (zb.pathTimer || 0) + dt;
@@ -2440,9 +2454,11 @@ class HauntedDorm {
                             bg.style.display = 'block';
                             fg.style.width = Math.max(0, (atkPlant.hp / atkPlant.maxHp) * 100) + '%';
                         }
-                        // 受击抖动反馈
-                        atkPlant.el1.style.transform = `translate(${(Math.random()-0.5)*10}px, ${(Math.random()-0.5)*10}px)`;
-                        setTimeout(() => { if(atkPlant && atkPlant.el1) atkPlant.el1.style.transform = 'none'; }, 100);
+                        // 受击抖动反馈（使用 CSS class 以避免 setTimeout 和内联样式卡顿）
+                        atkPlant.el1.classList.add('shake');
+                        if (!atkPlant._shakeT) {
+                            atkPlant._shakeT = setTimeout(() => { if(atkPlant && atkPlant.el1) atkPlant.el1.classList.remove('shake'); atkPlant._shakeT = null; }, 100);
+                        }
                         if (atkPlant.hp <= 0) {
                             atkPlant.el1.remove();
                             if (atkPlant.txtEl) atkPlant.txtEl.remove();
