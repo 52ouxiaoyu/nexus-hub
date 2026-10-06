@@ -69,11 +69,13 @@
         }
         /* UI 层 */
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1000; }
-        .player-hud { position: absolute; top: 20px; padding: 12px 20px; background: rgba(0,0,0,0.8); color: white; border: 3px solid #4da6ff; border-radius: 12px; font-size: 18px; text-shadow: 2px 2px 0 #000; left: 20px; pointer-events: auto; }
+        .player-hud { position: absolute; top: 20px; padding: 12px 20px; background: rgba(0,0,0,0.8); color: white; border: 3px solid #4da6ff; border-radius: 12px; font-size: 18px; text-shadow: 2px 2px 0 #000; left: 20px; pointer-events: auto; max-width: 400px; box-sizing: border-box; }
+        /* v4.0.16：控制行拆两行显示——HUD 收窄到 400px，避免与顶部中央的僵尸信息条重叠 */
+        .hud-ctrl { font-size: 14px; line-height: 1.5; font-weight: bold; margin-bottom: 4px; }
         .sun-text { color: #ffeb3b; font-size: 24px; }
         /* v3.86.0 玩家 HP 条常显 + 波次/击杀信息（红牌主题） */
         /* v4.0.15：删除旧 #hp-row/#hp-track/#hp-fill id 规则（flex:1 把 P1 血条拉满整行=长块），统一用上方 .hp-* 类 */
-        #wave-chip { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); padding: 10px 22px; background: rgba(20,5,5,0.85); color: #ff9e9e; border: 3px solid #7a2020; border-radius: 12px; font-size: 18px; text-shadow: 2px 2px 0 #000; font-family: 'Kaiti SC', serif; letter-spacing: 2px; }
+        #wave-chip { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); padding: 7px 16px; background: rgba(20,5,5,0.85); color: #ff9e9e; border: 3px solid #7a2020; border-radius: 12px; font-size: 16px; text-shadow: 2px 2px 0 #000; font-family: 'Kaiti SC', serif; letter-spacing: 1px; white-space: nowrap; }
 
         /* 小地图 */
         #minimap { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); border: 3px solid #5c3b1d; border-radius: 8px; background: rgba(0,0,0,0.75); pointer-events: auto; }
@@ -144,7 +146,10 @@
         <!-- 全局 UI -->
         <div id="ui-layer">
             <div id="hud-p1" class="player-hud">
-                <div style="color:#4da6ff; margin-bottom: 4px; font-weight:bold;">【P1 控制】移动: W/A/S/D | 建造/确认: F或J | 浇水: 空格 | 取消: 右Alt或G | 技能: M</div>
+                <div class="hud-ctrl" style="color:#4da6ff;">
+                    <div>【P1 控制】移动: W/A/S/D ｜ 建造/确认: F或J</div>
+                    <div>浇水: 空格 ｜ 取消: 右Alt或G ｜ 技能: M</div>
+                </div>
                 <div style="display:flex; gap:18px; align-items:center;">
                     <span>阳光: <span id="sun1" class="sun-text">0</span></span>
                     <span>孢子: <span id="spore1" class="sun-text" style="color:#c79aff;">0</span></span>
@@ -168,7 +173,10 @@
             </div>
 
             <div id="p2-hud" class="player-hud" style="display:none; right:20px; left:auto; text-align: right;">
-                <div style="color:#4fc3f7; margin-bottom: 4px; font-weight:bold;">【P2 控制】移动: 方向键 | 建造/确认: Delete或右Shift | 浇水: 0或小键盘0 | 取消: 回车或右Ctrl | 技能: /键</div>
+                <div class="hud-ctrl" style="color:#4fc3f7;">
+                    <div>【P2 控制】移动: 方向键 ｜ 建造/确认: 1</div>
+                    <div>浇水: 0 ｜ 取消: 2或回车 ｜ 技能: 3或/键</div>
+                </div>
                 <div style="display:flex; gap:18px; align-items:center; justify-content: flex-end;">
                     <span>阳光: <span id="sun2" class="sun-text">0</span></span>
                     <span>孢子: <span id="spore2" class="sun-text" style="color:#c79aff;">0</span></span>
@@ -208,9 +216,9 @@
                 <div style="max-width:640px; max-height:82vh; overflow:auto; background:rgba(30,16,8,0.96); border:3px solid #8c6a4d; border-radius:14px; padding:24px 30px; color:#f5e6c8; font-family:'Kaiti SC',serif; font-size:15px; line-height:1.9;">
                     <div style="text-align:center; font-size:26px; letter-spacing:4px; margin-bottom:12px;">🏠 守屋大作战 · 玩法说明</div>
                     <b style="color:#ffe14a;">基础操作（双人同屏纯键盘操作）</b><br>
-                    · P1控制：<b>[W/A/S/D] 移动</b> | <b>[F](或J) 呼出菜单/确认购买/升级</b> | <b>[空格] 浇水开关</b> | <b>[右Alt](或G/K) 关闭菜单</b> | <b>[M键] 释放角色主动技能</b><br>
-                    · P2控制：<b>[方向键] 移动</b> | <b>[Delete](或右Shift/小键盘1) 呼出菜单/确认</b> | <b>[0键](或小键盘0) 浇水开关</b> | <b>[回车](或右Ctrl/小键盘2) 关闭菜单</b> | <b>[/键(斜杠)] 释放角色主动技能</b><br>
-                    · <b>如何建造</b>：控制你的小人走到房间的某个空地上，按下【确认键】，你的小人身边就会弹出一个黑色的建造菜单。通过【上下键】选择你想种的植物，再按一次【确认键】即可购买！如果是走到已经种了植物的格子上按【确认键】，则会弹出【升级/拆除】菜单。<br>
+                    · P1控制：<b>[W/A/S/D] 移动</b> | <b>[F](或J) 呼出菜单/确认购买/升级</b> | <b>[空格] 浇水开关</b> | <b>[G](或右Alt/K) 关闭菜单</b> | <b>[M键] 释放角色主动技能</b><br>
+                    · P2控制：<b>[方向键] 移动</b> | <b>[1](或右Shift) 呼出菜单/确认</b> | <b>[0键] 浇水开关</b> | <b>[2](或回车/右Ctrl) 关闭菜单</b> | <b>[3](或/键) 释放角色主动技能</b><br>
+                    · <b>如何建造</b>：控制你的小人走到房间的某个空地上，按下【确认键】，你的小人身边就会弹出一个黑色的建造菜单（<b>菜单打开时人物会站定不动</b>）。通过【上下键】选择你想种的植物，再按一次【确认键】即可购买！如果是走到已经种了植物的格子上按【确认键】，则会弹出【升级/拆除】菜单——<b>拆除需要二次确认</b>（点/按两下才拆，防手滑）。<br>
                     · <b>如何发育</b>：尽早找一个带门的房间，待在阳光菇旁边即可自动每秒生产阳光！另外两人各有<b>浇水开关</b>（P1 空格 / P2 0键）：按一下开启持续浇水（头顶 🚿 标志，每 0.2 秒 +1 ☀、人走到哪浇到哪），再按一下停止。<b>阳光与孢子各算各的</b>：谁买植物扣谁的。<br><br>
                     <b style="color:#ffe14a;">成长配方（唯一，不撞衫）</b><br>
                     · 阳光菇(无需购买，房间自带) <span style="color:#9dff6b;">→(☀30)→ 向日葵 →(☀90)→ 双子向日葵 →(☀270)→ 双子向日葵 Lv2 →(☀810)→ 双子向日葵 Lv3</span>，产阳光更多<br>
@@ -249,6 +257,6 @@
         </div>
     </div>
 
-    <script src="js/HauntedDorm.js?v=1791291192"></script>
+    <script src="js/HauntedDorm.js?v=1791294233"></script>
 </body>
 </html>

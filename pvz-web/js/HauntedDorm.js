@@ -239,6 +239,7 @@ class HauntedDorm {
 
         this.initDOM();
         this.generateMap();
+        this._ensureSafeSpawn(); // v4.0.16：出生点防墙里（地图生成后校验，此时 walls 才有数据）
         this.bindInput();
         this._updateGhostChip();
         this._refreshHud();
@@ -382,10 +383,20 @@ class HauntedDorm {
         this.ppUp = document.getElementById('pp-upgrade');
         this.ppDemolish = document.getElementById('pp-demolish');
         this.popupPlant = null;
+        // v4.0.16：拆除二次确认——第一次点只进入「待确认」状态（按钮变红），2.5 秒内再点才真正拆除（防误删）
         this.ppDemolish.onclick = () => {
             const pl = this.popupPlant;
-            this._closePopup();
             if (!pl) return;
+            if (this._delArmed !== pl || performance.now() - (this._delArmAt || 0) > 2500) {
+                this._delArmed = pl;
+                this._delArmAt = performance.now();
+                this.ppDemolish.innerText = '⚠️ 再点一次确认拆除';
+                this.ppDemolish.style.background = '#c62828';
+                this.playSfx('buttonclick.mp3', 0.35);
+                return;
+            }
+            this._delArmed = null;
+            this._closePopup();
             pl.el1.remove();
             if (pl.txtEl) pl.txtEl.remove();
             this.plants = this.plants.filter(p => p !== pl);
@@ -597,11 +608,11 @@ class HauntedDorm {
             const sx = (this.worldWidth / 2) + (Math.random() * 40 - 20);
             const sy = (this.worldHeight / 2) + (Math.random() * 40 - 20);
             const p = this._findPath(sx, sy, rm.frontX, rm.frontY);
-            p.push({ x: (rm.x + bedChoice.bedCoords.c) * this.gridSize + 40, y: (rm.y + bedChoice.bedCoords.r) * this.gridSize + 40 }); // 走到专属床位
+            if (p) p.push({ x: (rm.x + bedChoice.bedCoords.c) * this.gridSize + 40, y: (rm.y + bedChoice.bedCoords.r) * this.gridSize + 40 }); // 走到专属床位（v4.0.16：寻路失败为 null，靠 update 里的重试兜底）
             const ai = {
                 x: sx,
                 y: sy,
-                path: p,
+                path: p || [],
                 sun: 0, spore: 0, hp: 100, maxHp: 100, actTimer: 5.0 + Math.random() * 3.0,
                 isAi: true, targetRoom: rm, room: null, roleDef: roleDef,
                 icon: roleDef.icon, dead: false,
@@ -732,6 +743,10 @@ class HauntedDorm {
         this._closePlantMenu();
         const def = pl.def;
         this.popupPlant = pl;
+        // v4.0.16：重置拆除确认状态
+        this._delArmed = null;
+        this.ppDemolish.innerText = '拆除';
+        this.ppDemolish.style.background = '';
         this.ppTitle.innerText = def.name + (pl.isDoor ? '（门板）' : '');
         // 用户反馈：因为已经有升级按键了，不需要长篇大论的升级预览框了，简化UI
         if (def.feed) {
@@ -763,6 +778,12 @@ class HauntedDorm {
     _closePopup() {
         this.popup.style.display = 'none';
         this.popupPlant = null;
+        // v4.0.16：复位拆除确认状态与按钮外观
+        this._delArmed = null;
+        if (this.ppDemolish) {
+            this.ppDemolish.innerText = '拆除';
+            this.ppDemolish.style.background = '';
+        }
     }
 
     _evolve(pl, to) {
@@ -796,14 +817,18 @@ class HauntedDorm {
     }
 
     _ghostSpawnPoint() {
-        for (let tries = 0; tries < 30; tries++) {
+        // v4.0.16：出笼点必须离所有存活玩家 ≥600px——原主路径只查了格子非墙，可能正好出在玩家房间门口，
+        // 僵尸 20s 出笼即堵门，玩家开局没门板没植物直接被吃（用户实拍 bug）
+        const farFromPlayers = (x, y) => this.allPlayers.every(p => p.dead || Math.hypot(p.x - x, p.y - y) >= 600);
+        for (let tries = 0; tries < 40; tries++) {
             const rm = this.rooms[Math.floor(Math.random() * this.rooms.length)];
             const d = rm.tpl.door;
             let dx = 0, dy = 0;
             if (d.r >= rm.h) dy = 1; else if (d.r < 0) dy = -1;
             else if (d.c >= rm.w) dx = 1; else dx = -1;
             const c = rm.x + d.c + dx * 2, r = rm.y + d.r + dy * 2;
-            if (!this.walls.has(`${c},${r}`)) return { x: c * this.gridSize + 40, y: r * this.gridSize + 40 };
+            const x = c * this.gridSize + 40, y = r * this.gridSize + 40;
+            if (!this.walls.has(`${c},${r}`) && !this.checkCollision(x, y) && farFromPlayers(x, y)) return { x, y };
         }
         // 兜底：玩家 700px 外随机空地
         for (let tries = 0; tries < 60; tries++) {
@@ -813,6 +838,23 @@ class HauntedDorm {
             if (!this.checkCollision(x, y)) return { x, y };
         }
         return { x: 100, y: 100 };
+    }
+
+    // v4.0.16：出生点安全校验——玩家/P2/人机出生在墙里时，就近螺旋找空位搬迁
+    _ensureSafeSpawn() {
+        const fix = (p) => {
+            if (!p || p.dead) return;
+            if (!this.checkCollision(p.x, p.y, 14)) return; // 原位安全
+            for (let radius = 40; radius <= 320; radius += 40) {
+                for (let a = 0; a < 12; a++) {
+                    const x = p.x + Math.cos(a / 12 * Math.PI * 2) * radius;
+                    const y = p.y + Math.sin(a / 12 * Math.PI * 2) * radius;
+                    if (x < 60 || y < 60 || x > this.worldWidth - 60 || y > this.worldHeight - 60) continue;
+                    if (!this.checkCollision(x, y, 14)) { p.x = x; p.y = y; return; }
+                }
+            }
+        };
+        for (const p of this.allPlayers) fix(p);
     }
 
     _announce(text, sfx, priority = false) {
@@ -1218,11 +1260,29 @@ class HauntedDorm {
         document.getElementById('ov-time').innerText = `${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}`;
         document.getElementById('ov-waves').innerText = this.ghostLevel;
         
-        let mvp = this.lastKiller || this.player; // 最终击杀者直接成为MVP
+        // v4.0.16：MVP 重做——按对僵尸的累计伤害评定（旧逻辑 lastKiller||player 会让"被吃掉的人"因无击杀者而成为 MVP，
+        // 且 2P 模式下 P2 会被误显示成"人机-xxx"）
+        let mvp = null, bestDmg = 0;
+        for (const p of this.allPlayers) {
+            const d = p.dmgDealt || 0;
+            if (d > bestDmg) { bestDmg = d; mvp = p; }
+        }
+        if (!mvp) mvp = (win ? (this.lastKiller || this.player) : this.player);
         const mvpEl = document.getElementById('ov-mvp');
         if (mvpEl) {
-            mvpEl.innerText = mvp === this.player ? '你' : `人机-${mvp.roleDef.name}`;
-            mvpEl.style.color = mvp === this.player ? '#00ff00' : mvp.color;
+            const dmgTxt = bestDmg > 0 ? ` · 伤害${Math.round(bestDmg)}` : '';
+            let label;
+            if (mvp === this.player) {
+                label = (this.gameMode === '2p' && !this.isZombieFaction) ? `P1（${mvp.roleDef ? mvp.roleDef.name : ''}）` : '你';
+            } else if (mvp === this.player2) {
+                label = `P2（${mvp.roleDef ? mvp.roleDef.name : ''}）`;
+            } else if (mvp.isAi) {
+                label = `人机-${mvp.roleDef ? mvp.roleDef.name : ''}`;
+            } else {
+                label = (mvp.roleDef && mvp.roleDef.name) ? mvp.roleDef.name : '';
+            }
+            mvpEl.innerText = `本局MVP：${label}${dmgTxt}`;
+            mvpEl.style.color = mvp === this.player ? '#00ff00' : (mvp.color || '#ffd54a');
         }
 
         document.getElementById('dorm-over').style.display = 'flex';
@@ -1321,9 +1381,10 @@ class HauntedDorm {
         this.spawnPlant(this.menuCol, this.menuRow, type);
     }
 
-    _useSkill() {
-        if (this.player.skillCd > 0) return;
-        const p = this.player;
+    _useSkill(target = null) {
+        // v4.0.16：接收目标玩家——原实现忽略参数，2P 模式下 P2 按 /键 释放的技能加在了 P1 身上
+        const p = target || this.player;
+        if (p.skillCd > 0) return;
 
         if (this.isZombieFaction) {
             p.skillCd = 60;
@@ -1487,7 +1548,7 @@ class HauntedDorm {
         return { visited: this._bfsVisited, parent: this._bfsParent, q: this._bfsQ, plantMap: this._bfsPlantMap };
     }
 
-    _findPath(startX, startY, targetX, targetY) {
+    _findPath(startX, startY, targetX, targetY, passDoors = true) {
         const sc = Math.floor(startX / this.gridSize);
         const sr = Math.floor(startY / this.gridSize);
         const tc = Math.floor(targetX / this.gridSize);
@@ -1503,7 +1564,10 @@ class HauntedDorm {
         const targetIdx = tr * this.cols + tc;
         
         for (const pl of this.plants) {
-            if (!pl.def.ground) plantMap[pl.r * this.cols + pl.c] = 1;
+            // v4.0.16：门板(isDoor)对玩家方(玩家/人机)不阻挡——玩家可自由过门，AI 同权；
+            // 僵尸(passDoors=false)仍视门板为障碍，会被引导到门前啃门。
+            // 原先门格一律阻挡 → 玩家造门后其他 AI 进房 BFS 必失败 → 走直线穿墙（用户实拍 bug）
+            if (!pl.def.ground && !(passDoors && pl.isDoor)) plantMap[pl.r * this.cols + pl.c] = 1;
         }
         
         let head = 0;
@@ -1543,7 +1607,8 @@ class HauntedDorm {
             }
         }
         
-        if (!found) return [{x: targetX, y: targetY}];
+        // v4.0.16：寻路失败返回 null（原返回直线目标 → AI 直线穿墙）——调用方必须兜底
+        if (!found) return null;
         
         const path = [];
         let curr = targetIdx;
@@ -1721,6 +1786,10 @@ class HauntedDorm {
                     for (const z of hits) {
                         z.hp -= pea.dmg;
                         if (pea.pctDmg) z.hp -= z.maxHp * pea.pctDmg;
+                        // v4.0.16：MVP 伤害归属——按出手者（玩家/人机）累计对僵尸的实际伤害
+                        if (pea.owner && pea.owner.roleDef) {
+                            pea.owner.dmgDealt = (pea.owner.dmgDealt || 0) + pea.dmg + (pea.pctDmg ? z.maxHp * pea.pctDmg : 0);
+                        }
                         if (pea.pctDmg) {
                             // 毁灭大炮特效
                             const boom = this._getDomElement('boom');
@@ -2042,8 +2111,8 @@ class HauntedDorm {
                 zb.el1.style.left = zb.x + 'px';
                 zb.el1.style.top = zb.y + 'px';
                 if (zb.hpBg) {
-                    zb.hpBg.style.left = (zb.x - 30) + 'px';
-                    zb.hpBg.style.top = (zb.y - 60) + 'px';
+                    // v4.0.16：血条是 zb.el1 的子元素（.hp-bar-bg CSS top:-10px 已相对定位）——
+                    // 此处原写成世界绝对坐标造成双重偏移，血条悬空在约 2 倍坐标处且随僵尸移动（用户实拍 bug）
                     zb.hpFg.style.width = Math.max(0, zb.hp / zb.maxHp * 100) + '%';
                 }
                 
@@ -2120,7 +2189,9 @@ class HauntedDorm {
         // 【优化3】冗余按键映射：为每个操作提供2-3个备用键。如果主键被硬件冲突屏蔽，玩家可以下意识用备用键
         this._handleKMenu(1, this.player, ['f', 'j'], ['altright', 'g', 'k'], ['w'], ['s'], this.p1Kmenu, this.p1Cursor);
         if (this.gameMode === '2p' && this.player2) {
-            this._handleKMenu(2, this.player2, ['delete', 'shiftright', '1'], ['enter', 'controlright', '2'], ['arrowup'], ['arrowdown'], this.p2Kmenu, this.p2Cursor);
+            // v4.0.16：P2 主键改数字位 1确认/2取消（0浇水/3技能）——原主键 Delete 在 Mac 上是退格(Backspace)根本不触发，
+            // 用户实际一直用的是备用键 1；Enter 保留为取消备用
+            this._handleKMenu(2, this.player2, ['1', 'shiftright', 'delete'], ['2', 'enter', 'controlright'], ['arrowup'], ['arrowdown'], this.p2Kmenu, this.p2Cursor);
         }
     }
     
@@ -2219,6 +2290,14 @@ class HauntedDorm {
             }
         } else if (opt.action === 'del') {
             const pl = menu.targetPl;
+            // v4.0.16：键盘拆除同样二次确认——第一次按只提示，再按一次才拆
+            if (menu.delArm !== pl) {
+                menu.delArm = pl;
+                this._flyText(pl.c * 80 + 40, pl.r * 80, '再按一次确认拆除', '#ffb0b0');
+                this.playSfx('buttonclick.mp3', 0.35);
+                return;
+            }
+            menu.delArm = null;
             pl.el1.remove();
             if (pl.txtEl) pl.txtEl.remove();
             this.plants = this.plants.filter(x => x !== pl);
@@ -2293,12 +2372,16 @@ class HauntedDorm {
         }
 
         // P1 Movement - 【SOC防冲突】
+        // v4.0.16：菜单打开（建造菜单/升级拆除弹窗）时 P1 停止移动，防止选菜单时人物走位
+        const p1MenuBusy = this.kmenus[1].active || (this.popup && this.popup.style.display === 'block');
         let vx1 = 0, vy1 = 0;
         const p1L = this.keys['a'], p1R = this.keys['d'], p1U = this.keys['w'], p1D = this.keys['s'];
-        if (p1L && !p1R) vx1 -= moveSpeed;
-        if (p1R && !p1L) vx1 += moveSpeed;
-        if (p1U && !p1D) vy1 -= moveSpeed;
-        if (p1D && !p1U) vy1 += moveSpeed;
+        if (!p1MenuBusy) {
+            if (p1L && !p1R) vx1 -= moveSpeed;
+            if (p1R && !p1L) vx1 += moveSpeed;
+            if (p1U && !p1D) vy1 -= moveSpeed;
+            if (p1D && !p1U) vy1 += moveSpeed;
+        }
 
         let nx1 = this.player.x + vx1 * dt;
         let ny1 = this.player.y;
@@ -2308,16 +2391,20 @@ class HauntedDorm {
 
         // P2 Movement - 【SOC防冲突】
         if (this.player2 && !this.player2.dead) {
+            // v4.0.16：P2 建造菜单打开时同样停止移动
+            const p2MenuBusy = this.kmenus[2].active;
             let vx2 = 0, vy2 = 0;
             let moveSpeed2 = this.player2.speedBuffT > 0 ? 800 : 400;
             const p2PhysRoom = this._insideRoom(Math.floor(this.player2.x/this.gridSize), Math.floor(this.player2.y/this.gridSize));
             if (p2PhysRoom) moveSpeed2 = baseSpeed / this.timeScale;
-            
+
             const p2L = this.keys['arrowleft'], p2R = this.keys['arrowright'], p2U = this.keys['arrowup'], p2D = this.keys['arrowdown'];
-            if (p2L && !p2R) vx2 -= moveSpeed2;
-            if (p2R && !p2L) vx2 += moveSpeed2;
-            if (p2U && !p2D) vy2 -= moveSpeed2;
-            if (p2D && !p2U) vy2 += moveSpeed2;
+            if (!p2MenuBusy) {
+                if (p2L && !p2R) vx2 -= moveSpeed2;
+                if (p2R && !p2L) vx2 += moveSpeed2;
+                if (p2U && !p2D) vy2 -= moveSpeed2;
+                if (p2D && !p2U) vy2 += moveSpeed2;
+            }
 
             let nx2 = this.player2.x + vx2 * dt;
             let ny2 = this.player2.y;
@@ -2355,7 +2442,7 @@ class HauntedDorm {
                 if (isWellDeveloped && ai.room && (!ai.path || ai.path.length === 0) && !zombieNear && Math.random() < 0.005) {
                     const drop = this.airdrops[Math.floor(Math.random() * this.airdrops.length)];
                     ai.targetDrop = drop;
-                    ai.path = this._findPath(ai.x, ai.y, drop.x, drop.y);
+                    ai.path = this._findPath(ai.x, ai.y, drop.x, drop.y) || ai.path; // v4.0.16：寻路失败不穿墙
                     if (Math.random() < 0.5) this._say(ai, "发育好了！去抢盲盒！");
                 }
                 // 如果盲盒消失了，或者碰到僵尸靠近，立刻放弃目标回家！
@@ -2365,8 +2452,10 @@ class HauntedDorm {
                         ai.targetDrop = null;
                         if (ai.room) {
                             const p = this._findPath(ai.x, ai.y, ai.room.frontX, ai.room.frontY);
-                            p.push({ x: (ai.room.x + ai.room.tpl.beds[0].c) * 80 + 40, y: (ai.room.y + ai.room.tpl.beds[0].r) * 80 + 40 });
-                            ai.path = p;
+                            if (p) {
+                                p.push({ x: (ai.room.x + ai.room.tpl.beds[0].c) * 80 + 40, y: (ai.room.y + ai.room.tpl.beds[0].r) * 80 + 40 });
+                                ai.path = p;
+                            }
                             if (zombieNear) ai.speed = 300; // 吓得跑快点
                         }
                     }
@@ -2391,9 +2480,24 @@ class HauntedDorm {
                     if (candidateRooms.length > 0) {
                         ai.targetRoom = candidateRooms[Math.floor(Math.random() * candidateRooms.length)];
                         const p = this._findPath(ai.x, ai.y, ai.targetRoom.frontX, ai.targetRoom.frontY);
-                        p.push({ x: (ai.targetRoom.x + ai.targetRoom.tpl.beds[0].c) * this.gridSize + 40, y: (ai.targetRoom.y + ai.targetRoom.tpl.beds[0].r) * this.gridSize + 40 });
                         ai.speed = 300; // 极速逃生
-                        ai.path = p;
+                        if (p) {
+                            p.push({ x: (ai.targetRoom.x + ai.targetRoom.tpl.beds[0].c) * this.gridSize + 40, y: (ai.targetRoom.y + ai.targetRoom.tpl.beds[0].r) * this.gridSize + 40 });
+                            ai.path = p;
+                        }
+                    }
+                }
+            }
+
+            // v4.0.16：寻路失败重试——没路时原地等待，每 2 秒重试一次（绝不直线穿墙）
+            if ((!ai.path || ai.path.length === 0) && ai.targetRoom && !ai.room) {
+                ai.repathT = (ai.repathT || 0) + dt;
+                if (ai.repathT > 2) {
+                    ai.repathT = 0;
+                    const rp = this._findPath(ai.x, ai.y, ai.targetRoom.frontX, ai.targetRoom.frontY);
+                    if (rp) {
+                        rp.push({ x: (ai.targetRoom.x + ai.targetRoom.tpl.beds[0].c) * this.gridSize + 40, y: (ai.targetRoom.y + ai.targetRoom.tpl.beds[0].r) * this.gridSize + 40 });
+                        ai.path = rp;
                     }
                 }
             }
@@ -2845,7 +2949,7 @@ class HauntedDorm {
             if (zb.pathTimer > 1.0 || !zb.path || zb.targetSwitched) {
                 zb.pathTimer = 0;
                 zb.targetSwitched = false;
-                zb.path = this._findPath(zb.x, zb.y, targetX, targetY);
+                zb.path = this._findPath(zb.x, zb.y, targetX, targetY, false); // 僵尸：门板视为障碍（引到门前啃）
                 if (zb.path && zb.path.length > 0) {
                     zb.path.push({x: targetX, y: targetY}); // 确保最后一步精确定位到玩家
                 }
