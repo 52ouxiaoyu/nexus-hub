@@ -13,13 +13,14 @@
      COMBO_CAP：倍率封顶所需连击数，x4.00 上限不变。
      BOSS_GRACE：脚本跑完后等待清场的宽限帧，超时强制 Boss 登场（防炮台卡关）。 */
   const COMBO_WIN = 210, COMBO_CAP = 30, BOSS_GRACE = 240;
+  const PSEP_MIN = 52;     /* v1.4.8：两机最小间距（px），低于即互相推开 */
   /* 自动驾驶接管阈值（帧）：某个席位连续 5 秒没有收到自己的按键，就交给 AI 代班；
      该玩家任意一键按下立即夺回 —— AI 是代班，不是抢机。 */
   const AI_IDLE = 5 * 60;
   let W = MIN_W;
   /* 战场越宽，自机速度等比补偿，避免横向机动变迟钝 */
   function fieldSpd() { return Math.min(1.25, Math.max(1, W / MIN_W)); }
-  const VERSION = 'v1.4.7';
+  const VERSION = 'v1.4.8';
 
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d', { alpha: false });
@@ -1033,6 +1034,25 @@
 
     runScript();
     for (let i = 0; i < G.players.length; i++) updatePlayer(G.players[i]);
+
+    /* v1.4.8 双机不重叠：两机靠得太近时沿连线互相推开（位置级硬校正）。
+       完全重合（同帧传送/复活）时按左右家方向分开。 */
+    for (let a = 0; a < G.players.length; a++) {
+      for (let b = a + 1; b < G.players.length; b++) {
+        const p1 = G.players[a], p2 = G.players[b];
+        if (!p1 || !p2 || p1.out || p2.out || p1.dead || p2.dead) continue;
+        let dx = p2.x - p1.x, dy = p2.y - p1.y;
+        let d = Math.hypot(dx, dy);
+        if (d >= PSEP_MIN) continue;
+        if (d < 0.001) { dx = p1.id === 0 ? 1 : -1; dy = 0; d = 1; }   /* 1P 往左、2P 往右，与出生位一致 */
+        const push = (PSEP_MIN - d) / 2 + 0.5;
+        const ux = dx / d, uy = dy / d;
+        p1.x -= ux * push; p1.y -= uy * push;
+        p2.x += ux * push; p2.y += uy * push;
+        p1.x = Math.max(16, Math.min(W - 16, p1.x)); p1.y = Math.max(40, Math.min(H - 24, p1.y));
+        p2.x = Math.max(16, Math.min(W - 16, p2.x)); p2.y = Math.max(40, Math.min(H - 24, p2.y));
+      }
+    }
 
     for (let i = G.enemies.length - 1; i >= 0; i--) {
       const e = G.enemies[i];
