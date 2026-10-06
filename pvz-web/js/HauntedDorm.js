@@ -1020,19 +1020,26 @@ class HauntedDorm {
         const bubble = document.createElement('div');
         bubble.innerText = text;
         bubble.style.cssText = `
-            position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.95); color: #333; padding: 6px 14px;
-            border-radius: 12px; font-size: 14px; font-weight: bold; white-space: nowrap;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3); border: 2px solid #555;
-            z-index: 500; opacity: 0; transition: opacity 0.2s; pointer-events: none;
-            font-family: 'Kaiti SC', serif;
+            position: absolute; bottom: 105%; left: 50%; transform: translateX(-50%);
+            background: #fff; color: #000; padding: 10px 18px;
+            border-radius: 20px; font-size: 20px; font-weight: 900; white-space: nowrap;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.9); border: 3px solid #000;
+            z-index: 500; opacity: 0; transition: opacity 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
+            font-family: 'Marker Felt', 'Comic Sans MS', 'Arial Black', sans-serif;
+            text-transform: uppercase;
         `;
         const arrow = document.createElement('div');
         arrow.style.cssText = `
             position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
-            border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid #555;
+            border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 14px solid #000;
+        `;
+        const innerArrow = document.createElement('div');
+        innerArrow.style.cssText = `
+            position: absolute; top: 100%; left: 50%; transform: translateX(-50%) translateY(-3px);
+            border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #fff;
         `;
         bubble.appendChild(arrow);
+        bubble.appendChild(innerArrow);
         
         entity.el1.appendChild(bubble);
         entity.chatBubble = bubble;
