@@ -19,7 +19,7 @@
   let W = MIN_W;
   /* 战场越宽，自机速度等比补偿，避免横向机动变迟钝 */
   function fieldSpd() { return Math.min(1.25, Math.max(1, W / MIN_W)); }
-  const VERSION = 'v1.4.5';
+  const VERSION = 'v1.4.6';
 
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d', { alpha: false });
@@ -39,10 +39,10 @@
 
   /* ==================== 武器 ==================== */
   const WEAPONS = [
-    { name: '火神炮', en: 'VULCAN', spr: 'vulcan', dmg: 4, interval: 9, color: '#7fe8ff' },
-    { name: '激光炮', en: 'LASER', spr: 'laser', dmg: 10, interval: 13, color: '#5fb0ff', pierce: 2 },
-    { name: '追踪导弹', en: 'MISSILE', spr: 'missile', dmg: 8, interval: 14, color: '#5ce8b4', homing: true },
-    { name: '磁轨炮', en: 'RAIL', spr: 'rail', dmg: 15, interval: 16, color: '#b8c8ff', pierce: 4 },
+    { name: '火神炮', en: 'VULCAN', spr: 'vulcan', dmg: 14, interval: 22, color: '#7fe8ff' },
+    { name: '激光炮', en: 'LASER', spr: 'laser', dmg: 26, interval: 26, color: '#5fb0ff', pierce: 2 },
+    { name: '追踪导弹', en: 'MISSILE', spr: 'missile', dmg: 19, interval: 28, color: '#5ce8b4', homing: true },
+    { name: '磁轨炮', en: 'RAIL', spr: 'rail', dmg: 24, interval: 26, color: '#b8c8ff', pierce: 4 },
   ];
   TW.WEAPONS = WEAPONS;
 
@@ -413,20 +413,20 @@
     const hom = !!wp.homing || pl.pk('homing') > 0;
 
     if (pl.weapon === 0) {
-      const n = [2, 2, 3, 3, 4][lv - 1] + twin;
+      const n = [2, 2, 2, 3, 3][lv - 1] + twin;
       const spread = [0.06, 0.10, 0.14, 0.16, 0.18][lv - 1];
       for (let i = 0; i < n; i++) {
         const off = (i - (n - 1) / 2) * spread;
         addBullet(pl, pl.x, pl.y - 14, ang + off, 6.5, dmg, wp.spr, pc, hom);
       }
     } else if (pl.weapon === 1) {
-      const n = [1, 1, 1, 2, 2][lv - 1] + twin;
+      const n = [1, 1, 2, 2, 2][lv - 1] + twin;
       const sep = n > 1 ? Math.min(14, 54 / n) : 0;
       for (let i = 0; i < n; i++) {
         addBullet(pl, pl.x + (i - (n - 1) / 2) * sep, pl.y - 16, ang, 7, dmg, wp.spr, 2 + pc, hom);
       }
     } else if (pl.weapon === 2) {
-      const n = [1, 2, 2, 3, 3][lv - 1] + twin;
+      const n = [1, 2, 2, 2, 3][lv - 1] + twin;
       for (let i = 0; i < n; i++) {
         const off = (i - (n - 1) / 2) * 0.34;
         addBullet(pl, pl.x, pl.y - 12, ang + off, 5, dmg, wp.spr, pc, true);
@@ -445,15 +445,15 @@
       const wa = lv >= 5 ? 0.13 : 0;
       for (let k = 0; k < pairs; k++) {
         const sp2 = 26 + k * 13;
-        addBullet(pl, pl.x - sp2, pl.y + 2, ang - wa, 6, 1, 'wing', pc);
-        addBullet(pl, pl.x + sp2, pl.y + 2, ang + wa, 6, 1, 'wing', pc);
+        addBullet(pl, pl.x - sp2, pl.y + 2, ang - wa, 6, 4, 'wing', pc);
+        addBullet(pl, pl.x + sp2, pl.y + 2, ang + wa, 6, 4, 'wing', pc);
       }
     }
     if (G.sfx) ((pl.weapon === 1 || pl.weapon === 3) ? TW.Audio.laser() : pl.weapon === 2 ? TW.Audio.missile() : TW.Audio.shot());
   }
 
   function addBullet(pl, x, y, ang, sp, dmg, kind, pierce, homing) {
-    if (G.pbullets.length > 150) return;   // 密集恐惧症保险丝：我方弹硬上限
+    if (G.pbullets.length > 80) return;    // 密集恐惧症保险丝：我方弹硬上限
     G.pbullets.push({
       x: x, y: y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
       dmg: dmg, kind: kind, pierce: pierce || 0, homing: !!homing, hit: [], t: 0,
@@ -468,15 +468,15 @@
     TW.Audio.chargeFire();
     TW.FX.ring(pl.x, pl.y - 10, 14, '#9ff0ff', 20);
     if (pl.weapon === 0) {
-      for (let i = -1; i <= 1; i++) addBullet(pl, pl.x, pl.y - 18, -Math.PI / 2 + i * 0.13, 7, 5, 'charge', 1);
+      for (let i = -1; i <= 1; i++) addBullet(pl, pl.x, pl.y - 18, -Math.PI / 2 + i * 0.13, 7, 9, 'charge', 1);
     } else if (pl.weapon === 1) {
-      for (let i = -1; i <= 1; i++) addBullet(pl, pl.x + i * 14, pl.y - 18, -Math.PI / 2, 8, 14, 'charge', 6);
+      for (let i = -1; i <= 1; i++) addBullet(pl, pl.x + i * 14, pl.y - 18, -Math.PI / 2, 8, 30, 'charge', 6);
     } else if (pl.weapon === 3) {
       /* 磁轨炮蓄力：一发全功率贯穿轨道 */
-      addBullet(pl, pl.x, pl.y - 18, -Math.PI / 2, 9, 22, 'charge', 9);
-      addBullet(pl, pl.x, pl.y - 18, -Math.PI / 2, 8, 12, 'rail', 6);
+      addBullet(pl, pl.x, pl.y - 18, -Math.PI / 2, 9, 40, 'charge', 9);
+      addBullet(pl, pl.x, pl.y - 18, -Math.PI / 2, 8, 20, 'rail', 6);
     } else {
-      for (let i = 0; i < 5; i++) addBullet(pl, pl.x, pl.y - 14, -Math.PI / 2 + (i - 2) * 0.3, 5.5, 6, 'charge', 0, true);
+      for (let i = 0; i < 5; i++) addBullet(pl, pl.x, pl.y - 14, -Math.PI / 2 + (i - 2) * 0.3, 5.5, 10, 'charge', 0, true);
     }
     G.rank = Math.min(100, G.rank + 1);
   }
