@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1791267337">
+    <link rel="stylesheet" href="css/style.css?v=1791268353">
 </head>
 <body>
     <div id="game-container">
@@ -373,6 +373,32 @@
             </div>
         </div>
 
+        
+        <!-- v3.96.0 猛鬼宿舍：阵营选择弹窗 -->
+        <div id="dorm-faction-modal" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.78); z-index:2400; align-items:center; justify-content:center; flex-direction:column;">
+            <div class="diff-panel" style="width: auto;">
+                <div class="diff-title">守屋大作战<span>HOUSE GUARD · 选择你的阵营</span></div>
+                <div class="diff-sub">你想成为幸存者，还是化身午夜猎杀者？</div>
+                <div class="diff-row" style="gap: 20px;">
+                    <button id="btn-faction-plant" class="diff-btn diff-easy" style="width:200px;">
+                        <img src="assets/images/Plants/SunFlower/0.gif" style="height:80px; margin-bottom:8px;">
+                        <span class="diff-name" style="font-size:24px;">扮演植物</span>
+                        <span class="diff-en">SURVIVOR</span>
+                        <span class="diff-desc">种下植物，抵御僵尸的猛烈进攻</span>
+                    </button>
+                    <button id="btn-faction-zombie" class="diff-btn diff-hard" style="width:200px;">
+                        <img src="assets/images/Zombies/Zombie/0.gif" style="height:80px; margin-bottom:8px;">
+                        <span class="diff-name" style="font-size:24px;">扮演僵尸</span>
+                        <span class="diff-en">HUNTER</span>
+                        <span class="diff-desc">化身鬼王，亲自抓破植物的家门</span>
+                    </button>
+                </div>
+                <div class="diff-foot">
+                    <button id="dorm-faction-back">返回主菜单</button>
+                </div>
+            </div>
+        </div>
+
         <!-- v3.94.7 猛鬼宿舍：皮肤选择弹窗 -->
         <div id="dorm-role-modal" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.78); z-index:2400; align-items:center; justify-content:center; flex-direction:column;">
             <div class="diff-panel" style="width: auto;">
@@ -548,17 +574,17 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1791267337"></script>
-    <script src="js/Board.js?v=1791267337"></script>
-    <script src="js/entities/Entity.js?v=1791267337"></script>
-    <script src="js/entities/Plant.js?v=1791267337"></script>
-    <script src="js/entities/Zombie.js?v=1791267337"></script>
-    <script src="js/entities/Projectile.js?v=1791267337"></script>
-    <script src="js/entities/Sun.js?v=1791267337"></script>
-    <script src="js/managers/WaveManager.js?v=1791267337"></script>
-    <script src="js/managers/CollisionManager.js?v=1791267337"></script>
-    <script src="js/managers/EventManager.js?v=1791267337"></script>
-    <script src="js/GameLoop.js?v=1791267337"></script>
-    <script src="js/HelpGuide.js?v=1791267337"></script>
+    <script src="js/InputManager.js?v=1791268353"></script>
+    <script src="js/Board.js?v=1791268353"></script>
+    <script src="js/entities/Entity.js?v=1791268353"></script>
+    <script src="js/entities/Plant.js?v=1791268353"></script>
+    <script src="js/entities/Zombie.js?v=1791268353"></script>
+    <script src="js/entities/Projectile.js?v=1791268353"></script>
+    <script src="js/entities/Sun.js?v=1791268353"></script>
+    <script src="js/managers/WaveManager.js?v=1791268353"></script>
+    <script src="js/managers/CollisionManager.js?v=1791268353"></script>
+    <script src="js/managers/EventManager.js?v=1791268353"></script>
+    <script src="js/GameLoop.js?v=1791268353"></script>
+    <script src="js/HelpGuide.js?v=1791268353"></script>
 </body>
 </html>

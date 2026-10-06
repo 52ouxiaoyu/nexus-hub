@@ -161,6 +161,8 @@ class HauntedDorm {
 
         const urlParams = new URLSearchParams(window.location.search);
         this.role = urlParams.get('role') || 'peashooter'; // Default to peashooter if missing
+        this.faction = urlParams.get('faction') || 'plant';
+        this.isZombieFaction = (this.faction === 'zombie');
         
         this.playerRoles = [
             { id: 'sunflower', name: '向日葵', icon: 'assets/images/Plants/SunFlower/0.gif', skillDesc: '【M键】10秒内阳光产出翻倍' },
@@ -176,8 +178,21 @@ class HauntedDorm {
             x: cx, y: cy, sun: 0, spore: 0, hp: 100, maxHp: 100,
             icon: this.playerRoleDef.icon,
             roleDef: this.playerRoleDef,
-            camX: 0, camY: 0, skillUsed: false, sunBuffT: 0, atkBuffT: 0
+            camX: 0, camY: 0, skillUsed: false, sunBuffT: 0, atkBuffT: 0,
+            biteT: 0, level: 1, speedBuffT: 0
         };
+        
+        if (this.isZombieFaction) {
+            const zCfg = HauntedDorm.GHOST_LEVELS[0];
+            this.player.hp = zCfg.hp;
+            this.player.maxHp = zCfg.hp;
+            this.player.x = this.worldWidth ? this.worldWidth / 2 : cx;
+            this.player.y = this.worldHeight ? this.worldHeight / 2 : cy;
+            this.player.isZombie = true;
+            this.player.cfg = zCfg;
+            this.ghostSpawned = true;
+            this.ghostSpawnAt = 0;
+        }
 
         this.keys = {};
         this.walls = new Set();
@@ -238,9 +253,16 @@ class HauntedDorm {
 
         this.player.el1 = document.createElement('div');
         this.player.el1.className = 'entity avatar';
-        this.player.el1.innerHTML = `<img src="${this.player.icon}" style="${this.playerRoleDef.imgStyle || ''}">` + 
-                                    `<div style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); color:#00ff00; font-size:18px; font-weight:bold; text-shadow:1px 1px 2px black, -1px -1px 2px black; white-space:nowrap;">你 (${this.playerRoleDef.name})</div>`;
-        this.player.el1.style.filter = `drop-shadow(0 0 10px #00ff00)`;
+        if (this.isZombieFaction) {
+            this.player.el1.innerHTML = `<img src="assets/images/Zombies/Zombie/0.gif" style="width:150%; height:150%; transform:translate(-20%, -30%);">` +
+                                        `<div class="lv-badge" style="position:absolute; top:-10px; right:-10px; background:red; color:white; border-radius:10px; padding:2px 5px; font-size:12px; z-index:2;">Lv.1</div>` +
+                                        `<div style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); color:#ff5252; font-size:18px; font-weight:bold; text-shadow:1px 1px 2px black, -1px -1px 2px black; white-space:nowrap;">你 (僵尸)</div>`;
+            this.player.el1.style.filter = `drop-shadow(0 0 10px #ff0000)`;
+        } else {
+            this.player.el1.innerHTML = `<img src="${this.player.icon}" style="${this.playerRoleDef.imgStyle || ''}">` + 
+                                        `<div style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); color:#00ff00; font-size:18px; font-weight:bold; text-shadow:1px 1px 2px black, -1px -1px 2px black; white-space:nowrap;">你 (${this.playerRoleDef.name})</div>`;
+            this.player.el1.style.filter = `drop-shadow(0 0 10px #00ff00)`;
+        }
         // v3.92.0：浇水开启时头顶显示 🚿 标志（跟随玩家移动）
         const wb = document.createElement('div');
         wb.id = 'water-badge';
@@ -857,6 +879,7 @@ class HauntedDorm {
     }
 
     _updateGhostDirector(time) {
+        if (this.isZombieFaction) return; // 僵尸阵营由玩家自己控制，关闭导演
         // 出笼
         if (!this.ghostSpawned) {
             if (time >= this.ghostSpawnAt) {
@@ -1008,7 +1031,11 @@ class HauntedDorm {
         this.playSfx(win ? 'winmusic.mp3' : 'losemusic.mp3', 0.6);
         this._closePopup();
         const secs = Math.floor((this.gameTime) / 1000);
-        document.getElementById('ov-title').innerText = win ? '🏆 僵尸被击倒了！' : '💀 被僵尸抓住了…';
+        if (this.isZombieFaction) {
+            document.getElementById('ov-title').innerText = win ? '🏆 猎杀完成！' : '💀 猎杀失败…';
+        } else {
+            document.getElementById('ov-title').innerText = win ? '🏆 僵尸被击倒了！' : '💀 被僵尸抓住了…';
+        }
         document.getElementById('ov-title').style.color = win ? '#ffd54a' : '#ff6b6b';
         document.getElementById('ov-time').innerText = `${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}`;
         document.getElementById('ov-waves').innerText = this.ghostLevel;
@@ -1131,6 +1158,7 @@ class HauntedDorm {
     }
 
     _useSkill() {
+        if (this.isZombieFaction) return; // 僵尸阵营暂无专属M技能
         if (this.player.skillUsed) return;
         const p = this.player;
         const r = p.roleDef.id;
@@ -1195,7 +1223,7 @@ class HauntedDorm {
                 this._useSkill();
             }
             // v3.92.0：空格开关式浇水——按一下开启持续浇水，再按一下停止（过滤按住触发的 auto-repeat）
-            if (e.key === ' ' && !e.repeat && this.role !== 'zombie') this.setWatering(!this.waterOn);
+            if (e.key === ' ' && !e.repeat && !this.isZombieFaction) this.setWatering(!this.waterOn);
         });
         window.addEventListener('keyup', e => this.keys[e.key.toLowerCase()] = false);
 
@@ -1341,7 +1369,8 @@ class HauntedDorm {
             if (pl.shootCd > 0) continue;
             const px = pl.c * 80 + 40, py = pl.r * 80 + 40;
             let best = null, bestD = (sh ? sh.range : lob.range);
-            for (const zb of this.zombies) {
+            const targets = this.isZombieFaction ? [this.player] : this.zombies;
+            for (const zb of targets) {
                 if (zb.dead) continue;
                 const d = Math.hypot(zb.x - px, zb.y - py);
                 if (d < bestD) { bestD = d; best = zb; }
@@ -1404,7 +1433,8 @@ class HauntedDorm {
             const c = Math.floor(pea.x / this.gridSize), r = Math.floor(pea.y / this.gridSize);
             // if (this.walls.has(`${c},${r}`)) pea.life = 0; // 用户要求子弹能穿透墙壁
             // 命中检测（34px）
-            for (const zb of this.zombies) {
+            const targets = this.isZombieFaction ? [this.player] : this.zombies;
+            for (const zb of targets) {
                 if (zb.dead || zb.retreating) continue; // 撤退中的幽灵僵尸直接免疫子弹
                 if (Math.hypot(zb.x - pea.x, zb.y - pea.y) < 34) {
                     pea.life = 0;
@@ -1449,16 +1479,20 @@ class HauntedDorm {
         if (zb.dead) return;
         zb.dead = true;
         this.kills++;
-        // 死亡动画：放大淡出
+        
         zb.el1.style.transition = 'all 0.45s ease-in';
         zb.el1.style.transform = 'translate(-50%, -50%) scale(1.25) rotate(12deg)';
         zb.el1.style.opacity = '0';
         setTimeout(() => zb.el1.remove(), 480);
         this.playSfx('scream.mp3', 0.35);
-        // 用户要求：去掉僵尸死亡后的掉落物
-        // 击倒最终形态（冰车僵尸）= 胜利；否则 8s 后同级重生
-        // 一命通关：僵尸死后游戏直接胜利
-        this.ghostRespawnAt = 1; // 标记已死
+        
+        if (this.isZombieFaction && zb === this.player) {
+            this._announce('💀 你被植物击败了…', 'scream.mp3', true);
+            setTimeout(() => this.gameOver(false), 3000);
+            return;
+        }
+        
+        this.ghostRespawnAt = 1;
         this._updateGhostChip();
         setTimeout(() => this.gameOver(true), 3000);
     }
@@ -1724,7 +1758,7 @@ class HauntedDorm {
             this.player.el1.style.filter = '';
         }
 
-        const speed = this.player.speedBuffT > 0 ? 800 : 400;
+        const speed = this.isZombieFaction ? (HauntedDorm.GHOST_LEVELS[this.player.level-1].speed) : (this.player.speedBuffT > 0 ? 800 : 400);
 
         let vx1 = 0, vy1 = 0;
         if (this.keys['a'] || this.keys['arrowleft']) vx1 -= speed;
@@ -1867,6 +1901,84 @@ class HauntedDorm {
         this._updateIceshroom(dt);
         this._updateDoomshroom(dt);
         this._updateMines();
+        
+        // 僵尸阵营玩家啃咬逻辑
+        if (this.isZombieFaction && !this.player.dead) {
+            // 每 2.4s 啃食身边的植物
+            this.player.biteT = (this.player.biteT || 0) + dt;
+            if (this.player.biteT >= 2.4) {
+                let bitten = false;
+                // 搜索身边的植物（优先啃门）
+                for (const p of this.plants) {
+                    if (p.def.ground) continue;
+                    const px = p.c * 80 + 40, py = p.r * 80 + 40;
+                    if (Math.hypot(this.player.x - px, this.player.y - py) < 80) { // 稍微大一点的判定范围
+                        p.hp -= 100; // 玩家僵尸基础伤害100
+                        this.playSfx('chomp.mp3', 0.25);
+                        bitten = true;
+                        const bg = p.el1.querySelector('.hp-bar-bg');
+                        const fg = p.el1.querySelector('.hp-bar-fg');
+                        if (bg) {
+                            bg.style.display = 'block';
+                            fg.style.width = Math.max(0, (p.hp / p.maxHp) * 100) + '%';
+                        }
+                        p.el1.style.transform = `translate(${(Math.random()-0.5)*10}px, ${(Math.random()-0.5)*10}px)`;
+                        setTimeout(() => { if(p && p.el1) p.el1.style.transform = 'none'; }, 100);
+                        if (p.hp <= 0) {
+                            p.el1.remove();
+                            if (p.txtEl) p.txtEl.remove();
+                            this.plants = this.plants.filter(pl => pl !== p);
+                        }
+                        break; // 每次只啃一个
+                    }
+                }
+                if (bitten) this.player.biteT = 0;
+            }
+            
+            // 僵尸自动回血（地图中心）
+            if (Math.hypot(this.player.x - this.worldWidth / 2, this.player.y - this.worldHeight / 2) < 120) {
+                this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.player.maxHp * 0.25 * dt);
+                this.player.el1.style.filter = 'drop-shadow(0 0 10px #0f0)';
+            } else {
+                this.player.el1.style.filter = '';
+            }
+            
+            // 玩家僵尸时间升级逻辑
+            const activeSeconds = this.gameTime / 1000;
+            let targetLevel = 1;
+            if (activeSeconds >= 30) targetLevel = 2;
+            if (activeSeconds >= 90) targetLevel = 3;
+            if (activeSeconds >= 150) targetLevel = 4;
+            // 简单根据击杀升级（假设 kills 增加）
+            targetLevel = Math.min(10, targetLevel + this.kills);
+            if (this.player.level < targetLevel && this.player.level < 10) {
+                this.player.level++;
+                this.ghostLevel = this.player.level; // 同步给AI升级判断
+                const cfg = HauntedDorm.GHOST_LEVELS[this.player.level - 1];
+                this.player.maxHp = cfg.hp;
+                this.player.hp = cfg.hp;
+                const im = this.player.el1.querySelector('img');
+                if (im) im.src = 'assets/images/' + cfg.img;
+                const bdg = this.player.el1.querySelector('.lv-badge');
+                if (bdg) bdg.innerText = 'Lv.' + this.player.level;
+                this._announce(`👻 你已升级为【${cfg.name}】！`, 'finalwave.mp3', true);
+            }
+            
+            // 接触AI造成秒杀（抓破门后吃人）
+            // 开局前 5 秒无敌保护，防止一出生人机就被吃掉
+            for (const ai of this.ais) {
+                if (!ai.dead && this.gameTime > 5000 && Math.hypot(ai.x - this.player.x, ai.y - this.player.y) < 50) {
+                    ai.dead = true;
+                    ai.el1.remove();
+                    this.playSfx('gulp.mp3', 0.8);
+                    this.kills++;
+                    this._announce(`🩸 击杀了一名幸存者！`, 'finalwave.mp3');
+                    if (this.ais.every(a => a.dead)) {
+                        this.gameOver(true); // 僵尸赢了
+                    }
+                }
+            }
+        }
         // 【新增】物资盲盒空投机制
         if (this.ghostSpawned && !this.over) {
             this.airdropTimer = (this.airdropTimer || 0) + dt;
@@ -2033,7 +2145,7 @@ class HauntedDorm {
         // v3.90.0：啃咬改离散慢咬——站在植物上一口一口啃（2.4s/口），不再逐帧持续扣血（用户：开局啃门要非常慢）；
         //          咬力随等级上涨（升级既涨血量也涨实际战力）
         const lv = this.ghostLevel;
-        const biteDmg = 15 + 12 * (lv - 1);      // 每口伤害（随僵尸等级成长）
+        const biteDmg = 10 + 8 * (lv - 1);       // 降低伤害（根据用户反馈下调）
         const BITE_CD = 2.4;                     // 每口间隔（秒）
         const touchDps = 12 + 3 * (lv - 1);      // 接触玩家
         let playerHurt = 0;
