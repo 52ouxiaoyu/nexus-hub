@@ -14,10 +14,13 @@
      BOSS_GRACE：脚本跑完后等待清场的宽限帧，超时强制 Boss 登场（防炮台卡关）。 */
   const COMBO_WIN = 210, COMBO_CAP = 30, BOSS_GRACE = 240;
   const PICK_LIFE = 180;   /* 三选一自动锁定前的思考帧数（3 秒） */
+  /* 自动驾驶接管阈值（帧）：某个席位 5 秒没有收到自己的按键，就交给 AI 代班；
+     该玩家任意一键按下立即夺回 —— AI 是代班，不是抢机。 */
+  const AI_IDLE = 300;
   let W = MIN_W;
   /* 战场越宽，自机速度等比补偿，避免横向机动变迟钝 */
   function fieldSpd() { return Math.min(1.25, Math.max(1, W / MIN_W)); }
-  const VERSION = 'v1.3.0';
+  const VERSION = 'v1.4.0';
 
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d', { alpha: false });
@@ -60,15 +63,21 @@
     { tag: '1P', color: '#8cf0ff', ring: 'rgba(140,240,255,0.55)' },
     { tag: '2P', color: '#ffd45e', ring: 'rgba(255,212,94,0.6)' },
   ];
-  function homeX(id, two) { return two ? (id === 0 ? W / 2 - 64 : W / 2 + 64) : W / 2; }
-  function makePlayer(id, two) {
+  /* v1.4.0：没有「单人」这个概念了 —— 永远是两个席位，没人上的席位由 AI 代班。
+     因此出生点恒为左右分列，两个座位的逻辑完全一致，不再有单人/双人两套分支。 */
+  function homeX(id) { return id === 0 ? W / 2 - 64 : W / 2 + 64; }
+  function makePlayer(id) {
     return {
       id: id, tag: PCFG[id].tag, out: false,
-      x: homeX(id, two), y: H - 120, vx: 0, vy: 0,
+      x: homeX(id), y: H - 120, vx: 0, vy: 0,
       r: 3, grazeR: 22, tilt: 0, dead: false,
       fireT: 0, charge: 0, invuln: 0, firing: false,
       lives: 3, bombs: 3, power: 1, weapon: 0, spd: 3,
       combo: 0, comboT: 0, graze: 0, kills: 0,
+      /* 自动驾驶（v1.4.0）：idle 是「多久没收到这个席位的按键」 */
+      ai: false, idle: 0,
+      /* 大招（v1.4.0）：每次释放后随机换成下一种，nextUlt 是预告 */
+      ult: null, nextUlt: null, lastUlt: null,
       /* Build（v1.3.0）：局内成长 */
       perks: {}, exp: 0, level: 0, nextExp: 5, queue: [],
       pick: null, pickIdx: 1, pickT: 0, pickMove: 0,
@@ -92,21 +101,27 @@
     nextExtend: 80000, wave: 0, clearT: 0, flash: 0, deathT: 0,
     best: 0, sfx: true, waveMsg: 0, msgText: '',
     daily: false, perkPool: null, dailyPow: 1,
+    enemySlow: 0,           /* >0 时敌人与敌弹降到 1/3 速（时空凝滞） */
     stats: { maxCombo: 0, deaths: 0, odTriggers: 0 },
     stars: [],
 
-    reset(two) {
+    reset() {
       this.enemies.length = 0; this.ebullets.length = 0; this.pbullets.length = 0;
       this.items.length = 0; this.pending.length = 0; this.exps.length = 0;
       this.rocks.length = 0; this.beams.length = 0;
       this.frame = 0; this.stageT = 0; this.scriptI = 0; this.boss = null;
       this.score = 0; this.rank = 0; this.kills = 0;
+      this.enemySlow = 0;
       this.nextExtend = 80000; this.wave = 0; this.clearT = 0; this.flash = 0; this.deathT = 0;
       this.stats.maxCombo = 0; this.stats.deaths = 0; this.stats.odTriggers = 0;
       TW.FX.reset();
-      this.two = !!two;
+      this.two = true;      /* v1.4.0：恒为双席位，单人 = 另一个席位交给 AI */
       this.players.length = 0;
-      for (let i = 0; i < (this.two ? 2 : 1); i++) this.players.push(makePlayer(i, this.two));
+      for (let i = 0; i < 2; i++) {
+        const pl = makePlayer(i);
+        pl.nextUlt = TW.pickUlt ? TW.pickUlt(pl) : null;
+        this.players.push(pl);
+      }
       this.best = +(localStorage.getItem('tw_best') || 0);
     },
     rankSpd() { return 1 + this.rank * 0.0025; },
@@ -133,6 +148,12 @@
     },
   };
   TW.G = G;
+  /* 给大招 / AI 模块用的引擎接口（函数声明已提升，此处赋值安全） */
+  TW.W = function () { return W; };
+  TW.addBullet = function (pl, x, y, ang, sp, dmg, kind, pierce, homing) {
+    addBullet(pl, x, y, ang, sp, dmg, kind, pierce, homing);
+  };
+  TW.hurtEnemy = function (e, dmg, hx, hy, pl) { hurtEnemy(e, dmg, hx, hy, pl); };
 
   /* 单人场景的便捷代理：G.xxx / G.player 等价于 1P（仅用于读写的快捷方式，战斗逻辑一律走 p.xxx） */
   Object.defineProperty(G, 'player', {
@@ -174,17 +195,10 @@
     for (let i = 0; i < list.length; i++) if (keys[list[i]]) return true;
     return false;
   }
-  function moveKeys(i) {
-    const m = KEYMAP[i];
-    if (i === 0 && !G.two) {
-      return { lf: m.lf.concat(['arrowleft']), rt: m.rt.concat(['arrowright']),
-        up: m.up.concat(['arrowup']), dn: m.dn.concat(['arrowdown']) };
-    }
-    return m;
-  }
-  function bombKeys(i) { return i === 0 && !G.two ? KEYMAP[0].bomb.concat(['shiftright']) : KEYMAP[i].bomb; }
+  function moveKeys(i) { return KEYMAP[i]; }
+  function bombKeys(i) { return KEYMAP[i].bomb; }
   function isFire(i, k, code) { const l = KEYMAP[i].fire; return l.indexOf(k) >= 0 || (code && l.indexOf(code) >= 0); }
-  function isBomb(i, k, code) { const l = bombKeys(i); return l.indexOf(k) >= 0 || (code && l.indexOf(code) >= 0); }
+  function isBomb(i, k, code) { const l = KEYMAP[i].bomb; return l.indexOf(k) >= 0 || (code && l.indexOf(code) >= 0); }
 
   function pressKey(k, code, down) {
     keys[k] = !!down;
@@ -194,10 +208,29 @@
     }
   }
 
+  /* 席位归属：某个玩家按下属于自己座位的任意一键，立刻夺回控制权并清零空闲计时 */
+  function noteActivity(k, code) {
+    for (let i = 0; i < G.players.length; i++) {
+      const pl = G.players[i];
+      if (!pl) continue;
+      const m = KEYMAP[i];
+      const inMove = m.lf.indexOf(k) >= 0 || m.rt.indexOf(k) >= 0 || m.up.indexOf(k) >= 0 || m.dn.indexOf(k) >= 0 ||
+        (!!code && (m.lf.indexOf(code) >= 0 || m.rt.indexOf(code) >= 0 || m.up.indexOf(code) >= 0 || m.dn.indexOf(code) >= 0));
+      if (inMove || isFire(i, k, code) || isBomb(i, k, code)) {
+        pl.idle = 0;
+        if (pl.ai) {
+          pl.ai = false;
+          TW.FX.text(pl.x, pl.y - 46, pl.tag + ' 接管', PCFG[i].color, 14);
+        }
+      }
+    }
+  }
+
   window.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
     const code = (e.code || '').toLowerCase();
     pressKey(k, code, true);
+    noteActivity(k, code);
     if (k === 'p' || k === 'escape') togglePause();
     if (k === 'enter' && (G.state === 'MENU' || G.state === 'OVER' || G.state === 'WIN')) {
       startGame(G.state === 'MENU' ? (document.body.dataset.mode || 'story') : G.mode,

@@ -166,10 +166,10 @@ class HauntedDorm {
         
         this.playerRoles = [
             { id: 'sunflower', name: '向日葵', icon: 'assets/images/Plants/SunFlower/0.gif', skillDesc: '【M键】10秒内阳光产出翻倍' },
-            { id: 'peashooter', name: '豌豆射手', icon: 'assets/images/Plants/Peashooter/0.gif', skillDesc: '【M键】15秒内全场植物攻击力翻倍', imgStyle: 'transform: scale(1.2)' },
+            { id: 'peashooter', name: '豌豆射手', icon: 'assets/images/Plants/Peashooter/0.gif', skillDesc: '【M键】15秒内全场植物攻击力翻倍', imgStyle: 'width: 120%; height: 120%; margin-left: -10%; margin-top: -10%;' },
             { id: 'wallnut', name: '坚果', icon: 'assets/images/Plants/WallNut/0.gif', skillDesc: '【M键】一局一次免费升级门' },
-            { id: 'chomper', name: '大嘴花', icon: 'assets/images/Plants/Chomper/0.gif', skillDesc: '【M键】赶跑僵尸一次', imgStyle: 'transform: scale(1.2)' },
-            { id: 'squash', name: '倭瓜', icon: 'assets/images/Plants/Squash/0.gif', skillDesc: '【M键】半血以上砸掉僵尸一半血', imgStyle: 'transform: scale(2.0)' }
+            { id: 'chomper', name: '大嘴花', icon: 'assets/images/Plants/Chomper/0.gif', skillDesc: '【M键】赶跑僵尸一次', imgStyle: 'width: 120%; height: 120%; margin-left: -10%; margin-top: -10%;' },
+            { id: 'squash', name: '倭瓜', icon: 'assets/images/Plants/Squash/0.gif', skillDesc: '【M键】半血以上砸掉僵尸一半血', imgStyle: 'width: 200%; height: 200%; margin-left: -50%; margin-top: -50%;' }
         ];
         
         this.playerRoleDef = this.playerRoles.find(r => r.id === this.role) || this.playerRoles[1];
@@ -2327,7 +2327,7 @@ class HauntedDorm {
                         if (p.hp <= 0 && !p.dead) {
                             p.dead = true;
                             p.el1.classList.add('dead-slash');
-                            p.el1.style.filter = 'grayscale(1) ' + (p.color ? `drop-shadow(0 0 10px ${p.color})` : '');
+                            p.el1.style.filter = 'grayscale(1)';
                             // 【击杀玩家升级】
                             if (this.ghostLevel >= 4) {
                                 this._levelUpGhostDirect();
@@ -2347,7 +2347,7 @@ class HauntedDorm {
             if (this.player.hp <= 0) { 
                 this.player.dead = true;
                 this.player.el1.classList.add('dead-slash');
-                this.player.el1.style.filter = 'grayscale(1) drop-shadow(0 0 10px #00ff00)';
+                this.player.el1.style.filter = 'grayscale(1)';
                 this.gameOver(false); 
                 return; 
             }
