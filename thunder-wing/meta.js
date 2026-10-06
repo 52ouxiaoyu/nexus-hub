@@ -30,13 +30,13 @@
   }
 
   const ACH = [
-    { id: 'clear1', name: '首捷', desc: '通关故事模式全部 5 关', check: (s) => s.win },
+    { id: 'clear1', name: '首捷', desc: '通关故事全部 5 关', check: (s) => s.win },
     { id: 'combo30', name: '连击大师', desc: '单局达成 30 连击', check: (s) => s.maxCombo >= 30 },
     { id: 'graze200', name: '刀尖起舞', desc: '单局擦弹 200 次', check: (s) => s.graze >= 200 },
     { id: 'lv10', name: '军火库', desc: '单局升到 10 级', check: (s) => s.level >= 10 },
     { id: 'nodeath', name: '零失误', desc: '不掉一命通关', check: (s) => s.win && s.deaths === 0 },
     { id: 'od3', name: '超载狂人', desc: '单局触发 3 次超载', check: (s) => s.odTriggers >= 3 },
-    { id: 'endless10', name: '无尽勇者', desc: '无尽模式抵达第 10 波', check: (s) => s.wave >= 10 },
+    { id: 'endless10', name: '无尽勇者', desc: '无尽抵达第 10 波', check: (s) => s.wave >= 10 },
     { id: 'score500k', name: '五十万俱乐部', desc: '单局得分突破 50 万', check: (s) => s.score >= 500000 },
   ];
 

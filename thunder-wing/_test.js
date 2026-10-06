@@ -31,7 +31,7 @@ function ok(name, cond, extra) {
   console.log('\n--- 加载与句柄 ---');
   ok('无页面异常', errors.length === 0, errors.slice(0, 3));
   const ver = await page.evaluate(() => window.__twGame && window.__twGame.VERSION);
-  ok('句柄存在且版本 v1.4.0', ver === 'v1.4.0', ver);
+  ok('句柄存在且版本 v1.4.1', ver === 'v1.4.1', ver);
   ok('初始为菜单态', await page.evaluate(() => window.__twGame.state()) === 'MENU');
   await page.screenshot({ path: OUT + '/_shot_menu.png' });
 
@@ -160,10 +160,10 @@ function ok(name, cond, extra) {
   });
   ok('120 帧（240 弹幕 + 40 敌机）耗时 < 2500ms', perf.ms < 2500, perf);
 
-  console.log('\n--- 无尽模式 ---');
+  console.log('\n--- 无尽 ---');
   await page.evaluate(() => window.__twGame.start('endless'));
   await page.evaluate(() => window.__twGame.frame(400));
-  ok('无尽模式持续刷怪', await page.evaluate(() => window.__twGame.G.wave) > 0,
+  ok('无尽持续刷怪', await page.evaluate(() => window.__twGame.G.wave) > 0,
     await page.evaluate(() => window.__twGame.G.wave));
 
   console.log('\n--- 流程连通性（脚本推进到 Boss） ---');
@@ -216,7 +216,7 @@ function ok(name, cond, extra) {
   ok('结算面板弹出', win.ov);
   ok('最高分已写入本地', win.best > 0, win);
 
-  console.log('\n--- 双人同屏 ---');
+  console.log('\n--- 同屏 ---');
   await page.evaluate(() => window.__twGame.start('story', true));
   const dpx = await page.evaluate(() => {
     const S = window.__twGame, A = S.playerInfo();
@@ -246,7 +246,7 @@ function ok(name, cond, extra) {
     S.frame(3);
     return { before: before, after: [g.players[0].power, g.players[1].power] };
   });
-  // 双人模式火力道具成对掉落，两人分摊；这里只断言「谁碰到谁受益」
+  // 同屏火力道具成对掉落，两人分摊；这里只断言「谁碰到谁受益」
   ok('道具只给碰到的人（2P 火力上升）', p2Item.after[1] > p2Item.before[1], p2Item);
   ok('另一人火力不受影响', p2Item.after[0] === p2Item.before[0], p2Item);
 

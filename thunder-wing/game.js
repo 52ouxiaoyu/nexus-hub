@@ -21,7 +21,7 @@
   let W = MIN_W;
   /* 战场越宽，自机速度等比补偿，避免横向机动变迟钝 */
   function fieldSpd() { return Math.min(1.25, Math.max(1, W / MIN_W)); }
-  const VERSION = 'v1.4.0';
+  const VERSION = 'v1.4.1';
 
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d', { alpha: false });
@@ -1435,8 +1435,8 @@
     }
     if (d) {
       d.innerHTML = (G.mode === 'story'
-        ? (G.state === 'WIN' ? '双人合作通关全 5 关' : '到达 STAGE ' + (G.stage + 1))
-        : '无尽模式 WAVE ' + G.wave)
+        ? (G.state === 'WIN' ? '通关全 5 关' : '到达 STAGE ' + (G.stage + 1))
+        : '无尽 WAVE ' + G.wave)
         + '<br>' + lines.join('<br>')
         + '<br>最高分 ' + G.best
         + (G.lastRun && G.lastRun.st ? '<br>等级 ' + G.lastRun.st.level + ' · 最高连击 ' + G.lastRun.st.maxCombo

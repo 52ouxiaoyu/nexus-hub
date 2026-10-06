@@ -246,7 +246,7 @@
 
     /* ── 7. 要塞模式：体型护盾 + 免伤一次 + 额外散射 ── */
     {
-      id: 'fortress', name: '要塞模式', en: 'FORTRESS', glyph: '⬢', color: '#a8ffe0',
+      id: 'fortress', name: '要塞护盾', en: 'FORTRESS', glyph: '⬢', color: '#a8ffe0',
       w: 10, dur: 300, grace: 40,
       desc: '展开护盾 · 免伤一次 · 额外散射',
       cast(pl, u) {
