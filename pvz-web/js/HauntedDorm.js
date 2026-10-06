@@ -2277,7 +2277,8 @@ class HauntedDorm {
             }
             // 僵尸寻路逻辑：无论攻击还是撤退都走寻路，防止穿墙瞬移
             zb.pathTimer = (zb.pathTimer || 0) + dt;
-            if (zb.pathTimer > 1.0 || !zb.path || zb.path.length === 0 || zb.targetSwitched) {
+            // 移除 zb.path.length === 0，防止僵尸到达目标门时每帧疯狂调用 BFS 导致严重卡顿
+            if (zb.pathTimer > 1.0 || !zb.path || zb.targetSwitched) {
                 zb.pathTimer = 0;
                 zb.targetSwitched = false;
                 zb.path = this._findPath(zb.x, zb.y, targetX, targetY);
@@ -2402,11 +2403,16 @@ class HauntedDorm {
                 isTargeted = true;
             }
         }
-        let warningOverlay = document.getElementById('zombie-warning');
-        let warningText = document.getElementById('zombie-warning-text');
+        if (this.warningOverlay === undefined) {
+            this.warningOverlay = document.getElementById('zombie-warning');
+            this.warningText = document.getElementById('zombie-warning-text');
+        }
+        let warningOverlay = this.warningOverlay;
+        let warningText = this.warningText;
         if (!warningOverlay) {
             warningOverlay = document.createElement('div');
             warningOverlay.id = 'zombie-warning';
+            this.warningOverlay = warningOverlay;
             warningOverlay.style.cssText = `
                 position: fixed; top: 0; left: 0; width: 100%; height: 100%;
                 pointer-events: none; z-index: 1000;
@@ -2426,6 +2432,7 @@ class HauntedDorm {
             warningText.innerText = "僵尸已经盯上你了，请你注意！";
             warningOverlay.appendChild(warningText);
             document.body.appendChild(warningOverlay);
+            this.warningText = warningText;
         }
 
         if (warningOverlay && warningText) {
