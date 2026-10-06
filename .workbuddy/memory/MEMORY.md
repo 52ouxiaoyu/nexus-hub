@@ -52,6 +52,18 @@
 - 车对车=Game.carVsCar 动量守恒；碰撞扣速一次性冲量+冷却；AI 冲量/位移换算到 (s,lane)
 - 输入隔离：frame() 给 P2 的 in_ 必须显式传 Input.p2；隔离性用「只按一方键另一方不动」断言；键盘断言优先 e.code 桩
 
+## thunder-wing（v1.2.0）
+- 纯 Canvas2D 零外部素材（程序化精灵 + WebAudio 合成音）；文件 sprites.js / fx.js / enemies.js / game.js + index.html/style.css；测试句柄 window.__twGame（start(mode,two) / frame / render / key / press / playerInfo / setPower(p,i) / bomb(i)）
+- 玩家状态下沉：`G.players[]`（1 或 2 个），每人独立 lives/bombs/power/weapon/spd/combo/comboT/graze/kills；分数与关卡共享。旧全局 G.lives 等用 defineProperty 代理到 1P——**新增玩家属性要同时改 makePlayer + 代理名单 + HUD**
+- 键位铁律：1P `WASD`/`空格(J)`/`K+左Shift`；2P `方向键`/`回车`/`右Shift + /`；暂停 `P/Esc` 全局。**左右 Shift 必须用 e.code（shiftleft/shiftright）区分**——e.key 两边都是 'shift' 会两人大招串台
+- **敌弹循环是倒序 for，而 playerDie→clearBullets 会清空 G.ebullets** → 下一轮下标取到 undefined 直接崩。必须 `const b = G.ebullets[i]; if (!b) break;`（单人版靠"死后立即 return"掩盖了这个坑）
+- 我方子弹带 owner → 连击与倍率归属开枪者；敌弹用 `b.gz[j]` 逐玩家记擦弹（兼容老数据要兜底初始化）
+- 添加第二玩家要点：2P 精灵（SPR.player2 = hue-rotate + source-atop 叠色）、识别环与 1P/2P 标记、敌人取 nearest 存活玩家、公平掉落（power 成对 / weapon 三种各一）、一方 out 后另一方可续战
+- 测试：_test.js（46 项）+ _shot.js 不入库；改键位/输入必跑真实键盘事件用例（page.keyboard.down('ShiftRight')）；测"再挨一发"要先 frame(1) 消化复活帧再置 invuln=0，且先把 hitstop 清零
+- **画面自适应（v1.2.0）**：纵向恒定 800，横向 `W = clamp(vw/vh*800, 420, 720)`；`W` 在 game.js 是 `let`，resize 里算完后经 `TW.setWidth(w)` 广播给 enemies.js（那边同样是 `let W`）。**关卡脚本里的横向字面量必须包 `X(v)=v/480*W`**（已用脚本批量包好 line/vee/sine 的 x0,dx、col 的 x、hover/turret 的 xs 数组）；F.ground / F.dive / ATK.wall / ATK.rain 内部用 W 已是动态。自机速度乘 `fieldSpd()=min(1.25, W/480)`。resize 里调用 initStars 重建星空
+- **配色契约（v1.2.0，改视觉必须遵守）**：有害=暖色(red #ff4864/amber #ffa42e/magenta #ff2fae/purple #c15cff/green槽位已改橙红菱形/big 橙红) + 尖锐星芒（`hazard(size,core,ring,spikes)`，角数 4/5/6/2）+ 深红暗描边 + 出膛 7 帧收缩白环；有利=白粗环圆形徽章（`ITEM_LOOK` 表 + 呼吸光环 + 中心符号 P/W/B/S/♥/★）+ 拾取半径 30。**禁再出现绿色敌人/绿弹（绿色=安全语义）**；我方一律冷色（追踪导弹已由紫改薄荷绿 #5ce8b4）；5 台 Boss 涂装全暖色
+- 回归保护：_test.js 现有 50 项，含像素级配色断言（遍历 sprite 的 getImageData，敌弹绿色像素占比 <5%、我方红通道占比 <10%）+ 自适应宽度区间 + 走真实关卡脚本验证编队居中
+
 ## tvbox-web-player
 - 部署方式：CF Pages 已连 GitHub 仓库，git push main 即自动部署（无需手动构建，tvbox/ 构建产物随提交入库）
 - 主页入口：media.html 卡片 → tvbox/index.html（相对路径）

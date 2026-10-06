@@ -192,7 +192,7 @@ class HauntedDorm {
         // ===== 单僵尸导演系统 =====
         this.ghostSpawned = false;
         this.gameTime = 0;
-        this.timeScale = 1;
+        this.timeScale = 2;
         this.ghostSpawnAt = 20000; // 开局 20s 出笼，修复准备中 bug
         this.ghostLevel = 1;              // 当前等级 1..10
         this.ghostRespawnAt = 0;          // >0 = 死亡等待重生
@@ -218,10 +218,11 @@ class HauntedDorm {
     }
 
 
-    setTimeScale(s) {
-        this.timeScale = s;
+    setTimeScale(label) {
+        const speedMap = { 1: 2, 2: 4, 5: 10, 10: 20 };
+        this.timeScale = speedMap[label] || 2;
         document.querySelectorAll('#speed-hud .speed-btn').forEach(b => {
-            if (b.innerText === s + 'x') {
+            if (b.innerText === label + 'x') {
                 b.classList.add('active');
             } else {
                 b.classList.remove('active');
