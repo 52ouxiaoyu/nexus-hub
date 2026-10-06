@@ -142,7 +142,7 @@
         <!-- 全局 UI -->
         <div id="ui-layer">
             <div id="hud-p1" class="player-hud">
-                <div style="color:#4da6ff; margin-bottom: 4px; font-weight:bold;">P1 面板 (WASD移动)</div>
+                <div style="color:#4da6ff; margin-bottom: 4px; font-weight:bold;">【P1 控制】移动: W/A/S/D | 确认/建造: 空格(或F) | 取消: 右Alt(或G) | 技能: M键</div>
                 <div style="display:flex; gap:18px; align-items:center;">
                     <span>阳光: <span id="sun1" class="sun-text">0</span></span>
                     <span>孢子: <span id="spore1" class="sun-text" style="color:#c79aff;">0</span></span>
@@ -165,7 +165,7 @@
             </div>
 
             <div id="p2-hud" class="player-hud" style="display:none; right:20px; left:auto;">
-                <div style="color:#4fc3f7; margin-bottom: 4px; font-weight:bold;">P2 面板 (方向键移动)</div>
+                <div style="color:#4fc3f7; margin-bottom: 4px; font-weight:bold;">【P2 控制】移动: 方向键 | 确认/建造: Delete(或右Shift) | 取消: 回车(或右Ctrl)</div>
                 <div style="display:flex; gap:18px; align-items:center;">
                     <span>阳光: <span id="sun2" class="sun-text">0</span></span>
                     <span>孢子: <span id="spore2" class="sun-text" style="color:#c79aff;">0</span></span>
@@ -204,9 +204,11 @@
             <div id="dorm-help" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2900; align-items:center; justify-content:center; pointer-events:auto;">
                 <div style="max-width:640px; max-height:82vh; overflow:auto; background:rgba(30,16,8,0.96); border:3px solid #8c6a4d; border-radius:14px; padding:24px 30px; color:#f5e6c8; font-family:'Kaiti SC',serif; font-size:15px; line-height:1.9;">
                     <div style="text-align:center; font-size:26px; letter-spacing:4px; margin-bottom:12px;">🏠 守屋大作战 · 玩法说明</div>
-                    <b style="color:#ffe14a;">基础操作</b><br>
-                    · WASD 移动 · <b>空格开关浇水</b>：<b>按一下空格开启自动浇水</b>（头顶出现 🚿 标志，不用按住），再按一下停止；每 <b>0.2 秒浇一次</b>：+1 阳光并催熟身边的小喷菇——开局 0 阳光，找到房间开始浇水才有收入<br>
-                    · 点击空地 = 种植菜单（<b>植物只能种在房间里面</b>，房间外的草地不能种）；<b>点击植物 = 弹出「升级 / 拆除」面板</b>，面板上会写出升级收益（血量/产出）：<b>向日葵链和坚果链升级花普通阳光 ☀</b>（阳光菇只在你在旁边时才产阳光），<b style="color:#c79aff;">🦠孢子</b>用来买高级孢子植物和豌豆分支升级；拆除直接移除植物<br><br>
+                    <b style="color:#ffe14a;">基础操作（双人同屏纯键盘操作）</b><br>
+                    · P1控制：<b>[W/A/S/D] 移动</b> | <b>[空格](或F/J) 呼出菜单/确认购买/升级</b> | <b>[右Alt](或G/K) 关闭菜单</b> | <b>[M键] 释放角色主动技能</b><br>
+                    · P2控制：<b>[方向键] 移动</b> | <b>[Delete](或右Shift/小键盘1) 呼出菜单/确认</b> | <b>[回车](或右Ctrl/小键盘2) 关闭菜单</b><br>
+                    · <b>如何建造</b>：控制你的小人走到房间的某个空地上，按下【确认键】，你的小人身边就会弹出一个黑色的建造菜单。通过【上下键】选择你想种的植物，再按一次【确认键】即可购买！如果是走到已经种了植物的格子上按【确认键】，则会弹出【升级/拆除】菜单。<br>
+                    · <b>如何发育</b>：本模式无需手动浇水。尽早找一个带门的房间，待在阳光菇旁边即可自动每秒生产阳光！<br><br>
                     <b style="color:#ffe14a;">成长配方（唯一，不撞衫）</b><br>
                     · 阳光菇(无需购买，房间自带) <span style="color:#9dff6b;">→(☀30)→ 向日葵 →(☀90)→ 双子向日葵 →(☀270)→ 双子向日葵 Lv2 →(☀810)→ 双子向日葵 Lv3</span>，产阳光更多<br>
                     · 小喷菇(☀200 购买) 靠阳光升级：<span style="color:#9dff6b;">(☀50)→ 大喷菇 →(☀200)→ 忧郁菇 →(☀800)→ 胆小菇 →(☀3200)→ 魅惑菇 →(☀12800)→ 磁力菇</span>，加快孢子产出<br>
@@ -244,6 +246,6 @@
         </div>
     </div>
 
-    <script src="js/HauntedDorm.js?v=1791286666"></script>
+    <script src="js/HauntedDorm.js?v=1791286829"></script>
 </body>
 </html>
