@@ -171,12 +171,26 @@ class HauntedDorm {
         this.playerRoleDef = this.playerRoles.find(r => r.id === this.role) || this.playerRoles[1];
 
         this.player = {
-            x: cx, y: cy, sun: 0, spore: 0, hp: 100, maxHp: 100,
+            id: 1,
+            x: cx - 40, y: cy, sun: 0, spore: 0, hp: 100, maxHp: 100,
             icon: this.playerRoleDef.icon,
             roleDef: this.playerRoleDef,
             camX: 0, camY: 0, skillCd: 0, sunBuffT: 0, atkBuffT: 0,
             biteT: 0, level: 1, speedBuffT: 0
         };
+        this.player2 = {
+            id: 2,
+            x: cx + 40, y: cy, sun: 0, spore: 0, hp: 100, maxHp: 100,
+            icon: this.playerRoleDef.icon,
+            roleDef: this.playerRoleDef,
+            camX: 0, camY: 0, skillCd: 0, sunBuffT: 0, atkBuffT: 0,
+            biteT: 0, level: 1, speedBuffT: 0
+        };
+        this.kmenus = {
+            1: { active: false, type: '', options: [], index: 0, c: 0, r: 0 },
+            2: { active: false, type: '', options: [], index: 0, c: 0, r: 0 }
+        };
+        this.keysJustPressed = {};
         
         if (this.isZombieFaction) {
             const zCfg = HauntedDorm.GHOST_LEVELS[0];
@@ -196,7 +210,7 @@ class HauntedDorm {
         this.zombies = [];   // 永远最多 1 只（单僵尸体系）
         this.peas = [];
         this.ais = [];
-        this.allPlayers = [this.player];
+        this.allPlayers = [this.player, this.player2];
         this.suns = [];      // 僵尸掉落的阳光袋
 
         // ===== 单僵尸导演系统 =====
@@ -267,6 +281,24 @@ class HauntedDorm {
         wb.style.display = 'none';
         this.player.el1.appendChild(wb);
         this.world1.appendChild(this.player.el1);
+        
+        this.player2.el1 = document.createElement('div');
+        this.player2.el1.className = 'entity avatar';
+        this.player2.el1.innerHTML = `<img src="${this.player2.icon}" style="${this.playerRoleDef.imgStyle || ''}">` + 
+                                     `<div style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); color:#00ffff; font-size:24px; font-weight:bold; text-shadow:1px 1px 2px black, -1px -1px 2px black; white-space:nowrap;">P2 (${this.playerRoleDef.name})</div>`;
+        this.player2.el1.style.filter = `drop-shadow(0 0 10px #00ffff)`;
+        const wb2 = document.createElement('div');
+        wb2.id = 'water-badge2';
+        wb2.className = 'water-badge';
+        wb2.innerText = '🚿';
+        wb2.style.display = 'none';
+        this.player2.el1.appendChild(wb2);
+        this.world1.appendChild(this.player2.el1);
+        
+        this.p1Cursor = document.getElementById('p1-cursor');
+        this.p2Cursor = document.getElementById('p2-cursor');
+        this.p1Kmenu = document.getElementById('p1-kmenu');
+        this.p2Kmenu = document.getElementById('p2-kmenu');
 
         this.plantMenu = document.getElementById('plant-menu');
         this.minimap = document.getElementById('minimap').getContext('2d');
@@ -1244,14 +1276,21 @@ class HauntedDorm {
 
     bindInput() {
         window.addEventListener('keydown', e => {
-            this.keys[e.key.toLowerCase()] = true;
-            if (e.key.toLowerCase() === 'm' && !e.repeat && this.player.skillCd <= 0) {
+            const key = e.key.toLowerCase();
+            this.keys[key] = true;
+            this.keys[e.code] = true;
+            if (!e.repeat) {
+                this.keysJustPressed[key] = true;
+                this.keysJustPressed[e.code] = true;
+            }
+            if (key === 'm' && !e.repeat && this.player.skillCd <= 0) {
                 this._useSkill();
             }
-            // v3.92.0：空格开关式浇水——按一下开启持续浇水，再按一下停止（过滤按住触发的 auto-repeat）
-            if (e.key === ' ' && !e.repeat && !this.isZombieFaction) this.setWatering(!this.waterOn);
         });
-        window.addEventListener('keyup', e => this.keys[e.key.toLowerCase()] = false);
+        window.addEventListener('keyup', e => {
+            this.keys[e.key.toLowerCase()] = false;
+            this.keys[e.code] = false;
+        });
 
         this.vp1.addEventListener('mousedown', e => {
             if (e.target.closest('#plant-menu')) return;
@@ -1449,7 +1488,7 @@ class HauntedDorm {
             if (pl.shootCd > 0) continue;
             const px = pl.c * 80 + 40, py = pl.r * 80 + 40;
             let best = null, bestD = (sh ? sh.range : lob.range);
-            const targets = this.isZombieFaction ? [this.player] : this.zombies;
+            const targets = this.isZombieFaction ? this.allPlayers : this.zombies;
             for (const zb of targets) {
                 if (zb.dead) continue;
                 const d = Math.hypot(zb.x - px, zb.y - py);
@@ -1529,7 +1568,7 @@ class HauntedDorm {
             const c = Math.floor(pea.x / this.gridSize), r = Math.floor(pea.y / this.gridSize);
             // if (this.walls.has(`${c},${r}`)) pea.life = 0; // 用户要求子弹能穿透墙壁
             // 命中检测（34px）
-            const targets = this.isZombieFaction ? [this.player] : this.zombies;
+            const targets = this.isZombieFaction ? this.allPlayers : this.zombies;
             for (const zb of targets) {
                 if (zb.dead) continue; // 撤退时不再免疫，可以被击杀
                 if (Math.hypot(zb.x - pea.x, zb.y - pea.y) < 34) {
@@ -1892,12 +1931,170 @@ class HauntedDorm {
                 pea.el.style.top = pea.y + 'px';
             }
         }
-        // 摄像机跟随
+        this.player2.el1.style.left = this.player2.x + 'px';
+        this.player2.el1.style.top = this.player2.y + 'px';
+        
+        // 渲染高亮光标
+        const c1 = Math.floor(this.player.x / this.gridSize) * this.gridSize;
+        const r1 = Math.floor(this.player.y / this.gridSize) * this.gridSize;
+        if (this.p1Cursor) {
+            this.p1Cursor.style.display = 'block';
+            this.p1Cursor.style.left = c1 + 'px';
+            this.p1Cursor.style.top = r1 + 'px';
+        }
+        const c2 = Math.floor(this.player2.x / this.gridSize) * this.gridSize;
+        const r2 = Math.floor(this.player2.y / this.gridSize) * this.gridSize;
+        if (this.p2Cursor) {
+            this.p2Cursor.style.display = 'block';
+            this.p2Cursor.style.left = c2 + 'px';
+            this.p2Cursor.style.top = r2 + 'px';
+        }
+
+        // 双人共享摄像机缩放跟随
         const vpw = this.vp1.clientWidth;
         const vph = this.vp1.clientHeight;
-        const cx = Math.max(0, Math.min(this.worldWidth - vpw, this.player.x - vpw / 2));
-        const cy = Math.max(0, Math.min(this.worldHeight - vph, this.player.y - vph / 2));
-        this.world1.style.transform = `translate(${-cx}px, ${-cy}px)`;
+        const midX = (this.player.x + this.player2.x) / 2;
+        const midY = (this.player.y + this.player2.y) / 2;
+        const dx = Math.abs(this.player.x - this.player2.x) + 300;
+        const dy = Math.abs(this.player.y - this.player2.y) + 300;
+        
+        const scaleX = vpw / dx;
+        const scaleY = vph / dy;
+        const scale = Math.max(0.4, Math.min(1.2, scaleX, scaleY));
+        
+        const cx = Math.max(0, Math.min(this.worldWidth - vpw / scale, midX - vpw / 2 / scale));
+        const cy = Math.max(0, Math.min(this.worldHeight - vph / scale, midY - vph / 2 / scale));
+        
+        this.world1.style.transform = `scale(${scale}) translate(${-cx}px, ${-cy}px)`;
+    }
+
+
+    _updateKMenus() {
+        this._handleKMenu(1, this.player, ' ', 'altright', 'w', 's', this.p1Kmenu, this.p1Cursor);
+        this._handleKMenu(2, this.player2, 'delete', 'enter', 'arrowup', 'arrowdown', this.p2Kmenu, this.p2Cursor);
+    }
+    
+    _handleKMenu(pId, p, keyOk, keyCancel, keyUp, keyDown, uiEl, cursorEl) {
+        const menu = this.kmenus[pId];
+        
+        if (this.keysJustPressed[keyCancel]) {
+            menu.active = false;
+            uiEl.style.display = 'none';
+        }
+        
+        if (menu.active) {
+            if (this.keysJustPressed[keyUp]) { menu.index = Math.max(0, menu.index - 1); this._renderKMenu(menu, uiEl); }
+            if (this.keysJustPressed[keyDown]) { menu.index = Math.min(menu.options.length - 1, menu.index + 1); this._renderKMenu(menu, uiEl); }
+            
+            if (this.keysJustPressed[keyOk]) {
+                const opt = menu.options[menu.index];
+                if (opt) this._execKMenu(p, menu, opt);
+                menu.active = false;
+                uiEl.style.display = 'none';
+            }
+            return;
+        }
+        
+        if (this.keysJustPressed[keyOk]) {
+            const col = Math.floor(p.x / this.gridSize);
+            const row = Math.floor(p.y / this.gridSize);
+            const pl = this.plants.find(x => x.c === col && x.r === row);
+            
+            let room = this.rooms.find(rm => col >= rm.x && col < rm.x + rm.w && row >= rm.y && row < rm.y + rm.h);
+            if (!room) room = this.rooms.find(rm => Math.abs(col - rm.doorCol) + Math.abs(row - rm.doorRow) <= 1);
+            
+            if (room && room.owners && room.owners.length > 0 && !room.owners.includes(p)) {
+                this._flyText(col * 80 + 40, row * 80, '别人的地盘！', '#ff4b4b');
+                return;
+            }
+            
+            if (pl) {
+                // 有植物 -> 升级/拆除
+                menu.options = [];
+                if (pl.def.up) menu.options.push({ action: 'up', text: `升级 (${pl.def.up.cost ? '☀'+pl.def.up.cost : ''} ${pl.def.up.sporeCost ? '🦠'+pl.def.up.sporeCost : ''})` });
+                menu.options.push({ action: 'del', text: '拆除' });
+                menu.targetPl = pl;
+            } else {
+                // 没植物 -> 种植
+                if (this.walls.has(`${col},${row}`)) return;
+                let isValid = room && true;
+                if (!isValid) return; // 不在房间
+                
+                menu.options = HauntedDorm.MENU.map(t => {
+                    const d = HauntedDorm.DEFS[t];
+                    const price = d.sporeCost ? `🦠${d.sporeCost}` : (d.cost > 0 ? `☀${d.cost}` : '免费');
+                    return { action: 'buy', type: t, text: `${d.name} (${price})` };
+                });
+                menu.targetCol = col;
+                menu.targetRow = row;
+                
+                if (p.room && p.room !== room) {
+                    this._flyText(col * 80 + 40, row * 80, '你已经有房间了！', '#ff4b4b');
+                    return;
+                }
+            }
+            
+            menu.active = true;
+            menu.index = 0;
+            uiEl.style.display = 'block';
+            uiEl.style.left = (col * 80 + 80) + 'px';
+            uiEl.style.top = (row * 80) + 'px';
+            this._renderKMenu(menu, uiEl);
+        }
+    }
+    
+    _renderKMenu(menu, uiEl) {
+        uiEl.innerHTML = menu.options.map((opt, i) => 
+            `<div style="padding:5px 10px; background:${i === menu.index ? '#fff' : 'transparent'}; color:${i === menu.index ? '#000' : '#fff'}; border-bottom:1px solid #444;">
+                ${opt.text}
+            </div>`
+        ).join('');
+    }
+    
+    _execKMenu(p, menu, opt) {
+        if (opt.action === 'up') {
+            const pl = menu.targetPl;
+            const up = pl.def.up;
+            if (p.sun >= (up.cost || 0) && p.spore >= (up.sporeCost || 0)) {
+                this.addSun(-(up.cost || 0), p);
+                this.addSpore(-(up.sporeCost || 0), p);
+                this._evolve(pl, up.to);
+                this.playSfx('plant.mp3', 0.5);
+            } else {
+                this.playSfx('buzzer.mp3', 0.3);
+            }
+        } else if (opt.action === 'del') {
+            const pl = menu.targetPl;
+            pl.el1.remove();
+            if (pl.txtEl) pl.txtEl.remove();
+            this.plants = this.plants.filter(x => x !== pl);
+            this.addSun(Math.floor((pl.def.cost||0) * 0.5), p);
+            this.addSpore(Math.floor((pl.def.sporeCost||0) * 0.5), p);
+            this.playSfx('shovel.mp3', 0.5);
+        } else if (opt.action === 'buy') {
+            const type = opt.type;
+            const def = HauntedDorm.DEFS[type];
+            if (p.sun >= (def.cost || 0) && p.spore >= (def.sporeCost || 0)) {
+                let room = this._insideRoom(menu.targetCol, menu.targetRow);
+                if (!room) room = this.rooms.find(rm => Math.abs(menu.targetCol - rm.doorCol) + Math.abs(menu.targetRow - rm.doorRow) <= 1);
+                
+                if (room && room.owners && !room.owners.includes(p)) {
+                    room.owners.push(p);
+                    p.room = room;
+                    if (room.owners.length === 1 && !this.plants.some(x => x.c === room.doorCol && x.r === room.doorRow)) {
+                        this.spawnPlant(room.doorCol, room.doorRow, 'wallnut', true);
+                        this.playSfx('plant.mp3', 0.5);
+                    }
+                }
+                
+                this.addSun(-(def.cost || 0), p);
+                this.addSpore(-(def.sporeCost || 0), p);
+                this.spawnPlant(menu.targetCol, menu.targetRow, type, false);
+                this.playSfx('plant.mp3', 0.5);
+            } else {
+                this.playSfx('buzzer.mp3', 0.3);
+            }
+        }
     }
 
     _tick(dt, time) {
