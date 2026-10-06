@@ -70,6 +70,9 @@
   function expNeed(lv) { return 5 + lv * 4 + Math.floor(lv * lv / 6); }
   TW.expNeed = expNeed;
 
+  /* 升级即自动发放一个词条（随机加权，保留每局 build 多样性）。
+     不再弹三选一菜单 —— 子弹纷飞里抢方向键、逼着读字选词条体验太差。
+     只在机体旁飘一行极短强化提示，不减速、不抢键、不打断操作。 */
   TW.gainExp = function (pl, v) {
     if (pl.out) return;
     pl.exp += v;
@@ -78,36 +81,16 @@
       pl.exp -= pl.nextExp;
       pl.level++;
       pl.nextExp = expNeed(pl.level);
-      pl.queue.push(TW.rollPerks(pl, 3));
+      const picks = TW.rollPerks(pl, 1);
+      if (picks[0]) {
+        TW.applyPerk(pl, picks[0].id);
+        if (TW.Audio && TW.Audio.levelup) TW.Audio.levelup();
+        if (TW.FX && TW.FX.text) {
+          const p = picks[0];
+          TW.FX.text(pl.x, pl.y - 52, p.name + '  Lv.' + pl.perks[p.id], p.color, 14);
+        }
+      }
     }
-    if (pl.queue.length && !pl.pick) openPick(pl);
-  };
-
-  function openPick(pl) {
-    pl.pick = pl.queue.shift() || null;
-    if (!pl.pick) return;
-    pl.pickIdx = 1; pl.pickT = 0;
-    if (TW.Audio && TW.Audio.levelup) TW.Audio.levelup();
-  }
-  TW.openPick = openPick;
-
-  /* 选择态：左右移动改高亮，射击键 / 大招键确认，180 帧后自动锁定 */
-  TW.updatePick = function (pl, dx) {
-    if (!pl.pick) return false;
-    pl.pickT++;
-    if (dx > 0.35 && pl.pickIdx < 2 && pl.pickMove !== 1) { pl.pickIdx++; pl.pickMove = 1; }
-    else if (dx < -0.35 && pl.pickIdx > 0 && pl.pickMove !== -1) { pl.pickIdx--; pl.pickMove = -1; }
-    else if (Math.abs(dx) < 0.15) pl.pickMove = 0;
-    return true;
-  };
-
-  TW.confirmPick = function (pl) {
-    if (!pl.pick) return null;
-    const p = pl.pick[Math.max(0, Math.min(pl.pick.length - 1, pl.pickIdx))];
-    pl.pick = null; pl.pickT = 0; pl.pickMove = 0;
-    if (p) TW.applyPerk(pl, p.id);
-    if (pl.queue.length) openPick(pl);
-    return p || null;
   };
 
   /* ==================== 经验球 ==================== */
@@ -190,9 +173,7 @@
 
   /* 三选一面板：单人居中；双人各占半屏，互不遮挡 */
   TW.drawPick = function (ctx, W, H) {
-    const g = TW.G;
-    const active = g.players.filter((pl) => pl && pl.pick);
-    if (!active.length) return;
+    return; /* v1.4.2+：三选一面板已移除，升级自动发词条，不再弹窗 */
 
     ctx.save();
     ctx.fillStyle = 'rgba(4,10,18,0.55)';

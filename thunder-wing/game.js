@@ -13,15 +13,13 @@
      COMBO_CAP：倍率封顶所需连击数，x4.00 上限不变。
      BOSS_GRACE：脚本跑完后等待清场的宽限帧，超时强制 Boss 登场（防炮台卡关）。 */
   const COMBO_WIN = 210, COMBO_CAP = 30, BOSS_GRACE = 240;
-  const PICK_LIFE = 180;   /* 三选一自动锁定前的思考帧数（3 秒） */
-  /* 自动驾驶接管阈值（帧）：某个席位连续 555 秒没有收到自己的按键，就交给 AI 代班；
-     该玩家任意一键按下立即夺回 —— AI 是代班，不是抢机。
-     用户指定 555 秒；若想「空座更快交给 AI」把这里改小即可（例如 5*60）。 */
-  const AI_IDLE = 555 * 60;
+  /* 自动驾驶接管阈值（帧）：某个席位连续 5 秒没有收到自己的按键，就交给 AI 代班；
+     该玩家任意一键按下立即夺回 —— AI 是代班，不是抢机。 */
+  const AI_IDLE = 5 * 60;
   let W = MIN_W;
   /* 战场越宽，自机速度等比补偿，避免横向机动变迟钝 */
   function fieldSpd() { return Math.min(1.25, Math.max(1, W / MIN_W)); }
-  const VERSION = 'v1.4.1';
+  const VERSION = 'v1.4.2';
 
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d', { alpha: false });
@@ -80,8 +78,7 @@
       /* 大招（v1.4.0）：每次释放后随机换成下一种，nextUlt 是预告 */
       ult: null, nextUlt: null, lastUlt: null,
       /* Build（v1.3.0）：局内成长 */
-      perks: {}, exp: 0, level: 0, nextExp: 5, queue: [],
-      pick: null, pickIdx: 1, pickT: 0, pickMove: 0,
+      perks: {}, exp: 0, level: 0, nextExp: 5,
       satN: 0, satA: 0, satT: 0,
       /* 超载 OVERDRIVE（v1.3.0）：擦弹充能换即时战力 */
       od: 0, odCharge: 0, shieldT: 0,
@@ -240,11 +237,6 @@
       for (let i = 0; i < G.players.length; i++) {
         if (e.repeat) continue;
         const pl = G.players[i];
-        if (pl && pl.pick && (isBomb(i, k, code) || isFire(i, k, code))) {
-          const got = TW.confirmPick(pl);
-          if (got) TW.FX.text(pl.x, pl.y - 52, got.name + '  Lv.' + pl.perks[got.id], got.color, 14);
-          continue;
-        }
         if (isBomb(i, k, code)) useBomb(pl);
       }
     }
@@ -339,12 +331,7 @@
 
     if (pl.invuln > 0 && pl.invuln % 8 < 4) { /* 闪烁 */ }
 
-    /* 三选一：左右移动改高亮，超时自动锁定（不新增按键、不打断节奏） */
-    if (TW.updatePick(pl, dx)) {
-      if (pl.pickT >= PICK_LIFE) TW.confirmPick(pl);
-      updateSats(pl);
-      return;
-    }
+    /* 升级自动发词条，不再有「三选一」抢占方向键或射击键 */
     if (pl.shieldT > 0) pl.shieldT--;
     if (pl.od > 0) pl.od--;
 
@@ -365,11 +352,6 @@
       pl.charge = Math.max(0, pl.charge - 1.5);
     }
     updateSats(pl);
-  }
-
-  function pickActive() {
-    for (let i = 0; i < G.players.length; i++) if (G.players[i] && G.players[i].pick) return true;
-    return false;
   }
 
   /* 环绕炮台：自动锁定最近敌人开火 */
@@ -969,12 +951,8 @@
       if (e.dead && !e.boss) G.enemies.splice(i, 1);
     }
 
-    /* 三选一期间世界降速到 1/3（玩家照常操作），既保留紧张感又不打断节奏 */
-    const slow = pickActive();
-    if (!slow || (G.frame % 3 === 0)) {
-      updateItems();
-      collide();
-    }
+    updateItems();
+    collide();
     TW.updateExp();
     TW.updateRocks();
     TW.updateBeams();
@@ -1242,7 +1220,6 @@
     }
 
     drawHUD();
-    TW.drawPick(ctx, W, H);
   }
 
   function drawHUD() {
@@ -1562,7 +1539,6 @@
       it: G.items.length, ex: G.exps.length, rk: G.rocks.length, bm: G.beams.length,
       parts: TW.FX.parts.length }),
     gainExp: (v, i) => { const pl = G.players[i || 0]; if (pl) TW.gainExp(pl, v); },
-    confirmPick: (i) => TW.confirmPick(G.players[i || 0]),
     overdrive: (i) => TW.tryOverdrive(G.players[i || 0]),
     perks: (i) => { const pl = G.players[i || 0]; return pl ? pl.perks : {}; },
     spawnElite: () => TW.spawnElite(),

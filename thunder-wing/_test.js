@@ -31,7 +31,7 @@ function ok(name, cond, extra) {
   console.log('\n--- 加载与句柄 ---');
   ok('无页面异常', errors.length === 0, errors.slice(0, 3));
   const ver = await page.evaluate(() => window.__twGame && window.__twGame.VERSION);
-  ok('句柄存在且版本 v1.4.1', ver === 'v1.4.1', ver);
+  ok('句柄存在且版本 v1.4.2', ver === 'v1.4.2', ver);
   ok('初始为菜单态', await page.evaluate(() => window.__twGame.state()) === 'MENU');
   await page.screenshot({ path: OUT + '/_shot_menu.png' });
 
@@ -81,9 +81,18 @@ function ok(name, cond, extra) {
   ok('W 道具切换武器', await page.evaluate(() => window.__twGame.G.weapon) === 2);
 
   console.log('\n--- 大招（随机） ---');
-  await page.evaluate(() => { window.__twGame.killAll(); window.__twGame.spawnBoss(0); });
-  await page.evaluate(() => window.__twGame.frame(300));
-  const eb = await page.evaluate(() => window.__twGame.counts().eb);
+  await page.evaluate(() => {
+    window.__twGame.killAll(); window.__twGame.spawnBoss(0);
+    window.__twGame.G.players.forEach((p) => { p.ai = false; p.idle = 0; });  // 冻结 AI：5 秒空闲会接管并可能放大招清空敌弹，干扰断言
+  });
+  let eb = 0;
+  for (let k = 0; k < 4 && eb === 0; k++) {
+    await page.evaluate(() => {
+      window.__twGame.G.players.forEach((p) => { p.ai = false; p.idle = 0; });
+      window.__twGame.frame(90);
+    });
+    eb = await page.evaluate(() => window.__twGame.counts().eb);
+  }
   ok('Boss 放出弹幕', eb > 0, { eb });
   await page.screenshot({ path: OUT + '/_shot_boss.png' });
   // 现在「大招键」释放的是随机大招；其中「新星爆破」这一种会清空敌弹
@@ -364,33 +373,28 @@ function ok(name, cond, extra) {
   ok('我方子弹一律冷色（红通道不得主导）', oursWarm.length === 0,
     { bad: oursWarm, sample: hue.ours.missile });
 
-  console.log('\n--- 局内 Build（三选一） ---');
+  console.log('\n--- 局内 Build（升级自动发词条，无弹窗） ---');
   await page.evaluate(() => window.__twGame.start('story', false));
   const lv0 = await page.evaluate(() => window.__twGame.G.player.level);
-  /* 只给刚好够一级的经验：多了会连续升级，三选一排队，测不出「关闭」 */
+  const before = await page.evaluate(() => Object.keys(window.__twGame.perks()).length);
+  /* 升级时自动发词条，不弹菜单、不减速、不抢键 */
   await page.evaluate(() => window.__twGame.gainExp(6));
-  const pickState = await page.evaluate(() => ({
-    lv: window.__twGame.G.player.level, pick: !!window.__twGame.G.player.pick,
-    n: window.__twGame.G.player.pick ? window.__twGame.G.player.pick.length : 0,
+  const st = await page.evaluate(() => ({
+    lv: window.__twGame.G.player.level,
+    pick: !!window.__twGame.G.player.pick,
+    nPerks: Object.keys(window.__twGame.perks()).length,
   }));
-  ok('吃经验升级并弹出三选一', pickState.lv > lv0 && pickState.pick && pickState.n === 3, pickState);
+  ok('吃经验升级并自动发放词条（无弹窗）', st.lv > lv0 && !st.pick && st.nPerks > before, st);
 
-  const applied = await page.evaluate(() => {
-    const p = window.__twGame.confirmPick();
-    return { id: p && p.id, perks: window.__twGame.perks() };
-  });
-  ok('确认后词条写入玩家', !!applied.id && !!applied.perks[applied.id], applied);
-  ok('确认后三选一关闭', await page.evaluate(() => !window.__twGame.G.player.pick));
-
-  /* 子弹时间：三选一期间世界降速但玩家仍可操作 */
-  const slowmo = await page.evaluate(() => {
+  /* 升级不中断操作：升级后仍可正常移动，没有三选一抢方向键 */
+  const moveOk = await page.evaluate(() => {
     const S = window.__twGame, g = S.G;
     S.start('story', false); S.gainExp(60);
     const x0 = g.player.x;
     S.key('d', true); S.frame(30); S.key('d', false);
-    return { picking: !!g.player.pick, moved: g.player.x > x0 + 5 };
+    return { pick: !!g.player.pick, moved: g.player.x > x0 + 5, nPerks: Object.keys(S.perks()).length };
   });
-  ok('三选一期间玩家仍可移动（子弹时间不锁操作）', slowmo.picking && slowmo.moved, slowmo);
+  ok('升级不弹窗、不抢键、仍可移动', !moveOk.pick && moveOk.moved && moveOk.nPerks > 0, moveOk);
 
   /* 单发对比：每次都把射击冷却归零，否则两次统计的射击次数会不同 */
   const twinTest = await page.evaluate(() => {
