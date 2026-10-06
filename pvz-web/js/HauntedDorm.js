@@ -1388,7 +1388,10 @@ class HauntedDorm {
             if ((key === '/' || key === '3' || key === 'pagedown') && !e.repeat && this.gameMode === '2p' && this.player2 && this.player2.skillCd <= 0) {
                 this._useSkill(this.player2);
             }
-            if (key === ' ' && !e.repeat && !this.isZombieFaction) {
+            if (e.code === 'Space') {
+                e.preventDefault();
+            }
+            if ((key === ' ' || e.code === 'Space') && !e.repeat && !this.isZombieFaction) {
                 this.setWatering(!this.waterOn);
             }
         });
@@ -2099,7 +2102,7 @@ class HauntedDorm {
 
     _updateKMenus() {
         // 【优化3】冗余按键映射：为每个操作提供2-3个备用键。如果主键被硬件冲突屏蔽，玩家可以下意识用备用键
-        this._handleKMenu(1, this.player, [' ', 'f', 'j'], ['altright', 'g', 'k'], ['w'], ['s'], this.p1Kmenu, this.p1Cursor);
+        this._handleKMenu(1, this.player, ['f', 'j'], ['altright', 'g', 'k'], ['w'], ['s'], this.p1Kmenu, this.p1Cursor);
         if (this.gameMode === '2p' && this.player2) {
             this._handleKMenu(2, this.player2, ['delete', 'shiftright', '1'], ['enter', 'controlright', '2'], ['arrowup'], ['arrowdown'], this.p2Kmenu, this.p2Cursor);
         }

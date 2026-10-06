@@ -142,7 +142,7 @@
         <!-- 全局 UI -->
         <div id="ui-layer">
             <div id="hud-p1" class="player-hud">
-                <div style="color:#4da6ff; margin-bottom: 4px; font-weight:bold;">【P1 控制】移动: W/A/S/D | 确认/建造: 空格(或F) | 取消: 右Alt(或G) | 技能: M键</div>
+                <div style="color:#4da6ff; margin-bottom: 4px; font-weight:bold;">【P1 控制】移动: W/A/S/D | 建造: F | 浇水: 空格 | 取消: G | 技能: M</div>
                 <div style="display:flex; gap:18px; align-items:center;">
                     <span>阳光: <span id="sun1" class="sun-text">0</span></span>
                     <span>孢子: <span id="spore1" class="sun-text" style="color:#c79aff;">0</span></span>
@@ -153,27 +153,28 @@
                     <span id="hp-num" style="font-size:14px; color:#fff;">100</span>
                 </div>
                 <div id="skill-hud" style="margin-top: 8px; font-size: 14px;"></div>
-                <div id="speed-hud" style="margin-top: 10px; display: flex; align-items: center; background: rgba(0,0,0,0.6); border-radius: 20px; padding: 4px; box-shadow: 0 0 10px rgba(0,0,0,0.5);">
-                    <span style="color:#fff; margin: 0 8px 0 4px; font-weight: bold; font-size: 13px; text-shadow: 0 1px 2px #000;">🕒 倍速</span>
-                    <div style="display: flex; gap: 4px;">
-                        <button class="speed-btn active" onclick="window.game.setTimeScale(1)">1x</button>
-                        <button class="speed-btn" onclick="window.game.setTimeScale(2)">2x</button>
-                        <button class="speed-btn" onclick="window.game.setTimeScale(5)">5x</button>
-                        <button class="speed-btn" onclick="window.game.setTimeScale(10)">10x</button>
-                    </div>
+            </div>
+
+            <div id="speed-hud" style="position: absolute; top: 70px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; background: rgba(0,0,0,0.8); border: 2px solid #aaa; border-radius: 20px; padding: 4px 12px; box-shadow: 0 0 10px rgba(0,0,0,0.5); pointer-events: auto;">
+                <span style="color:#fff; margin-right: 8px; font-weight: bold; font-size: 14px; text-shadow: 0 1px 2px #000;">🕒 倍速</span>
+                <div style="display: flex; gap: 4px;">
+                    <button class="speed-btn active" onclick="window.game.setTimeScale(1)">1x</button>
+                    <button class="speed-btn" onclick="window.game.setTimeScale(2)">2x</button>
+                    <button class="speed-btn" onclick="window.game.setTimeScale(5)">5x</button>
+                    <button class="speed-btn" onclick="window.game.setTimeScale(10)">10x</button>
                 </div>
             </div>
 
-            <div id="p2-hud" class="player-hud" style="display:none; right:20px; left:auto;">
-                <div style="color:#4fc3f7; margin-bottom: 4px; font-weight:bold;">【P2 控制】移动: 方向键 | 确认/建造: Delete(或右Shift) | 取消: 回车(或右Ctrl) | 技能: /键(斜杠)</div>
-                <div style="display:flex; gap:18px; align-items:center;">
+            <div id="p2-hud" class="player-hud" style="display:none; right:20px; left:auto; text-align: right;">
+                <div style="color:#4fc3f7; margin-bottom: 4px; font-weight:bold;">【P2 控制】移动: 方向键 | 确认: Delete | 取消: 回车 | 技能: /键</div>
+                <div style="display:flex; gap:18px; align-items:center; justify-content: flex-end;">
                     <span>阳光: <span id="sun2" class="sun-text">0</span></span>
                     <span>孢子: <span id="spore2" class="sun-text" style="color:#c79aff;">0</span></span>
                 </div>
-                <div id="hp-row2" style="display:flex; align-items:center; margin-top:8px;">
-                    <span class="hp-label">HP</span>
-                    <div id="hp-track" style="margin: 0 10px; flex: 1; height: 16px; background: rgba(0,0,0,0.8); border: 2px solid #fff; border-radius: 8px; overflow: hidden;"><div id="hp-fill2" style="height: 100%; width: 100%; background: linear-gradient(90deg, #ff5252, #ff0000);"></div></div>
+                <div id="hp-row2" style="display:flex; align-items:center; margin-top:8px; justify-content: flex-end;">
                     <span id="hp-num2" style="font-size:14px; color:#fff;">100</span>
+                    <div id="hp-track" style="margin: 0 10px; width: 160px; height: 14px; background: rgba(0,0,0,0.6); border: 2px solid #000; border-radius: 7px; overflow: hidden;"><div id="hp-fill2" style="height: 100%; width: 100%; background: linear-gradient(90deg, #ff5252, #ff0000);"></div></div>
+                    <span class="hp-label">HP</span>
                 </div>
                 <div id="skill-hud2" style="margin-top: 8px; font-size: 14px;"></div>
             </div>
@@ -246,6 +247,6 @@
         </div>
     </div>
 
-    <script src="js/HauntedDorm.js?v=1791288077"></script>
+    <script src="js/HauntedDorm.js?v=1791288321"></script>
 </body>
 </html>
