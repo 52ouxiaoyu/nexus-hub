@@ -958,7 +958,7 @@ class HauntedDorm {
     }
 
     _updateGhostChip() {
-        const chip = document.getElementById('wave-chip');
+        const chip = document.getElementById('ghost-chip') || document.getElementById('wave-chip');
         if (!chip) return;
         const now = this.gameTime;
         if (!this.ghostSpawned) {
@@ -1315,6 +1315,7 @@ class HauntedDorm {
         });
 
         this.vp1.addEventListener('mousedown', e => {
+            if (this.gameMode === '2p') return; // 双人模式禁用鼠标操作
             if (e.target.closest('#plant-menu')) return;
             if (this.popup.style.display === 'block') { this._closePopup(); return; }
             if (this.menuOpen) {
@@ -2746,8 +2747,11 @@ class HauntedDorm {
                 const nzx = zb.x + dx * spd * dt;
                 const nzy = zb.y + dy * spd * dt;
 
-                // 先看目标格有没有植物（啃食优先；地刺贴地不挡路不被啃）
-                const atkPlant = this.getPlantAt(nzx, nzy);
+                // 先看目标前方25像素的格子有没有植物（啃食优先；地刺贴地不挡路不被啃）
+                // 因为僵尸自身有15像素碰撞体积，用 nzx 可能会判定在自己脚下导致找不到前面的门
+                const probeX = zb.x + dx * 25;
+                const probeY = zb.y + dy * 25;
+                const atkPlant = this.getPlantAt(probeX, probeY);
                 if (atkPlant && !atkPlant.def.ground && !zb.retreating) {
                     // 站定慢啃：每 2.4s 一口，一口一口咬
                     zb.biteT = (zb.biteT || 0) + dt;
