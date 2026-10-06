@@ -203,7 +203,11 @@
       for (let i = 0; i < G.players.length; i++) {
         if (e.repeat) continue;
         const pl = G.players[i];
-        if (pl && pl.pick && (isBomb(i, k, code) || isFire(i, k, code))) { TW.confirmPick(pl); continue; }
+        if (pl && pl.pick && (isBomb(i, k, code) || isFire(i, k, code))) {
+          const got = TW.confirmPick(pl);
+          if (got) TW.FX.text(pl.x, pl.y - 52, got.name + '  Lv.' + pl.perks[got.id], got.color, 14);
+          continue;
+        }
         if (isBomb(i, k, code)) useBomb(pl);
       }
     }
@@ -327,6 +331,19 @@
     }
   }
 
+  /* 超载 OVERDRIVE：擦弹充能满格自动触发，火力翻倍 + 擦弹范围扩大 */
+  function tryOverdrive(pl) {
+    if (pl.od > 0 || pl.out) return;
+    pl.odCharge = 0;
+    pl.od = 180 + Math.round(72 * pl.pk('over'));
+    TW.FX.ring(pl.x, pl.y, 20, '#ffe9a8', 36);
+    TW.FX.text(pl.x, pl.y - 42, 'OVERDRIVE', '#ffe9a8', 17);
+    TW.FX.quake(4, 12);
+    TW.Audio.chargeFire();
+    G.rank = Math.min(100, G.rank + 2);
+  }
+  TW.tryOverdrive = tryOverdrive;
+
   /* 击破溅射：向四周喷弹片，制造连锁清屏的爽点 */
   function splashOnKill(e, pl) {
     const lv = pl ? pl.pk('splash') : 0;
@@ -340,29 +357,42 @@
   function shoot(pl, wp) {
     const lv = pl.power;
     const ang = -Math.PI / 2;
+    const od = pl.od > 0;
+    /* 词条 / 超载在这里落到实际弹幕上：伤害、弹数、穿透、追踪 */
+    const dmg = wp.dmg * (1 + 0.25 * pl.pk('power')) * (od ? 2 : 1);
+    const twin = pl.pk('twin') + (od ? 1 : 0);
+    const pc = pl.pk('pierce');
+    const hom = !!wp.homing || pl.pk('homing') > 0;
+
     if (pl.weapon === 0) {
-      const n = [2, 3, 4, 5, 7][lv - 1];
+      const n = [2, 3, 4, 5, 7][lv - 1] + twin;
       const spread = [0.05, 0.09, 0.14, 0.17, 0.16][lv - 1];
       for (let i = 0; i < n; i++) {
         const off = (i - (n - 1) / 2) * spread;
-        addBullet(pl, pl.x, pl.y - 14, ang + off, 11, wp.dmg, wp.spr, 0);
+        addBullet(pl, pl.x, pl.y - 14, ang + off, 11, dmg, wp.spr, pc, hom);
       }
     } else if (pl.weapon === 1) {
-      const n = [1, 2, 2, 3, 4][lv - 1];
-      const offs = n === 1 ? [0] : n === 2 ? [-8, 8] : n === 3 ? [-12, 0, 12] : [-18, -6, 6, 18];
-      for (let i = 0; i < n; i++) addBullet(pl, pl.x + offs[i], pl.y - 16, ang, 15, wp.dmg, wp.spr, 2);
-    } else {
-      const n = [2, 2, 3, 4, 5][lv - 1];
+      const n = [1, 2, 2, 3, 4][lv - 1] + twin;
+      const sep = n > 1 ? Math.min(14, 54 / n) : 0;
       for (let i = 0; i < n; i++) {
-        const off = n === 1 ? 0 : (i - (n - 1) / 2) * 0.5;
-        addBullet(pl, pl.x, pl.y - 12, ang + off * 0.25, 7.5, wp.dmg, wp.spr, 0, true);
+        addBullet(pl, pl.x + (i - (n - 1) / 2) * sep, pl.y - 16, ang, 15, dmg, wp.spr, 2 + pc, hom);
+      }
+    } else {
+      const n = [2, 2, 3, 4, 5][lv - 1] + twin;
+      for (let i = 0; i < n; i++) {
+        const off = (i - (n - 1) / 2) * 0.34;
+        addBullet(pl, pl.x, pl.y - 12, ang + off, 7.5, dmg, wp.spr, pc, true);
       }
     }
-    /* 僚机 */
+    /* 僚机：火力 3 级起 1 对，词条可增编到 3 对 */
     if (lv >= 3) {
+      const pairs = 1 + pl.pk('wing');
       const wa = lv >= 5 ? 0.13 : 0;
-      addBullet(pl, pl.x - 26, pl.y + 2, ang - wa, 10, 1, 'wing', 0);
-      addBullet(pl, pl.x + 26, pl.y + 2, ang + wa, 10, 1, 'wing', 0);
+      for (let k = 0; k < pairs; k++) {
+        const sp2 = 26 + k * 13;
+        addBullet(pl, pl.x - sp2, pl.y + 2, ang - wa, 10, 1, 'wing', pc);
+        addBullet(pl, pl.x + sp2, pl.y + 2, ang + wa, 10, 1, 'wing', pc);
+      }
     }
     if (G.sfx) (pl.weapon === 1 ? TW.Audio.laser() : pl.weapon === 2 ? TW.Audio.missile() : TW.Audio.shot());
   }
@@ -526,6 +556,15 @@
 
   function playerDie(pl) {
     if (pl.invuln > 0 || G.state !== 'PLAYING' || pl.out) return;
+    /* 力场护盾：冷却就绪时吃掉这次致命伤 */
+    if (pl.pk('shield') > 0 && pl.shieldT <= 0) {
+      pl.shieldT = 1080;
+      pl.invuln = Math.max(pl.invuln, 70);
+      TW.FX.ring(pl.x, pl.y, 16, '#a8ffe0', 30);
+      TW.FX.text(pl.x, pl.y - 34, '护盾抵挡', '#a8ffe0', 14);
+      TW.Audio.pickup();
+      return;
+    }
     pl.lives--;
     pl.combo = 0; pl.comboT = 0;
     G.rank = Math.max(0, G.rank - 28);
@@ -583,16 +622,35 @@
           if (Math.hypot(b.x - e.x, b.y - e.y) < e.r * 0.8 + b.r) hit = true;
         }
         if (hit) {
+          /* 临界打击：12%/级 概率 3 倍伤害，命中反馈明确 */
+          let dmg = b.dmg;
+          const clv = pl ? pl.pk('crit') : 0;
+          if (clv && Math.random() < 0.12 * clv) {
+            dmg *= 3;
+            TW.FX.quake(3, 8);
+            TW.FX.text(hx, hy - 10, 'CRIT', '#ffe9a8', 13);
+          }
           if (b.pierce > 0) {
             if (b.hit.indexOf(e) >= 0) continue;
             b.hit.push(e); b.pierce--;
-            hurtEnemy(e, b.dmg * 0.85, hx, hy, pl);
+            hurtEnemy(e, dmg * 0.85, hx, hy, pl);
           } else {
-            hurtEnemy(e, b.dmg, hx, hy, pl);
+            hurtEnemy(e, dmg, hx, hy, pl);
             consumed = true;
           }
           TW.FX.hit(hx, hy, '#ffffff');
           if (G.sfx && b.t % 2 === 0) TW.Audio.hit();
+          /* 爆裂弹头：子弹消失时炸出碎片（穿透弹不炸，避免弹幕失控） */
+          if (consumed && pl) {
+            const slv = pl.pk('split');
+            if (slv && b.kind !== 'wing') {
+              const n = 1 + slv;
+              const base = Math.atan2(b.vy, b.vx);
+              for (let k = 0; k < n; k++) {
+                addBullet(pl, b.x, b.y, base + (k - (n - 1) / 2) * 0.6, 6.5, 1.4, 'wing', 0);
+              }
+            }
+          }
           break;
         }
       }
@@ -619,12 +677,18 @@
           playerDie(pl);
           gone = true; break;
         }
-        if (!b.gz[j] && d < pl.grazeR + b.r) {
+        const gzR = pl.grazeR * (pl.od > 0 ? 1.6 : 1);
+        if (!b.gz[j] && d < gzR + b.r) {
           b.gz[j] = true; pl.graze++;
           G.addScore(50, undefined, undefined, pl);
           G.rank = Math.min(100, G.rank + 0.05);
           TW.FX.graze(pl.x, pl.y);
           if (G.sfx && pl.graze % 3 === 0) TW.Audio.graze();
+          /* 擦弹从「加 50 分」升级为「充能换即时战力」—— 贴着弹幕飞有实际回报 */
+          if (pl.od <= 0) {
+            pl.odCharge += 7 * (1 + 0.6 * pl.pk('graze'));
+            if (pl.odCharge >= 100) tryOverdrive(pl);
+          }
         }
       }
       if (gone) continue;
@@ -946,6 +1010,8 @@
       }
     }
 
+    TW.drawExp(ctx);
+
     /* 玩家 */
     if (G.state === 'PLAYING') {
       for (let i = G.players.length - 1; i >= 0; i--) {
@@ -973,6 +1039,14 @@
           ctx.globalAlpha = 0.85;
           ctx.fillText(p.tag, p.x, p.y + 40);
           ctx.globalAlpha = 1;
+        }
+        TW.drawSats(ctx, p);
+        /* 超载：暖金色呼吸环，让「我现在很强」一眼可见 */
+        if (p.od > 0) {
+          const pulse = 0.55 + 0.3 * Math.sin(G.frame * 0.28);
+          ctx.strokeStyle = 'rgba(255,233,168,' + pulse.toFixed(2) + ')';
+          ctx.lineWidth = 2.4;
+          ctx.beginPath(); ctx.arc(p.x, p.y, 30 + Math.sin(G.frame * 0.2) * 3, 0, Math.PI * 2); ctx.stroke();
         }
         /* 判定点（擦弹判定圈常态淡显） */
         ctx.strokeStyle = 'rgba(255,255,255,0.18)';
@@ -1010,6 +1084,7 @@
     }
 
     drawHUD();
+    TW.drawPick(ctx, W, H);
   }
 
   function drawHUD() {
@@ -1017,6 +1092,7 @@
     ctx.font = '600 15px system-ui, sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.fillText('SCORE ' + G.score, 12, 26);
+    drawBuildBars();
     ctx.font = '400 12px system-ui, sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.fillText('HI ' + Math.max(G.best, G.score), 12, 42);
@@ -1051,6 +1127,34 @@
       ctx.font = '600 18px system-ui, sans-serif';
       ctx.fillStyle = '#ffe9a8';
       ctx.fillText('x' + G.mult(cl).toFixed(2) + '  ' + cl.combo + (G.two ? ' ' + cl.tag : '') + ' COMBO', W / 2, 26);
+    }
+
+    /* Build：等级 + 经验条 + 超载充能条（v1.3.0） */
+    for (let i = 0; i < G.players.length; i++) {
+      const pl = G.players[i];
+      if (pl.out) continue;
+      const bw = 96;
+      const bx = i === 0 ? 12 : W - 12 - bw;
+      const by = H - 64;
+      ctx.textAlign = 'left';
+      ctx.font = '600 11px system-ui, sans-serif';
+      ctx.fillStyle = G.two ? PCFG[i].color : '#9ff0ff';
+      ctx.fillText('LV ' + pl.level, bx, by + 8);
+      ctx.fillStyle = 'rgba(255,255,255,0.16)';
+      ctx.fillRect(bx + 36, by + 3, bw - 36, 5);
+      ctx.fillStyle = '#5ce8b4';
+      ctx.fillRect(bx + 36, by + 3, (bw - 36) * Math.min(1, pl.exp / Math.max(1, pl.nextExp)), 5);
+      /* 超载条：满格自动触发，充能过程要显眼 */
+      ctx.fillStyle = 'rgba(255,255,255,0.16)';
+      ctx.fillRect(bx, by + 12, bw, 5);
+      const odMax = 180 + 72 * pl.pk('over');
+      ctx.fillStyle = pl.od > 0 ? '#ffe9a8' : '#ffb84d';
+      ctx.fillRect(bx, by + 12, bw * (pl.od > 0 ? pl.od / odMax : Math.min(1, pl.odCharge / 100)), 5);
+      if (pl.od > 0) {
+        ctx.font = '600 9px system-ui, sans-serif';
+        ctx.fillStyle = '#ffe9a8';
+        ctx.fillText('OVERDRIVE', bx + 2, by + 26);
+      }
     }
 
     /* 武器 / 火力（逐玩家） */

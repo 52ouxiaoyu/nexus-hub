@@ -930,17 +930,25 @@ class HauntedDorm {
     }
 
     _flyText(x, y, text, color) {
-        const offsetX = (Math.random() - 0.5) * 80; // 左右随机偏移，防重叠
-        const offsetY = (Math.random() - 0.5) * 60; // 上下随机偏移，防重叠
-        const flyX = x + offsetX;
-        const flyY = y + offsetY - 30;
+        const now = performance.now();
+        if (!this.activeTexts) this.activeTexts = [];
+        this.activeTexts = this.activeTexts.filter(t => now - t.t < 2000); // 慢一点，保留2秒
         
+        let flyY = y - 30;
+        // 防重叠堆叠逻辑 (Vertical stacking)
+        for (const t of this.activeTexts) {
+            if (Math.abs(t.x - x) < 50 && Math.abs(t.y - flyY) < 30) {
+                flyY -= 30; // 向上避让
+            }
+        }
+        this.activeTexts.push({ x: x, y: flyY, t: now });
+
         const fly = document.createElement('div');
         fly.innerText = text;
-        fly.style = `position:absolute; color:${color || 'yellow'}; font-weight:bold; font-size:22px; left:${flyX}px; top:${flyY}px; transition:all 1s; pointer-events:none; z-index:500; text-shadow:1px 1px 2px #000; transform:translate(-50%,-50%); white-space:nowrap;`;
+        fly.style = `position:absolute; color:${color || 'yellow'}; font-weight:bold; font-size:22px; left:${x}px; top:${flyY}px; transition:all 2s ease-out; pointer-events:none; z-index:500; text-shadow:1px 1px 2px #000; transform:translate(-50%,-50%); white-space:nowrap;`;
         this.world1.appendChild(fly);
-        setTimeout(() => { fly.style.top = (flyY - 60) + 'px'; fly.style.opacity = 0; }, 40);
-        setTimeout(() => fly.remove(), 1050);
+        setTimeout(() => { fly.style.top = (flyY - 80) + 'px'; fly.style.opacity = 0; }, 50);
+        setTimeout(() => fly.remove(), 2050);
     }
 
     gameOver(win) {
@@ -1808,8 +1816,10 @@ class HauntedDorm {
                     const box = { x: rx, y: ry, life: 25 };
                     const el = document.createElement('div');
                     el.className = 'entity';
-                    el.style.cssText = `width:50px; height:50px; z-index:50; left:${rx}px; top:${ry}px;`;
-                    el.innerHTML = '<div style="font-size:36px; transform:translate(-50%, -50%);">🎁</div>';
+                    const icons = ['🎁', '📦', '💎', '💰', '🎒', '🏆'];
+                    const icon = icons[Math.floor(Math.random() * icons.length)];
+                    el.style.cssText = `width:70px; height:70px; z-index:50; left:${rx}px; top:${ry}px;`;
+                    el.innerHTML = `<div style="font-size:60px; transform:translate(-50%, -50%); filter:drop-shadow(0 0 15px #ff00ff);">${icon}</div>`;
                     this.world1.appendChild(el);
                     box.el = el;
                     if (!this.airdrops) this.airdrops = [];
@@ -1829,7 +1839,7 @@ class HauntedDorm {
                     continue;
                 }
                 if (Math.hypot(this.player.x - a.x, this.player.y - a.y) < 50) {
-                    const r = Math.floor(Math.random() * 12);
+                    const r = Math.floor(Math.random() * 15);
                     switch(r) {
                         case 0:
                             this.addSun(800);
@@ -1894,6 +1904,25 @@ class HauntedDorm {
                         case 11:
                             this.spawnPlant(Math.floor(this.player.x/80), Math.floor(this.player.y/80), 'doomshroom');
                             this._flyText(a.x, a.y, '🎁 意外之喜 (白给毁灭重炮)', '#ff00ff');
+                            break;
+                        case 12:
+                            this.player.hp -= 30;
+                            this._flyText(a.x, a.y, '☠️ 倒霉透顶 (-30血)', '#ff0000');
+                            if (this.player.hp <= 0) this.gameOver(false);
+                            break;
+                        case 13:
+                            for(const pl of this.plants) { if(pl.shootCd !== undefined) pl.shootCd = 0; }
+                            this._flyText(a.x, a.y, '⏱️ 时光倒流 (全图植物冷却清零)', '#00ffff');
+                            break;
+                        case 14:
+                            if (this.zombies[0] && !this.zombies[0].dead) {
+                                this.zombies[0].speed *= 1.5;
+                                this.zombies[0].hp = this.zombies[0].maxHp;
+                                this._flyText(a.x, a.y, '🧟 僵尸狂暴 (僵尸满血且移速暴增)', '#ff0000');
+                            } else {
+                                this.addSun(500);
+                                this._flyText(a.x, a.y, '☀️ 阳光替代 (+500)', '#ffeb3b');
+                            }
                             break;
                     }
                     this.playSfx('sun.mp3', 0.5);
