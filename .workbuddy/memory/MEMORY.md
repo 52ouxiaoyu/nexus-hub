@@ -52,7 +52,7 @@
 - 车对车=Game.carVsCar 动量守恒；碰撞扣速一次性冲量+冷却；AI 冲量/位移换算到 (s,lane)
 - 输入隔离：frame() 给 P2 的 in_ 必须显式传 Input.p2；隔离性用「只按一方键另一方不动」断言；键盘断言优先 e.code 桩
 
-## thunder-wing（v1.4.8）
+## thunder-wing（v1.4.10）
 - 纯 Canvas2D 零外部素材（程序化精灵 + WebAudio 合成音）；模块 sprites.js / fx.js / enemies.js / build.js / meta.js / ultimate.js / ai.js / game.js + index.html/style.css（**script 顺序：sprites→fx→enemies→build→meta→ultimate→ai→game**，ultimate/ai 在 game 前**且必须在 meta 后**）；测试句柄 window.__twGame（start(mode) / frame / render / key / press / playerInfo / setPower(p,i) / castUlt(i) / setAI(i,on) / idle(i) / nextUlt(i) / enemySlow()）
 - 玩家状态下沉：`G.players[]`（1 或 2 个），每人独立 lives/bombs/power/weapon/spd/combo/comboT/graze/kills；分数与关卡共享。旧全局 G.lives 等用 defineProperty 代理到 1P——**新增玩家属性要同时改 makePlayer + 代理名单 + HUD**
 - **键位铁律（v1.4.3 用户定稿，每人严格三键）**：1P `WASD`/`空格(射击)`/`M(大招)`；2P `方向键`/`小键盘回车(射击)`/`小键盘+(大招)`；暂停 `P/Esc` 全局。冗余键（J/Z/K/X/Q/左Shift/主回车/右Shift/slash 等）已全部删除；**NumpadEnter 的 e.key='Enter' 与主回车相同，必须靠 e.code（小写 'numpadenter'）区分**——主回车现不触发 2P 射击
@@ -66,6 +66,11 @@
 - **救援信标（v1.4.7 双人互助）**：残机耗尽不出局 → G.pods 信标（坠机点生成、vy 0.85 下落+摆动、漏出屏底 3s 后顶部重入场）；存活玩家距 46px 接触 → rescue()：队友 2 残机+210 帧无敌+清弹+5000 分；ai.js 4.8 节信标强吸引 2.6（威胁规避仍生效）；双方都坠机才 OVER。测试 killOne 类用例必须先把两席位 x 拉开（100/400），否则信标生成即被队友误触救回
 
 - **双机不重叠（v1.4.8）**：updatePlayer 循环后 `PSEP_MIN=52` 位置级硬校正——两机间距 <52 沿连线各推一半（+0.5 防抖），完全重合按出生位方向（1P 左/2P 右）分开；p.out/dead 跳过。改玩家移动逻辑注意这层在移动之后执行
+
+- **顶部对称 HUD（v1.4.9，用户要求左右完全对称）**：drawHUD 全部集中在顶部——中央 SCORE / HI·擦弹·RANK / 连击 / Boss 血条（y=104/112）；左列 1P（左对齐）右列 2P（右对齐）逐行镜像：残机+大招 y=26 → 武器+火力格 y=44/48 → LV+经验条 y=59-64 / 超载条 y=67 → 下一发大招 y=86/96；底部无常规 HUD（1P/2P 机体识别标签与救援提示除外）。改 HUD 注意这个布局契约
+
+- **v1.4.10 两契约**：①鼠标 pointerType==='mouse' 的 pointerdown 直接 return——绝不设 touch 锁存（曾致 1P 键盘永久失效，用户实测踩雷）；1P 键盘让位条件是 `dragLast && pl.id===0`（拖动进行中）而非碰过触摸。②AI 拾取：threat<2.0 时主动捡 340px 内道具，VAL 分级 weapon/power 1.25、bomb 1.1、medal 0.75、exp 0.45；闪避权重 1~2.6 恒占优
+- **测试隔离教训（killOne）**：注入敌弹前必须清 `g.pbullets` + `players.forEach(p=>p.ult=null)`——上个用例随机大招的残留弹幕/引力井会清掉注入弹造成偶发 FAIL
 
 - 测试：_test.js（46 项）+ _shot.js 不入库；改键位/输入必跑真实键盘事件用例（page.keyboard.down('ShiftRight')）；测"再挨一发"要先 frame(1) 消化复活帧再置 invuln=0，且先把 hitstop 清零
 - **画面自适应（v1.2.0）**：纵向恒定 800，横向 `W = clamp(vw/vh*800, 420, 720)`；`W` 在 game.js 是 `let`，resize 里算完后经 `TW.setWidth(w)` 广播给 enemies.js（那边同样是 `let W`）。**关卡脚本里的横向字面量必须包 `X(v)=v/480*W`**（已用脚本批量包好 line/vee/sine 的 x0,dx、col 的 x、hover/turret 的 xs 数组）；F.ground / F.dive / ATK.wall / ATK.rain 内部用 W 已是动态。自机速度乘 `fieldSpd()=min(1.25, W/480)`。resize 里调用 initStars 重建星空

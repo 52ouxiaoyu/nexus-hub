@@ -251,12 +251,12 @@ class HauntedDorm {
         this.player.el1.className = 'entity avatar';
         if (this.isZombieFaction) {
             this.player.el1.innerHTML = `<img src="assets/images/Zombies/Zombie/0.gif" style="width:150%; height:150%; transform:translate(-20%, -30%);">` +
-                                        `<div class="lv-badge" style="position:absolute; top:-10px; right:-10px; background:red; color:white; border-radius:10px; padding:2px 5px; font-size:12px; z-index:2;">Lv.1</div>` +
-                                        `<div style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); color:#ff5252; font-size:18px; font-weight:bold; text-shadow:1px 1px 2px black, -1px -1px 2px black; white-space:nowrap;">你 (僵尸)</div>`;
+                                        `<div class="lv-badge" style="position:absolute; top:-10px; right:-10px; background:red; color:white; border-radius:10px; padding:4px 8px; font-size:18px; z-index:2;">Lv.1</div>` +
+                                        `<div style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); color:#ff5252; font-size:24px; font-weight:bold; text-shadow:1px 1px 2px black, -1px -1px 2px black; white-space:nowrap;">你 (僵尸)</div>`;
             this.player.el1.style.filter = `drop-shadow(0 0 10px #ff0000)`;
         } else {
             this.player.el1.innerHTML = `<img src="${this.player.icon}" style="${this.playerRoleDef.imgStyle || ''}">` + 
-                                        `<div style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); color:#00ff00; font-size:18px; font-weight:bold; text-shadow:1px 1px 2px black, -1px -1px 2px black; white-space:nowrap;">你 (${this.playerRoleDef.name})</div>`;
+                                        `<div style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); color:#00ff00; font-size:24px; font-weight:bold; text-shadow:1px 1px 2px black, -1px -1px 2px black; white-space:nowrap;">你 (${this.playerRoleDef.name})</div>`;
             this.player.el1.style.filter = `drop-shadow(0 0 10px #00ff00)`;
         }
         // v3.92.0：浇水开启时头顶显示 🚿 标志（跟随玩家移动）
@@ -617,18 +617,11 @@ class HauntedDorm {
         if (def.feed) txt = `浇水 ${Math.min(pl.fed, def.feed.goal)}/${def.feed.goal}`;
         else if (def.up) txt = `点击升级 ${def.up.cur === 'sun' ? '☀' : '🦠'}${def.up.cost}`;
         if (!txt) { if (pl.txtEl) { pl.txtEl.remove(); pl.txtEl = null; } return; }
-        if (!pl.txtEl) {
-            pl.txtEl = document.createElement('div');
-            pl.txtEl.className = 'float-text';
-            pl.el1.appendChild(pl.txtEl);
-        }
-        pl.txtEl.innerText = txt;
-        pl.txtEl.style.opacity = pl._hint ? 1 : 0;
+
     }
 
     _setHint(pl, on) {
-        pl._hint = on;
-        if (pl.txtEl) pl.txtEl.style.opacity = on ? 1 : 0;
+        // Disabled user floating hint
     }
 
     // ===== 点击植物 → 弹出「升级 / 拆除」面板 =====
@@ -646,25 +639,10 @@ class HauntedDorm {
         const def = pl.def;
         this.popupPlant = pl;
         this.ppTitle.innerText = def.name + (pl.isDoor ? '（门板）' : '');
+        // 用户反馈：因为已经有升级按键了，不需要长篇大论的升级预览框了，简化UI
         if (def.feed) {
             this.ppFeed.style.display = 'block';
-            this.ppFeed.innerText = `浇水 ${Math.min(pl.fed, def.feed.goal)}/${def.feed.goal}（站旁边开浇水）`;
-        } else if (def.up) {
-            // v3.89.0：升级收益预览——血量/产阳光/弹数的具体提升，让升级看得见好处
-            const nd = HauntedDorm.DEFS[def.up.to];
-            const fac = pl.isDoor ? 0.3 : 1;
-            const bits = [];
-            if (nd.hp > def.hp) bits.push(`血量 ${Math.round(def.hp * fac)}→${Math.round(nd.hp * fac)}`);
-            if (nd.produce) bits.push(`产阳光 ${nd.produce.sun}/每${nd.produce.every}秒`);
-            if (nd.spore) bits.push(`产孢子 ${nd.spore.n}/每${nd.spore.every}秒`);
-            if (nd.shoot && nd.shoot.homing && !(def.shoot && def.shoot.homing)) bits.push('子弹跟踪');
-            if (nd.shoot && def.shoot && nd.shoot.n > def.shoot.n) bits.push(`${def.shoot.n}连发→${nd.shoot.n}连发`);
-            if (nd.shoot && !def.shoot) bits.push('会喷射攻击');
-            if (nd.lob && nd.lob.slow) bits.push('冰西瓜群攻减速');
-            else if (nd.lob) bits.push('抛物线范围群攻');
-            if (nd.shoot && nd.shoot.slow && !(def.shoot && def.shoot.slow)) bits.push('子弹减速');
-            this.ppFeed.style.display = 'block';
-            this.ppFeed.innerText = bits.length ? bits.join('，') : '全面强化';
+            this.ppFeed.innerText = `浇水进度: ${Math.min(pl.fed, def.feed.goal)}/${def.feed.goal}`;
         } else {
             this.ppFeed.style.display = 'none';
         }
