@@ -166,11 +166,11 @@ class HauntedDorm {
         this.isZombieFaction = (this.faction === 'zombie');
         
         this.playerRoles = [
-            { id: 'sunflower', name: '向日葵', icon: 'assets/images/Plants/SunFlower/0.gif', skillDesc: '【M键】10秒内阳光产出翻倍' },
-            { id: 'peashooter', name: '豌豆射手', icon: 'assets/images/Plants/Peashooter/0.gif', skillDesc: '【M键】15秒内全场植物攻击力翻倍', imgStyle: 'width: 120%; height: 120%; margin-left: -10%; margin-top: -10%;' },
-            { id: 'wallnut', name: '坚果', icon: 'assets/images/Plants/WallNut/0.gif', skillDesc: '【M键】一局一次免费升级门' },
-            { id: 'chomper', name: '大嘴花', icon: 'assets/images/Plants/Chomper/0.gif', skillDesc: '【M键】赶跑僵尸一次', imgStyle: 'width: 120%; height: 120%; margin-left: -10%; margin-top: -10%;' },
-            { id: 'squash', name: '倭瓜', icon: 'assets/images/Plants/Squash/0.gif', skillDesc: '【M键】半血以上砸掉僵尸一半血', imgStyle: 'width: 200%; height: 200%; margin-left: -50%; margin-top: -50%;' }
+            { id: 'sunflower', name: '向日葵', icon: 'assets/images/Plants/SunFlower/0.gif', skillDesc: '【M键】10秒阳光翻倍 (CD:60s)' },
+            { id: 'peashooter', name: '豌豆射手', icon: 'assets/images/Plants/Peashooter/0.gif', skillDesc: '【M键】15秒攻击翻倍 (CD:60s)', imgStyle: 'width: 120%; height: 120%; margin-left: -10%; margin-top: -10%;' },
+            { id: 'wallnut', name: '坚果', icon: 'assets/images/Plants/WallNut/0.gif', skillDesc: '【M键】免费升一级门 (CD:60s)' },
+            { id: 'chomper', name: '大嘴花', icon: 'assets/images/Plants/Chomper/0.gif', skillDesc: '【M键】强制赶跑僵尸 (CD:60s)', imgStyle: 'width: 120%; height: 120%; margin-left: -10%; margin-top: -10%;' },
+            { id: 'squash', name: '倭瓜', icon: 'assets/images/Plants/Squash/0.gif', skillDesc: '【M键】重创僵尸半血 (CD:60s)', imgStyle: 'width: 200%; height: 200%; margin-left: -50%; margin-top: -50%;' }
         ];
         
         this.playerRoleDef = this.playerRoles.find(r => r.id === this.role) || this.playerRoles[1];
@@ -179,7 +179,7 @@ class HauntedDorm {
             x: cx, y: cy, sun: 0, spore: 0, hp: 100, maxHp: 100,
             icon: this.playerRoleDef.icon,
             roleDef: this.playerRoleDef,
-            camX: 0, camY: 0, skillUsed: false, sunBuffT: 0, atkBuffT: 0,
+            camX: 0, camY: 0, skillCd: 0, sunBuffT: 0, atkBuffT: 0,
             biteT: 0, level: 1, speedBuffT: 0
         };
         
@@ -983,11 +983,19 @@ class HauntedDorm {
         document.getElementById('sun1').innerText = this.player.sun;
         document.getElementById('spore1').innerText = this.player.spore;
         const skillEl = document.getElementById('skill-hud');
-        if (skillEl && this.player.roleDef) {
-            if (this.player.skillUsed) {
-                skillEl.innerHTML = `<span style="color:#aaa;"><s>${this.player.roleDef.skillDesc}</s> (已使用)</span>`;
-            } else {
-                skillEl.innerHTML = `<span style="color:#0f0;">${this.player.roleDef.skillDesc}</span>`;
+        if (skillEl) {
+            if (this.isZombieFaction) {
+                if (this.player.skillCd > 0) {
+                    skillEl.innerHTML = `<span style="color:#aaa;"><s>【M键】狂暴冲刺</s> (CD: ${Math.ceil(this.player.skillCd)}s)</span>`;
+                } else {
+                    skillEl.innerHTML = `<span style="color:#ff5252;">【M键】狂暴冲刺 (5秒内极速免疫)</span>`;
+                }
+            } else if (this.player.roleDef) {
+                if (this.player.skillCd > 0) {
+                    skillEl.innerHTML = `<span style="color:#aaa;"><s>${this.player.roleDef.skillDesc}</s> (CD: ${Math.ceil(this.player.skillCd)}s)</span>`;
+                } else {
+                    skillEl.innerHTML = `<span style="color:#0f0;">${this.player.roleDef.skillDesc}</span>`;
+                }
             }
         }
     }
@@ -1196,59 +1204,61 @@ class HauntedDorm {
     }
 
     _useSkill() {
-        if (this.isZombieFaction) return; // 僵尸阵营暂无专属M技能
-        if (this.player.skillUsed) return;
+        if (this.player.skillCd > 0) return;
         const p = this.player;
+
+        if (this.isZombieFaction) {
+            p.skillCd = 60;
+            p.speedBuffT = 5; // 提速免疫
+            this._announce('🧟 技能激活：僵尸狂暴冲刺！', 'scream.mp3');
+            this._refreshHud();
+            return;
+        }
+
         const r = p.roleDef.id;
         const zb = this.zombies[0];
 
         if (r === 'sunflower') {
-            p.skillUsed = true;
+            p.skillCd = 60;
             p.sunBuffT = 10;
             this._announce('🌻 技能激活：10秒内阳光产出翻倍！', 'points.mp3');
         } else if (r === 'peashooter') {
-            p.skillUsed = true;
+            p.skillCd = 60;
             p.atkBuffT = 15;
             this._announce('🌿 技能激活：15秒内植物攻击力翻倍！', 'points.mp3');
         } else if (r === 'wallnut') {
-            let myRm = null;
-            for (const rm of this.rooms) {
-                const rxMin = rm.x * this.gridSize, rxMax = (rm.x + rm.w) * this.gridSize;
-                const ryMin = rm.y * this.gridSize, ryMax = (rm.y + rm.h) * this.gridSize;
-                if (p.x >= rxMin && p.x <= rxMax && p.y >= ryMin && p.y <= ryMax) {
-                    myRm = rm; break;
-                }
-            }
+            const myRm = p.room; // 取消位置限制，只要有房间就能用
             if (myRm) {
                 const doorPlant = this.getPlantAt(myRm.doorCol * this.gridSize, myRm.doorRow * this.gridSize);
                 if (doorPlant && doorPlant.def.up) {
-                    p.skillUsed = true;
+                    p.skillCd = 60;
                     this._upgradePlant(doorPlant, doorPlant.def.up.to);
                     this._announce('🌰 技能激活：大门免费升级完毕！', 'points.mp3');
                 } else {
                     this._announce('❌ 门不存在或无法再升级！', 'buzzer.mp3');
+                    return; // 失败不扣CD
                 }
             } else {
-                this._announce('❌ 必须在房间内才能升级门！', 'buzzer.mp3');
+                this._announce('❌ 你还没有绑定任何房间！', 'buzzer.mp3');
+                return;
             }
         } else if (r === 'chomper') {
             if (zb && !zb.dead) {
-                p.skillUsed = true;
+                p.skillCd = 60;
                 zb.hp = Math.min(zb.hp, zb.maxHp * 0.05); // 触发回城
                 zb.retreating = true;
                 this._announce('🌸 技能激活：大嘴花将僵尸吓跑了！', 'chomp.mp3');
+            } else {
+                return;
             }
         } else if (r === 'squash') {
             if (zb && !zb.dead) {
-                if (zb.hp >= zb.maxHp / 2) {
-                    p.skillUsed = true;
-                    zb.hp -= zb.maxHp / 2;
-                    if (zb.hpBg) zb.hpBg.style.display = 'block';
-                    if (zb.hpFg) zb.hpFg.style.width = Math.max(0, zb.hp / zb.maxHp * 100) + '%';
-                    this._announce('🎃 技能激活：倭瓜砸掉了僵尸一半血！', 'squash_hmm.mp3');
-                } else {
-                    this._announce('❌ 僵尸血量不足一半，无法使用！', 'buzzer.mp3');
-                }
+                p.skillCd = 60;
+                zb.hp = Math.max(1, zb.hp - zb.maxHp * 0.5); // 取消血量限制，直接扣除半管血
+                if (zb.hpBg) zb.hpBg.style.display = 'block';
+                this._announce('🎃 技能激活：倭瓜重创了僵尸！', 'squash_hmm.mp3');
+            } else {
+                return;
             }
         }
         this._refreshHud();
@@ -1257,7 +1267,7 @@ class HauntedDorm {
     bindInput() {
         window.addEventListener('keydown', e => {
             this.keys[e.key.toLowerCase()] = true;
-            if (e.key.toLowerCase() === 'm' && !e.repeat && !this.player.skillUsed) {
+            if (e.key.toLowerCase() === 'm' && !e.repeat && this.player.skillCd <= 0) {
                 this._useSkill();
             }
             // v3.92.0：空格开关式浇水——按一下开启持续浇水，再按一下停止（过滤按住触发的 auto-repeat）
@@ -1868,10 +1878,15 @@ class HauntedDorm {
     }
 
     _tick(dt, time) {
+        if (this.player.skillCd > 0) {
+            this.player.skillCd -= dt;
+            if (this.player.skillCd <= 0) this._refreshHud(); // 冷却完毕刷新一下UI
+        }
         for (const zb of this.zombies) { if (zb.hitFlashT > 0) zb.hitFlashT -= dt; }
         this._updateGhostDirector(time);
         this._updateAIs(dt);
         if (Math.floor(time / 500) !== Math.floor((time - dt * 1000) / 500)) this._updateGhostChip(); // 0.5s 刷一次信息牌
+        if (Math.floor(time / 1000) !== Math.floor((time - dt * 1000) / 1000)) this._refreshHud(); // 1s 刷一次 HUD (为了技能倒计时)
 
         if (this.player.sunBuffT > 0) this.player.sunBuffT -= dt;
         if (this.player.atkBuffT > 0) this.player.atkBuffT -= dt;

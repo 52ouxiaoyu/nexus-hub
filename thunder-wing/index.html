@@ -12,7 +12,7 @@
 
   <div id="hud-top">
     <span class="tag">雷霆之翼</span>
-    <span id="ver" class="ver">v1.3.0</span>
+    <span id="ver" class="ver">v1.4.0</span>
   </div>
 
   <button id="btn-bomb" title="大招">B</button>
@@ -24,10 +24,8 @@
       <div class="logo-en">T H U N D E R &nbsp; W I N G</div>
       <div id="menu-best" class="best">最高分 0</div>
       <div class="btns">
-        <button class="btn" data-act="start-solo">单人出击 <span>故事模式 5 关</span></button>
-        <button class="btn primary" data-act="start-coop">双人合作 <span>本机同屏 · 2P 加入</span></button>
-        <button class="btn" data-act="start-endless">单人无尽 <span>越打越难</span></button>
-        <button class="btn" data-act="start-endless2">双人无尽 <span>共斗刷波次</span></button>
+        <button class="btn primary" data-act="start-coop">故事模式 <span>双人同屏 · 5 关</span></button>
+        <button class="btn" data-act="start-endless">无尽模式 <span>双人同屏 · 越打越难</span></button>
         <button class="btn daily" data-act="start-daily">每日挑战 <span id="daily-sub">今天固定词条池</span></button>
         <button class="btn" data-act="show-ach">成就 <span id="ach-sub">0 / 8</span></button>
       </div>
@@ -42,8 +40,8 @@
         <div class="krow"><span class="pz">暂停</span><span><b>P</b> / <b>Esc</b></span><span>全屏共用</span><span></span></div>
         <div class="row touch-only"><b>触屏</b><span>拖动移动 · 自动射击 · 右下 B 放 1P 大招</span></div>
       </div>
-      <div class="tips">擦着敌弹飞过可充能，满格自动<b>超载</b>（火力翻倍）· 连击不断倍率最高 x4.00<br>击破掉经验球，升级时三选一强化 —— 每局的 build 都不一样<br>双人：共用分数与关卡，各自独立的残机 / 火力 / 大招</div>
-      <div class="foot">程序化矢量美术 · 无外部素材 · <span id="menu-ver">v1.3.0</span></div>
+      <div class="tips">一直双人：暂时没操作的座位会自动交给 <b>AI 代班</b>，按任意键立刻夺回<br>大招每局随机切换（僚机风暴 / 引力井 / 轨道炮 / 时空凝滞…），HUD 预告<b>下一发</b><br>擦着敌弹飞过可充能，满格自动<b>超载</b> · 升级三选一，每局 build 都不一样</div>
+      <div class="foot">程序化矢量美术 · 无外部素材 · <span id="menu-ver">v1.4.0</span></div>
       <button class="btn small" data-act="mute">♪ 开启</button>
     </div>
   </div>
@@ -90,6 +88,8 @@
 <script src="enemies.js"></script>
 <script src="build.js"></script>
 <script src="meta.js"></script>
+<script src="ultimate.js"></script>
+<script src="ai.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

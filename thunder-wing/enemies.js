@@ -120,33 +120,34 @@
 
   /* ==================== 敌人更新 ==================== */
   TW.updateEnemy = function (e) {
-    e.t++;
-    if (e.flash > 0) e.flash--;
     const g = G();
+    const slow = g.enemySlow > 0 ? (1 / 3) : 1;   // 时空凝滞：敌机降到 1/3 速
+    e.t += slow;
+    if (e.flash > 0) e.flash--;
     const tp = nearest(e.x, e.y);
 
     switch (e.pat) {
       case 'sine':
-        e.y += e.vy; e.x = e.x0 + Math.sin(e.t * e.w) * e.amp; break;
+        e.y += e.vy * slow; e.x = e.x0 + Math.sin(e.t * e.w) * e.amp; break;
       case 'dive':
-        e.y += e.vy;
-        e.vx += (tp.x - e.x) * 0.0022;
+        e.y += e.vy * slow;
+        e.vx += (tp.x - e.x) * 0.0022 * slow;
         e.vx = Math.max(-3.4, Math.min(3.4, e.vx));
-        e.x += e.vx; break;
+        e.x += e.vx * slow; break;
       case 'hover':
-        if (e.y < e.ty) { e.y += e.vy; if (e.y >= e.ty) e.y = e.ty; }
-        else { e.x = e.x0 + Math.sin(e.t * 0.028) * Math.min(96, 70 * W / RW); e.y += 0.12; }
+        if (e.y < e.ty) { e.y += e.vy * slow; if (e.y >= e.ty) e.y = e.ty; }
+        else { e.x = e.x0 + Math.sin(e.t * 0.028) * Math.min(96, 70 * W / RW); e.y += 0.12 * slow; }
         break;
       case 'arc':
-        e.y += e.vy; e.x += e.vx; e.vx *= 0.995; break;
+        e.y += e.vy * slow; e.x += e.vx * slow; e.vx *= 0.995; break;
       default:
-        e.y += e.vy; e.x += e.vx;
+        e.y += e.vy * slow; e.x += e.vx * slow;
     }
     if (e.x < -60 || e.x > W + 60 || e.y > H + 70 || e.y < -140) { e.dead = true; e.escaped = true; return; }
 
     /* 开火 */
     if (e.y > 10 && e.y < H - 60) {
-      e.fireT--;
+      e.fireT -= slow;
       if (e.fireT <= 0) {
         e.fireT = e.every * (0.85 + Math.random() * 0.3) / g.rankRate();
         fire(e);
@@ -441,13 +442,14 @@
   ];
 
   TW.updateBoss = function (b) {
-    b.t++;
+    const g = G();
+    const slow = g.enemySlow > 0 ? (1 / 3) : 1;   // 时空凝滞：Boss 降到 1/3 速
+    b.t += slow;
     if (b.flash > 0) b.flash--;
     if (b.invuln > 0) b.invuln--;
-    const g = G();
 
     /* 入场 */
-    if (b.y < 130) { b.y += 1.6; }
+    if (b.y < 130) { b.y += 1.6 * slow; }
     else {
       b.x = b.cx + Math.sin(b.t * 0.013) * Math.min(150, 105 * W / RW);
       b.cx = W / 2 + Math.sin(b.t * 0.005) * Math.min(42, 28 * W / RW);
@@ -468,7 +470,7 @@
 
     /* 攻击编排 */
     if (b.y >= 120) {
-      if (b.wait > 0) b.wait--;
+      if (b.wait > 0) b.wait -= slow;
       else {
         const plan = b.plan[b.phase];
         const cur = plan[b.pi];

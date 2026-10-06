@@ -1,6 +1,6 @@
 {
-  "version": "v3.97.14-修复僵尸相遇时的帧数骤降",
+  "version": "v3.97.15-解除所有大招使用限制并改为冷却机制",
   "build": "2026-10-06",
   "feature": "v3.92.1：豌豆坚果/射手坚果贴图弃用自创拼接图(Plants/Fusions/nutshooter.png),改为原版素材组装——与主游戏融合「坚果射手」同款:原版坚果身体+头顶缩小的原版豌豆射手(spawnPlant新增overlay槽位,定位对齐主游戏translate(2px,-28px)scale(0.6)按80px格换算);去掉不再需要的multiply白底混合",
-  "assetVersion": 1791274560
+  "assetVersion": 1791275473
 }

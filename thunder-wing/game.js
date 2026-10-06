@@ -14,9 +14,10 @@
      BOSS_GRACE：脚本跑完后等待清场的宽限帧，超时强制 Boss 登场（防炮台卡关）。 */
   const COMBO_WIN = 210, COMBO_CAP = 30, BOSS_GRACE = 240;
   const PICK_LIFE = 180;   /* 三选一自动锁定前的思考帧数（3 秒） */
-  /* 自动驾驶接管阈值（帧）：某个席位 5 秒没有收到自己的按键，就交给 AI 代班；
-     该玩家任意一键按下立即夺回 —— AI 是代班，不是抢机。 */
-  const AI_IDLE = 300;
+  /* 自动驾驶接管阈值（帧）：某个席位连续 555 秒没有收到自己的按键，就交给 AI 代班；
+     该玩家任意一键按下立即夺回 —— AI 是代班，不是抢机。
+     用户指定 555 秒；若想「空座更快交给 AI」把这里改小即可（例如 5*60）。 */
+  const AI_IDLE = 555 * 60;
   let W = MIN_W;
   /* 战场越宽，自机速度等比补偿，避免横向机动变迟钝 */
   function fieldSpd() { return Math.min(1.25, Math.max(1, W / MIN_W)); }
@@ -233,8 +234,7 @@
     noteActivity(k, code);
     if (k === 'p' || k === 'escape') togglePause();
     if (k === 'enter' && (G.state === 'MENU' || G.state === 'OVER' || G.state === 'WIN')) {
-      startGame(G.state === 'MENU' ? (document.body.dataset.mode || 'story') : G.mode,
-        document.body.dataset.two === '1');
+      startGame(G.state === 'MENU' ? (document.body.dataset.mode || 'story') : G.mode);
     }
     if (G.state === 'PLAYING') {
       for (let i = 0; i < G.players.length; i++) {
@@ -296,19 +296,44 @@
       pl.x = homeX(pl.id, G.two); pl.y = H - 120; pl.invuln = 150;
     }
     if (pl.invuln > 0) pl.invuln--;
+    if (TW.updateUlt) TW.updateUlt(pl);   /* v1.4.0：推进当前大招（僚机 / 轨道炮 / 要塞…） */
 
-    let dx = 0, dy = 0;
-    if (!(touch && pl.id === 0)) {
-      const m = moveKeys(pl.id);
-      if (held(m.lf)) dx -= 1;
-      if (held(m.rt)) dx += 1;
-      if (held(m.up)) dy -= 1;
-      if (held(m.dn)) dy += 1;
-      if (dx && dy) { const k = Math.SQRT1_2; dx *= k; dy *= k; }
-      const sp = (3.6 + pl.spd * 0.35) * fieldSpd();
-      pl.x += dx * sp; pl.y += dy * sp;
-      pl.tilt += ((dx * 0.22) - pl.tilt) * 0.18;
+    /* v1.4.0：空闲超时交给 AI 代班。人类只用「物理按键」算控制，AI 自己设的
+       firing 不算，否则 AI 会把自己判成「在控制」而立刻退出代班。 */
+    const m0 = moveKeys(pl.id);
+    const hmv = held(m0.lf) || held(m0.rt) || held(m0.up) || held(m0.dn);
+    const controlling = hmv || (pl.firing && !pl.ai);
+    if (controlling) {
+      pl.idle = 0;
+      if (pl.ai) { pl.ai = false; TW.FX.text(pl.x, pl.y - 46, pl.tag + ' 接管', PCFG[pl.id].color, 14); }
+    } else if (!pl.ai) {
+      pl.idle++;
+      if (pl.idle >= AI_IDLE && !pl.out) {
+        pl.ai = true;
+        TW.FX.text(pl.x, pl.y - 46, pl.tag + ' AI 代班', PCFG[pl.id].color, 14);
+      }
     }
+
+    let dx = 0, dy = 0, aiDrive = false;
+    if (pl.ai && G.state === 'PLAYING') {
+      const cmd = TW.AI.think(pl);
+      dx = cmd.dx; dy = cmd.dy; aiDrive = true;
+      pl.firing = cmd.fire;
+      if (cmd.ult && pl.bombs > 0 && pl.invuln <= 90) {
+        const u = TW.castUlt(pl);
+        if (u) TW.FX.text(pl.x, pl.y - 54, 'AI · ' + u.name, PCFG[pl.id].color, 13);
+      }
+    }
+    if (!aiDrive && !(touch && pl.id === 0)) {
+      if (held(m0.lf)) dx -= 1;
+      if (held(m0.rt)) dx += 1;
+      if (held(m0.up)) dy -= 1;
+      if (held(m0.dn)) dy += 1;
+    }
+    if (dx && dy) { const k = Math.SQRT1_2; dx *= k; dy *= k; }
+    const sp = (3.6 + pl.spd * 0.35) * fieldSpd();
+    pl.x += dx * sp; pl.y += dy * sp;
+    pl.tilt += ((dx * 0.22) - pl.tilt) * 0.18;
     pl.x = Math.max(16, Math.min(W - 16, pl.x));
     pl.y = Math.max(40, Math.min(H - 24, pl.y));
 
@@ -530,23 +555,10 @@
   }
 
   /* ==================== 炸弹 / 大招 ==================== */
+  /* v1.4.0：大招键即「释放随机大招」。释放后立刻抽下一发，玩家永远在期待下一发。 */
   function useBomb(pl) {
     if (!pl) pl = G.players[0];
-    if (G.state !== 'PLAYING' || !pl || pl.out || pl.dead) return;
-    if (pl.bombs <= 0 || pl.invuln > 90) return;
-    pl.bombs--;
-    pl.invuln = Math.max(pl.invuln, 95);
-    G.clearBullets(true);
-    G.flash = 12;
-    TW.FX.quake(10, 26); TW.FX.stop(6);
-    TW.FX.bigBoom(pl.x, pl.y, 4, pl.id === 0 ? '#bff6ff' : '#ffe6a8');
-    TW.Audio.bomb();
-    for (let i = 0; i < G.enemies.length; i++) {
-      const e = G.enemies[i];
-      if (e.boss) { if (!e.dying) hurtEnemy(e, 40, e.x, e.y, pl); }
-      else hurtEnemy(e, 25, e.x, e.y, pl);
-    }
-    G.rank = Math.max(0, G.rank - 6);
+    return TW.castUlt(pl);
   }
 
   /* ==================== 伤害与击破 ==================== */
@@ -601,6 +613,7 @@
 
   function playerDie(pl) {
     if (pl.invuln > 0 || G.state !== 'PLAYING' || pl.out) return;
+    if (TW.ultEatDeath && TW.ultEatDeath(pl)) return;   // 要塞模式：免伤一次
     G.stats.deaths++;
     /* 力场护盾：冷却就绪时吃掉这次致命伤 */
     if (pl.pk('shield') > 0 && pl.shieldT <= 0) {
@@ -749,11 +762,12 @@
     }
 
     /* 敌弹 → 玩家（逐在多玩家身上独立判定） */
+    const es = G.enemySlow > 0 ? (1 / 3) : 1;   // 时空凝滞：敌弹降到 1/3 速
     for (let i = G.ebullets.length - 1; i >= 0; i--) {
       const b = G.ebullets[i];
       if (!b) break;   // 玩家阵亡会清屏，后续索引已失效
       b.t++;
-      b.x += b.vx; b.y += b.vy;
+      b.x += b.vx * es; b.y += b.vy * es;
       if (b.y < -40 || b.y > H + 40 || b.x < -40 || b.x > W + 40) { G.ebullets.splice(i, 1); continue; }
       if (!b.gz) b.gz = [false, false];
       let gone = false;
@@ -920,6 +934,7 @@
     G.stageT++;
     if (G.waveMsg > 0) G.waveMsg--;
     if (G.flash > 0) G.flash--;
+    if (G.enemySlow > 0) G.enemySlow--;
     for (let i = 0; i < G.players.length; i++) {
       const pl = G.players[i];
       if (pl.comboT > 0) { pl.comboT--; if (pl.comboT === 0) pl.combo = 0; }
@@ -1206,6 +1221,7 @@
     }
 
     TW.FX.draw(ctx);
+    if (TW.drawUlt) TW.drawUlt(ctx);   // v1.4.0：大招特效（僚机 / 轨道炮 / 要塞…）盖在玩家之上
 
     /* 屏幕闪光 */
     if (G.flash > 0) {
@@ -1322,6 +1338,18 @@
           ctx.fillRect(W - 23 - k * 14, H - 18, 11, 6);
         }
       }
+    }
+
+    /* v1.4.0：下一发大招预告，让随机性变成期待感 */
+    for (let i = 0; i < G.players.length; i++) {
+      const pl = G.players[i];
+      if (pl.out) continue;
+      const nu = pl.nextUlt && TW.ULT_BY_ID ? TW.ULT_BY_ID[pl.nextUlt] : null;
+      if (!nu) continue;
+      ctx.font = '600 10px system-ui, sans-serif';
+      ctx.fillStyle = 'rgba(255,233,168,0.9)';
+      if (i === 0) { ctx.textAlign = 'left'; ctx.fillText('下一发 ' + nu.glyph + ' ' + nu.name, 12, H - 6); }
+      else { ctx.textAlign = 'right'; ctx.fillText('下一发 ' + nu.glyph + ' ' + nu.name, W - 12, H - 6); }
     }
     ctx.fillStyle = 'rgba(255,255,255,0.55)';
     ctx.font = '400 11px system-ui, sans-serif';
@@ -1469,7 +1497,7 @@
     G.mode = G.daily ? 'endless' : (mode || 'story');
     G.perkPool = G.daily && TW.Meta ? TW.Meta.dailyPool() : null;
     G.dailyPow = G.daily && TW.Meta ? TW.Meta.dailyPower() : 1;
-    G.reset(two === undefined ? G.two : !!two);
+    G.reset(true);   // v1.4.0：永远双席位，单人 = 另一个席位交给 AI 代班
     if (G.daily) G.rank = 22;          /* 每日挑战：起步就更硬 */
     G.state = 'PLAYING';
     startStage(0);
@@ -1485,11 +1513,11 @@
   document.querySelectorAll('[data-act]').forEach((el) => {
     el.addEventListener('click', () => {
       const a = el.dataset.act;
-      if (a === 'start-solo') startGame('story', false);
-      else if (a === 'start-coop') startGame('story', true);
-      else if (a === 'start-endless') startGame('endless', false);
-      else if (a === 'start-endless2') startGame('endless', true);
-      else if (a === 'start-daily') startGame('daily', false);
+      if (a === 'start-solo') startGame('story');
+      else if (a === 'start-coop') startGame('story');
+      else if (a === 'start-endless') startGame('endless');
+      else if (a === 'start-endless2') startGame('endless');
+      else if (a === 'start-daily') startGame('daily');
       else if (a === 'show-ach') showAchievements();
       else if (a === 'resume') togglePause();
       else if (a === 'restart') startGame(G.mode, G.two);
@@ -1540,5 +1568,10 @@
     spawnElite: () => TW.spawnElite(),
     spawnRock: () => TW.spawnRock(),
     spawnBeam: () => TW.spawnBeam(),
+    castUlt: (i) => TW.castUlt(G.players[i || 0]),
+    setAI: (on, i) => { const pl = G.players[i || 0]; if (pl) { pl.ai = !!on; if (on) pl.idle = AI_IDLE; } },
+    idle: (i) => (G.players[i || 0] || {}).idle,
+    nextUlt: (i) => (G.players[i || 0] || {}).nextUlt,
+    enemySlow: () => G.enemySlow,
   };
 })();
