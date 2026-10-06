@@ -1368,6 +1368,9 @@ class HauntedDorm {
             if ((key === '/' || key === '3' || key === 'pagedown') && !e.repeat && this.gameMode === '2p' && this.player2 && this.player2.skillCd <= 0) {
                 this._useSkill(this.player2);
             }
+            if (key === ' ' && !e.repeat && !this.isZombieFaction) {
+                this.setWatering(!this.waterOn);
+            }
         });
         window.addEventListener('keyup', e => {
             this.keys[e.key.toLowerCase()] = false;
@@ -1525,7 +1528,7 @@ class HauntedDorm {
             const plant = this.getPlantAt(p.c * this.gridSize, p.r * this.gridSize);
             if (plant && !plant.def.ground) {
                 // 如果是僵尸阵营（包括僵尸玩家和AI僵尸），所有植物（门、塔等）都是绝对实体，绝不允许穿透！
-                if (this.isZombieFaction || isZombie) return true;
+                if (isZombie) return true;
                 
                 // 以下逻辑针对人类幸存者阵营玩家：
                 if (plant.isDoor) {
@@ -1577,7 +1580,7 @@ class HauntedDorm {
             if (pl.shootCd > 0) continue;
             const px = pl.c * 80 + 40, py = pl.r * 80 + 40;
             let best = null, bestD = (sh ? sh.range : lob.range);
-            const targets = this.isZombieFaction ? this.allPlayers : this.zombies;
+            const targets = this.isZombieFaction ? this.allPlayers.filter(p => p.isZombie) : this.zombies;
             for (const zb of targets) {
                 if (zb.dead) continue;
                 const d = Math.hypot(zb.x - px, zb.y - py);
@@ -1657,7 +1660,7 @@ class HauntedDorm {
             const c = Math.floor(pea.x / this.gridSize), r = Math.floor(pea.y / this.gridSize);
             // if (this.walls.has(`${c},${r}`)) pea.life = 0; // 用户要求子弹能穿透墙壁
             // 命中检测（34px）
-            const targets = this.isZombieFaction ? this.allPlayers : this.zombies;
+            const targets = this.isZombieFaction ? this.allPlayers.filter(p => p.isZombie) : this.zombies;
             for (const zb of targets) {
                 if (zb.dead) continue; // 撤退时不再免疫，可以被击杀
                 if (Math.hypot(zb.x - pea.x, zb.y - pea.y) < 34) {
@@ -2251,9 +2254,9 @@ class HauntedDorm {
 
         let nx1 = this.player.x + vx1 * dt;
         let ny1 = this.player.y;
-        if (nx1 > 20 && nx1 < this.worldWidth - 20 && !this.checkCollision(nx1, ny1, 10)) this.player.x = nx1;
+        if (nx1 > 20 && nx1 < this.worldWidth - 20 && !this.checkCollision(nx1, ny1, 10, this.player.isZombie)) this.player.x = nx1;
         nx1 = this.player.x; ny1 = this.player.y + vy1 * dt;
-        if (ny1 > 30 && ny1 < this.worldHeight - 10 && !this.checkCollision(nx1, ny1, 10)) this.player.y = ny1;
+        if (ny1 > 30 && ny1 < this.worldHeight - 10 && !this.checkCollision(nx1, ny1, 10, this.player.isZombie)) this.player.y = ny1;
 
         // P2 Movement - 【SOC防冲突】
         if (this.player2 && !this.player2.dead) {
@@ -2270,9 +2273,9 @@ class HauntedDorm {
 
             let nx2 = this.player2.x + vx2 * dt;
             let ny2 = this.player2.y;
-            if (nx2 > 20 && nx2 < this.worldWidth - 20 && !this.checkCollision(nx2, ny2, 10)) this.player2.x = nx2;
+            if (nx2 > 20 && nx2 < this.worldWidth - 20 && !this.checkCollision(nx2, ny2, 10, this.player2.isZombie)) this.player2.x = nx2;
             nx2 = this.player2.x; ny2 = this.player2.y + vy2 * dt;
-            if (ny2 > 30 && ny2 < this.worldHeight - 10 && !this.checkCollision(nx2, ny2, 10)) this.player2.y = ny2;
+            if (ny2 > 30 && ny2 < this.worldHeight - 10 && !this.checkCollision(nx2, ny2, 10, this.player2.isZombie)) this.player2.y = ny2;
         }
         
         this._updateKMenus();
@@ -2408,7 +2411,7 @@ class HauntedDorm {
 
         // 浇水（v3.89.0：1 秒才能浇一次——按再快也只按时间间隔计，杜绝拼手速；+1 阳光 / 催熟身边蘑菇）
         // 浇水（v3.92.0：空格开关式——按一下持续浇水不用按住，0.2 秒一次；+1 阳光 / 催熟身边蘑菇）
-        if (this.waterOn && !this.over && time - this.lastWaterTime > 1000) {
+        if (this.waterOn && !this.over && time - this.lastWaterTime > 200) {
             this.lastWaterTime = time;
             this._water();
         }
@@ -2903,8 +2906,8 @@ class HauntedDorm {
                         const pushSpd = 200;
                         const nx = p.x + Math.cos(angle) * pushSpd * dt;
                         const ny = p.y + Math.sin(angle) * pushSpd * dt;
-                        if (!this.checkCollision(nx, p.y, 10)) p.x = nx;
-                        if (!this.checkCollision(p.x, ny, 10)) p.y = ny;
+                        if (!this.checkCollision(nx, p.y, 10, p.isZombie)) p.x = nx;
+                        if (!this.checkCollision(p.x, ny, 10, p.isZombie)) p.y = ny;
                     }
                 }
             }
