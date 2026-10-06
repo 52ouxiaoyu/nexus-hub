@@ -92,7 +92,7 @@
         #plant-menu { position: absolute; display: none; background: rgba(46,26,12,0.92); padding: 10px; border-radius: 10px; border: 3px solid #8c6a4d; box-shadow: 0 6px 16px rgba(0,0,0,0.6); pointer-events: auto; z-index: 2000; gap: 10px; }
         .plant-option { cursor: pointer; text-align: center; color: #f5e6c8; font-size: 12px; border: 2px solid transparent; padding: 5px; border-radius: 8px; font-family: 'Kaiti SC', serif; }
         .plant-option:hover { background: rgba(247,230,161,0.18); border-color: #f7e6a1; }
-        .plant-option img { width: 50px; height: 50px; image-rendering: pixelated; margin-bottom: 5px; }
+        .plant-option img { width: 50px; height: auto; min-height: 50px; max-height: 70px; object-fit: contain; image-rendering: pixelated; margin-bottom: 5px; }
 
         /* v3.88.0 点击植物 →「升级 / 拆除」弹窗 */
         #plant-popup { position: absolute; display: none; z-index: 2400; background: rgba(46,26,12,0.95); border: 3px solid #8c6a4d; border-radius: 10px; padding: 10px 12px; pointer-events: auto; box-shadow: 0 6px 16px rgba(0,0,0,0.6); min-width: 160px; }
@@ -192,11 +192,11 @@
                     · WASD 移动 · <b>空格开关浇水</b>：<b>按一下空格开启自动浇水</b>（头顶出现 🚿 标志，不用按住），再按一下停止；每 <b>0.2 秒浇一次</b>：+1 阳光并催熟身边的小喷菇——开局 0 阳光，找到房间开始浇水才有收入<br>
                     · 点击空地 = 种植菜单（<b>植物只能种在房间里面</b>，房间外的草地不能种）；<b>点击植物 = 弹出「升级 / 拆除」面板</b>，面板上会写出升级收益（血量/产出）：<b>向日葵链和坚果链升级花普通阳光 ☀</b>（阳光菇只在你在旁边时才产阳光），<b style="color:#c79aff;">🦠孢子</b>用来买高级孢子植物和豌豆分支升级；拆除直接移除植物<br><br>
                     <b style="color:#ffe14a;">成长配方（唯一，不撞衫）</b><br>
-                    · 阳光菇(无需购买，房间自带) <span style="color:#9dff6b;">→(☀30)→ 大阳光菇 →(☀90)→ 向日葵 →(☀270)→ 双子向日葵</span>，逐级变大、产阳光更多<br>
-                    · 小喷菇(☀200 购买) 靠阳光升级：<span style="color:#9dff6b;">(☀50)→ 阳光喷菇(产孢子+阳光) →(☀150)→ 大喷菇(会喷射) →(☀450)→ 忧郁菇(强范围喷射)</span><br>
-                    · 坚果 <span style="color:#9dff6b;">→(☀40)→ 豌豆坚果(子弹跟踪·血量5000) →(☀100)→ 射手坚果(跟踪·双发·血量6500) →(☀160)→ 卷心菜坚果(投掷·血量8000) →(☀260)→ 高坚果(血量10000) →(☀400)→ 南瓜壳(血量15000)</span>，逐级变大变硬<br>
-                    · 豌豆射手三选一分支：<span style="color:#9dff6b;">双发射手→(🦠60)→机枪射手</span> / <span style="color:#9dff6b;">寒冰射手→(🦠40)→冰雪双发(减速)</span> / <span style="color:#9dff6b;">双向射手→(🦠50)→三线射手(扇形)</span><br>
-                    · <b>跟踪弹规则</b>：豌豆坚果线的子弹在 <b>260px 内自动追踪僵尸</b>，超出追踪区就变直线飞<br><br>
+                    · 阳光菇(无需购买，房间自带) <span style="color:#9dff6b;">→(☀30)→ 向日葵 →(☀90)→ 双子向日葵 →(☀270)→ 双子向日葵 Lv2 →(☀810)→ 双子向日葵 Lv3</span>，产阳光更多<br>
+                    · 小喷菇(☀200 购买) 靠阳光升级：<span style="color:#9dff6b;">(☀50)→ 大喷菇 →(☀200)→ 忧郁菇 →(☀800)→ 胆小菇 →(☀3200)→ 魅惑菇 →(☀12800)→ 磁力菇</span>，加快孢子产出<br>
+                    · 坚果(纯肉盾防御) <span style="color:#9dff6b;">→(☀80)→ 坚果 Lv2 →(☀160)→ 高坚果 →(☀400)→ 高坚果 Lv2 →(☀800)→ 南瓜头 →(☀1600)→ 南瓜头 Lv2</span>，血量极高<br>
+                    · 豌豆射手三选一分支：<span style="color:#9dff6b;">双发射手→(🦠60)→机枪射手</span> / <span style="color:#9dff6b;">寒冰射手→(🦠80)→冰瓜投手(减速)</span> / <span style="color:#9dff6b;">双向射手→(🦠80)→三线射手→(🦠150)→杨桃</span><br>
+                    · <b>原汁原味</b>：所有植物均严格遵循《植物大战僵尸》原版设定，拒绝魔改缝合怪！<br><br>
                     <b style="color:#c79aff;">🦠 孢子高级植物</b>（蘑菇系随时间产出孢子）<br>
                     · <b>地刺(🦠50)</b>：贴地陷阱，僵尸站上持续掉血，不会被啃<br>
                     · <b>眩晕菇(🦠100)</b>：每 6 秒冰冻僵尸 2 秒<br>
@@ -228,6 +228,6 @@
         </div>
     </div>
 
-    <script src="js/HauntedDorm.js?v=1791271510"></script>
+    <script src="js/HauntedDorm.js?v=1791271778"></script>
 </body>
 </html>
