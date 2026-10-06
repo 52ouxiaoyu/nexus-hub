@@ -31,7 +31,7 @@ function ok(name, cond, extra) {
   console.log('\n--- 加载与句柄 ---');
   ok('无页面异常', errors.length === 0, errors.slice(0, 3));
   const ver = await page.evaluate(() => window.__twGame && window.__twGame.VERSION);
-  ok('句柄存在且版本 v1.4.9', ver === 'v1.4.9', ver);
+  ok('句柄存在且版本 v1.4.10', ver === 'v1.4.10', ver);
   ok('初始为菜单态', await page.evaluate(() => window.__twGame.state()) === 'MENU');
   await page.screenshot({ path: OUT + '/_shot_menu.png' });
 
@@ -275,6 +275,8 @@ function ok(name, cond, extra) {
     window.TW.FX.hitstop = 0;
     g.players[i].invuln = 0;
     g.players[i].ai = false; g.players[i].idle = 0;   // 关掉 AI：本测试只验证中弹扣命逻辑（否则空闲席会被 AI 接管而躲弹）
+    g.pbullets.length = 0;                            // 清残留我方弹（上个用例的随机大招可能还在飞，会把注入的敌弹打掉）
+    g.players.forEach((p) => { p.ult = null; });      // 停掉残留大招（引力井会吸走注入的敌弹）
     const before = g.players.map((p) => p.lives);
     g.ebullets.push({ x: g.players[i].x, y: g.players[i].y, vx: 0, vy: 0, r: 5, kind: 'red', t: 0, gz: [false, false] });
     S.frame(2);
@@ -308,7 +310,7 @@ function ok(name, cond, extra) {
   }));
   ok('结算面板弹出并区分 1P / 2P 战绩', res2.ov && res2.has1p && res2.has2p, res2);
 
-  /* v1.4.9 救援：接触信标把队友拉回战场 */
+  /* v1.4.10 救援：接触信标把队友拉回战场 */
   const res3 = await page.evaluate(() => {
     const S = window.__twGame, g = S.G;
     S.start('story', true);

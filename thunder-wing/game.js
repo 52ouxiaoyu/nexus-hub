@@ -20,7 +20,7 @@
   let W = MIN_W;
   /* 战场越宽，自机速度等比补偿，避免横向机动变迟钝 */
   function fieldSpd() { return Math.min(1.25, Math.max(1, W / MIN_W)); }
-  const VERSION = 'v1.4.9';
+  const VERSION = 'v1.4.10';
 
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d', { alpha: false });
@@ -257,6 +257,10 @@
     return { x: (cx - r.left) / r.width * W, y: (cy - r.top) / r.height * H };
   }
   cv.addEventListener('pointerdown', (e) => {
+    /* v1.4.10 修复：鼠标点击不再劫持 1P。此前任何 pointerdown（含鼠标）都会把
+       touch 锁存为 true，永久禁用 1P 的键盘方向 —— 「AI 接管后按键夺回却推不动飞机」
+       的元凶。只有真实触摸 / 手写笔才启用拖动控制。 */
+    if (e.pointerType === 'mouse') return;
     touch = true; TW.Audio.init(); TW.Audio.resume();
     const p = toLogical(e.clientX, e.clientY);
     dragLast = p;
@@ -321,7 +325,7 @@
         if (u) TW.FX.text(pl.x, pl.y - 54, 'AI · ' + u.name, PCFG[pl.id].color, 13);
       }
     }
-    if (!aiDrive && !(touch && pl.id === 0)) {
+    if (!aiDrive && !(dragLast && pl.id === 0)) {   /* 仅触摸拖动进行中才让位给拖动 */
       if (held(m0.lf)) dx -= 1;
       if (held(m0.rt)) dx += 1;
       if (held(m0.up)) dy -= 1;
@@ -342,7 +346,7 @@
 
     /* 射击 */
     const wp = WEAPONS[pl.weapon];
-    const shooting = pl.firing || (touch && pl.id === 0);
+    const shooting = pl.firing || (dragLast && pl.id === 0);
     if (shooting && G.state === 'PLAYING') {
       pl.fireT--;
       if (pl.fireT <= 0) {

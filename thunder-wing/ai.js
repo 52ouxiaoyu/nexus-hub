@@ -119,23 +119,25 @@
         fx += (dx / d) * 2.6; fy += (dy / d) * 2.6;
       }
 
-      /* ---- 5. 拾取：威胁低才去拿，命比资源重要 ---- */
-      if (threat < 1.4) {
+      /* ---- 5. 拾取：闪避优先，但明显有余力时就主动去捡（v1.4.10 加强） ----
+         威胁权重 1~2.6、拾取权重 ≤1.25：弹幕密时自然让位保命，弹幕稀时坚定去拿。 */
+      if (threat < 2.0) {
         let tx = 0, ty = 0, tw = 0;
+        const VAL = { weapon: 1.25, power: 1.25, bomb: 1.1, medal: 0.75 };
         for (let i = 0; i < g.items.length; i++) {
           const it = g.items[i];
           const dx = it.x - cx, dy = it.y - cy;
           const d = Math.sqrt(dx * dx + dy * dy) || 0.001;
-          if (d > 280) continue;
-          const w = (1 - d / 280) * 0.62;
+          if (d > 340) continue;
+          const w = (1 - d / 340) * (VAL[it.kind] || 0.9);
           if (w > tw) { tw = w; tx = dx / d; ty = dy / d; }
         }
         for (let i = 0; i < g.exps.length; i++) {
           const o = g.exps[i];
           const dx = o.x - cx, dy = o.y - cy;
           const d = Math.sqrt(dx * dx + dy * dy) || 0.001;
-          if (d > 240) continue;
-          const w = (1 - d / 240) * 0.3;
+          if (d > 260) continue;
+          const w = (1 - d / 260) * 0.45;
           if (w > tw) { tw = w; tx = dx / d; ty = dy / d; }
         }
         fx += tx * tw; fy += ty * tw;
