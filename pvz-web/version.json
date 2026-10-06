@@ -1,6 +1,6 @@
 {
-  "version": "v4.0.14-修复HUD对称与浇水冲突",
+  "version": "v4.0.15-HUD对称+P2浇水键",
   "build": "2026-10-06",
-  "feature": "v3.92.1：豌豆坚果/射手坚果贴图弃用自创拼接图(Plants/Fusions/nutshooter.png),改为原版素材组装——与主游戏融合「坚果射手」同款:原版坚果身体+头顶缩小的原版豌豆射手(spawnPlant新增overlay槽位,定位对齐主游戏translate(2px,-28px)scale(0.6)按80px格换算);去掉不再需要的multiply白底混合",
-  "assetVersion": 1791288321
+  "feature": "v4.0.15：守屋大作战 HUD 左右对称与 P2 浇水键——P1/P2 HUD 结构统一为镜像等高(血条同规格160x14,P2容器补flex-direction:column修掉'长条'vs'长块',hp-track重复id修复);P2新增浇水开关(0键/小键盘0,与P1空格同机制,各自头顶🚿标志/各自+1☀);修复2P资源归属严重bug(addSun/addSpore忽略p参数,P2买植物/升级/拆除退款全扣到P1头上);技能HUD双重【M键】前缀修复;玩法说明与主菜单帮助全面纠错(P1空格实为浇水非呼出菜单/僵尸升级节奏30s-90s-150s至4级/打倒僵尸即胜无重生/卡面'挺过8波'过期文案);僵尸阵营HUD控制行动态切换为僵尸键位",
+  "assetVersion": 1791291192
 }

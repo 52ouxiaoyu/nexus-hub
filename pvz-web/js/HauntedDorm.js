@@ -163,11 +163,11 @@ class HauntedDorm {
         this.isZombieFaction = (this.faction === 'zombie');
         
         this.playerRoles = [
-            { id: 'sunflower', name: '向日葵', icon: 'assets/images/Plants/SunFlower/0.gif', skillDesc: '【M键】10秒阳光翻倍 (CD:60s)' },
-            { id: 'peashooter', name: '豌豆射手', icon: 'assets/images/Plants/Peashooter/0.gif', skillDesc: '【M键】15秒攻击翻倍 (CD:60s)', imgStyle: 'width: 120%; height: 120%; margin-left: -10%; margin-top: -10%;' },
-            { id: 'wallnut', name: '坚果', icon: 'assets/images/Plants/WallNut/0.gif', skillDesc: '【M键】免费升一级门 (CD:60s)' },
-            { id: 'chomper', name: '大嘴花', icon: 'assets/images/Plants/Chomper/0.gif', skillDesc: '【M键】强制赶跑僵尸 (CD:60s)', imgStyle: 'width: 120%; height: 120%; margin-left: -10%; margin-top: -10%;' },
-            { id: 'squash', name: '倭瓜', icon: 'assets/images/Plants/Squash/0.gif', skillDesc: '【M键】重创僵尸半血 (CD:60s)', imgStyle: 'width: 200%; height: 200%; margin-left: -50%; margin-top: -50%;' }
+            { id: 'sunflower', name: '向日葵', icon: 'assets/images/Plants/SunFlower/0.gif', skillDesc: '10秒阳光翻倍 (CD:60s)' },
+            { id: 'peashooter', name: '豌豆射手', icon: 'assets/images/Plants/Peashooter/0.gif', skillDesc: '15秒攻击翻倍 (CD:60s)', imgStyle: 'width: 120%; height: 120%; margin-left: -10%; margin-top: -10%;' },
+            { id: 'wallnut', name: '坚果', icon: 'assets/images/Plants/WallNut/0.gif', skillDesc: '免费升一级门 (CD:60s)' },
+            { id: 'chomper', name: '大嘴花', icon: 'assets/images/Plants/Chomper/0.gif', skillDesc: '强制赶跑僵尸 (CD:60s)', imgStyle: 'width: 120%; height: 120%; margin-left: -10%; margin-top: -10%;' },
+            { id: 'squash', name: '倭瓜', icon: 'assets/images/Plants/Squash/0.gif', skillDesc: '重创僵尸半血 (CD:60s)', imgStyle: 'width: 200%; height: 200%; margin-left: -50%; margin-top: -50%;' }
         ];
         
         this.playerRoleDef1 = this.playerRoles.find(r => r.id === this.role1) || this.playerRoles[1];
@@ -179,7 +179,7 @@ class HauntedDorm {
             icon: this.playerRoleDef1.icon,
             roleDef: this.playerRoleDef1,
             camX: 0, camY: 0, skillCd: 0, sunBuffT: 0, atkBuffT: 0,
-            biteT: 0, level: 1, speedBuffT: 0
+            biteT: 0, level: 1, speedBuffT: 0, waterOn: false, waterTick: 0, lastWaterTime: 0
         };
         
         if (this.gameMode === '2p') {
@@ -189,7 +189,7 @@ class HauntedDorm {
                 icon: this.playerRoleDef2.icon,
                 roleDef: this.playerRoleDef2,
                 camX: 0, camY: 0, skillCd: 0, sunBuffT: 0, atkBuffT: 0,
-                biteT: 0, level: 1, speedBuffT: 0
+                biteT: 0, level: 1, speedBuffT: 0, waterOn: false, waterTick: 0, lastWaterTime: 0
             };
             this.allPlayers = [this.player, this.player2];
         } else {
@@ -233,8 +233,6 @@ class HauntedDorm {
         this.over = false;
         this.lastFlashAt = 0;
 
-        this.lastWaterTime = 0;
-        this.waterOn = false;   // v3.92.0：开关式浇水状态
         this.menuOpen = false;
         this.menuCol = -1;
         this.menuRow = -1;
@@ -314,6 +312,9 @@ class HauntedDorm {
         this.player.el1 = document.createElement('div');
         this.player.el1.className = 'entity avatar';
         if (this.isZombieFaction) {
+            // v4.0.15：僵尸阵营的 HUD 控制行换成僵尸键位（原先是静态的植物键位文案，误导玩家）
+            const p1Ctl = document.querySelector('#hud-p1 > div');
+            if (p1Ctl) p1Ctl.innerHTML = '【僵尸 控制】移动: W/A/S/D | 技能: M（狂暴冲刺）| 咬人: 走近幸存者';
             this.player.el1.innerHTML = `<img src="assets/images/Zombies/Zombie/0.gif" style="width:150%; height:150%; transform:translate(-20%, -30%);">` +
                                         `<div class="lv-badge" style="position:absolute; top:-10px; right:-10px; background:red; color:white; border-radius:10px; padding:4px 8px; font-size:18px; z-index:2;">Lv.1</div>` +
                                         `<div style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); color:#ff5252; font-size:24px; font-weight:bold; text-shadow:1px 1px 2px black, -1px -1px 2px black; white-space:nowrap;">你 (僵尸)</div>`;
@@ -334,7 +335,11 @@ class HauntedDorm {
         this.world1.appendChild(this.player.el1);
         
         if (this.gameMode === '2p') {
-            document.getElementById('p2-hud').style.display = 'flex';
+            // v4.0.15：补 flex-direction:column——此前容器级 display:flex 让 P2 HUD 所有子元素横排成"长条"，
+            // 而 P1 HUD 是 block 竖排"长块"，这正是用户反馈的左右显示不一致的直接根源
+            const p2hud = document.getElementById('p2-hud');
+            p2hud.style.display = 'flex';
+            p2hud.style.flexDirection = 'column';
             this.player2.el1 = document.createElement('div');
             this.player2.el1.className = 'entity avatar';
             this.player2.el1.innerHTML = `<img src="${this.player2.icon}" style="${this.playerRoleDef2.imgStyle || ''}">` + 
@@ -1013,16 +1018,20 @@ class HauntedDorm {
         }
     }
 
-    addSun(n) {
-        this.player.sun = Math.max(0, this.player.sun + n);
-        document.getElementById('sun1').innerText = this.player.sun;
+    // v4.0.15：修复严重 bug——调用处传了第二参 p（双人模式 P2 购买/升级/拆除退款），旧定义却忽略它，全部扣到/加到 P1 头上
+    addSun(n, p) {
+        p = p || this.player;
+        p.sun = Math.max(0, p.sun + n);
+        const el = document.getElementById(p === this.player2 ? 'sun2' : 'sun1');
+        if (el) el.innerText = p.sun;
         this._refreshPopupCurrency();
     }
 
-    addSpore(n) {
-        this.player.spore = Math.max(0, this.player.spore + n);
-        const el = document.getElementById('spore1');
-        if (el) el.innerText = this.player.spore;
+    addSpore(n, p) {
+        p = p || this.player;
+        p.spore = Math.max(0, p.spore + n);
+        const el = document.getElementById(p === this.player2 ? 'spore2' : 'spore1');
+        if (el) el.innerText = p.spore;
         this._refreshPopupCurrency();
     }
 
@@ -1195,7 +1204,7 @@ class HauntedDorm {
     gameOver(win) {
         if (this.over) return;
         this.over = true;
-        this.setWatering(false); // v3.92.0：结算时关掉浇水标志
+        for (const p of this.allPlayers) this.setWatering(p, false); // v4.0.15：结算时关掉所有人的浇水标志
         document.getElementById('wave-announce')?.remove(); // 结算时移除残留的播报字
         this.playSfx(win ? 'winmusic.mp3' : 'losemusic.mp3', 0.6);
         this._closePopup();
@@ -1392,7 +1401,11 @@ class HauntedDorm {
                 e.preventDefault();
             }
             if ((key === ' ' || e.code === 'Space') && !e.repeat && !this.isZombieFaction) {
-                this.setWatering(!this.waterOn);
+                this.setWatering(this.player, !this.player.waterOn);
+            }
+            // v4.0.15：P2 浇水开关（0键 / 小键盘0）——此前浇水只有 P1 能用
+            if ((key === '0' || e.code === 'Numpad0') && !e.repeat && this.gameMode === '2p' && this.player2 && !this.isZombieFaction) {
+                this.setWatering(this.player2, !this.player2.waterOn);
             }
         });
         window.addEventListener('keyup', e => {
@@ -1424,15 +1437,16 @@ class HauntedDorm {
         });
     }
 
-    // ===== 浇水：每次 +1 阳光，并催熟身边所有蘑菇（同时浇水）=====
-    _water() {
-        this.addSun(1);
+    // ===== 浇水（per-player）：每次 +1 该玩家的阳光，并催熟身边所有蘑菇 =====
+    _water(p) {
+        p = p || this.player;
+        this.addSun(1, p);
         this.playSfx('plant_water.mp3', 0.4);
         let fedAny = false;
         for (const pl of this.plants) {
             if (!pl.def.feed) continue;
             const px = pl.c * 80 + 40, py = pl.r * 80 + 40;
-            if (Math.hypot(this.player.x - px, this.player.y - py) < 130) {
+            if (Math.hypot(p.x - px, p.y - py) < 130) {
                 fedAny = true;
                 pl.fed++;
                 if (pl.fed >= pl.def.feed.goal) {
@@ -1445,17 +1459,19 @@ class HauntedDorm {
             }
         }
         // v3.92.0：0.2 秒一浇，飘字节流到约 1 秒一飘（+1 ☀），避免 5 个飘字叠成一柱
-        this._waterTick = (this._waterTick || 0) + 1;
-        if (this._waterTick % 5 === 1) {
-            this._flyText(this.player.x, this.player.y - 20, fedAny ? '+1 ☀·浇水' : '+1 ☀', '#ffe14a');
+        p.waterTick = (p.waterTick || 0) + 1;
+        if (p.waterTick % 5 === 1) {
+            this._flyText(p.x, p.y - 20, fedAny ? '+1 ☀·浇水' : '+1 ☀', '#ffe14a');
         }
     }
 
-    // v3.92.0：空格开关式浇水——按一下开启持续浇水（头顶 🚿 标志），再按一下停止
-    setWatering(on) {
-        this.waterOn = !!on;
-        const badge = document.getElementById('water-badge');
-        if (badge) badge.style.display = this.waterOn ? 'block' : 'none';
+    // v3.92.0 空格开关式浇水；v4.0.15 改 per-player——P1 空格、P2 0键/小键盘0，各自头顶 🚿 标志、各自加阳光
+    setWatering(p, on) {
+        if (!p) p = this.player;
+        if (on === undefined) { on = p; p = this.player; } // 兼容旧签名 setWatering(bool)
+        p.waterOn = !!on;
+        const badge = document.getElementById(p === this.player2 ? 'water-badge2' : 'water-badge');
+        if (badge) badge.style.display = p.waterOn ? 'block' : 'none';
     }
 
     _getBfsArrays(MAX_CELLS) {
@@ -2452,11 +2468,12 @@ class HauntedDorm {
         // 移除卡墙推挤（这会导致高速贴墙时被硬挤出地图或穿墙）
         // 墙永远是实体，不需要自救穿墙
 
-        // 浇水（v3.89.0：1 秒才能浇一次——按再快也只按时间间隔计，杜绝拼手速；+1 阳光 / 催熟身边蘑菇）
-        // 浇水（v3.92.0：空格开关式——按一下持续浇水不用按住，0.2 秒一次；+1 阳光 / 催熟身边蘑菇）
-        if (this.waterOn && !this.over && time - this.lastWaterTime > 200) {
-            this.lastWaterTime = time;
-            this._water();
+        // 浇水（v4.0.15 per-player：P1 空格 / P2 0键 开关式——按一下持续浇水不用按住，0.2 秒一次；各加各的阳光）
+        for (const p of this.allPlayers) {
+            if (p.waterOn && !this.over && time - (p.lastWaterTime || 0) > 200) {
+                p.lastWaterTime = time;
+                this._water(p);
+            }
         }
         // 身边蘑菇提示条亮起（同时浇水提示）
         for (const pl of this.plants) {
