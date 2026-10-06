@@ -127,6 +127,70 @@
     glowDot(g, 0, -2, 5, 'rgba(255,120,190,0.9)', 'rgba(255,120,190,0)');
   });
 
+  /* ---------------- v1.4.4 新敌机 ----------------
+     外星 / 高科技，但保持「会飞的东西长得像飞行器」的合理性：
+     ufo=折跃飞碟（经典外星碟形）、sniper=隐形涂装激光狙击机、
+     launcher=双联挂架导弹无人机、splitter=外星分裂体（有机细胞）。 */
+  TW.SPR.ufo = sp(40, 30, (g, w, h) => {
+    g.translate(w / 2, h / 2);
+    // 碟身（椭圆压扁 + 边缘灯）
+    g.fillStyle = '#2a1038'; g.strokeStyle = '#d86bff'; g.lineWidth = 2;
+    g.beginPath(); g.ellipse(0, 2, 17, 7, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+    // 顶部圆顶（外星座舱）
+    g.fillStyle = '#4d2060'; g.strokeStyle = '#ff9ae8'; g.lineWidth = 1.6;
+    g.beginPath(); g.arc(0, -2, 8, Math.PI, 0); g.closePath(); g.fill(); g.stroke();
+    // 碟缘灯组
+    [-11, 0, 11].forEach((x, i) => glowDot(g, x, 5, 2.6, 'rgba(255,140,240,' + (i === 1 ? 0.95 : 0.7) + ')', 'rgba(255,140,240,0)'));
+    // 底部牵引光环
+    g.strokeStyle = 'rgba(216,107,255,0.5)'; g.lineWidth = 1;
+    g.beginPath(); g.ellipse(0, 8, 9, 2.5, 0, 0, Math.PI * 2); g.stroke();
+  });
+
+  TW.SPR.sniper = sp(36, 36, (g, w, h) => {
+    g.translate(w / 2, h / 2); g.scale(1, -1);
+    // 隐身棱形机身（暗红近黑，边缘锐利）
+    poly(g, [[0, 17], [5, 4], [12, -10], [4, -16], [0, -12], [-4, -16], [-12, -10], [-5, 4]],
+      '#260a0e', '#ff5e6e', 1.8);
+    // 狙击镜（白热镜头，一眼认出「这台会射激光」）
+    glowDot(g, 0, 8, 4.5, 'rgba(255,240,235,0.98)', 'rgba(255,94,110,0.35)');
+    poly(g, [[-2, 3], [2, 3], [2, 14], [-2, 14]], '#3a1016', '#ff8a94', 1.2);
+    // 侧鳍散热片
+    g.strokeStyle = '#c23a48'; g.lineWidth = 1.6;
+    g.beginPath(); g.moveTo(-10, -6); g.lineTo(-4, -2); g.moveTo(10, -6); g.lineTo(4, -2); g.stroke();
+  });
+
+  TW.SPR.launcher = sp(44, 36, (g, w, h) => {
+    g.translate(w / 2, h / 2); g.scale(1, -1);
+    // 机体
+    poly(g, [[0, 14], [8, 8], [16, -2], [8, -12], [0, -15], [-8, -12], [-16, -2], [-8, 8]],
+      '#2e1808', '#ffa63c', 1.8);
+    // 双联导弹挂架（左右斜置，弹头朝下）
+    [[-9, -0.5], [9, 0.5]].forEach((p) => {
+      g.save(); g.translate(p[0], 4); g.rotate(p[1]);
+      poly(g, [[-4, -6], [4, -6], [4, 10], [-4, 10]], '#4d2c0e', '#ffd08a', 1.3);
+      poly(g, [[-2.5, 10], [2.5, 10], [0, 15]], '#ff7a34', '#ffd08a', 1);
+      g.restore();
+    });
+    glowDot(g, 0, -4, 4, 'rgba(255,170,70,0.9)', 'rgba(255,170,70,0)');
+  });
+
+  TW.SPR.splitter = sp(34, 34, (g, w, h) => {
+    g.translate(w / 2, h / 2);
+    // 外星细胞：半透明胞体 + 波动膜 + 细胞核
+    g.fillStyle = 'rgba(80,20,20,0.88)'; g.strokeStyle = '#ff7a4a'; g.lineWidth = 2;
+    g.beginPath(); g.arc(0, 0, 13, 0, Math.PI * 2); g.fill(); g.stroke();
+    // 波动膜（伪足）
+    g.strokeStyle = '#ff9a5c'; g.lineWidth = 1.5;
+    for (let i = 0; i < 6; i++) {
+      const a = (Math.PI * 2 / 6) * i + 0.4;
+      g.beginPath(); g.moveTo(Math.cos(a) * 13, Math.sin(a) * 13);
+      g.quadraticCurveTo(Math.cos(a + 0.4) * 17, Math.sin(a + 0.4) * 17, Math.cos(a) * 15.5, Math.sin(a) * 15.5);
+      g.stroke();
+    }
+    glowDot(g, 0, 0, 5.5, 'rgba(255,190,140,0.95)', 'rgba(255,120,70,0.15)');
+    g.fillStyle = '#ffd0a8'; g.beginPath(); g.arc(3, -2, 2, 0, Math.PI * 2); g.fill();
+  });
+
   /* ---------------- Boss（5 关各异） ---------------- */
   function bossBase(g, hull, edge, accent, variant) {
     g.translate(90, 65);
@@ -197,6 +261,7 @@
     vulcan: bullet(8, 16, '#63dcff', 'rgba(70,200,255,0.42)'),
     laser: bullet(10, 30, '#5fb0ff', 'rgba(80,170,255,0.45)'),
     missile: bullet(10, 16, '#5ce8b4', 'rgba(92,232,180,0.42)'),
+    rail: bullet(9, 34, '#cfe0ff', 'rgba(170,200,255,0.5)'),
     wing: bullet(7, 13, '#8ceaff', 'rgba(110,220,255,0.38)'),
     charge: bullet(16, 28, '#bff6ff', 'rgba(140,235,255,0.6)'),
   };
@@ -229,6 +294,7 @@
   TW.BULLET.purple = hazard(32, '#c15cff', 'rgba(193,92,255,0.45)', 5);  // 五芒：环形
   TW.BULLET.green = hazard(30, '#ff7a34', 'rgba(255,122,52,0.5)', 2);   // 菱形：螺旋（原绿色=友好语义，改为橙红）
   TW.BULLET.big = hazard(48, '#ff4a26', 'rgba(255,74,38,0.5)', 6);       // 六芒大弹：重型
+  TW.BULLET.missileH = hazard(34, '#ff8a3c', 'rgba(255,138,60,0.5)', 3); // 三芒：敌方追踪导弹
 
   /* ---------------- 受击白闪剪影 ---------------- */
   function whiten(src) {

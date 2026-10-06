@@ -31,7 +31,7 @@ function ok(name, cond, extra) {
   console.log('\n--- 加载与句柄 ---');
   ok('无页面异常', errors.length === 0, errors.slice(0, 3));
   const ver = await page.evaluate(() => window.__twGame && window.__twGame.VERSION);
-  ok('句柄存在且版本 v1.4.3', ver === 'v1.4.3', ver);
+  ok('句柄存在且版本 v1.4.4', ver === 'v1.4.4', ver);
   ok('初始为菜单态', await page.evaluate(() => window.__twGame.state()) === 'MENU');
   await page.screenshot({ path: OUT + '/_shot_menu.png' });
 

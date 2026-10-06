@@ -50,7 +50,7 @@
           const w = Math.pow(1 - Math.min(1, d / R_DANGER), 2)
             * (0.55 + Math.min(1, app / 4) * 0.6) * (1 - s * 0.22);
           fx += (dx / d) * w; fy += (dy / d) * w;
-          threat += w;
+          threat += w * (b.home ? 1.5 : 1);   /* 追踪导弹更黏人，威胁加成 */
           if (s === 0 && d < nearD) { nearD = d; nearX = dx / d; nearY = dy / d; }
         }
       }
@@ -89,6 +89,26 @@
         const dy = cy - bm.y;
         if (Math.abs(dy) < 95) fy += (dy >= 0 ? 1 : -1) * 2.4;
         fx += clamp((bm.gapX - cx) / 90, -1, 1) * 2.2;
+      }
+
+      /* ---- 4.5 狙击机激光束：预警/发射期沿垂直线方向推开（v1.4.4） ---- */
+      for (let i = 0; i < g.enemies.length; i++) {
+        const e = g.enemies[i];
+        if (!e.snip) continue;
+        const ca = Math.cos(e.snip.ang), sa = Math.sin(e.snip.ang);
+        const dx = cx - e.x, dy = cy - e.y;
+        const proj = dx * ca + dy * sa;
+        if (proj <= 0) continue;
+        const perp = dx * sa - dy * ca;          /* 带符号垂距 */
+        const ad = Math.abs(perp);
+        const R = e.snip.ph === 'fire' ? 60 : 46;
+        if (ad < R) {
+          /* 垂直于光束方向推离，发射期权重更高 */
+          const w = (1 - ad / R) * (e.snip.ph === 'fire' ? 2.6 : 1.9);
+          fx += -sa * Math.sign(perp) * w;
+          fy += ca * Math.sign(perp) * w;
+          threat += w * 0.5;
+        }
       }
 
       /* ---- 5. 拾取：威胁低才去拿，命比资源重要 ---- */

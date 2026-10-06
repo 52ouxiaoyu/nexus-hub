@@ -25,6 +25,12 @@
     tank: { spr: 'tank', hp: 14, r: 15, score: 200, fire: 'aimed', every: 95 },
     turret: { spr: 'turret', hp: 15, r: 15, score: 250, fire: 'spread3', every: 80 },
     elite: { spr: 'elite', hp: 95, r: 27, score: 2500, fire: 'ring12', every: 78 },
+    /* v1.4.4 新敌机：更聪明、更有想象力的外星 / 高科技单位 */
+    ufo: { spr: 'ufo', hp: 10, r: 15, score: 350, fire: 'ring5', every: 105 },        // 折跃飞碟：瞬移到玩家头上
+    sniper: { spr: 'sniper', hp: 12, r: 14, score: 400, fire: 'none', every: 170 },   // 激光狙击机：锁定→预警→光束
+    launcher: { spr: 'launcher', hp: 16, r: 15, score: 380, fire: 'missile2', every: 175 }, // 挂弹机：追踪导弹
+    splitter: { spr: 'splitter', hp: 9, r: 14, score: 300, fire: 'aimed', every: 130 },     // 外星分裂体：死亡一分为二
+    mini: { spr: 'splitter', hp: 2, r: 8, score: 80, fire: 'none', every: 999 },            // 分裂体子细胞（高速冲撞）
   };
   TW.ED = ED;
 
@@ -68,7 +74,8 @@
       amp: opt.amp || 60, w: opt.w || 0.045, ty: opt.ty || 180,
       fire: opt.fire || d.fire, every: opt.every || d.every, fireT: opt.delay || (40 + Math.random() * 50),
       flash: 0, dead: false, item: opt.item || null, ground: opt.ground || false,
-      boss: false,
+      boss: false, alpha: 1, fade: 0, warpCd: 130, snip: null, snipCd: 55,
+      isMini: !!opt.isMini,
     };
     G().enemies.push(e);
     return e;
@@ -138,11 +145,51 @@
         if (e.y < e.ty) { e.y += e.vy * slow; if (e.y >= e.ty) e.y = e.ty; }
         else { e.x = e.x0 + Math.sin(e.t * 0.028) * Math.min(96, 70 * W / RW); e.y += 0.12 * slow; }
         break;
+      case 'ufo':
+        /* 折跃飞碟：到位后周期性瞬移到玩家侧翼上空（淡出→挪位→淡入） */
+        if (e.y < e.ty) { e.y += e.vy * slow; }
+        else {
+          e.x = e.x0 + Math.sin(e.t * 0.03) * 34;
+          if (e.fade === -1) {
+            e.alpha -= 0.09 * slow;
+            if (e.alpha <= 0) {
+              e.alpha = 0;
+              e.x0 = Math.max(40, Math.min(W - 40, tp.x + (Math.random() < 0.5 ? -1 : 1) * (60 + Math.random() * 50)));
+              e.x = e.x0; e.y = e.ty + (Math.random() * 40 - 20);
+              if (G().sfx) TW.Audio.tone(880, 0.08, 'sine', 0.04, 1400);
+              e.fade = 1;
+            }
+          } else if (e.fade === 1) {
+            e.alpha += 0.09 * slow;
+            if (e.alpha >= 1) { e.alpha = 1; e.fade = 0; e.warpCd = 130; }
+          } else {
+            e.warpCd -= slow;
+            if (e.warpCd <= 0) e.fade = -1;
+          }
+        }
+        break;
       case 'arc':
         e.y += e.vy * slow; e.x += e.vx * slow; e.vx *= 0.995; break;
       default:
         e.y += e.vy * slow; e.x += e.vx * slow;
     }
+
+    /* 激光狙击机状态机：锁定（预警线跟随玩家）→ 冻结角度射出光束 → 冷却 */
+    if (e.type === 'sniper') {
+      if (!e.snip && e.y >= e.ty - 2) {
+        e.snipCd -= slow;
+        if (e.snipCd <= 0) { e.snip = { ph: 'lock', t: 0, ang: aimAt(e.x, e.y) }; if (G().sfx) TW.Audio.tone(520, 0.1, 'sawtooth', 0.035, 760); }
+      } else if (e.snip) {
+        e.snip.t += slow;
+        if (e.snip.ph === 'lock') {
+          e.snip.ang = aimAt(e.x, e.y);           // 锁定期预警线持续追踪玩家
+          if (e.snip.t >= 46) { e.snip.ph = 'fire'; e.snip.t = 0; if (G().sfx) TW.Audio.laser(); }
+        } else if (e.snip.t >= 15) {
+          e.snip = null; e.snipCd = e.every;
+        }
+      }
+    }
+
     if (e.x < -60 || e.x > W + 60 || e.y > H + 70 || e.y < -140) { e.dead = true; e.escaped = true; return; }
 
     /* 开火 */
@@ -155,6 +202,17 @@
     }
   };
 
+  /* 敌方追踪导弹：曲线逼近玩家，飞行约 5 秒后燃料耗尽改直线 */
+  TW.enemyMissile = function (x, y, ang, sp) {
+    const g = G();
+    if (g.ebullets.length > 420) return;
+    g.ebullets.push({
+      x: x, y: y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+      r: 5, kind: 'missileH', t: 0, grazed: false, warn: 0,
+      home: true, turn: 0.032, fuel: 300,
+    });
+  };
+
   function fire(e) {
     const a0 = aimAt(e.x, e.y);
     switch (e.fire) {
@@ -164,6 +222,8 @@
         for (let i = -1; i <= 1; i++) TW.enemyShot(e.x, e.y + 10, a0 + i * 0.22, 2.5, 'amber'); break;
       case 'spread5':
         for (let i = -2; i <= 2; i++) TW.enemyShot(e.x, e.y + 10, a0 + i * 0.18, 2.4, 'magenta'); break;
+      case 'ring5':
+        for (let i = 0; i < 5; i++) TW.enemyShot(e.x, e.y, (Math.PI * 2 / 5) * i + e.t * 0.02, 2.3, 'purple'); break;
       case 'ring8':
         for (let i = 0; i < 8; i++) TW.enemyShot(e.x, e.y, (Math.PI * 2 / 8) * i + e.t * 0.01, 2.2, 'purple'); break;
       case 'ring12':
@@ -171,11 +231,43 @@
       case 'bomb':
         TW.enemyShot(e.x - 12, e.y + 14, Math.PI / 2, 1.7, 'big');
         TW.enemyShot(e.x + 12, e.y + 14, Math.PI / 2, 1.7, 'big'); break;
+      case 'missile2':
+        TW.enemyMissile(e.x - 9, e.y + 12, a0 - 0.5, 1.7);
+        TW.enemyMissile(e.x + 9, e.y + 12, a0 + 0.5, 1.7); break;
       case 'none': break;
       default: break;
     }
     if (G().sfx) TW.Audio.tone(300, 0.04, 'square', 0.03, 200);
   }
+
+  /* 狙击机预警线 / 激光束的绘制（game.js render 在敌机层之后调用） */
+  TW.drawEnemyFx = function (ctx) {
+    const g = G();
+    const en = (g && g.enemies) || [];
+    for (let i = 0; i < en.length; i++) {
+      const e = en[i];
+      if (!e || e.dead || !e.snip) continue;
+      const s = e.snip, len = 950;
+      const ex = e.x + Math.cos(s.ang) * len, ey = e.y + Math.sin(s.ang) * len;
+      ctx.save();
+      if (s.ph === 'lock') {
+        /* 锁定期：闪烁红色虚线预警 */
+        ctx.globalAlpha = (s.t % 10 < 5) ? 0.55 : 0.22;
+        ctx.strokeStyle = '#ff5e6e'; ctx.lineWidth = 1.2; ctx.setLineDash([6, 8]);
+        ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(ex, ey); ctx.stroke();
+      } else {
+        /* 发射期：橙红宽光束 + 白热芯，随时间收窄 */
+        const k = s.t / 15;
+        ctx.globalAlpha = 1 - k * 0.3;
+        ctx.strokeStyle = '#ff8a5c';
+        ctx.lineWidth = 3 + 9 * (1 - Math.abs(k - 0.5) * 2);
+        ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(ex, ey); ctx.stroke();
+        ctx.strokeStyle = '#fff6ee'; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(ex, ey); ctx.stroke();
+      }
+      ctx.restore();
+    }
+  };
 
   /* ==================== 关卡脚本 ==================== */
   function S(t, fn) { return { t: t, fn: fn }; }
@@ -197,7 +289,9 @@
         S(1560, () => F.ground('tank', 4, 55, { item: 'bomb' })),
         S(1760, () => F.sine('fighter', 5, X(90), X(75), 2.2)),
         S(1960, () => { F.col('drone', 5, X(150), 20); F.col('drone', 5, X(330), 20); }),
+        S(2140, () => F.vee('splitter', 3, X(240), X(70), 1.4)),                       // 首见：分裂体
         S(2180, () => F.hover('gunship', 2, [X(140), X(340)], 170, { item: 'power' })),
+        S(2400, () => F.hover('ufo', 1, [X(240)], 150, {})),                            // 首见：折跃飞碟
         S(2480, () => F.ground('tank', 4, 50)),
         S(2700, () => F.line('fighter', 6, X(70), X(68), 2.0, { item: 'medal' })),
       ],
@@ -218,7 +312,9 @@
         S(1420, () => F.hover('gunship', 3, [X(90), X(240), X(390)], 160, { item: 'power' })),
         S(1720, () => F.vee('fighter', 7, X(240), X(52), 2.4)),
         S(1920, () => F.ground('tank', 5, 48, { item: 'bomb' })),
+        S(2040, () => F.hover('sniper', 2, [X(120), X(360)], 210, {})),                 // 首见：激光狙击机
         S(2140, () => F.turret([X(80), X(180), X(300), X(400)], 230)),
+        S(2320, () => F.col('launcher', 3, X(240), 30, { pat: 'hover', ty: 150 })),     // 首见：导弹挂弹机
         S(2440, () => F.line('bomber', 2, X(150), X(180), 1.3, { item: 'power', fire: 'bomb' })),
         S(2700, () => F.sine('fighter', 6, X(70), X(70), 2.5)),
         S(2900, () => { F.col('drone', 6, X(100), 16); F.col('drone', 6, X(380), 16); F.dive('fighter', 4, -1, 24); }),
@@ -242,6 +338,7 @@
         S(1960, () => F.col('drone', 8, X(140), 14, { pat: 'sine', amp: 70 })),
         S(2140, () => F.col('drone', 8, X(340), 14, { pat: 'sine', amp: 70 })),
         S(2360, () => F.ground('tank', 6, 44, { item: 'bomb' })),
+        S(2480, () => { F.hover('ufo', 2, [X(130), X(350)], 140, {}); F.hover('sniper', 1, [X(240)], 190, {}); }),
         S(2620, () => F.line('bomber', 3, X(110), X(130), 1.5, { item: 'medal' })),
         S(2880, () => F.turret([X(70), X(170), X(310), X(410)], 240, { fire: 'spread5' })),
         S(3150, () => F.vee('fighter', 9, X(240), X(44), 2.7)),
@@ -265,6 +362,7 @@
         S(1960, () => F.sine('fighter', 8, X(60), X(55), 2.8)),
         S(2200, () => F.vee('fighter', 9, X(240), X(46), 2.8, { item: 'medal' })),
         S(2460, () => F.ground('tank', 7, 40, { item: 'bomb' })),
+        S(2560, () => { F.hover('launcher', 2, [X(150), X(330)], 140, {}); F.hover('ufo', 1, [X(240)], 110, {}); }),
         S(2740, () => F.hover('gunship', 4, [X(90), X(190), X(290), X(390)], 140, { fire: 'ring12' })),
         S(3060, () => F.line('bomber', 4, X(70), X(115), 1.6, { item: 'power' })),
       ],
@@ -286,7 +384,8 @@
         S(1980, () => F.sine('fighter', 9, X(55), X(48), 3.0)),
         S(2260, () => F.line('bomber', 4, X(90), X(110), 1.7, { item: 'bomb' })),
         S(2540, () => F.hover('gunship', 5, [X(60), X(150), X(240), X(330), X(420)], 140, { fire: 'ring12', item: 'medal' })),
-        S(2860, () => F.vee('fighter', 11, X(240), X(40), 3.0)),
+        S(2700, () => { F.hover('sniper', 2, [X(110), X(370)], 170, {}); F.hover('launcher', 2, [X(200), X(280)], 120, {}); }),
+        S(2860, () => F.vee('splitter', 5, X(240), X(60), 1.6)),
         S(3120, () => F.ground('tank', 8, 34, { item: 'power' })),
       ],
       len: 3400,
@@ -380,9 +479,10 @@
       for (let i = 0; i < n; i++) TW.enemyShot(b.x, b.y, b.t * 0.11 * dir + (Math.PI * 2 / n) * i, sp, kind || 'green');
     },
     homing(b, n) {
+      /* Boss 版追踪导弹：真正的曲线导弹（v1.4.4 与杂兵挂弹机同款武器） */
       for (let i = 0; i < n; i++) {
-        const a = aimAt(b.x, b.y) + (i - (n - 1) / 2) * 0.3;
-        TW.enemyShot(b.x, b.y + 20, a, 2.0, 'big');
+        const a = aimAt(b.x, b.y) + (i - (n - 1) / 2) * 0.5;
+        TW.enemyMissile(b.x + (i - (n - 1) / 2) * 22, b.y + 20, a, 2.0);
       }
     },
     laser(b) {

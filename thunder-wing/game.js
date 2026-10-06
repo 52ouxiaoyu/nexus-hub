@@ -19,7 +19,7 @@
   let W = MIN_W;
   /* 战场越宽，自机速度等比补偿，避免横向机动变迟钝 */
   function fieldSpd() { return Math.min(1.25, Math.max(1, W / MIN_W)); }
-  const VERSION = 'v1.4.3';
+  const VERSION = 'v1.4.4';
 
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d', { alpha: false });
@@ -42,6 +42,7 @@
     { name: '火神炮', en: 'VULCAN', spr: 'vulcan', dmg: 2, interval: 6, color: '#7fe8ff' },
     { name: '激光炮', en: 'LASER', spr: 'laser', dmg: 7, interval: 10, color: '#5fb0ff', pierce: 2 },
     { name: '追踪导弹', en: 'MISSILE', spr: 'missile', dmg: 5, interval: 12, color: '#5ce8b4', homing: true },
+    { name: '磁轨炮', en: 'RAIL', spr: 'rail', dmg: 9, interval: 17, color: '#b8c8ff', pierce: 4 },
   ];
   TW.WEAPONS = WEAPONS;
 
@@ -424,11 +425,18 @@
       for (let i = 0; i < n; i++) {
         addBullet(pl, pl.x + (i - (n - 1) / 2) * sep, pl.y - 16, ang, 15, dmg, wp.spr, 2 + pc, hom);
       }
-    } else {
+    } else if (pl.weapon === 2) {
       const n = [2, 2, 3, 4, 5][lv - 1] + twin;
       for (let i = 0; i < n; i++) {
         const off = (i - (n - 1) / 2) * 0.34;
         addBullet(pl, pl.x, pl.y - 12, ang + off, 7.5, dmg, wp.spr, pc, true);
+      }
+    } else {
+      /* 磁轨炮：低速高伤贯穿，弹道笔直穿透整列敌人 */
+      const n = [1, 1, 2, 2, 3][lv - 1] + twin;
+      for (let i = 0; i < n; i++) {
+        const off = (i - (n - 1) / 2) * 0.1;
+        addBullet(pl, pl.x, pl.y - 14, ang + off, 18, dmg, wp.spr, 4 + pc, hom);
       }
     }
     /* 僚机：火力 3 级起 1 对，词条可增编到 3 对 */
@@ -441,7 +449,7 @@
         addBullet(pl, pl.x + sp2, pl.y + 2, ang + wa, 10, 1, 'wing', pc);
       }
     }
-    if (G.sfx) (pl.weapon === 1 ? TW.Audio.laser() : pl.weapon === 2 ? TW.Audio.missile() : TW.Audio.shot());
+    if (G.sfx) ((pl.weapon === 1 || pl.weapon === 3) ? TW.Audio.laser() : pl.weapon === 2 ? TW.Audio.missile() : TW.Audio.shot());
   }
 
   function addBullet(pl, x, y, ang, sp, dmg, kind, pierce, homing) {
@@ -450,9 +458,9 @@
       x: x, y: y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
       dmg: dmg, kind: kind, pierce: pierce || 0, homing: !!homing, hit: [], t: 0,
       owner: pl ? pl.id : 0,
-      w: kind === 'laser' ? 10 : (kind === 'charge' ? 16 : (kind === 'wing' ? 7 : 8)),
-      h: kind === 'laser' ? 30 : (kind === 'charge' ? 28 : (kind === 'wing' ? 13 : 16)),
-      r: kind === 'laser' ? 6 : 5,
+      w: kind === 'laser' ? 10 : (kind === 'charge' ? 16 : (kind === 'wing' ? 7 : (kind === 'rail' ? 9 : 8))),
+      h: kind === 'laser' ? 30 : (kind === 'charge' ? 28 : (kind === 'wing' ? 13 : (kind === 'rail' ? 34 : 16))),
+      r: (kind === 'laser' || kind === 'rail') ? 6 : 5,
     });
   }
 
@@ -463,6 +471,10 @@
       for (let i = -1; i <= 1; i++) addBullet(pl, pl.x, pl.y - 18, -Math.PI / 2 + i * 0.13, 13, 3, 'charge', 1);
     } else if (pl.weapon === 1) {
       for (let i = -1; i <= 1; i++) addBullet(pl, pl.x + i * 14, pl.y - 18, -Math.PI / 2, 17, 9, 'charge', 6);
+    } else if (pl.weapon === 3) {
+      /* 磁轨炮蓄力：一发全功率贯穿轨道 */
+      addBullet(pl, pl.x, pl.y - 18, -Math.PI / 2, 22, 14, 'charge', 9);
+      addBullet(pl, pl.x, pl.y - 18, -Math.PI / 2, 20, 8, 'rail', 6);
     } else {
       for (let i = 0; i < 5; i++) addBullet(pl, pl.x, pl.y - 14, -Math.PI / 2 + (i - 2) * 0.3, 9, 4, 'charge', 0, true);
     }
@@ -473,16 +485,16 @@
   TW.dropItem = function (x, y, kind) {
     if (kind === 'weapon') {
       if (G.two) {
-        // 双人：三种武器各掉一个，两人各取所需
-        const base = Math.floor(Math.random() * 3);
+        // 双人：从 4 种武器里随机连掉 3 种（磁轨炮加入轮换池）
+        const base = Math.floor(Math.random() * 4);
         for (let i = 0; i < 3; i++) {
-          G.items.push({ x: x + (i - 1) * 22, y: y, vy: 1.5, vx: 0, kind: 'weapon', w: (base + i) % 3, t: 0 });
+          G.items.push({ x: x + (i - 1) * 22, y: y, vy: 1.5, vx: 0, kind: 'weapon', w: (base + i) % 4, t: 0 });
         }
         return;
       }
       const cur = G.players[0] ? G.players[0].weapon : 0;
       let w = cur;
-      while (w === cur) w = Math.floor(Math.random() * 3);
+      while (w === cur) w = Math.floor(Math.random() * 4);
       G.items.push({ x: x, y: y, vy: 1.5, vx: 0, kind: 'weapon', w: w, t: 0 });
       return;
     }
@@ -561,6 +573,12 @@
   function killEnemy(e, pl) {
     if (e.dead) return;
     e.dead = true;
+    /* 外星分裂体：死亡一分为二，子细胞高速冲撞（v1.4.4） */
+    if (e.type === 'splitter' && !e.isMini) {
+      for (let k = -1; k <= 1; k += 2) {
+        TW.spawn('mini', e.x + k * 14, e.y, { vy: 2.8, vx: k * 1.2, fire: 'none', isMini: true });
+      }
+    }
     TW.FX.boom(e.x, e.y, e.type === 'bomber' || e.type === 'gunship' ? 1.7 : 1, '#ffb04a');
     TW.Audio.explode();
     G.kills++;
@@ -745,6 +763,20 @@
       }
     }
 
+    /* 狙击机激光束 → 玩家（发射期 15 帧内沿线判定） */
+    for (let m = 0; m < G.enemies.length; m++) {
+      const en = G.enemies[m];
+      if (!en.snip || en.snip.ph !== 'fire') continue;
+      const ca = Math.cos(en.snip.ang), sa = Math.sin(en.snip.ang);
+      for (let k = 0; k < G.players.length; k++) {
+        const pl = G.players[k];
+        if (pl.out || pl.dead || pl.invuln > 0) continue;
+        const dx = pl.x - en.x, dy = pl.y - en.y;
+        const proj = dx * ca + dy * sa;
+        if (proj > 0 && Math.abs(dx * sa - dy * ca) < pl.r * 0.7 + 5) { playerDie(pl); break; }
+      }
+    }
+
     /* 敌弹 → 玩家（逐在多玩家身上独立判定） */
     const es = G.enemySlow > 0 ? (1 / 3) : 1;   // 时空凝滞：敌弹降到 1/3 速
     for (let i = G.ebullets.length - 1; i >= 0; i--) {
@@ -752,6 +784,28 @@
       if (!b) break;   // 玩家阵亡会清屏，后续索引已失效
       b.t++;
       b.x += b.vx * es; b.y += b.vy * es;
+      /* 敌方追踪导弹：限速转向逼近最近玩家，燃料烧尽改直线（v1.4.4） */
+      if (b.home) {
+        if (b.fuel > 0) {
+          b.fuel -= es;
+          let tp2 = null, bd2 = Infinity;
+          for (let j = 0; j < G.players.length; j++) {
+            const p2 = G.players[j];
+            if (p2.out || p2.dead) continue;
+            const dd = Math.hypot(p2.x - b.x, p2.y - b.y);
+            if (dd < bd2) { bd2 = dd; tp2 = p2; }
+          }
+          if (tp2) {
+            const cur = Math.atan2(b.vy, b.vx);
+            let diff = Math.atan2(tp2.y - b.y, tp2.x - b.x) - cur;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            const turn = Math.max(-b.turn * es, Math.min(b.turn * es, diff));
+            const sp2 = Math.min(3.4, Math.hypot(b.vx, b.vy) + 0.018 * es);
+            b.vx = Math.cos(cur + turn) * sp2; b.vy = Math.sin(cur + turn) * sp2;
+          }
+        } else b.home = false;
+      }
       if (b.y < -40 || b.y > H + 40 || b.x < -40 || b.x > W + 40) { G.ebullets.splice(i, 1); continue; }
       if (!b.gz) b.gz = [false, false];
       let gone = false;
@@ -1085,13 +1139,18 @@
           ctx.fillRect(e.x + pt.ox - 14, e.y + pt.oy - 20, 28 * (pt.hp / pt.maxhp), 3);
         }
       } else {
+        if (e.alpha !== undefined && e.alpha < 1) ctx.globalAlpha = e.alpha;   // 折跃飞碟淡入淡出
         drawSpr(sprImg(e.spr), e.x, e.y, e.r * 2.6, e.r * 2.6, 0, e.flash > 0, sprWhite(e.spr));
+        if (e.alpha !== undefined && e.alpha < 1) ctx.globalAlpha = 1;
         if (e.hp < e.maxhp && e.maxhp > 10) {
           ctx.fillStyle = 'rgba(255,90,110,0.8)';
           ctx.fillRect(e.x - 14, e.y - e.r - 8, 28 * (e.hp / e.maxhp), 2.5);
         }
       }
     }
+
+    /* 狙击机预警线 / 激光束（叠在敌机层之上） */
+    if (TW.drawEnemyFx) TW.drawEnemyFx(ctx);
 
     /* 我方子弹 */
     for (let i = 0; i < G.pbullets.length; i++) {
