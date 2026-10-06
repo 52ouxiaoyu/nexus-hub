@@ -1050,7 +1050,7 @@ class HauntedDorm {
                 if (this.player.skillCd > 0) {
                     skillEl.innerHTML = `<span style="color:#aaa;"><s>${this.player.roleDef.skillDesc}</s> (CD: ${Math.ceil(this.player.skillCd)}s)</span>`;
                 } else {
-                    skillEl.innerHTML = `<span style="color:#0f0;">${this.player.roleDef.skillDesc}</span>`;
+                    skillEl.innerHTML = `<span style="color:#0f0;">【M键】${this.player.roleDef.skillDesc}</span>`;
                 }
             }
         }
@@ -1063,9 +1063,9 @@ class HauntedDorm {
             const skillEl2 = document.getElementById('skill-hud2');
             if (skillEl2 && this.player2.roleDef) {
                 if (this.player2.skillCd > 0) {
-                    skillEl2.innerHTML = `<span style="color:#aaa;"><s>被动技能自动生效中</s> (CD: ${Math.ceil(this.player2.skillCd)}s)</span>`;
+                    skillEl2.innerHTML = `<span style="color:#aaa;"><s>${this.player2.roleDef.skillDesc}</s> (CD: ${Math.ceil(this.player2.skillCd)}s)</span>`;
                 } else {
-                    skillEl2.innerHTML = `<span style="color:#0f0;">${this.player2.roleDef.skillDesc}</span>`;
+                    skillEl2.innerHTML = `<span style="color:#0f0;">【/键】${this.player2.roleDef.skillDesc}</span>`;
                 }
             }
         }
@@ -1076,6 +1076,15 @@ class HauntedDorm {
         const pct = Math.max(0, p.hp / p.maxHp * 100);
         document.getElementById('hp-fill').style.width = pct + '%';
         document.getElementById('hp-num').innerText = Math.max(0, Math.ceil(p.hp));
+        
+        if (this.gameMode === '2p' && this.player2) {
+            const p2 = this.player2;
+            const pct2 = Math.max(0, p2.hp / p2.maxHp * 100);
+            const fill2 = document.getElementById('hp-fill2');
+            if (fill2) fill2.style.width = pct2 + '%';
+            const num2 = document.getElementById('hp-num2');
+            if (num2) num2.innerText = Math.max(0, Math.ceil(p2.hp));
+        }
     }
 
     // 受击红闪（节流）
@@ -1353,7 +1362,10 @@ class HauntedDorm {
                 this.keysJustPressed[e.code] = true;
             }
             if (key === 'm' && !e.repeat && this.player.skillCd <= 0) {
-                this._useSkill();
+                this._useSkill(this.player);
+            }
+            if ((key === '/' || key === '3' || key === 'pagedown') && !e.repeat && this.gameMode === '2p' && this.player2 && this.player2.skillCd <= 0) {
+                this._useSkill(this.player2);
             }
         });
         window.addEventListener('keyup', e => {
@@ -1537,7 +1549,7 @@ class HauntedDorm {
     // ===== 通用弹道 =====
     _firePea(px, py, angle, dmg, opts = {}) {
         let finalDmg = dmg;
-        if (opts.owner === this.player && this.player.atkBuffT > 0) finalDmg *= 2;
+        if (opts.owner && opts.owner.atkBuffT > 0) finalDmg *= 2;
         dmg = finalDmg;
         const el = document.createElement('div');
         el.className = 'entity';
@@ -1738,7 +1750,7 @@ class HauntedDorm {
                 if (pl.prodT >= def.produce.every) {
                     pl.prodT = 0;
                     let sAmt = def.produce.sun;
-                    if (owner === this.player && owner.sunBuffT > 0) sAmt *= 2; // 向日葵技能生效
+                    if (owner.sunBuffT > 0) sAmt *= 2; // 向日葵技能生效
                     owner.sun = (owner.sun || 0) + sAmt;
                     if (owner === this.player) {
                         this.addSun(sAmt); // 顺便更新UI
@@ -1773,7 +1785,7 @@ class HauntedDorm {
                     const rm = this._insideRoom(pl.c, pl.r);
                     const owner = (rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : this.player;
                     let fdps = sp.dps;
-                    if (owner === this.player && owner.atkBuffT > 0) fdps *= 2;
+                    if (owner.atkBuffT > 0) fdps *= 2;
                     zb.hp -= fdps * dt;
                     if (zb.hpBg) {
                         zb.hpBg.style.display = 'block';
@@ -2198,21 +2210,23 @@ class HauntedDorm {
         if (Math.floor(time / 500) !== Math.floor((time - dt * 1000) / 500)) this._updateGhostChip(); // 0.5s 刷一次信息牌
         if (Math.floor(time / 1000) !== Math.floor((time - dt * 1000) / 1000)) this._refreshHud(); // 1s 刷一次 HUD (为了技能倒计时)
 
-        if (this.player.sunBuffT > 0) this.player.sunBuffT -= dt;
-        if (this.player.atkBuffT > 0) this.player.atkBuffT -= dt;
-        
-        if (this.player.speedBuffT > 0) this.player.speedBuffT -= dt;
-        if (this.player.stealthT > 0) {
-            this.player.stealthT -= dt;
-            this.player.el1.style.opacity = '0.5';
-        } else {
-            this.player.el1.style.opacity = '1';
-        }
-        if (this.player.invincibleT > 0) {
-            this.player.invincibleT -= dt;
-            this.player.el1.style.filter = 'drop-shadow(0 0 10px #fff)';
-        } else {
-            this.player.el1.style.filter = '';
+        for (const p of this.allPlayers) {
+            if (p.sunBuffT > 0) p.sunBuffT -= dt;
+            if (p.atkBuffT > 0) p.atkBuffT -= dt;
+            if (p.speedBuffT > 0) p.speedBuffT -= dt;
+            
+            if (p.stealthT > 0) {
+                p.stealthT -= dt;
+                p.el1.style.opacity = '0.5';
+            } else {
+                p.el1.style.opacity = '1';
+            }
+            if (p.invincibleT > 0) {
+                p.invincibleT -= dt;
+                p.el1.style.filter = 'drop-shadow(0 0 10px #fff)';
+            } else {
+                p.el1.style.filter = '';
+            }
         }
 
         const baseSpeed = this.isZombieFaction ? (HauntedDorm.GHOST_LEVELS[this.player.level-1].speed * (this.player.speedBuffT > 0 ? 1.5 : 1)) : (this.player.speedBuffT > 0 ? 800 : 400);
@@ -2241,7 +2255,7 @@ class HauntedDorm {
         // P2 Movement - 【SOC防冲突】
         if (this.player2 && !this.player2.dead) {
             let vx2 = 0, vy2 = 0;
-            let moveSpeed2 = baseSpeed;
+            let moveSpeed2 = this.player2.speedBuffT > 0 ? 800 : 400;
             const p2PhysRoom = this._insideRoom(Math.floor(this.player2.x/this.gridSize), Math.floor(this.player2.y/this.gridSize));
             if (p2PhysRoom) moveSpeed2 = baseSpeed / this.timeScale;
             
@@ -2557,27 +2571,32 @@ class HauntedDorm {
                     continue;
                 }
 
-                if (Math.hypot(this.player.x - a.x, this.player.y - a.y) < 50) {
+                let pickedByPlayer = null;
+                if (Math.hypot(this.player.x - a.x, this.player.y - a.y) < 50) pickedByPlayer = this.player;
+                else if (this.gameMode === '2p' && this.player2 && !this.player2.dead && Math.hypot(this.player2.x - a.x, this.player2.y - a.y) < 50) pickedByPlayer = this.player2;
+
+                if (pickedByPlayer) {
                     const r = Math.floor(Math.random() * 15);
                     switch(r) {
                         case 0:
-                            this.addSun(800);
+                            this.addSun(800, pickedByPlayer);
                             this._flyText(a.x, a.y, '☀️ 阳光暴雨 (+800)', '#ffeb3b');
                             break;
                         case 1:
-                            this.addSpore(80);
+                            this.addSpore(80, pickedByPlayer);
                             this._flyText(a.x, a.y, '🦠 孢子丰收 (+80)', '#c79aff');
                             break;
                         case 2:
-                            this.player.hp = Math.min((this.player.maxHp || 100), this.player.hp + 50);
+                            pickedByPlayer.hp = Math.min((pickedByPlayer.maxHp || 100), pickedByPlayer.hp + 50);
+                            this.setHp();
                             this._flyText(a.x, a.y, '💖 强效急救包 (+50血)', '#0f0');
                             break;
                         case 3:
-                            this.player.invincibleT = 15;
+                            pickedByPlayer.invincibleT = 15;
                             this._flyText(a.x, a.y, '🛡️ 无敌护盾 (15s)', '#fff');
                             break;
                         case 4:
-                            this.player.speedBuffT = 15;
+                            pickedByPlayer.speedBuffT = 15;
                             this._flyText(a.x, a.y, '🚀 飞毛腿 (移速翻倍)', '#0ff');
                             break;
                         case 5:
@@ -2850,28 +2869,39 @@ class HauntedDorm {
             // 接触目标 → 持续掉血
             for (const p of this.allPlayers) {
                 if (p.dead) continue;
-                if (Math.hypot(p.x - zb.x, p.y - zb.y) < 48) {
-                    if (p === this.player && (!this.player.invincibleT || this.player.invincibleT <= 0)) {
-                        playerHurt += touchDps * dt;
-                        // 用户反馈：被僵尸压在身上会动不了，增加受击微击退机制，防止被挤进墙角卡死
+                if (Math.hypot(p.x - zb.x, p.y - zb.y) < 50) {
+                    // 如果中间隔着门（玩家在房间里且门活着，僵尸在外面），则免疫接触伤害
+                    const pRm = this._insideRoom(Math.floor(p.x/80), Math.floor(p.y/80));
+                    let safeBehindDoor = false;
+                    if (pRm) {
+                        const doorPlant = this.getPlantAt(pRm.doorCol*80, pRm.doorRow*80);
+                        const zRm = this._insideRoom(Math.floor(zb.x/80), Math.floor(zb.y/80));
+                        if (doorPlant && zRm !== pRm) safeBehindDoor = true;
+                    }
+                    
+                    if (!safeBehindDoor) {
+                        if (p === this.player) {
+                            if (!this.player.invincibleT || this.player.invincibleT <= 0) {
+                                playerHurt += touchDps * dt;
+                            }
+                        } else {
+                            p.hp -= touchDps * dt;
+                            this.setHp(); // 更新P2血条UI
+                            if (p.hp <= 0 && !p.dead) {
+                                p.dead = true;
+                                p.el1.classList.add('dead-slash');
+                                p.el1.style.filter = 'grayscale(1)';
+                                if (this.ghostLevel >= 4) this._levelUpGhostDirect();
+                            }
+                        }
+                        
+                        // 所有人受击都会被微击退，防止被挤进墙角卡死
                         const angle = Math.atan2(p.y - zb.y, p.x - zb.x);
                         const pushSpd = 200;
                         const nx = p.x + Math.cos(angle) * pushSpd * dt;
                         const ny = p.y + Math.sin(angle) * pushSpd * dt;
                         if (!this.checkCollision(nx, p.y, 10)) p.x = nx;
                         if (!this.checkCollision(p.x, ny, 10)) p.y = ny;
-                    }
-                    else if (p !== this.player) {
-                        p.hp -= touchDps * dt;
-                        if (p.hp <= 0 && !p.dead) {
-                            p.dead = true;
-                            p.el1.classList.add('dead-slash');
-                            p.el1.style.filter = 'grayscale(1)';
-                            // 【击杀玩家升级】
-                            if (this.ghostLevel >= 4) {
-                                this._levelUpGhostDirect();
-                            }
-                        }
                     }
                 }
             }
