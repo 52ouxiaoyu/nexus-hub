@@ -191,7 +191,7 @@ class HauntedDorm {
                 camX: 0, camY: 0, skillCd: 0, sunBuffT: 0, atkBuffT: 0,
                 biteT: 0, level: 1, speedBuffT: 0
             };
-            
+            this.allPlayers = [this.player, this.player2];
         } else {
             this.allPlayers = [this.player];
         }
