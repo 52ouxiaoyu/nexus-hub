@@ -1044,6 +1044,7 @@ class HauntedDorm {
         const now = performance.now();
         if (!this.activeTexts) this.activeTexts = [];
         this.activeTexts = this.activeTexts.filter(t => now - t.t < 2000); // 慢一点，保留2秒
+        if (this.activeTexts.length > 30) return; // v3.97.13 限制同屏文字数量防卡顿
         
         let flyY = y - 30;
         // 彻底防重叠堆叠逻辑 (Vertical stacking loop)
@@ -1530,8 +1531,6 @@ class HauntedDorm {
                     break;
                 }
             }
-            pea.el.style.left = pea.x + 'px';
-            pea.el.style.top = pea.y + 'px';
         }
         this.peas = this.peas.filter(p => {
             if (p.life > 0) return true;
@@ -1804,9 +1803,50 @@ class HauntedDorm {
             this.gameTime += dt * 1000;
             this._tick(dt, this.gameTime);
         }
+        
+        this._render(); // 将样式更新移出高频逻辑循环，统一渲染
 
         this._updateMinimap();
         requestAnimationFrame(t => this.loop(t));
+    }
+    
+    _render() {
+        // 更新玩家
+        if (this.player.el1) {
+            this.player.el1.style.left = this.player.x + 'px';
+            this.player.el1.style.top = this.player.y + 'px';
+        }
+        // 更新AI
+        for (const ai of this.ais) {
+            if (ai.el1 && !ai.dead) {
+                ai.el1.style.left = ai.x + 'px';
+                ai.el1.style.top = ai.y + 'px';
+            }
+        }
+        // 更新僵尸
+        for (const zb of this.zombies) {
+            if (zb.el1 && !zb.dead) {
+                zb.el1.style.left = zb.x + 'px';
+                zb.el1.style.top = zb.y + 'px';
+                if (zb.hpBg) {
+                    zb.hpBg.style.left = (zb.x - 30) + 'px';
+                    zb.hpBg.style.top = (zb.y - 60) + 'px';
+                }
+            }
+        }
+        // 更新子弹
+        for (const pea of this.peas) {
+            if (pea.el) {
+                pea.el.style.left = pea.x + 'px';
+                pea.el.style.top = pea.y + 'px';
+            }
+        }
+        // 摄像机跟随
+        const vpw = this.vp1.clientWidth;
+        const vph = this.vp1.clientHeight;
+        const cx = Math.max(0, Math.min(this.worldWidth - vpw, this.player.x - vpw / 2));
+        const cy = Math.max(0, Math.min(this.worldHeight - vph, this.player.y - vph / 2));
+        this.world1.style.transform = `translate(${-cx}px, ${-cy}px)`;
     }
 
     _tick(dt, time) {
