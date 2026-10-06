@@ -2583,8 +2583,9 @@ class HauntedDorm {
             warningOverlay.style.cssText = `
                 position: fixed; top: 0; left: 0; width: 100%; height: 100%;
                 pointer-events: none; z-index: 1000;
-                box-shadow: inset 0 0 100px rgba(255, 0, 0, 0);
-                transition: box-shadow 0.2s;
+                box-shadow: inset 0 0 150px rgba(255, 0, 0, 0.5);
+                opacity: 0;
+                transition: opacity 0.5s;
                 display: flex; align-items: flex-end; justify-content: center;
                 padding-bottom: 80px;
             `;
@@ -2592,7 +2593,7 @@ class HauntedDorm {
             warningText.id = 'zombie-warning-text';
             warningText.style.cssText = `
                 color: #ff3333; font-size: 36px; font-weight: bold; text-shadow: 0 0 15px #000, 2px 2px 6px #000;
-                opacity: 0; transition: opacity 0.2s;
+                opacity: 1;
                 font-family: 'Kaiti SC', 'SimHei', sans-serif;
                 letter-spacing: 2px;
             `;
@@ -2602,14 +2603,23 @@ class HauntedDorm {
             this.warningText = warningText;
         }
 
-        if (warningOverlay && warningText) {
+        if (warningOverlay) {
             if (isTargeted) {
-                const pulse = (Math.sin(performance.now() / 150) + 1) / 2;
-                warningOverlay.style.boxShadow = `inset 0 0 ${150 + pulse*100}px rgba(255, 0, 0, ${0.4 + pulse*0.3})`;
-                warningText.style.opacity = 0.6 + pulse * 0.4;
+                // 使用 opacity 开关配合 CSS 动画，避免每帧改 boxShadow 导致严重卡顿
+                warningOverlay.style.opacity = '1';
+                // 使用 css animation 进行呼吸，防止主线程卡顿
+                if (!warningOverlay.classList.contains('pulse-anim')) {
+                    warningOverlay.classList.add('pulse-anim');
+                    if (!document.getElementById('pulse-style')) {
+                        const style = document.createElement('style');
+                        style.id = 'pulse-style';
+                        style.innerHTML = `@keyframes dangerPulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } } .pulse-anim { animation: dangerPulse 1.5s infinite; }`;
+                        document.head.appendChild(style);
+                    }
+                }
             } else {
-                warningOverlay.style.boxShadow = `inset 0 0 100px rgba(255, 0, 0, 0)`;
-                warningText.style.opacity = 0;
+                warningOverlay.style.opacity = '0';
+                warningOverlay.classList.remove('pulse-anim');
             }
         }
 
