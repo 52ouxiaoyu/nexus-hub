@@ -126,6 +126,26 @@ class HauntedDorm {
         return ['puffshroom', 'peashooter', 'plantern', 'spikeweed', 'iceshroom', 'doomshroom', 'garlic', 'blindbox'];
     }
 
+    // ===== v4.0.19：存活祝福池（每 90 秒三选一，全局生效）=====
+    static get BLESSINGS() {
+        return [
+            { id: 'sun',   icon: '☀',  name: '阳光雨',   desc: '立即 +300 阳光',
+              apply: (g, p) => g.addSun(300, p) },
+            { id: 'spore', icon: '🦠', name: '孢子潮',   desc: '立即 +200 孢子',
+              apply: (g, p) => g.addSpore(200, p) },
+            { id: 'rage',  icon: '⚔',  name: '狂怒',     desc: '20 秒内植物伤害翻倍',
+              apply: (g) => { g.plantDmgBoostT = 20; } },
+            { id: 'heal',  icon: '🛡', name: '硬化',     desc: '所有植物与门板血量回满',
+              apply: (g) => { for (const pl of g.plants) pl.hp = pl.maxHp; } },
+            { id: 'water', icon: '🚿', name: '丰收浇水', desc: '45 秒内浇水阳光产出 ×3',
+              apply: (g) => { g.waterBoostT = 45; } },
+            { id: 'cd',    icon: '⏱',  name: '冷却清零', desc: 'P1/P2 技能立刻就绪',
+              apply: (g) => { for (const p of g.allPlayers) if (!p.isAi) p.skillCd = 0; } },
+            { id: 'mower', icon: '🛒', name: '后备推车', desc: '恢复自家门口的小推车',
+              apply: (g, p) => { if (!g._restoreMowers(p)) { g.addSpore(150, p); g._flyText(p.x, p.y - 30, '推车尚在 +150🦠', '#9dff6b'); } } },
+        ];
+    }
+
     // ===== 僵尸升级链（10级）=====
     static get GHOST_LEVELS() {
         // 用户要求：僵尸速度变成原来的 3 倍（原来150 -> 450），比玩家还快！
@@ -161,6 +181,13 @@ class HauntedDorm {
         this.role2 = urlParams.get('role2') || 'peashooter';
         this.faction = urlParams.get('faction') || 'plant';
         this.isZombieFaction = (this.faction === 'zombie');
+
+        // v4.0.19：小推车（最后防线）+ 存活三选一祝福
+        this.mowers = [];
+        this.blessingAt = 90000;      // 存活 90 秒后首次送出祝福
+        this.blessing = null;         // 当前打开的三选一 { options, idx, deadline }
+        this.plantDmgBoostT = 0;      // 狂怒：植物伤害翻倍剩余秒数
+        this.waterBoostT = 0;         // 丰收浇水：浇水产出 ×3 剩余秒数
         
         this.playerRoles = [
             { id: 'sunflower', name: '向日葵', icon: 'assets/images/Plants/SunFlower/0.gif', skillDesc: '10秒阳光翻倍 (CD:60s)' },
@@ -362,6 +389,13 @@ class HauntedDorm {
 
 
         this.plantMenu = document.getElementById('plant-menu');
+
+        // v4.0.19：存活三选一祝福面板（复用建造菜单的上下+确认键）
+        this.blessEl = document.createElement('div');
+        this.blessEl.id = 'bless-board';
+        this.blessEl.style.cssText = 'position:absolute; bottom:300px; left:50%; transform:translateX(-50%); display:none; z-index:2100; text-align:center; font-family:"Kaiti SC",serif; pointer-events:none;';
+        if (this.plantMenu && this.plantMenu.parentElement) this.plantMenu.parentElement.appendChild(this.blessEl);
+        else document.body.appendChild(this.blessEl);
         this.minimap = document.getElementById('minimap').getContext('2d');
 
         // 商店菜单（数据驱动生成）
@@ -589,6 +623,35 @@ class HauntedDorm {
         this.player.room = null;
         this.player.room2 = null; // v4.0.18：副房一并清空
         if (this.player2) { this.player2.room = null; this.player2.room2 = null; }
+
+        // v4.0.19：祝福计时归零
+        this.blessingAt = 90000;
+        if (this.blessing) { this.blessing = null; if (this.blessEl) this.blessEl.style.display = 'none'; }
+
+        // v4.0.19：每间房门口一台小推车（最后防线）——僵尸靠近即冲撞，一次性消耗
+        this.mowers.forEach(mw => { if (mw.el1) mw.el1.remove(); });
+        this.mowers = [];
+        if (!this.isZombieFaction) {
+            for (const rm of this.rooms) {
+                const dx = rm.doorCol - (rm.x + rm.w / 2), dy = rm.doorRow - (rm.y + rm.h / 2);
+                const len = Math.hypot(dx, dy) || 1;
+                const dirX = dx / len, dirY = dy / len; // 门外方向
+                // 停在门外一格（桥上）；该格若是墙则退回门口格
+                let mc = rm.doorCol + Math.round(dirX), mr = rm.doorRow + Math.round(dirY);
+                if (this.walls.has(`${mc},${mr}`)) { mc = rm.doorCol; mr = rm.doorRow; }
+                const mx = mc * this.gridSize + 40, my = mr * this.gridSize + 40;
+                const el = document.createElement('div');
+                el.className = 'tile';
+                el.style.left = (mc * this.gridSize) + 'px';
+                el.style.top = (mr * this.gridSize) + 'px';
+                el.style.zIndex = 5;
+                el.innerHTML = `<img src="assets/images/interface/LawnCleaner.png" style="width:100%; height:100%; object-fit:contain; transform:scale(1.1);">`;
+                this.world1.appendChild(el);
+                this.mowers.push({ room: rm, homeX: mx, homeY: my, x: mx, y: my,
+                                   dirX, dirY, el1: el, used: false, active: false, dist: 0, gone: false,
+                                   hits: new Set() });
+            }
+        }
         for (const rm of this.rooms) {
             rm.owners = [];
             rm.capacity = rm.tpl.beds.length;
@@ -1558,7 +1621,7 @@ class HauntedDorm {
     // ===== 浇水（per-player）：每次 +1 该玩家的阳光，并催熟身边所有蘑菇 =====
     _water(p) {
         p = p || this.player;
-        this.addSun(1, p);
+        this.addSun(this.waterBoostT > 0 ? 3 : 1, p); // v4.0.19：丰收浇水中产出 ×3
         this.playSfx('plant_water.mp3', 0.4);
         let fedAny = false;
         for (const pl of this.plants) {
@@ -1761,11 +1824,12 @@ class HauntedDorm {
 
             const rm = this._insideRoom(pl.c, pl.r);
             const owner = (rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : this.player;
+            const dmgMul = this.plantDmgBoostT > 0 ? 2 : 1; // v4.0.19：狂怒祝福——伤害翻倍
 
             if (lob) {
                 pl.shootCd = lob.cd;
                 const isButter = lob.stunChance && Math.random() < lob.stunChance;
-                this._firePea(px, py, Math.atan2(best.y - py, best.x - px), lob.dmg,
+                this._firePea(px, py, Math.atan2(best.y - py, best.x - px), lob.dmg * dmgMul,
                     { img: isButter ? 'Plants/KernelPult/butter.png' : lob.img, range: lob.range, aoe: lob.aoe, speed: 300, size: 34, owner, stunTime: isButter ? lob.stunTime : 0 });
             } else {
                 if (sh.crazySpray && Math.random() < sh.crazySpray) {
@@ -1784,17 +1848,17 @@ class HauntedDorm {
                 if (sh.fan) { // 三线/忧郁菇：扇形多向
                     for (let i = 0; i < sh.n; i++) {
                         const a = isFocus ? base : base + (i - (sh.n - 1) / 2) * sh.fan;
-                        this._firePea(px, py, a, sh.dmg, { img: sh.img, range: sh.range, slow: sh.slow, homing: sh.homing, owner });
+                        this._firePea(px, py, a, sh.dmg * dmgMul, { img: sh.img, range: sh.range, slow: sh.slow, homing: sh.homing, owner });
                     }
                 } else { // 连发：同向串行
                     const actualN = (sh.dualChance && Math.random() < sh.dualChance) ? 2 : sh.n;
                     for (let i = 0; i < actualN; i++) {
-                        this._firePea(px - Math.cos(base) * i * 22, py - Math.sin(base) * i * 22, base, sh.dmg,
+                        this._firePea(px - Math.cos(base) * i * 22, py - Math.sin(base) * i * 22, base, sh.dmg * dmgMul,
                             { img: sh.img, range: sh.range, slow: sh.slow, homing: sh.homing, owner });
                     }
                 }
                 if (sh.back) { // 双向射手：脑后再补一发
-                    this._firePea(px, py, base + Math.PI, sh.dmg, { img: sh.img, range: sh.range, slow: sh.slow, owner });
+                    this._firePea(px, py, base + Math.PI, sh.dmg * dmgMul, { img: sh.img, range: sh.range, slow: sh.slow, owner });
                 }
             }
             this.playSfx('ballooninflate.mp3', 0.15);
@@ -2280,6 +2344,7 @@ class HauntedDorm {
     }
     
     _handleKMenu(pId, p, keysOk, keysCancel, keysUp, keysDown, uiEl, cursorEl) {
+        if (this.blessing) return; // v4.0.19：祝福选择期间屏蔽建造菜单（共用确认键，防止一手按出一串）
         const menu = this.kmenus[pId];
         
         if (this._checkAnyKey(keysCancel)) {
@@ -2437,7 +2502,137 @@ class HauntedDorm {
         }
     }
 
+    // ===== v4.0.19：小推车（每房一台的最后防线）=====
+    _updateMowers(dt) {
+        if (!this.mowers || this.mowers.length === 0) return;
+        for (const mw of this.mowers) {
+            if (mw.gone) continue;
+            if (!mw.active) {
+                // 触发：僵尸靠近 75px（啃到门口了）
+                for (const zb of this.zombies) {
+                    if (zb.dead) continue;
+                    if (Math.hypot(zb.x - mw.x, zb.y - mw.y) < 75) {
+                        mw.active = true; mw.used = true;
+                        this._announce('🛒 小推车启动！', 'cherrybomb.mp3');
+                        break;
+                    }
+                }
+                if (!mw.active) continue;
+            }
+            // 冲撞：向门外方向疾驰
+            mw.x += mw.dirX * 520 * dt;
+            mw.y += mw.dirY * 520 * dt;
+            mw.dist += 520 * dt;
+            mw.el1.style.left = mw.x + 'px';
+            mw.el1.style.top = mw.y + 'px';
+            // 撞击僵尸：大伤害 + 击退 + 眩晕（每次冲锋每个僵尸只撞一次；伤害计入房间主人账本）
+            const owner = (mw.room.owners && mw.room.owners.length > 0) ? mw.room.owners[0] : this.player;
+            for (const zb of this.zombies) {
+                if (zb.dead || mw.hits.has(zb)) continue;
+                if (Math.hypot(zb.x - mw.x, zb.y - mw.y) < 50) {
+                    const dmg = 800;
+                    zb.hp -= dmg;
+                    owner.dmgDealt = (owner.dmgDealt || 0) + dmg;
+                    mw.hits.add(zb);
+                    zb.hitFlashT = 0.3;
+                    zb.stunT = Math.max(zb.stunT || 0, 2.5);
+                    zb.x += mw.dirX * 60; zb.y += mw.dirY * 60; // 击退一段
+                    this._flyText(zb.x, zb.y - 30, '-' + dmg, '#ff8a5c');
+                    if (zb.hp <= 0) this._killZombie(zb, owner);
+                }
+            }
+            if (mw.dist >= 260) {
+                mw.gone = true;
+                mw.el1.remove();
+            }
+        }
+    }
+
+    // 后备推车祝福：恢复 picker 拥有房间门口已用掉的小推车（返回恢复台数）
+    _restoreMowers(p) {
+        let n = 0;
+        for (const mw of this.mowers) {
+            if (!this._ownsRoom(p, mw.room)) continue;
+            if (mw.used) {
+                mw.used = false; mw.active = false; mw.gone = false;
+                mw.dist = 0; mw.x = mw.homeX; mw.y = mw.homeY;
+                if (mw.hits) mw.hits.clear();
+                if (!mw.el1.isConnected) this.world1.appendChild(mw.el1);
+                mw.el1.style.left = mw.x + 'px';
+                mw.el1.style.top = mw.y + 'px';
+                n++;
+            }
+        }
+        return n;
+    }
+
+    // ===== v4.0.19：存活三选一祝福 =====
+    _offerBlessings() {
+        if (this.over || this.isZombieFaction) return;
+        const pool = HauntedDorm.BLESSINGS.slice();
+        // 洗牌取三个不重复
+        for (let i = pool.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        this.blessing = { options: pool.slice(0, 3), idx: 0, deadline: this.gameTime + 15000 };
+        this._renderBlessing();
+        this.blessEl.style.display = 'block';
+        this._announce('🎁 存活奖励：选一个祝福！', 'readysetplant.mp3');
+    }
+
+    _renderBlessing() {
+        const b = this.blessing;
+        if (!b) return;
+        this.blessEl.innerHTML =
+            `<div style="color:#ffe14a; font-size:20px; font-weight:bold; text-shadow:1px 1px 2px #000; margin-bottom:8px;">🎁 存活奖励——选一个祝福！</div>` +
+            `<div style="display:flex; gap:14px; justify-content:center;">` +
+            b.options.map((o, i) =>
+                `<div style="width:150px; padding:10px 8px; border-radius:10px; background:rgba(30,16,8,${i === b.idx ? '0.95' : '0.75'}); border:3px solid ${i === b.idx ? '#ffe14a' : '#8c6a4d'}; color:#f5e6c8;">
+                    <div style="font-size:26px;">${o.icon}</div>
+                    <div style="font-size:16px; font-weight:bold; color:${i === b.idx ? '#ffe14a' : '#f5e6c8'};">${o.name}</div>
+                    <div style="font-size:12px; opacity:0.9; line-height:1.5;">${o.desc}</div>
+                </div>`
+            ).join('') +
+            `</div>` +
+            `<div style="margin-top:8px; color:#c8b8a0; font-size:13px; text-shadow:1px 1px 2px #000;">P1：W/S 选择 + F 确认 ｜ P2：↑/↓ 选择 + 1 确认 ｜ 15 秒后自动跳过</div>`;
+    }
+
+    _updateBlessing() {
+        // 计时触发（每 90 秒一次）
+        if (!this.blessing && !this.over && !this.isZombieFaction && this.gameTime >= this.blessingAt) {
+            this._offerBlessings();
+        }
+        const b = this.blessing;
+        if (!b) return;
+        // 15 秒无人选 → 自动跳过
+        if (this.gameTime > b.deadline) { this._closeBlessing(); return; }
+        const len = b.options.length;
+        if (len === 0) { this._closeBlessing(); return; }
+        const up = this._checkAnyKey(['w']) || this._checkAnyKey(['arrowup']);
+        const down = this._checkAnyKey(['s']) || this._checkAnyKey(['arrowdown']);
+        const ok = this._checkAnyKey(['f', 'j']) || this._checkAnyKey(['1', 'shiftright']);
+        if (up) { b.idx = (b.idx - 1 + len) % len; this._renderBlessing(); }
+        if (down) { b.idx = (b.idx + 1) % len; this._renderBlessing(); }
+        if (ok) {
+            const opt = b.options[b.idx];
+            const picker = this.player2 && this._checkAnyKey(['1', 'shiftright']) ? this.player2 : this.player;
+            opt.apply(this, picker);
+            this._announce('🎁 祝福生效：' + opt.name, 'points.mp3');
+            this._closeBlessing();
+        }
+    }
+
+    _closeBlessing() {
+        this.blessing = null;
+        if (this.blessEl) this.blessEl.style.display = 'none';
+        this.blessingAt = this.gameTime + 90000;
+    }
+
     _tick(dt, time) {
+        // v4.0.19：全局祝福计时递减
+        if (this.plantDmgBoostT > 0) this.plantDmgBoostT -= dt;
+        if (this.waterBoostT > 0) this.waterBoostT -= dt;
         for (const p of this.allPlayers) {
             if (p.skillCd > 0) {
                 p.skillCd -= dt;
@@ -2521,6 +2716,8 @@ class HauntedDorm {
         }
         
         this._updateKMenus();
+        this._updateBlessing(); // v4.0.19：祝福三选一（复用 _checkAnyKey，须在 keysJustPressed 清空前）
+        this._updateMowers(dt); // v4.0.19：小推车触发与冲撞
         this._updateDmgBoard(); // v4.0.17：实时伤害榜（内部自带节流）
         this.keysJustPressed = {}; // 清空单帧按键缓存
 
