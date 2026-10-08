@@ -76,6 +76,9 @@
         /* v3.86.0 玩家 HP 条常显 + 波次/击杀信息（红牌主题） */
         /* v4.0.15：删除旧 #hp-row/#hp-track/#hp-fill id 规则（flex:1 把 P1 血条拉满整行=长块），统一用上方 .hp-* 类 */
         #wave-chip { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); padding: 7px 16px; background: rgba(20,5,5,0.85); color: #ff9e9e; border: 3px solid #7a2020; border-radius: 12px; font-size: 16px; text-shadow: 2px 2px 0 #000; font-family: 'Kaiti SC', serif; letter-spacing: 1px; white-space: nowrap; }
+        /* v4.0.17：实时伤害榜（wave-chip 正下方，植物阵营显示） */
+        #dmg-board { position: absolute; top: 66px; left: 50%; transform: translateX(-50%); padding: 4px 14px; background: rgba(0,0,0,0.6); border: 2px solid #3a3a5a; border-radius: 10px; font-size: 14px; color: #ffe14a; text-shadow: 1px 1px 0 #000; white-space: nowrap; pointer-events: none; z-index: 40; }
+        #dmg-board .dmg-me { color: #7dff7d; font-weight: bold; }
 
         /* 小地图 */
         #minimap { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); border: 3px solid #5c3b1d; border-radius: 8px; background: rgba(0,0,0,0.75); pointer-events: auto; }
@@ -153,6 +156,7 @@
                 <div style="display:flex; gap:18px; align-items:center;">
                     <span>阳光: <span id="sun1" class="sun-text">0</span></span>
                     <span>孢子: <span id="spore1" class="sun-text" style="color:#c79aff;">0</span></span>
+                    <span style="color:#ff9e9e;">⚔伤害: <span id="dmg1" class="sun-text">0</span></span>
                 </div>
                 <div id="hp-row" class="hp-row">
                     <span class="hp-label">HP</span>
@@ -180,6 +184,7 @@
                 <div style="display:flex; gap:18px; align-items:center; justify-content: flex-end;">
                     <span>阳光: <span id="sun2" class="sun-text">0</span></span>
                     <span>孢子: <span id="spore2" class="sun-text" style="color:#c79aff;">0</span></span>
+                    <span style="color:#ff9e9e;">⚔伤害: <span id="dmg2" class="sun-text">0</span></span>
                 </div>
                 <div id="hp-row2" class="hp-row" style="justify-content: flex-end;">
                     <span id="hp-num2" class="hp-label">100</span>
@@ -190,6 +195,8 @@
             </div>
 
             <div id="wave-chip">👻 准备中…</div>
+            <!-- v4.0.17：实时伤害榜——MVP 不再是结算时才揭晓的意外 -->
+            <div id="dmg-board" style="display:none;"></div>
 
             <canvas id="minimap" width="320" height="240"></canvas>
             
@@ -257,6 +264,6 @@
         </div>
     </div>
 
-    <script src="js/HauntedDorm.js?v=1791294233"></script>
+    <script src="js/HauntedDorm.js?v=1791464038"></script>
 </body>
 </html>

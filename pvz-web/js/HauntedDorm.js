@@ -1302,18 +1302,15 @@ class HauntedDorm {
         if (this.walls.has(`${col},${row}`)) return;
         if (this.plants.some(pl => pl.c === col && pl.r === row)) return;
         // v3.91.0：植物只能种在房间里——房间外的草地不允许种植 (新增: 地刺可以种在门外一格)
-        let targetRm = this._insideRoom(col, row);
+        // v4.0.17：改用统一解析器（门邻格优先自己的房间，修「站在自己房间却提示你已经有房间了」）
+        const inRoomGrid = !!this._insideRoom(col, row);
+        const targetRm = inRoomGrid ? this._insideRoom(col, row) : this._resolveBuildRoom(col, row, this.player);
         let isSpikeTile = false;
         if (!targetRm) {
-            // 允许地刺种在门的上下左右相邻一格（适应各种朝向的门）
-            targetRm = this.rooms.find(rm => Math.abs(col - rm.doorCol) + Math.abs(row - rm.doorRow) <= 1);
-            if (targetRm) {
-                isSpikeTile = true;
-            } else {
-                this._flyText(col * this.gridSize + 40, row * this.gridSize, '只能种房内，或门周围一格种地刺', '#ff8a8a');
-                return;
-            }
+            this._flyText(col * this.gridSize + 40, row * this.gridSize, '只能种房内，或门周围一格种地刺', '#ff8a8a');
+            return;
         }
+        if (!inRoomGrid) isSpikeTile = true;
         
         // 检查房间归属
         if (this.ais.some(ai => ai.room === targetRm) && targetRm !== this.player.room) {
@@ -1358,14 +1355,30 @@ class HauntedDorm {
         return null;
     }
 
+    // v4.0.17：统一的「目标格 → 可建造房间」解析——修「站在自己房间却提示『你已经有房间了！』」
+    // 根因：键盘建造菜单用外接矩形判定 + 门邻格兜底 find 首个匹配——站在自家门口/桥上（门邻格、
+    // 属于房间但不在地形格内）时，门的两侧房间都可能命中，find 抓到隔壁房间 → p.room !== room → 误报
+    _resolveBuildRoom(col, row, p) {
+        // 1. 真实地形格内（最准）
+        const inRm = this._insideRoom(col, row);
+        if (inRm) return inRm;
+        // 2. 房间包围盒内（站位在床位/装饰格等非地形格上）
+        const bbox = this.rooms.find(r => col >= r.x && col < r.x + r.w && row >= r.y && row < r.y + r.h);
+        if (bbox) return bbox;
+        // 3. 门邻格（地刺区）：优先解析回自己的房间——家门口永远算自己的地盘
+        if (p && p.room && Math.abs(col - p.room.doorCol) + Math.abs(row - p.room.doorRow) <= 1) return p.room;
+        return this.rooms.find(r => Math.abs(col - r.doorCol) + Math.abs(row - r.doorRow) <= 1) || null;
+    }
+
     doPlant(type) {
         this._closePlantMenu();
-        
-        let targetRm = this._insideRoom(this.menuCol, this.menuRow);
-        if (!targetRm) targetRm = this.rooms.find(rm => this.menuCol === rm.doorCol && this.menuRow === rm.doorRow + 1);
-        
+
+        // v4.0.17：统一房间解析器
+        let targetRm = this._resolveBuildRoom(this.menuCol, this.menuRow, this.player);
+
         if (targetRm && !this.player.room) {
             this.player.room = targetRm; // 绑定房间归属
+            if (!targetRm.owners.includes(this.player)) targetRm.owners.push(this.player); // v4.0.17：同步 owners（原只写 p.room 不写 owners，归属账本不一致）
         }
 
         const def = HauntedDorm.DEFS[type];
@@ -1424,6 +1437,9 @@ class HauntedDorm {
         } else if (r === 'chomper') {
             if (zb && !zb.dead) {
                 p.skillCd = 60;
+                // v4.0.17：技能伤害计入 MVP 伤害账
+                const dealt = Math.max(0, zb.hp - zb.maxHp * 0.05);
+                if (p.roleDef) p.dmgDealt = (p.dmgDealt || 0) + dealt;
                 zb.hp = Math.min(zb.hp, zb.maxHp * 0.05); // 触发回城
                 zb.retreating = true;
                 this._announce('🌸 技能激活：大嘴花将僵尸吓跑了！', 'chomp.mp3');
@@ -1433,6 +1449,9 @@ class HauntedDorm {
         } else if (r === 'squash') {
             if (zb && !zb.dead) {
                 p.skillCd = 60;
+                // v4.0.17：技能伤害计入 MVP 伤害账（按实际扣血计，不虚报）
+                const dealt = zb.hp - Math.max(1, zb.hp - zb.maxHp * 0.5);
+                if (p.roleDef) p.dmgDealt = (p.dmgDealt || 0) + dealt;
                 zb.hp = Math.max(1, zb.hp - zb.maxHp * 0.5); // 取消血量限制，直接扣除半管血
                 if (zb.hpBg) zb.hpBg.style.display = 'block';
                 this._announce('🎃 技能激活：倭瓜重创了僵尸！', 'squash_hmm.mp3');
@@ -1923,22 +1942,27 @@ class HauntedDorm {
 
     _updateIceshroom(dt) {
         // 极寒冰阵：全局减速并造成持续伤害
-        let hasAura = false;
-        let dps = 0;
+        // v4.0.17：按种植者（房间归属）记账——原全局 dps 都算在 P1 头上，MVP 伤害失真
+        const auras = [];
         for (const pl of this.plants) {
             const fz = pl.def.freeze;
             if (fz && fz.aura) {
-                hasAura = true;
-                dps += fz.dps;
+                const rm = this._insideRoom(pl.c, pl.r);
+                const owner = (rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : this.player;
+                auras.push({ owner, dps: fz.dps });
             }
         }
+        const hasAura = auras.length > 0;
         for (const zb of this.zombies) {
             if (zb.dead) continue;
             if (hasAura) {
                 zb.slowT = 0.5;
-                zb.hp -= dps * dt;
+                for (const a of auras) {
+                    zb.hp -= a.dps * dt;
+                    if (a.owner.roleDef) a.owner.dmgDealt = (a.owner.dmgDealt || 0) + a.dps * dt;
+                }
                 zb.el1.querySelector('img').style.filter = 'saturate(0.35) brightness(1.5) drop-shadow(0 0 8px #7fd8ff)';
-                if (zb.hp <= 0) this._killZombie(zb, this.player); // 冰阵是全局的，算在玩家头上，或者暂不追究
+                if (zb.hp <= 0) this._killZombie(zb, auras[auras.length - 1].owner);
             } else {
                 if (zb.slowT <= 0 && zb.el1) zb.el1.querySelector('img').style.filter = '';
             }
@@ -1970,15 +1994,19 @@ class HauntedDorm {
                 this.world1.appendChild(el);
                 
                 // 给导弹加上无限范围追踪属性
+                // v4.0.17：补 owner——原导弹不带 owner，伤害不计入任何人的 MVP 伤害账
+                const nRm = this._insideRoom(pl.c, pl.r);
+                const nOwner = (nRm && nRm.owners && nRm.owners.length > 0) ? nRm.owners[0] : this.player;
                 this.peas.push({
                     x: px, y: py,
-                    vx: 0, vy: -200, 
+                    vx: 0, vy: -200,
                     el: el, life: 10,
                     dmg: nk.dmg,
                     pctDmg: nk.pct,
                     homing: true,
                     homeR: 9999, // 无论多远都追踪
-                    speed: 350
+                    speed: 350,
+                    owner: nOwner
                 });
             }
         }
@@ -2002,7 +2030,10 @@ class HauntedDorm {
             for (const zb of [...this.zombies]) {
                 if (!zb.dead && Math.hypot(zb.x - px, zb.y - py) < 130) {
                     const rm = this._insideRoom(pl.c, pl.r);
-                    this._killZombie(zb, (rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : this.player);
+                    const owner = (rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : this.player;
+                    // v4.0.17：雷爆伤害计入 MVP 伤害账（原只记击杀不记伤害）
+                    if (owner.roleDef) owner.dmgDealt = (owner.dmgDealt || 0) + Math.max(0, zb.hp);
+                    this._killZombie(zb, owner);
                 }
             }
             pl.el1.remove();
@@ -2224,9 +2255,10 @@ class HauntedDorm {
             const col = Math.floor(p.x / this.gridSize);
             const row = Math.floor(p.y / this.gridSize);
             const pl = this.plants.find(x => x.c === col && x.r === row);
-            
-            let room = this.rooms.find(rm => col >= rm.x && col < rm.x + rm.w && row >= rm.y && row < rm.y + rm.h);
-            if (!room) room = this.rooms.find(rm => Math.abs(col - rm.doorCol) + Math.abs(row - rm.doorRow) <= 1);
+
+            // v4.0.17：统一房间解析器（原外接矩形+门邻格 find 首匹配会误抓隔壁房间，
+            // 站在自家门口/桥上想建造时误报「你已经有房间了！」）
+            const room = this._resolveBuildRoom(col, row, p);
             
             if (room && room.owners && room.owners.length > 0 && !room.owners.includes(p)) {
                 this._flyText(col * 80 + 40, row * 80, '别人的地盘！', '#ff4b4b');
@@ -2269,11 +2301,40 @@ class HauntedDorm {
     }
     
     _renderKMenu(menu, uiEl) {
-        uiEl.innerHTML = menu.options.map((opt, i) => 
+        uiEl.innerHTML = menu.options.map((opt, i) =>
             `<div style="padding:5px 10px; background:${i === menu.index ? '#fff' : 'transparent'}; color:${i === menu.index ? '#000' : '#fff'}; border-bottom:1px solid #444;">
                 ${opt.text}
             </div>`
         ).join('');
+    }
+
+    // v4.0.17：实时伤害榜 + P1/P2 HUD 伤害数字——让「谁对僵尸输出最多」全程可见，MVP 结算不再意外
+    _updateDmgBoard() {
+        if (this.isZombieFaction) return;
+        this._dmgBoardTick = (this._dmgBoardTick || 0) + 1;
+        if (this._dmgBoardTick % 20 !== 0) return; // 约 0.33s 刷新一次
+
+        // P1/P2 HUD 实时伤害
+        const d1 = document.getElementById('dmg1');
+        if (d1) d1.innerText = Math.round(this.player.dmgDealt || 0);
+        const d2 = document.getElementById('dmg2');
+        if (d2) d2.innerText = Math.round((this.player2 && this.player2.dmgDealt) || 0);
+
+        // 顶部伤害榜：所有人（含人机）按伤害降序，领先者标出
+        const board = document.getElementById('dmg-board');
+        if (!board) return;
+        const entries = this.allPlayers
+            .map(p => ({
+                label: p === this.player ? 'P1' : (p === this.player2 ? 'P2' : `人机-${p.roleDef ? p.roleDef.name : '?'}`),
+                dmg: Math.round(p.dmgDealt || 0),
+                isMe: p === this.player
+            }))
+            .sort((a, b) => b.dmg - a.dmg);
+        if (entries.length <= 1 && entries[0] && entries[0].dmg === 0) { board.style.display = 'none'; return; }
+        board.innerHTML = '⚔ 伤害榜：' + entries.map(e =>
+            `<span class="${e.isMe ? 'dmg-me' : ''}">${e.label} ${e.dmg}</span>`
+        ).join(' ｜ ');
+        board.style.display = 'block';
     }
     
     _execKMenu(p, menu, opt) {
@@ -2308,8 +2369,8 @@ class HauntedDorm {
             const type = opt.type;
             const def = HauntedDorm.DEFS[type];
             if (p.sun >= (def.cost || 0) && p.spore >= (def.sporeCost || 0)) {
-                let room = this._insideRoom(menu.targetCol, menu.targetRow);
-                if (!room) room = this.rooms.find(rm => Math.abs(menu.targetCol - rm.doorCol) + Math.abs(menu.targetRow - rm.doorRow) <= 1);
+                // v4.0.17：统一房间解析器（门邻格优先自己的房间）
+                const room = this._resolveBuildRoom(menu.targetCol, menu.targetRow, p);
                 
                 if (room && room.owners && !room.owners.includes(p)) {
                     room.owners.push(p);
@@ -2414,6 +2475,7 @@ class HauntedDorm {
         }
         
         this._updateKMenus();
+        this._updateDmgBoard(); // v4.0.17：实时伤害榜（内部自带节流）
         this.keysJustPressed = {}; // 清空单帧按键缓存
 
         // 人机开局自动寻路（按路点走到床位，避免穿模穿墙）
