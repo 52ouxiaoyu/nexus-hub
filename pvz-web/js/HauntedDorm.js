@@ -118,7 +118,7 @@ class HauntedDorm {
             doomshroom:    { name: '毁灭菇', img: 'Plants/DoomShroom/0.gif', card: 'DoomShroom.png', hp: 2000,  cost: 0, sporeCost: 1000,
                              nuke: { lob: true, dmg: 1000, pct: 0.05, cd: 4.0, img: 'Plants/DoomShroom/0.gif' } },
             garlic:        { name: '大蒜',   img: 'Plants/Garlic/0.gif',     card: 'Garlic.png',     hp: 1000,  cost: 100, isGarlic: true },
-            blindbox:      { name: '植物盲盒',img: 'Plants/FlowerPot/0.gif', card: 'PlantBox.png', hp: 100,  cost: 100, sporeCost: 5, isBlindBox: true }
+            blindbox:      { name: '植物盲盒',img: 'Plants/FlowerPot/0.gif', card: 'PlantBox.png', hp: 100,  cost: 100, sporeCost: 100, isBlindBox: true }
         };
     }
     // 商店可购清单（阳光 / 孢子两种货币）
@@ -587,6 +587,8 @@ class HauntedDorm {
 
         // 修复：清除在生成门和床时被错误赋予给玩家的房间归属
         this.player.room = null;
+        this.player.room2 = null; // v4.0.18：副房一并清空
+        if (this.player2) { this.player2.room = null; this.player2.room2 = null; }
         for (const rm of this.rooms) {
             rm.owners = [];
             rm.capacity = rm.tpl.beds.length;
@@ -1313,12 +1315,17 @@ class HauntedDorm {
         if (!inRoomGrid) isSpikeTile = true;
         
         // 检查房间归属
-        if (this.ais.some(ai => ai.room === targetRm) && targetRm !== this.player.room) {
+        if (this.ais.some(ai => ai.room === targetRm) && !this._ownsRoom(this.player, targetRm)) {
             this._flyText(col * this.gridSize + 40, row * this.gridSize, '这是人机的房间！', '#ff8a8a');
             return;
         }
-        if (this.player.room && this.player.room !== targetRm) {
-            this._flyText(col * this.gridSize + 40, row * this.gridSize, '你已经有房间了！', '#ff8a8a');
+        if (targetRm.owners && targetRm.owners.some(o => o !== this.player)) {
+            this._flyText(col * this.gridSize + 40, row * this.gridSize, '别人的地盘！', '#ff8a8a');
+            return;
+        }
+        // v4.0.18：支持第二间房——空房且自己未满两间即可去建造（建造时自动认领）
+        if (!this._ownsRoom(this.player, targetRm) && this._ownedRooms(this.player).length >= 2) {
+            this._flyText(col * this.gridSize + 40, row * this.gridSize, '最多只能拥有两间房！', '#ff8a8a');
             return;
         }
 
@@ -1327,9 +1334,7 @@ class HauntedDorm {
         this.menuOpen = true;
 
         this.plantMenu.style.display = 'flex';
-        this.plantMenu.style.left = (mouseX + 20) + 'px';
-        this.plantMenu.style.top = (mouseY - 20) + 'px';
-        
+
         // 地刺格子只能种地刺，别的植物隐藏
         const opts = this.plantMenu.querySelectorAll('.plant-option');
         opts.forEach(opt => {
@@ -1339,6 +1344,17 @@ class HauntedDorm {
                 opt.style.display = (opt.dataset.t === 'spikeweed') ? 'none' : 'block';
             }
         });
+
+        // v4.0.18：菜单贴边自动回调——格子太靠下/靠右时整体上移/左移，别让下半截被屏幕裁掉
+        this.plantMenu.style.left = (mouseX + 20) + 'px';
+        this.plantMenu.style.top = (mouseY - 20) + 'px';
+        const mr = this.plantMenu.getBoundingClientRect();
+        if (mr.bottom > window.innerHeight - 8) {
+            this.plantMenu.style.top = Math.max(8, mouseY - 20 - (mr.bottom - window.innerHeight + 8)) + 'px';
+        }
+        if (mr.right > window.innerWidth - 8) {
+            this.plantMenu.style.left = Math.max(8, mouseX + 20 - (mr.right - window.innerWidth + 8)) + 'px';
+        }
     }
 
     _closePlantMenu() {
@@ -1370,16 +1386,38 @@ class HauntedDorm {
         return this.rooms.find(r => Math.abs(col - r.doorCol) + Math.abs(row - r.doorRow) <= 1) || null;
     }
 
+    // v4.0.18：房间归属助手——每人最多拥有两间房（p.room 主房 + p.room2 副房）
+    _ownedRooms(p) {
+        const arr = [];
+        if (p.room && !arr.includes(p.room)) arr.push(p.room);
+        if (p.room2 && !arr.includes(p.room2)) arr.push(p.room2);
+        return arr;
+    }
+    _ownsRoom(p, rm) { return !!rm && (p.room === rm || p.room2 === rm); }
+    // 认领房间：别人的地盘 / 满员 / 自己已满两间时认领失败（返回 false）
+    _claimRoom(p, rm) {
+        if (!rm || this._ownsRoom(p, rm)) return true;
+        if (rm.owners && rm.owners.some(o => o !== p)) return false;
+        if (this._ownedRooms(p).length >= 2) return false;
+        if (rm.owners && rm.owners.length >= (rm.capacity || 1)) return false;
+        rm.owners.push(p);
+        if (!p.room) p.room = rm; else p.room2 = rm;
+        // 首个占领者自动在门口放一块坚果门板
+        if (rm.owners.length === 1 && !this.plants.some(x => x.c === rm.doorCol && x.r === rm.doorRow)) {
+            this.spawnPlant(rm.doorCol, rm.doorRow, 'wallnut', true);
+            this.playSfx('plant.mp3', 0.5);
+        }
+        return true;
+    }
+
     doPlant(type) {
         this._closePlantMenu();
 
         // v4.0.17：统一房间解析器
         let targetRm = this._resolveBuildRoom(this.menuCol, this.menuRow, this.player);
 
-        if (targetRm && !this.player.room) {
-            this.player.room = targetRm; // 绑定房间归属
-            if (!targetRm.owners.includes(this.player)) targetRm.owners.push(this.player); // v4.0.17：同步 owners（原只写 p.room 不写 owners，归属账本不一致）
-        }
+        // v4.0.18：建造时认领房间（支持主房+副房，最多两间）
+        if (targetRm) this._claimRoom(this.player, targetRm);
 
         const def = HauntedDorm.DEFS[type];
         if (!def) return;
@@ -2213,6 +2251,17 @@ class HauntedDorm {
         const cy = Math.max(0, Math.min(this.worldHeight - vph / scale, midY - vph / 2 / scale));
         
         this.world1.style.transform = `scale(${scale}) translate(${-cx}px, ${-cy}px)`;
+
+        // v4.0.18：键盘建造菜单贴到屏幕下缘/右缘时整体上移/左移，避免下半截被裁掉看不见
+        const visBottom = cy + vph / scale;
+        const visRight = cx + vpw / scale;
+        for (const km of [this.p1Kmenu, this.p2Kmenu]) {
+            if (!km || km.style.display !== 'block') continue;
+            const kh = km.offsetHeight || 0, kw = km.offsetWidth || 0;
+            const kt = parseFloat(km.style.top) || 0, kl = parseFloat(km.style.left) || 0;
+            if (kt + kh > visBottom) km.style.top = Math.max(0, visBottom - kh - 8) + 'px';
+            if (kl + kw > visRight) km.style.left = Math.max(0, visRight - kw - 8) + 'px';
+        }
     }
 
 
@@ -2239,8 +2288,12 @@ class HauntedDorm {
         }
         
         if (menu.active) {
-            if (this._checkAnyKey(keysUp)) { menu.index = Math.max(0, menu.index - 1); this._renderKMenu(menu, uiEl); }
-            if (this._checkAnyKey(keysDown)) { menu.index = Math.min(menu.options.length - 1, menu.index + 1); this._renderKMenu(menu, uiEl); }
+            // v4.0.18：循环翻页——到顶再往上直接跳到最底一条，到底再往下回到最顶
+            const len = menu.options.length;
+            if (len > 0) {
+                if (this._checkAnyKey(keysUp)) { menu.index = (menu.index - 1 + len) % len; this._renderKMenu(menu, uiEl); }
+                if (this._checkAnyKey(keysDown)) { menu.index = (menu.index + 1) % len; this._renderKMenu(menu, uiEl); }
+            }
             
             if (this._checkAnyKey(keysOk)) {
                 const opt = menu.options[menu.index];
@@ -2260,7 +2313,7 @@ class HauntedDorm {
             // 站在自家门口/桥上想建造时误报「你已经有房间了！」）
             const room = this._resolveBuildRoom(col, row, p);
             
-            if (room && room.owners && room.owners.length > 0 && !room.owners.includes(p)) {
+            if (room && room.owners && room.owners.some(o => o !== p)) {
                 this._flyText(col * 80 + 40, row * 80, '别人的地盘！', '#ff4b4b');
                 return;
             }
@@ -2285,8 +2338,9 @@ class HauntedDorm {
                 menu.targetCol = col;
                 menu.targetRow = row;
                 
-                if (p.room && p.room !== room) {
-                    this._flyText(col * 80 + 40, row * 80, '你已经有房间了！', '#ff4b4b');
+                // v4.0.18：支持第二间房——空房且自己未满两间即可建造（建造时自动认领）
+                if (!this._ownsRoom(p, room) && this._ownedRooms(p).length >= 2) {
+                    this._flyText(col * 80 + 40, row * 80, '最多只能拥有两间房！', '#ff4b4b');
                     return;
                 }
             }
@@ -2369,17 +2423,9 @@ class HauntedDorm {
             const type = opt.type;
             const def = HauntedDorm.DEFS[type];
             if (p.sun >= (def.cost || 0) && p.spore >= (def.sporeCost || 0)) {
-                // v4.0.17：统一房间解析器（门邻格优先自己的房间）
+                // v4.0.18：统一房间认领（支持主房+副房，最多两间；首个占领者自动补门板坚果）
                 const room = this._resolveBuildRoom(menu.targetCol, menu.targetRow, p);
-                
-                if (room && room.owners && !room.owners.includes(p)) {
-                    room.owners.push(p);
-                    p.room = room;
-                    if (room.owners.length === 1 && !this.plants.some(x => x.c === room.doorCol && x.r === room.doorRow)) {
-                        this.spawnPlant(room.doorCol, room.doorRow, 'wallnut', true);
-                        this.playSfx('plant.mp3', 0.5);
-                    }
-                }
+                if (room) this._claimRoom(p, room);
                 
                 this.addSun(-(def.cost || 0), p);
                 this.addSpore(-(def.sporeCost || 0), p);
@@ -2613,7 +2659,7 @@ class HauntedDorm {
                             // 如果到了床边发现玩家站在这里或满员了，触发重新寻路
                             let foundNew = false;
                             for (const rm of this.rooms) {
-                                if (rm.owners.length < rm.capacity && rm !== this.player.room) {
+                                if (rm.owners.length < rm.capacity && rm !== this.player.room && rm !== this.player.room2) {
                                     ai.targetRoom = rm;
                                     const p = this._findPath(ai.x, ai.y, rm.frontX, rm.frontY);
                                     p.push({ x: (rm.x + rm.tpl.beds[0].c) * this.gridSize + 40, y: (rm.y + rm.tpl.beds[0].r) * this.gridSize + 40 });
