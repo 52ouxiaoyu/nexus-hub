@@ -20,7 +20,7 @@
   let W = MIN_W;
   /* 战场越宽，自机速度等比补偿，避免横向机动变迟钝 */
   function fieldSpd() { return Math.min(1.25, Math.max(1, W / MIN_W)); }
-  const VERSION = 'v1.4.11';
+  const VERSION = 'v1.5.0';
 
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d', { alpha: false });
@@ -84,6 +84,8 @@
       satN: 0, satA: 0, satT: 0,
       /* 超载 OVERDRIVE（v1.3.0）：擦弹充能换即时战力 */
       od: 0, odCharge: 0, shieldT: 0,
+      /* v1.5.0：升级二选一 + 个人最高连击 */
+      pick: null, pickIdx: 0, pickT: 0, maxCombo: 0,
       pk(n) { return this.perks[n] || 0; },
     };
   }
@@ -103,7 +105,8 @@
     best: 0, sfx: true, waveMsg: 0, msgText: '',
     daily: false, perkPool: null, dailyPow: 1,
     enemySlow: 0,           /* >0 时敌人与敌弹降到 1/3 速（时空凝滞） */
-    stats: { maxCombo: 0, deaths: 0, odTriggers: 0 },
+    heat: 0, heatT: 999, heatMul: 1,   /* v1.5.0 贪分热度：擦弹累积/停手衰减/中弹清零 */
+    stats: { maxCombo: 0, deaths: 0, odTriggers: 0, pdmg: [0, 0], rescues: 0 },
     stars: [],
 
     reset() {
@@ -115,6 +118,8 @@
       this.enemySlow = 0;
       this.nextExtend = 80000; this.wave = 0; this.clearT = 0; this.flash = 0; this.deathT = 0;
       this.stats.maxCombo = 0; this.stats.deaths = 0; this.stats.odTriggers = 0;
+      this.stats.pdmg = [0, 0]; this.stats.rescues = 0;
+      this.heat = 0; this.heatT = 999; this.heatMul = 1;
       TW.FX.reset();
       this.two = true;      /* v1.4.0：恒为双席位，单人 = 另一个席位交给 AI */
       this.players.length = 0;
@@ -132,7 +137,7 @@
     grazeTotal() { let n = 0; for (let i = 0; i < this.players.length; i++) n += this.players[i].graze; return n; },
     bombTotal() { let n = 0; for (let i = 0; i < this.players.length; i++) n += Math.max(0, this.players[i].bombs); return n; },
     addScore(v, x, y, pl) {
-      const s = Math.round(v * this.mult(pl));
+      const s = Math.round(v * this.mult(pl) * (this.heatMul || 1));   // v1.5.0 贪分倍率
       this.score += s;
       if (x !== undefined) TW.FX.text(x, y, '+' + s, '#ffe9a8', 12);
       while (this.score >= this.nextExtend) {
@@ -155,6 +160,18 @@
     addBullet(pl, x, y, ang, sp, dmg, kind, pierce, homing);
   };
   TW.hurtEnemy = function (e, dmg, hx, hy, pl) { hurtEnemy(e, dmg, hx, hy, pl); };
+  /* v1.5.0 世界凝滞系数：时空凝滞大招 1/3，升级二选一子弹时间 1/10（取更深者） */
+  TW.worldSlow = function () {
+    let sl = 1;
+    if (G.enemySlow > 0) sl = 1 / 3;
+    if (G.state === 'PLAYING') {
+      for (let i = 0; i < G.players.length; i++) {
+        const pl = G.players[i];
+        if (pl && pl.pick) sl = Math.min(sl, 0.1);
+      }
+    }
+    return sl;
+  };
 
   /* 单人场景的便捷代理：G.xxx / G.player 等价于 1P（仅用于读写的快捷方式，战斗逻辑一律走 p.xxx） */
   Object.defineProperty(G, 'player', {
@@ -241,10 +258,25 @@
       startGame(G.state === 'MENU' ? (document.body.dataset.mode || 'story') : G.mode);
     }
     if (G.state === 'PLAYING') {
+      /* v1.5.0 二选一：左右移动键选卡、射击/大招键确认 —— 凝滞下不抢键 */
+      let pickUsed = false;
       for (let i = 0; i < G.players.length; i++) {
-        if (e.repeat) continue;
         const pl = G.players[i];
-        if (isBomb(i, k, code)) useBomb(pl);
+        if (!pl || !pl.pick) continue;
+        if (e.repeat) continue;
+        const m = KEYMAP[i];
+        const lf = m.lf.indexOf(k) >= 0 || (code && m.lf.indexOf(code) >= 0);
+        const rt = m.rt.indexOf(k) >= 0 || (code && m.rt.indexOf(code) >= 0);
+        if (lf) { pl.pickIdx = 0; pickUsed = true; }
+        else if (rt) { pl.pickIdx = Math.min(1, pl.pick.length - 1); pickUsed = true; }
+        else if (isFire(i, k, code) || isBomb(i, k, code)) { TW.confirmPick(pl, pl.pickIdx); pickUsed = true; }
+      }
+      if (!pickUsed) {
+        for (let i = 0; i < G.players.length; i++) {
+          if (e.repeat) continue;
+          const pl = G.players[i];
+          if (isBomb(i, k, code)) useBomb(pl);
+        }
       }
     }
     if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].indexOf(k) >= 0) e.preventDefault();
@@ -470,7 +502,7 @@
         addBullet(pl, pl.x + sp2, pl.y + 2, ang + wa, 6, 4, 'wing', pc);
       }
     }
-    if (G.sfx) ((pl.weapon === 1 || pl.weapon === 3) ? TW.Audio.laser() : pl.weapon === 2 ? TW.Audio.missile() : TW.Audio.shot());
+    if (G.sfx) ((pl.weapon === 1 || pl.weapon === 3) ? TW.Audio.laser() : pl.weapon === 2 ? TW.Audio.missile() : TW.Audio.shot(1 + Math.min(30, pl.combo) * 0.006));
   }
 
   function addBullet(pl, x, y, ang, sp, dmg, kind, pierce, homing) {
@@ -586,7 +618,14 @@
       if (e.hp <= 0) { e.hp = 0; bossDown(e, pl); }
       return;
     }
+    /* v1.5.0 旗舰装甲：炮塔健在时舰体只受 15% 伤害 —— 先拆件再打主体 */
+    if (e.dread) {
+      let shielded = false;
+      for (let k = 0; k < e.parts.length; k++) if (e.parts[k].alive) shielded = true;
+      if (shielded) dmg *= 0.15;
+    }
     e.hp -= dmg; e.flash = 3;
+    if (pl) G.stats.pdmg[pl.id] = (G.stats.pdmg[pl.id] || 0) + dmg;
     TW.FX.hit(hx, hy, '#ffffff');
     if (e.hp <= 0) killEnemy(e, pl);
   }
@@ -604,7 +643,8 @@
     TW.Audio.explode();
     G.kills++;
     if (pl) { pl.kills++; pl.combo++; pl.comboT = COMBO_WIN;
-      if (pl.combo > G.stats.maxCombo) G.stats.maxCombo = pl.combo; }
+      if (pl.combo > G.stats.maxCombo) G.stats.maxCombo = pl.combo;
+      if (pl.combo > pl.maxCombo) pl.maxCombo = pl.combo; }
     G.rank = Math.min(100, G.rank + 0.18);
     G.addScore(e.score, e.x, e.y - 10, pl);
     TW.spawnExp(e.x, e.y, (e.type === 'gunship' || e.type === 'bomber') ? 3 : 1);
@@ -613,6 +653,14 @@
       TW.dropItem(e.x - 24, e.y, 'weapon');
       TW.FX.text(e.x, e.y - 34, 'ELITE DOWN', '#ffd27a', 16);
       TW.FX.quake(5, 16);
+    }
+    if (e.dread) {
+      TW.spawnExp(e.x, e.y, 12);
+      TW.dropItem(e.x - 26, e.y, 'weapon');
+      TW.dropItem(e.x + 26, e.y, 'bomb');
+      TW.FX.text(e.x, e.y - 44, '旗舰击破！', '#ffd27a', 18);
+      TW.FX.quake(8, 24);
+      TW.Audio.bigExplode();
     }
     splashOnKill(e, pl);
     if (e.item) TW.dropItem(e.x, e.y, e.item);
@@ -651,6 +699,9 @@
     pl.combo = 0; pl.comboT = 0;
     G.rank = Math.max(0, G.rank - 28);
     pl.power = Math.max(1, pl.power - 2);
+    pl.pick = null;
+    if (G.heatMul > 1) TW.FX.text(pl.x, pl.y - 60, '倍率归零', '#ff8a9a', 14);
+    G.heat = 0; G.heatT = 999; G.heatMul = 1;
     G.clearBullets(false);
     TW.FX.bigBoom(pl.x, pl.y, 2.4, '#ff8a5c');
     TW.FX.quake(9, 24); TW.Audio.death();
@@ -708,6 +759,7 @@
     owner.y = Math.max(120, Math.min(H - 130, pod.y + 50));
     G.pods.splice(idx, 1);
     G.clearBullets(false);
+    G.stats.rescues++;
     G.addScore(5000, owner.x, owner.y - 46, pl);
     TW.FX.ring(owner.x, owner.y, 20, PCFG[owner.id].color, 40);
     TW.FX.ring(owner.x, owner.y, 44, '#ffffff', 26);
@@ -730,7 +782,7 @@
         if (e.dead || e.dying) continue;
         const pl = G.players[b.owner] || G.players[0] || null;
         let hit = false, hx = b.x, hy = b.y;
-        if (e.boss) {
+        if (e.boss || e.dread) {
           for (let k = 0; k < e.parts.length; k++) {
             const pt = e.parts[k];
             if (!pt.alive) continue;
@@ -756,6 +808,7 @@
             dmg *= 3;
             TW.FX.quake(3, 8);
             TW.FX.text(hx, hy - 10, 'CRIT', '#ffe9a8', 13);
+            if (TW.Audio.crit) TW.Audio.crit();
           }
           if (b.pierce > 0) {
             if (b.hit.indexOf(e) >= 0) continue;
@@ -844,7 +897,7 @@
     }
 
     /* 敌弹 → 玩家（逐在多玩家身上独立判定） */
-    const es = G.enemySlow > 0 ? (1 / 3) : 1;   // 时空凝滞：敌弹降到 1/3 速
+    const es = TW.worldSlow();   // 凝滞：大招 1/3 · 升级二选一 1/10
     for (let i = G.ebullets.length - 1; i >= 0; i--) {
       const b = G.ebullets[i];
       if (!b) break;   // 玩家阵亡会清屏，后续索引已失效
@@ -888,10 +941,11 @@
         const gzR = pl.grazeR * (pl.od > 0 ? 1.6 : 1);
         if (!b.gz[j] && d < gzR + b.r) {
           b.gz[j] = true; pl.graze++;
+          G.heat = Math.min(100, G.heat + 3.2 + 1.3 * pl.pk('graze')); G.heatT = 0;
           G.addScore(50, undefined, undefined, pl);
           G.rank = Math.min(100, G.rank + 0.05);
           TW.FX.graze(pl.x, pl.y);
-          if (G.sfx && pl.graze % 3 === 0) TW.Audio.graze();
+          if (G.sfx && pl.graze % 3 === 0) TW.Audio.graze(1 + (G.heatMul - 1) * 0.1);
           /* 擦弹从「加 50 分」升级为「充能换即时战力」—— 贴着弹幕飞有实际回报 */
           if (pl.od <= 0) {
             pl.odCharge += 7 * (1 + 0.6 * pl.pk('graze'));
@@ -963,6 +1017,15 @@
       st.script[G.scriptI].fn();
       G.scriptI++;
     }
+    /* v1.5.0 乐章横幅：命名小节给推进感，节与节之间天然形成喘息点 */
+    if (st.movements) {
+      for (let i = 0; i < st.movements.length; i++) {
+        if (G.stageT === st.movements[i].t) {
+          G.msgText = '第' + '一二三四五'[i] + '幕 · ' + st.movements[i].name;
+          G.waveMsg = 100;
+        }
+      }
+    }
     /* 段末精英机：把每关切成三个节奏高点 */
     if (st.elites) {
       for (let i = 0; i < st.elites.length; i++) {
@@ -1012,6 +1075,12 @@
         G.boss.hp = G.boss.maxhp = Math.round(G.boss.maxhp * (1 + G.wave * 0.06));
         G.msgText = 'WARNING';
         G.waveMsg = 110;
+        return;
+      }
+      if (G.wave % 8 === 4) {
+        TW.spawnDread(Math.min(4, Math.floor(G.wave / 8)));
+        G.msgText = 'WARNING · 旗舰接近';
+        G.waveMsg = 90;
         return;
       }
       if (roll === 0) F.vee('drone', 7, 240, 44, 2.0 * k);
@@ -1072,6 +1141,21 @@
         p2.x = Math.max(16, Math.min(W - 16, p2.x)); p2.y = Math.max(40, Math.min(H - 24, p2.y));
       }
     }
+
+    /* v1.5.0 二选一超时自动锁定；出局作废 */
+    for (let i = 0; i < G.players.length; i++) {
+      const pl = G.players[i];
+      if (!pl.pick) continue;
+      if (pl.out) { pl.pick = null; continue; }
+      pl.pickT--;
+      if (pl.pickT <= 0) TW.confirmPick(pl, Math.floor(Math.random() * pl.pick.length));
+    }
+    /* v1.5.0 贪分热度：擦弹抬升、停手衰减、档位提升有音效 */
+    G.heatT++;
+    if (G.heatT > 75) G.heat = Math.max(0, G.heat - 0.55);
+    const nm = 1 + Math.min(7, Math.floor(G.heat / 14.3));
+    if (nm > G.heatMul && TW.Audio.heatUp) TW.Audio.heatUp(nm);
+    G.heatMul = nm;
 
     for (let i = G.enemies.length - 1; i >= 0; i--) {
       const e = G.enemies[i];
@@ -1216,6 +1300,7 @@
     /* 敌人 */
     for (let i = 0; i < G.enemies.length; i++) {
       const e = G.enemies[i];
+      if (e.dread) { if (TW.drawDread) TW.drawDread(ctx, e); continue; }
       if (e.boss) {
         drawSpr(sprImg(e.spr), e.x, e.y, e.r * 2.6, e.r * 1.9, 0, e.flash > 0, sprWhite(e.spr));
         for (let k = 0; k < e.parts.length; k++) {
@@ -1361,7 +1446,7 @@
       ctx.globalAlpha = a;
       ctx.textAlign = 'center';
       ctx.font = '600 26px system-ui, sans-serif';
-      ctx.fillStyle = G.msgText === 'WARNING' ? '#ff6b7d' : '#9ff0ff';
+      ctx.fillStyle = G.msgText.indexOf('WARNING') === 0 ? '#ff6b7d' : '#9ff0ff';
       ctx.fillText(G.msgText, W / 2, 300);
       ctx.globalAlpha = 1;
       ctx.textAlign = 'left';
@@ -1399,7 +1484,22 @@
       ctx.textAlign = 'left';
     }
 
+    /* v1.5.0 贪分光晕：倍率越高边缘白辉越亮（白=有利语义，与暖色弹幕区分） */
+    if (G.heatMul > 1 && G.state === 'PLAYING') {
+      const ha = Math.min(0.26, 0.03 + (G.heatMul - 1) * 0.036);
+      const gl = [[0, 0, 90, 0, 0, H], [W, 0, W - 90, 0, W, H], [0, 0, 0, 70, W, 0], [0, H, 0, H - 70, W, H]];
+      for (let gi = 0; gi < gl.length; gi++) {
+        const g4 = gl[gi];
+        const gr = ctx.createLinearGradient(g4[0], g4[1], g4[2], g4[3]);
+        gr.addColorStop(0, 'rgba(255,255,255,' + ha + ')');
+        gr.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = gr;
+        ctx.fillRect(Math.min(g4[0], g4[2]), Math.min(g4[1], g4[3]), Math.abs(g4[4] - g4[0]) || 90, Math.abs(g4[5] - g4[1]) || 70);
+      }
+    }
+
     drawHUD();
+    if (TW.drawPick) TW.drawPick(ctx, W, H);   /* v1.5.0 子弹时间二选一卡片 */
   }
 
   /* ==================== HUD（v1.4.9：全部顶部、左右完全镜像） ==================== */
@@ -1427,6 +1527,13 @@
       ctx.font = '600 18px system-ui, sans-serif';
       ctx.fillStyle = '#ffe9a8';
       ctx.fillText('x' + G.mult(cl).toFixed(2) + '  ' + cl.combo + ' ' + cl.tag + ' COMBO', W / 2, 64);
+    }
+
+    /* ---- 贪分倍率（v1.5.0）：倍率越高越显眼，提醒玩家「贴脸有赏」 ---- */
+    if (G.heatMul > 1) {
+      ctx.font = '600 14px system-ui, sans-serif';
+      ctx.fillStyle = '#ffe9a8';
+      ctx.fillText('贪分 x' + G.heatMul, W / 2, 82);
     }
 
     /* ---- 左右两列：逐玩家完全镜像 ---- */
@@ -1553,6 +1660,13 @@
         lines.push('<span style="color:' + PCFG[i].color + '">' + pl.tag +
           ' 击破 ' + pl.kills + ' · 擦弹 ' + pl.graze + ' · 残机 ' + Math.max(0, pl.lives) + '</span>');
       }
+      const hl = G.lastRun && G.lastRun.hl;
+      if (hl) {
+        lines.unshift('<b style="color:' + PCFG[hl.mvp].color + '">★ MVP ' + PCFG[hl.mvp].tag +
+          '（输出 ' + hl.pdmg[hl.mvp] + '）</b>');
+        lines.push('<span style="color:rgba(255,255,255,0.6)">最高连击 ' + hl.maxCombo[0] + ' / ' + hl.maxCombo[1] +
+          (hl.rescues ? ' · 救援 ' + hl.rescues + ' 次' : '') + '</span>');
+      }
     } else {
       lines.push('击破 ' + G.kills + ' · 擦弹 ' + G.grazeTotal());
     }
@@ -1584,7 +1698,17 @@
     let newRec = false;
     if (G.daily && TW.Meta) newRec = TW.Meta.submitDaily(G.score, G.wave);
     if (G.score > G.best) { G.best = G.score; localStorage.setItem('tw_best', G.best); }
-    G.lastRun = { st: st, fresh: fresh, newRec: newRec };
+    const pd = G.stats.pdmg;
+    const mvp = ((pd[1] || 0) > (pd[0] || 0)) ? 1 : 0;
+    G.lastRun = {
+      st: st, fresh: fresh, newRec: newRec,
+      hl: {
+        mvp: mvp,
+        pdmg: [Math.round(pd[0] || 0), Math.round(pd[1] || 0)],
+        maxCombo: [G.players[0] ? G.players[0].maxCombo || 0 : 0, G.players[1] ? G.players[1].maxCombo || 0 : 0],
+        rescues: G.stats.rescues,
+      },
+    };
   }
 
   function showAchievements() {

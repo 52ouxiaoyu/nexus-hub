@@ -31,7 +31,7 @@ function ok(name, cond, extra) {
   console.log('\n--- 加载与句柄 ---');
   ok('无页面异常', errors.length === 0, errors.slice(0, 3));
   const ver = await page.evaluate(() => window.__twGame && window.__twGame.VERSION);
-  ok('句柄存在且版本 v1.4.11', ver === 'v1.4.11', ver);
+  ok('句柄存在且版本 v1.5.0', ver === 'v1.5.0', ver);
   ok('初始为菜单态', await page.evaluate(() => window.__twGame.state()) === 'MENU');
   await page.screenshot({ path: OUT + '/_shot_menu.png' });
 
@@ -420,28 +420,58 @@ function ok(name, cond, extra) {
   ok('我方子弹一律冷色（红通道不得主导）', oursWarm.length === 0,
     { bad: oursWarm, sample: hue.ours.missile });
 
-  console.log('\n--- 局内 Build（升级自动发词条，无弹窗） ---');
+  console.log('\n--- 局内 Build（v1.5.0 子弹时间二选一） ---');
   await page.evaluate(() => window.__twGame.start('story', false));
   const lv0 = await page.evaluate(() => window.__twGame.G.player.level);
-  const before = await page.evaluate(() => Object.keys(window.__twGame.perks()).length);
-  /* 升级时自动发词条，不弹菜单、不减速、不抢键 */
   await page.evaluate(() => window.__twGame.gainExp(6));
   const st = await page.evaluate(() => ({
     lv: window.__twGame.G.player.level,
     pick: !!window.__twGame.G.player.pick,
+    pickN: window.__twGame.G.player.pick ? window.__twGame.G.player.pick.length : 0,
+    slow: window.TW.worldSlow(),
+  }));
+  ok('升级弹出二选一并进入子弹时间（世界凝滞 1/10）',
+    st.lv > lv0 && st.pick && st.pickN === 2 && st.slow <= 0.11, st);
+
+  /* 选卡用真实键盘事件（选卡逻辑在 keydown 监听里，S.key 直接调 pressKey 不走监听） */
+  await page.keyboard.press('d');      /* 右移键 → 选第 2 张卡 */
+  const idx1 = await page.evaluate(() => window.__twGame.G.player.pickIdx);
+  const perksBefore = await page.evaluate(() => Object.keys(window.__twGame.perks()).length);
+  await page.keyboard.press('Space');  /* 射击键确认 */
+  const pickDone = await page.evaluate(() => ({
+    pick: !!window.__twGame.G.player.pick,
     nPerks: Object.keys(window.__twGame.perks()).length,
   }));
-  ok('吃经验升级并自动发放词条（无弹窗）', st.lv > lv0 && !st.pick && st.nPerks > before, st);
+  ok('左右键选卡、射击键确认生效', idx1 === 1 && !pickDone.pick && pickDone.nPerks > perksBefore,
+    { idx1, pickDone });
 
-  /* 升级不中断操作：升级后仍可正常移动，没有三选一抢方向键 */
+  /* 选卡期间照常操作：凝滞的是世界不是玩家，不抢键 */
   const moveOk = await page.evaluate(() => {
     const S = window.__twGame, g = S.G;
-    S.start('story', false); S.gainExp(60);
+    S.start('story', false); S.gainExp(60);   /* 多级连升：首级弹卡，后续自动 */
     const x0 = g.player.x;
     S.key('d', true); S.frame(30); S.key('d', false);
     return { pick: !!g.player.pick, moved: g.player.x > x0 + 5, nPerks: Object.keys(S.perks()).length };
   });
-  ok('升级不弹窗、不抢键、仍可移动', !moveOk.pick && moveOk.moved && moveOk.nPerks > 0, moveOk);
+  ok('选卡期间仍可正常移动（不抢方向键）', moveOk.pick && moveOk.moved && moveOk.nPerks > 0, moveOk);
+
+  const autoTests = await page.evaluate(() => {
+    const S = window.__twGame, g = S.G;
+    /* 超时自动锁定 */
+    if (g.player.pick) g.player.pickT = 5;
+    S.frame(8);
+    const timeoutOk = !g.player.pick && Object.keys(S.perks()).length > 0;
+    /* AI 席位保持全自动发放 */
+    S.setAI(true, 1);
+    const n1 = Object.keys(g.players[1].perks).length;
+    S.gainExp(20, 1);
+    const r = { timeoutOk: timeoutOk, aiNoPick: !g.players[1].pick,
+      aiPerk: Object.keys(g.players[1].perks).length > n1 };
+    S.setAI(false, 1);
+    return r;
+  });
+  ok('2.3 秒不选自动随机锁定', autoTests.timeoutOk, autoTests);
+  ok('AI 席位升级自动发词条（不打断 AI）', autoTests.aiNoPick && autoTests.aiPerk, autoTests);
 
   /* 单发对比：每次都把射击冷却归零，否则两次统计的射击次数会不同 */
   const twinTest = await page.evaluate(() => {
@@ -560,6 +590,93 @@ function ok(name, cond, extra) {
   });
   ok('成就面板可打开且列出全部条目', achUI.shown && achUI.items === 8, achUI);
   await page.evaluate(() => { document.getElementById('ov-ach').classList.add('hidden'); });
+
+  console.log('\n--- v1.5.0 贪分热度 ---');
+  const heatTest = await page.evaluate(() => {
+    const S = window.__twGame, g = S.G;
+    S.start('story', false);
+    const pl = g.player;
+    pl.ai = false; pl.idle = 0; pl.invuln = 9999; pl.od = 0;
+    g.heat = 0; g.heatT = 999; g.heatMul = 1;
+    g.ebullets.length = 0;
+    /* 5 颗擦弹弹：距机 17px（在擦弹圈 26px 内、命中圈 5.5px 外） */
+    for (let i = 0; i < 5; i++) {
+      const a = (Math.PI * 2 / 5) * i;
+      g.ebullets.push({ x: pl.x + Math.cos(a) * 17, y: pl.y + Math.sin(a) * 17,
+        vx: 0, vy: 0, r: 4, kind: 'red', t: 0, gz: [false, false] });
+    }
+    S.frame(2);
+    const heat1 = Math.round(g.heat * 10) / 10, mul1 = g.heatMul;
+    const sc = g.addScore(100);
+    return { heat1: heat1, mul1: mul1, sc: sc };
+  });
+  ok('擦弹累积贪分热度并抬升倍率到 x2', heatTest.heat1 >= 14.3 && heatTest.mul1 === 2, heatTest);
+  ok('贪分倍率放大得分（100 分 x2 = 200）', heatTest.sc === 200, heatTest);
+
+  const heatReset = await page.evaluate(() => {
+    const S = window.__twGame, g = S.G;
+    const pl = g.player;
+    pl.invuln = 0; pl.lives = 3;
+    g.ebullets.push({ x: pl.x, y: pl.y, vx: 0, vy: 0, r: 5, kind: 'red', t: 0, gz: [false, false] });
+    S.frame(2);
+    return { lives: pl.lives, mul: g.heatMul };
+  });
+  ok('中弹清零贪分倍率', heatReset.lives === 2 && heatReset.mul === 1, heatReset);
+
+  console.log('\n--- v1.5.0 旗舰中 Boss ---');
+  const dreadTest = await page.evaluate(() => {
+    const S = window.__twGame, g = S.G;
+    S.start('story', false); S.killAll();
+    g.ebullets.length = 0; g.player.invuln = 99999; g.player.lives = 99;
+    const d = window.TW.spawnDread(0);
+    const spawned = !!d && g.enemies.some((e) => e.dread) && d.parts.length === 2;
+    /* 炮塔健在：舰体只受 15% 伤害 */
+    const hp0 = d.hp;
+    window.TW.hurtEnemy(d, 100, d.x, d.y, g.player);
+    const shieldedLoss = hp0 - d.hp;
+    /* 拆掉双炮塔后全额受伤 */
+    d.parts[0].hp = 0; d.parts[1].hp = 0; S.frame(3);
+    const partsDead = !d.parts[0].alive && !d.parts[1].alive;
+    const hp1 = d.hp;
+    window.TW.hurtEnemy(d, 100, d.x, d.y, g.player);
+    const fullLoss = hp1 - d.hp;
+    /* 击破掉落 */
+    const sc0 = g.score;
+    d.hp = 1;
+    window.TW.hurtEnemy(d, 10, d.x, d.y, g.player);
+    S.frame(3);
+    return { spawned: spawned, shieldedLoss: shieldedLoss, partsDead: partsDead, fullLoss: fullLoss,
+      dead: d.dead, scoreGain: g.score - sc0,
+      drops: g.items.filter((it) => it.kind === 'weapon' || it.kind === 'bomb').length };
+  });
+  ok('旗舰生成且携带双炮塔', dreadTest.spawned, dreadTest);
+  ok('炮塔健在时舰体只受 15% 伤害', dreadTest.shieldedLoss > 0 && dreadTest.shieldedLoss <= 16, dreadTest);
+  ok('炮塔清空后舰体受到全额伤害', dreadTest.partsDead && dreadTest.fullLoss === 100, dreadTest);
+  ok('旗舰击破有得分并掉落武器/炸弹', dreadTest.dead && dreadTest.scoreGain > 0 && dreadTest.drops >= 2, dreadTest);
+
+  const moveM = await page.evaluate(() => {
+    const S = window.__twGame, g = S.G;
+    S.start('story', false); S.killAll();
+    g.player.invuln = 99999; g.player.lives = 99;
+    S.frame(565);
+    return { msg: g.msgText, stageT: g.stageT };
+  });
+  ok('乐章横幅出现（第一幕 · 巡逻遭遇）', moveM.msg.indexOf('第一幕') >= 0, moveM);
+
+  const edread = await page.evaluate(() => {
+    const S = window.__twGame, g = S.G;
+    S.start('endless', false);
+    g.players.forEach((p) => { p.invuln = 99999; p.lives = 99; p.ai = false; });
+    S.frame(1500);
+    return { wave: g.wave, dread: g.enemies.some((e) => e.dread) };
+  });
+  ok('无尽模式第 4 波旗舰登场（Boss 波之外）', edread.wave >= 4 && edread.dread, edread);
+
+  ok('结算包含 MVP 高光数据',
+    await page.evaluate(() => {
+      const hl = window.__twGame.G.lastRun && window.__twGame.G.lastRun.hl;
+      return !!hl && Array.isArray(hl.pdmg) && typeof hl.mvp === 'number';
+    }));
 
   console.log('\n--- 全程异常检查 ---');
   ok('运行期间无 JS 异常', errors.length === 0, errors.slice(0, 5));

@@ -128,7 +128,7 @@
   /* ==================== 敌人更新 ==================== */
   TW.updateEnemy = function (e) {
     const g = G();
-    const slow = g.enemySlow > 0 ? (1 / 3) : 1;   // 时空凝滞：敌机降到 1/3 速
+    const slow = TW.worldSlow ? TW.worldSlow() : (g.enemySlow > 0 ? (1 / 3) : 1);   // 凝滞：大招 1/3 · 升级二选一 1/10
     e.t += slow;
     if (e.flash > 0) e.flash--;
     const tp = nearest(e.x, e.y);
@@ -170,6 +170,9 @@
         break;
       case 'arc':
         e.y += e.vy * slow; e.x += e.vx * slow; e.vx *= 0.995; break;
+      case 'dread':
+        /* v1.5.0 旗舰：从右侧横穿战场，带轻微起伏 —— 标志性瞬间 */
+        e.x += e.vx * slow; e.y = e.y0 + Math.sin(e.t * 0.02) * 16; break;
       default:
         e.y += e.vy * slow; e.x += e.vx * slow;
     }
@@ -190,7 +193,33 @@
       }
     }
 
-    if (e.x < -60 || e.x > W + 60 || e.y > H + 70 || e.y < -140) { e.dead = true; e.escaped = true; return; }
+    if (e.x < (e.dread ? -230 : -60) || e.x > W + 230 || e.y > H + 70 || e.y < -140) { e.dead = true; e.escaped = true; return; }
+
+    /* v1.5.0 旗舰：炮塔独立开火 / 部件摧毁结算 / 溜走前放一轮告别弹幕 */
+    if (e.dread) {
+      for (let i = 0; i < e.parts.length; i++) {
+        const pt = e.parts[i];
+        if (!pt.alive) continue;
+        if (pt.hp <= 0) {
+          pt.alive = false;
+          TW.FX.bigBoom(e.x + pt.ox, e.y + pt.oy, 1.6, '#ffa64d');
+          TW.FX.quake(5, 14); TW.Audio.explode();
+          g.addScore(1500, e.x + pt.ox, e.y + pt.oy);
+          TW.dropItem(e.x + pt.ox, e.y + pt.oy, 'power');
+          continue;
+        }
+        pt.fireT -= slow;
+        if (pt.fireT <= 0) {
+          pt.fireT = pt.every * (0.85 + Math.random() * 0.3) / g.rankRate();
+          const a0 = aimAt(e.x + pt.ox, e.y + pt.oy);
+          for (let k = -1; k <= 1; k++) TW.enemyShot(e.x + pt.ox, e.y + pt.oy, a0 + k * 0.24, 2.0, 'amber');
+        }
+      }
+      if (!e.parted && e.x < -110) {
+        e.parted = true;
+        for (let k = 0; k < 8; k++) TW.enemyShot(e.x, e.y, Math.PI / 2 + (k - 3.5) * 0.16, 1.9, 'magenta');
+      }
+    }
 
     /* 开火 */
     if (e.y > 10 && e.y < H - 60) {
@@ -272,6 +301,7 @@
     {
       name: '边境星域', sub: 'Frontier Belt', tint: '#071428', star: '#9fd8ff',
       elites: [1100, 2200, 3120],
+      movements: [{ t: 560, name: '巡逻遭遇' }, { t: 1300, name: '游击拦截' }, { t: 2360, name: '前哨总攻' }],
       boss: 0,
       script: [
         S(40, () => F.vee('drone', 5, X(240), X(46), 1.9)),
@@ -283,6 +313,7 @@
         S(1020, () => F.dive('fighter', 4, -1, 26)),
         S(1180, () => F.line('fighter', 5, X(90), X(70), 1.8, { item: 'weapon' })),
         S(1360, () => F.vee('drone', 7, X(240), X(40), 2.2)),
+        S(1500, () => TW.spawnDread(0)),
         S(1560, () => F.ground('tank', 4, 55, { item: 'bomb' })),
         S(1760, () => F.sine('fighter', 5, X(90), X(75), 2.2)),
         S(1960, () => { F.col('drone', 5, X(150), 20); F.col('drone', 5, X(330), 20); }),
@@ -297,6 +328,7 @@
     {
       name: '云海要塞', sub: 'Cloud Fortress', tint: '#0a1a2e', star: '#bfe4ff',
       elites: [1100, 2200, 3120],
+      movements: [{ t: 560, name: '云层追击' }, { t: 1300, name: '要塞外围' }, { t: 2360, name: '火力网' }],
       boss: 1,
       script: [
         S(40, () => F.line('drone', 6, X(70), X(68), 2.0)),
@@ -307,6 +339,7 @@
         S(1080, () => F.col('drone', 7, X(120), 18, { pat: 'sine', amp: 60 })),
         S(1240, () => F.col('drone', 7, X(360), 18, { pat: 'sine', amp: 60 })),
         S(1420, () => F.hover('gunship', 3, [X(90), X(240), X(390)], 160, { item: 'power' })),
+        S(1650, () => TW.spawnDread(1)),
         S(1720, () => F.vee('fighter', 7, X(240), X(52), 2.4)),
         S(1920, () => F.ground('tank', 5, 48, { item: 'bomb' })),
         S(2040, () => F.hover('sniper', 2, [X(120), X(360)], 210, {})),                 // 首见：激光狙击机
@@ -321,6 +354,7 @@
     {
       name: '赤色峡谷', sub: 'Crimson Canyon', tint: '#200a12', star: '#ffc9b0',
       elites: [1100, 2200, 3120],
+      movements: [{ t: 560, name: '峡谷伏击' }, { t: 1300, name: '陨石风暴' }, { t: 2360, name: '赤色黎明' }],
       gimmick: 'meteor',
       boss: 2,
       script: [
@@ -332,6 +366,7 @@
         S(1100, () => F.line('bomber', 3, X(90), X(150), 1.4, { item: 'weapon' })),
         S(1400, () => F.hover('gunship', 3, [X(80), X(240), X(400)], 150, { item: 'power', fire: 'ring6' })),
         S(1720, () => F.sine('fighter', 7, X(70), X(62), 2.6)),
+        S(1780, () => TW.spawnDread(2)),
         S(1960, () => F.col('drone', 8, X(140), 14, { pat: 'sine', amp: 70 })),
         S(2140, () => F.col('drone', 8, X(340), 14, { pat: 'sine', amp: 70 })),
         S(2360, () => F.ground('tank', 6, 44, { item: 'bomb' })),
@@ -345,6 +380,7 @@
     {
       name: '极地轨道', sub: 'Polar Orbit', tint: '#071c1e', star: '#b6fbff',
       elites: [1100, 2200, 3120],
+      movements: [{ t: 560, name: '轨道扫荡' }, { t: 1300, name: '极光屏障' }, { t: 2360, name: '破冰突袭' }],
       gimmick: 'beam',
       boss: 3,
       script: [
@@ -356,6 +392,7 @@
         S(1160, () => F.ground('tank', 6, 42, { item: 'weapon' })),
         S(1400, () => F.line('bomber', 3, X(100), X(140), 1.5, { item: 'power' })),
         S(1680, () => F.turret([X(60), X(160), X(320), X(420)], 210, { fire: 'spread5' })),
+        S(1860, () => TW.spawnDread(3)),
         S(1960, () => F.sine('fighter', 8, X(60), X(55), 2.8)),
         S(2200, () => F.vee('fighter', 9, X(240), X(46), 2.8, { item: 'medal' })),
         S(2460, () => F.ground('tank', 7, 40, { item: 'bomb' })),
@@ -368,6 +405,7 @@
     {
       name: '敌旗舰队', sub: 'Flagship Fleet', tint: '#1a0e26', star: '#e0c9ff',
       elites: [1100, 2200, 3120],
+      movements: [{ t: 560, name: '舰队前锋' }, { t: 1300, name: '旗舰护卫' }, { t: 2360, name: '决战时刻' }],
       gimmick: 'meteor',
       boss: 4,
       script: [
@@ -380,6 +418,7 @@
         S(1700, () => F.turret([X(60), X(160), X(320), X(420)], 200, { fire: 'spread5' })),
         S(1980, () => F.sine('fighter', 9, X(55), X(48), 3.0)),
         S(2260, () => F.line('bomber', 4, X(90), X(110), 1.7, { item: 'bomb' })),
+        S(2380, () => TW.spawnDread(4)),
         S(2540, () => F.hover('gunship', 5, [X(60), X(150), X(240), X(330), X(420)], 140, { fire: 'ring6', item: 'medal' })),
         S(2700, () => { F.hover('sniper', 2, [X(110), X(370)], 170, {}); F.hover('launcher', 2, [X(200), X(280)], 120, {}); }),
         S(2860, () => F.vee('splitter', 5, X(240), X(60), 1.6)),
@@ -397,6 +436,80 @@
     });
     e.elite = true;
     return e;
+  };
+
+  /* ==================== v1.5.0 旗舰中 Boss（每关的标志性瞬间） ====================
+     从右向左横穿战场，两侧炮塔是弱点：炮塔健在时舰体只受 15% 伤害 —— 逼玩家
+     先拆件再打主体。击破 = 高分 + 武器/炸弹掉落；放走 = 挨一轮告别弹幕。 */
+  TW.spawnDread = function (stage) {
+    const g = G();
+    if (g.enemies.some((e) => e.dread && !e.dead)) return null;
+    const hp = Math.round((430 + stage * 150) * dpow());
+    const ph = Math.round(80 * dpow());
+    const e = {
+      type: 'dread', spr: null, dread: true, boss: false,
+      x: W + 150, y0: 138 + (stage % 2) * 30, y: 0, vx: -0.52, vy: 0,
+      hp: hp, maxhp: hp, r: 56, score: 9000 + stage * 2500, t: 0,
+      pat: 'dread', fire: 'aimed', every: 210, fireT: 90,
+      flash: 0, dead: false, alpha: 1, item: null, ground: false, isMini: false,
+      snip: null,
+      parts: [
+        { ox: -72, oy: 4, hp: ph, maxhp: ph, alive: true, r: 16, every: 155, fireT: 60 },
+        { ox: 72, oy: 4, hp: ph, maxhp: ph, alive: true, r: 16, every: 155, fireT: 120 },
+      ],
+    };
+    e.y = e.y0;
+    g.enemies.push(e);
+    g.msgText = 'WARNING · 旗舰接近';
+    g.waveMsg = 110;
+    TW.Audio.warn();
+    if (TW.Audio.bossRoar) TW.Audio.bossRoar();
+    return e;
+  };
+
+  /* 旗舰外观：程序化舰体（暗色装甲 + 暖色描边，符合敌人=暖色契约） */
+  TW.drawDread = function (ctx, e) {
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    /* 引擎尾焰（船头朝左，尾在右） */
+    ctx.fillStyle = 'rgba(255,138,92,0.5)';
+    ctx.beginPath();
+    ctx.moveTo(96, -12); ctx.lineTo(126 + Math.random() * 18, 0); ctx.lineTo(96, 12);
+    ctx.closePath(); ctx.fill();
+    /* 舰体 */
+    ctx.fillStyle = e.flash > 0 ? '#7a4050' : '#381d29';
+    ctx.beginPath();
+    ctx.moveTo(-98, 0); ctx.lineTo(-56, -27); ctx.lineTo(72, -31); ctx.lineTo(98, -12);
+    ctx.lineTo(98, 12); ctx.lineTo(72, 31); ctx.lineTo(-56, 27);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#ff8a5c'; ctx.lineWidth = 2; ctx.stroke();
+    /* 甲板与舰桥 */
+    ctx.fillStyle = '#22101a';
+    ctx.fillRect(-42, -13, 96, 26);
+    ctx.fillStyle = '#ff8a5c';
+    ctx.fillRect(-14, -7, 30, 14);
+    ctx.fillRect(82, -4, 10, 8);
+    /* 炮塔（弱点部件） */
+    for (let i = 0; i < e.parts.length; i++) {
+      const pt = e.parts[i];
+      if (!pt.alive) continue;
+      ctx.fillStyle = '#241018';
+      ctx.beginPath(); ctx.arc(pt.ox, pt.oy, 13, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#ffa64d'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(pt.ox, pt.oy, 13, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = '#ffa64d';
+      ctx.fillRect(pt.ox - 2.4, pt.oy - 20, 4.8, 9);
+      ctx.fillStyle = 'rgba(255,120,80,0.8)';
+      ctx.fillRect(pt.ox - 12, pt.oy - 24, 24 * (pt.hp / pt.maxhp), 2.6);
+    }
+    /* 舰体血条 */
+    if (e.hp < e.maxhp) {
+      ctx.fillStyle = 'rgba(255,90,110,0.85)';
+      ctx.fillRect(-40, -44, 80 * Math.max(0, e.hp / e.maxhp), 3.2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1;
+      ctx.strokeRect(-40, -44, 80, 3.2);
+    }
+    ctx.restore();
   };
 
   /* ==================== 关卡机制：陨石带 ====================
@@ -506,6 +619,7 @@
     G().enemies.push(b);
     G().boss = b;
     TW.Audio.warn();
+    if (TW.Audio.bossRoar) TW.Audio.bossRoar();
     return b;
   };
 
@@ -540,7 +654,7 @@
 
   TW.updateBoss = function (b) {
     const g = G();
-    const slow = g.enemySlow > 0 ? (1 / 3) : 1;   // 时空凝滞：Boss 降到 1/3 速
+    const slow = TW.worldSlow ? TW.worldSlow() : (g.enemySlow > 0 ? (1 / 3) : 1);   // 凝滞：大招 1/3 · 升级二选一 1/10
     b.t += slow;
     if (b.flash > 0) b.flash--;
     if (b.invuln > 0) b.invuln--;

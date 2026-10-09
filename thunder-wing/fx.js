@@ -153,7 +153,7 @@
       s.connect(f); f.connect(g); g.connect(this.master); s.start(t); s.stop(t + dur);
     },
 
-    shot() { this.tone(760, 0.05, 'square', 0.045, 420); },
+    shot(p) { const m = p || 1; this.tone(760 * m, 0.05, 'square', 0.045, 420 * m); },   // p: 连击越高音调越高
     laser() { this.tone(1250, 0.09, 'sawtooth', 0.05, 700); },
     missile() { this.tone(420, 0.08, 'triangle', 0.05, 260); },
     hit() { this.burst(0.05, 0.06, 2600, 2); },
@@ -164,13 +164,19 @@
     charge() { this.tone(300, 0.35, 'sawtooth', 0.06, 1200); },
     chargeFire() { this.tone(1500, 0.18, 'sawtooth', 0.09, 300); this.burst(0.18, 0.12, 2400, 1); },
     bomb() { this.burst(0.9, 0.34, 700, 1); this.tone(70, 0.9, 'sine', 0.18, 28); },
-    graze() { this.tone(1800, 0.035, 'sine', 0.035); },
+    graze(m) { this.tone(1800 * (m || 1), 0.035, 'sine', 0.035); },   // m: 贪分倍率越高越尖
     death() { this.burst(0.5, 0.28, 800, 1); this.tone(220, 0.6, 'sawtooth', 0.12, 40); },
     warn() { this.tone(520, 0.12, 'square', 0.08); setTimeout(() => this.tone(520, 0.12, 'square', 0.08), 160); },
     extend() { [660, 880, 1100, 1320].forEach((f, i) => setTimeout(() => this.tone(f, 0.13, 'square', 0.08), i * 90)); },
     /* v1.3.0：升级三选一的上行音阶；超载触发的更亮更有力 */
     levelup() { [784, 988, 1319].forEach((f, i) => setTimeout(() => this.tone(f, 0.1, 'square', 0.08), i * 70)); },
     overdrive() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => this.tone(f, 0.12, 'sawtooth', 0.09), i * 58)); },
+    /* ---- v1.5.0 打击感分层 ---- */
+    crit() { this.tone(150, 0.14, 'square', 0.11, 55); this.burst(0.12, 0.1, 900, 1); },
+    bossRoar() { this.tone(72, 0.9, 'sawtooth', 0.15, 46); this.tone(108, 0.7, 'sawtooth', 0.09, 60); },
+    pickOpen() { this.tone(520, 0.14, 'sine', 0.07, 260); },
+    pickOk() { [660, 990].forEach((f, i) => setTimeout(() => this.tone(f, 0.08, 'square', 0.07), i * 60)); },
+    heatUp(t) { this.tone(900 + t * 90, 0.09, 'square', 0.06); },
   };
   TW.Audio = A;
 })();

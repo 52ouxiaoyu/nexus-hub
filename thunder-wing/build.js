@@ -70,9 +70,11 @@
   function expNeed(lv) { return 5 + lv * 4 + Math.floor(lv * lv / 6); }
   TW.expNeed = expNeed;
 
-  /* 升级即自动发放一个词条（随机加权，保留每局 build 多样性）。
-     不再弹三选一菜单 —— 子弹纷飞里抢方向键、逼着读字选词条体验太差。
-     只在机体旁飘一行极短强化提示，不减速、不抢键、不打断操作。 */
+  /* 升级发词条（v1.5.0 子弹时间二选一）：
+     人类玩家升级 → 世界凝滞到 1/10 速，屏幕出两张词条卡，左右移动键选卡、
+     射击/大招键确认，约 2.3 秒不选自动随机。决策权回到玩家手里，而凝滞期间
+     弹幕几乎停住 —— 不存在 v1.4.2 之前「弹幕里读字 / 菜单抢方向键」的问题。
+     AI 代班席位保持全自动发放，不打断 AI 节奏。 */
   TW.gainExp = function (pl, v) {
     if (pl.out) return;
     pl.exp += v;
@@ -81,16 +83,32 @@
       pl.exp -= pl.nextExp;
       pl.level++;
       pl.nextExp = expNeed(pl.level);
-      const picks = TW.rollPerks(pl, 1);
-      if (picks[0]) {
-        TW.applyPerk(pl, picks[0].id);
-        if (TW.Audio && TW.Audio.levelup) TW.Audio.levelup();
-        if (TW.FX && TW.FX.text) {
-          const p = picks[0];
-          TW.FX.text(pl.x, pl.y - 52, p.name + '  Lv.' + pl.perks[p.id], p.color, 14);
+      if (pl.pick || pl.ai) {
+        /* 屏上已有选择 / AI 席位：直接随机发放，不叠加打断 */
+        const picks = TW.rollPerks(pl, 1);
+        if (picks[0]) TW.autoPerk(pl, picks[0]);
+      } else {
+        const picks = TW.rollPerks(pl, 2);
+        if (picks.length >= 1) {
+          pl.pick = picks; pl.pickIdx = 0; pl.pickT = 140;
+          if (TW.Audio && TW.Audio.pickOpen) TW.Audio.pickOpen();
         }
       }
     }
+  };
+
+  TW.autoPerk = function (pl, p) {
+    TW.applyPerk(pl, p.id);
+    if (TW.Audio && TW.Audio.levelup) TW.Audio.levelup();
+    if (TW.FX && TW.FX.text) TW.FX.text(pl.x, pl.y - 52, p.name + '  Lv.' + pl.perks[p.id], p.color, 14);
+  };
+
+  TW.confirmPick = function (pl, idx) {
+    if (!pl || !pl.pick) return;
+    const p = pl.pick[Math.max(0, Math.min(pl.pick.length - 1, idx))];
+    pl.pick = null;
+    TW.autoPerk(pl, p);
+    if (TW.Audio && TW.Audio.pickOk) TW.Audio.pickOk();
   };
 
   /* ==================== 经验球 ==================== */
@@ -171,10 +189,74 @@
     }
   };
 
-  /* 三选一面板：单人居中；双人各占半屏，互不遮挡 */
+  /* v1.5.0 二选一卡片：子弹时间里出现。单人居中；双人各占半屏互不遮挡。
+     只有两张卡 + 一行提示，2 秒内一定能读完 —— 决策快、不打断爽感。 */
   TW.drawPick = function (ctx, W, H) {
-    return; /* v1.4.2+：三选一面板已移除，升级自动发词条，不再弹窗 */
+    const g = TW.G;
+    if (!g || !g.players) return;
+    const act = [];
+    for (let i = 0; i < g.players.length; i++) {
+      const pl = g.players[i];
+      if (pl && pl.pick && !pl.out) act.push(pl);
+    }
+    if (!act.length) return;
 
+    ctx.save();
+    ctx.fillStyle = 'rgba(4,10,18,0.34)';
+    ctx.fillRect(0, 0, W, H);
+
+    const cw = 118, ch = 96, gap = 14;
+    const PC = ['#8cf0ff', '#ffd45e'];
+    for (let k = 0; k < act.length; k++) {
+      const pl = act[k];
+      const total = pl.pick.length * cw + (pl.pick.length - 1) * gap;
+      const cx = g.players.length > 1 ? (pl.id === 0 ? W * 0.25 : W * 0.75) : W / 2;
+      const ox = cx - total / 2, oy = H / 2 - 70;
+
+      ctx.textAlign = 'center';
+      ctx.font = '600 12px system-ui, sans-serif';
+      ctx.fillStyle = PC[pl.id] || '#9ff0ff';
+      ctx.fillText('LEVEL ' + pl.level + ' · ' + pl.tag + ' 选择强化', cx, oy - 10);
+
+      for (let i = 0; i < pl.pick.length; i++) {
+        const p = pl.pick[i], on = i === pl.pickIdx;
+        const x = ox + i * (cw + gap);
+        const lvl = pl.perks[p.id] || 0;
+
+        ctx.fillStyle = on ? 'rgba(12,32,44,0.96)' : 'rgba(8,18,28,0.8)';
+        rrect(ctx, x, oy, cw, ch, 10); ctx.fill();
+        ctx.strokeStyle = on ? p.color : 'rgba(255,255,255,0.2)';
+        ctx.lineWidth = on ? 2.4 : 1;
+        rrect(ctx, x, oy, cw, ch, 10); ctx.stroke();
+
+        ctx.fillStyle = p.color;
+        ctx.font = '600 20px system-ui, sans-serif';
+        ctx.fillText(p.glyph, x + cw / 2, oy + 27);
+        ctx.fillStyle = on ? '#ffffff' : 'rgba(255,255,255,0.75)';
+        ctx.font = '600 12px system-ui, sans-serif';
+        ctx.fillText(p.name, x + cw / 2, oy + 46);
+        ctx.fillStyle = 'rgba(255,255,255,0.58)';
+        ctx.font = '400 10px system-ui, sans-serif';
+        wrapText(ctx, p.desc, x + cw / 2, oy + 62, cw - 14, 12);
+        ctx.fillStyle = p.color;
+        ctx.font = '400 9px system-ui, sans-serif';
+        ctx.fillText(lvl > 0 ? 'Lv.' + lvl + ' → ' + (lvl + 1) : ['', '常见', '稀有', '史诗'][p.rar], x + cw / 2, oy + ch - 12);
+      }
+
+      /* 倒计时条：不选自动随机锁定 */
+      const prog = Math.max(0, 1 - pl.pickT / 140);
+      ctx.fillStyle = 'rgba(255,255,255,0.14)';
+      ctx.fillRect(ox, oy + ch + 8, total, 3);
+      ctx.fillStyle = 'rgba(159,240,255,0.85)';
+      ctx.fillRect(ox, oy + ch + 8, total * prog, 3);
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = '400 10px system-ui, sans-serif';
+      ctx.fillText('← → 选 · 射击键确认 · 不选自动随机', cx, oy + ch + 26);
+    }
+    ctx.restore();
+  };
+
+  function drawPickDead(ctx, W, H) {
     ctx.save();
     ctx.fillStyle = 'rgba(4,10,18,0.55)';
     ctx.fillRect(0, 0, W, H);
