@@ -2708,10 +2708,26 @@ class HauntedDorm {
     _applySleepVisual(pl) {
         if (!pl || !pl.el1 || pl.isDoor || !this._isShroom(pl.def)) return;
         const img = pl.el1.querySelector('img');
-        if (!img) return;
-        const base = pl.def.tint || '';
-        img.style.filter = this._shroomAwake() ? base
-            : (base ? base + ' grayscale(0.75) brightness(0.9)' : 'grayscale(0.75) brightness(0.9)');
+        const asleep = !this._shroomAwake();
+        if (img) {
+            // v4.0.22：灰化减磅（0.75→0.45，保留大部分原色）——睡觉是「打盹」不是「换皮」
+            const base = pl.def.tint || '';
+            const sleepFx = 'grayscale(0.45) brightness(0.95) opacity(0.88)';
+            img.style.filter = asleep ? (base ? base + ' ' + sleepFx : sleepFx) : base;
+        }
+        // v4.0.22：头顶 💤 徽标——一眼看懂「在睡觉」，而不是以为掉色 bug
+        let badge = pl.sleepBadge;
+        if (asleep && !badge) {
+            badge = document.createElement('div');
+            badge.className = 'lv-badge';
+            badge.style.cssText = 'background:rgba(255,255,255,0.92); border-color:#3a5fa8; color:#1e3a8a; top:-20px; font-size:13px; padding:1px 6px; animation:zzzFloat 1.6s ease-in-out infinite;';
+            badge.innerText = '💤';
+            pl.el1.appendChild(badge);
+            pl.sleepBadge = badge;
+        } else if (!asleep && badge) {
+            badge.remove();
+            pl.sleepBadge = null;
+        }
     }
 
     _updateDayNight(time) {
@@ -2795,7 +2811,7 @@ class HauntedDorm {
             // 揭露：变红名、上血条、开始反水
             this.traitorRevealed = true;
             t.isTraitor = true;
-            t.hp = 600; t.maxHp = 600;
+            t.hp = 300; t.maxHp = 300; // v4.0.22：600→300，植物集火打得动
             const badge = document.createElement('div');
             badge.className = 'lv-badge';
             badge.style.background = '#c62828';
@@ -2809,10 +2825,10 @@ class HauntedDorm {
             t.el1.appendChild(hb);
             t.trHpBg = hb;
             t.trHpFg = hb.firstChild;
-            this._announce(`😈 内鬼现身：【${t.roleDef.name}】反水了！击败他有重赏！`, 'scream.mp3', true);
+            this._announce(`😈 内鬼现身：【${t.roleDef.name}】反水了！用植物集火它——它进不了有主的房间！击败有重赏！`, 'scream.mp3', true);
             return;
         }
-        // 揭露后：追击最近的存活玩家
+        // v4.0.22 重做：追击最近的存活玩家，但绝不进入有主的房间——只能堵在门外蹲守
         let best = null, bd = Infinity;
         for (const p of this.allPlayers) {
             if (p.dead || p === t) continue;
@@ -2820,10 +2836,22 @@ class HauntedDorm {
             if (d < bd) { bd = d; best = p; }
         }
         if (!best) return;
+        // 目标躲在房间里 → 追到「门外一格」驻点（沿房间中心→门方向外推 1.3 格），进屋咬人不存在
+        let tx = best.x, ty = best.y;
+        const bcol = Math.floor(best.x / this.gridSize), brow = Math.floor(best.y / this.gridSize);
+        const brm = this._insideRoom(bcol, brow)
+            || this.rooms.find(r => best.x >= r.x * 80 && best.x < (r.x + r.w) * 80 && best.y >= r.y * 80 && best.y < (r.y + r.h) * 80);
+        if (brm) {
+            let ddx = brm.doorCol - (brm.x + brm.w / 2), ddy = brm.doorRow - (brm.y + brm.h / 2);
+            const dl = Math.hypot(ddx, ddy) || 1;
+            ddx /= dl; ddy /= dl;
+            tx = (brm.doorCol + ddx * 1.3) * this.gridSize + 40;
+            ty = (brm.doorRow + ddy * 1.3) * this.gridSize + 40;
+        }
         t.pathTimer = (t.pathTimer || 0) + dt;
         if (t.pathTimer > 1.0 || !t.path) {
             t.pathTimer = 0;
-            t.path = this._findPath(t.x, t.y, best.x, best.y, true); // 可穿门进屋
+            t.path = this._findPath(t.x, t.y, tx, ty, false); // v4.0.22：不可穿门——走廊游荡，进不了任何房间
         }
         let dx, dy;
         if (t.path && t.path.length > 0) {
@@ -2834,23 +2862,23 @@ class HauntedDorm {
                 if (t.path.length > 0) { dx = t.path[0].x - t.x; dy = t.path[0].y - t.y; }
             }
         } else {
-            dx = best.x - t.x; dy = best.y - t.y;
+            dx = tx - t.x; dy = ty - t.y;
         }
         const len = Math.hypot(dx, dy) || 1;
-        const spd = 330; // 比玩家(400)稍慢，跑得掉但甩不干净
+        const spd = 300; // v4.0.22：330→300，走廊上跑得掉
         const nx = t.x + dx / len * spd * dt, ny = t.y + dy / len * spd * dt;
         if (!this.checkCollision(nx, t.y, 14)) t.x = nx;
         if (!this.checkCollision(t.x, ny, 14)) t.y = ny;
         t.el1.style.left = t.x + 'px';
         t.el1.style.top = t.y + 'px';
         if (t.trHpFg) t.trHpFg.style.width = Math.max(0, t.hp / t.maxHp * 100) + '%';
-        // 贴身咬人：每 1.2 秒一口 25 血
+        // 贴身咬人：v4.0.22 每 1.8 秒一口 12 血（原 1.2s/25 血咬死人太快），且只在门外发生
         if (bd < 48) {
             t.biteT = (t.biteT || 0) + dt;
-            if (t.biteT >= 1.2) {
+            if (t.biteT >= 1.8) {
                 t.biteT = 0;
-                best.hp -= 25;
-                this._flyText(best.x, best.y - 26, '-25 😈', '#ff5252');
+                best.hp -= 12;
+                this._flyText(best.x, best.y - 26, '-12 😈', '#ff5252');
                 this.playSfx('chomp.mp3', 0.4);
                 if (best === this.player || best === this.player2) this.setHp();
                 if (best.hp <= 0 && !best.dead) {
@@ -2873,7 +2901,7 @@ class HauntedDorm {
         for (const p of this.allPlayers) {
             if (!p.dead && p !== t) this.addSpore(200, p);
         }
-        if (killer && killer.roleDef) killer.dmgDealt = (killer.dmgDealt || 0) + 600;
+        if (killer && killer.roleDef) killer.dmgDealt = (killer.dmgDealt || 0) + 300;
     }
 
     _tick(dt, time) {
@@ -2916,11 +2944,14 @@ class HauntedDorm {
 
         const baseSpeed = this.isZombieFaction ? (HauntedDorm.GHOST_LEVELS[this.player.level-1].speed * (this.player.speedBuffT > 0 ? 1.5 : 1)) : (this.player.speedBuffT > 0 ? 800 : 400);
         let moveSpeed = baseSpeed;
-        
+
         // 玩家如果在房间内，移动速度不吃时间倍速，防止10倍速下走位失控；在走廊则正常吃倍速（为了跑图快）
+        // v4.0.22：走廊加成 2×→1.5×——倍速全开时出门瞬间过冲、追战时根本控不住
         const playerPhysRoom = this._insideRoom(Math.floor(this.player.x/this.gridSize), Math.floor(this.player.y/this.gridSize));
         if (playerPhysRoom) {
             moveSpeed = baseSpeed / this.timeScale;
+        } else {
+            moveSpeed = baseSpeed * 1.5 / this.timeScale;
         }
 
         // P1 Movement - 【SOC防冲突】
@@ -2935,11 +2966,18 @@ class HauntedDorm {
             if (p1D && !p1U) vy1 += moveSpeed;
         }
 
-        let nx1 = this.player.x + vx1 * dt;
+        // v4.0.22：速度平滑（加减速缓冲）——修「卡住/过冲」：瞬时速度改为指数趋近目标速度，
+        // 碰墙的轴速度立即清零（防贴墙磨蹭），松键自然滑停
+        const acc = Math.min(1, 12 * dt);
+        this.player.vx = (this.player.vx || 0) + (vx1 - (this.player.vx || 0)) * acc;
+        this.player.vy = (this.player.vy || 0) + (vy1 - (this.player.vy || 0)) * acc;
+        let nx1 = this.player.x + this.player.vx * dt;
         let ny1 = this.player.y;
         if (nx1 > 20 && nx1 < this.worldWidth - 20 && !this.checkCollision(nx1, ny1, 10, this.player.isZombie)) this.player.x = nx1;
-        nx1 = this.player.x; ny1 = this.player.y + vy1 * dt;
+        else this.player.vx = 0;
+        nx1 = this.player.x; ny1 = this.player.y + this.player.vy * dt;
         if (ny1 > 30 && ny1 < this.worldHeight - 10 && !this.checkCollision(nx1, ny1, 10, this.player.isZombie)) this.player.y = ny1;
+        else this.player.vy = 0;
 
         // P2 Movement - 【SOC防冲突】
         if (this.player2 && !this.player2.dead) {
@@ -2949,6 +2987,7 @@ class HauntedDorm {
             let moveSpeed2 = this.player2.speedBuffT > 0 ? 800 : 400;
             const p2PhysRoom = this._insideRoom(Math.floor(this.player2.x/this.gridSize), Math.floor(this.player2.y/this.gridSize));
             if (p2PhysRoom) moveSpeed2 = baseSpeed / this.timeScale;
+            else moveSpeed2 = baseSpeed * 1.5 / this.timeScale; // v4.0.22：走廊 1.5×
 
             const p2L = this.keys['arrowleft'], p2R = this.keys['arrowright'], p2U = this.keys['arrowup'], p2D = this.keys['arrowdown'];
             if (!p2MenuBusy) {
@@ -2958,11 +2997,17 @@ class HauntedDorm {
                 if (p2D && !p2U) vy2 += moveSpeed2;
             }
 
-            let nx2 = this.player2.x + vx2 * dt;
+            // v4.0.22：P2 同样速度平滑
+            const acc2 = Math.min(1, 12 * dt);
+            this.player2.vx = (this.player2.vx || 0) + (vx2 - (this.player2.vx || 0)) * acc2;
+            this.player2.vy = (this.player2.vy || 0) + (vy2 - (this.player2.vy || 0)) * acc2;
+            let nx2 = this.player2.x + this.player2.vx * dt;
             let ny2 = this.player2.y;
             if (nx2 > 20 && nx2 < this.worldWidth - 20 && !this.checkCollision(nx2, ny2, 10, this.player2.isZombie)) this.player2.x = nx2;
-            nx2 = this.player2.x; ny2 = this.player2.y + vy2 * dt;
+            else this.player2.vx = 0;
+            nx2 = this.player2.x; ny2 = this.player2.y + this.player2.vy * dt;
             if (ny2 > 30 && ny2 < this.worldHeight - 10 && !this.checkCollision(nx2, ny2, 10, this.player2.isZombie)) this.player2.y = ny2;
+            else this.player2.vy = 0;
         }
         
         this._updateKMenus();

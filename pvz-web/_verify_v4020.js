@@ -240,7 +240,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
     const badge = t.el1.innerText.includes('内鬼');
     return { revealed: g.traitorRevealed, isTrait: t.isTraitor, hp: t.hp, badge };
   });
-  ok(c3.revealed && c3.isTrait && c3.hp === 600 && c3.badge, "C3 揭露：红名徽标「😈 内鬼」+ 600 血条 + 播报");
+  ok(c3.revealed && c3.isTrait && c3.hp === 300 && c3.badge, "C3 揭露：红名徽标「😈 内鬼」+ 300 血条 + 播报（v4.0.22 削弱后）");
 
   const c4 = await page.evaluate(() => {
     const g = window.game;
@@ -260,16 +260,39 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   });
   ok(c4.closed && c4.d0 - c4.d1 > 40, `C4 内鬼追击玩家（${Math.round(c4.d0)}px → ${Math.round(c4.d1)}px）`);
 
+  // v4.0.22 回归：内鬼绝不进入有主房间——玩家躲屋里，它只能堵在门外
+  const c4b = await page.evaluate(() => {
+    const g = window.game;
+    const t = g.traitor;
+    const rm = g.rooms.find(r => r.owners.length === 0 && !g.ais.some(ai => ai.room === r));
+    g._claimRoom(g.player, rm);
+    g.player.x = (rm.x + rm.w / 2) * 80; g.player.y = (rm.y + rm.h / 2) * 80; // 屋内深处
+    t.x = 30 * 80 + 40; t.y = 20 * 80 + 40; t.path = null; t.pathTimer = 0;
+    const inRoom = (x, y) => !!g._insideRoom(Math.floor(x / 80), Math.floor(y / 80));
+    let entered = false;
+    for (let i = 0; i < 240; i++) { // 12 秒
+      g._updateTraitor(0.05);
+      if (inRoom(t.x, t.y)) { entered = true; break; }
+    }
+    const dDoor = Math.hypot(t.x - (rm.doorCol * 80 + 40), t.y - (rm.doorRow * 80 + 40));
+    return { entered, dDoor: Math.round(dDoor) };
+  });
+  ok(!c4b.entered, "C4b 内鬼绝不进入有主房间（12 秒内全程在走廊）");
+  ok(c4b.dDoor <= 220, `C4b 内鬼堵门驻守（距门 ${c4b.dDoor}px ≤ 220）`);
+
   const c5 = await page.evaluate(() => {
     const g = window.game;
     const t = g.traitor;
-    // 贴脸咬人
-    t.x = g.player.x + 30; t.y = g.player.y; t.biteT = 1.1; t.path = [];
+    // 走廊贴脸咬人（v4.0.22：屋内咬不到人，咬人只发生在开阔地）
+    const openCol = (c) => { for (let rr = 4; rr < g.rows - 4; rr++) if (g.walls.has(c + ',' + rr)) return false; return true; };
+    let c = 30; while (c < g.cols - 5 && !openCol(c)) c++;
+    g.player.x = c * 80 + 40; g.player.y = 20 * 80 + 40;
+    t.x = g.player.x + 30; t.y = g.player.y; t.path = []; t.biteT = 1.7;
     const hp0 = g.player.hp;
     for (let i = 0; i < 20 && g.player.hp === hp0; i++) g._updateTraitor(0.1); // 最多 2s
     return { bit: g.player.hp < hp0, dmg: hp0 - g.player.hp };
   });
-  ok(c5.bit && c5.dmg === 25, `C5 内鬼贴身咬人：一口 -${c5.dmg} 血`);
+  ok(c5.bit && c5.dmg === 12, `C5 内鬼贴身咬人：一口 -${c5.dmg} 血（v4.0.22：25→12）`);
 
   const c6 = await page.evaluate(() => {
     const g = window.game;
@@ -281,7 +304,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
     g.spawnPlant(c2, row, 'peashooter');
     const pe = g.plants[g.plants.length - 1];
     pe.shootCd = 0;
-    t.hp = 10; // 内鬼 600 血，一颗豌豆(15伤)打不死 → 先压到 10 血验致死链路
+    t.hp = 10; // 内鬼 300 血，一颗豌豆(15伤)打不死 → 先压到 10 血验致死链路
     g.peas.length = 0;
     g._updateShooting(0.01);
     // 让豌豆飞完
@@ -320,6 +343,54 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   });
   ok(d2.zombieFaction && d2.noTraitor, "D1 僵尸阵营：无内鬼");
   ok(d2.waveN === 0 && !d2.night && d2.water === 1, "D2 僵尸阵营：无尸潮、无昼夜、浇水恒 ×1（三系统正确关闭）");
+
+  // ============ E. 移动手感（v4.0.22） ============
+  console.log("—— E. 移动手感：速度平滑 + 走廊 1.5× ——");
+  const e1 = await page.evaluate(() => {
+    const g = window.game;
+    // 走廊开阔地：按住 D 跑，测加速度渐起（不瞬移）与稳态速度
+    const openCol = (c) => { for (let rr = 4; rr < g.rows - 4; rr++) if (g.walls.has(c + ',' + rr)) return false; return true; };
+    let c = 30; while (c < g.cols - 5 && !openCol(c)) c++;
+    g.player.x = c * 80 + 40; g.player.y = 20 * 80 + 40;
+    const startX = g.player.x;
+    g.keys = {}; g.keys['d'] = true;
+    const x0 = g.player.x;
+    g._tick(0.016, g.gameTime); // 一帧（timeScale=2 下游戏时间 32ms）
+    const step1 = g.player.x - x0;
+    for (let i = 0; i < 14; i++) {
+      g.player.x = startX; // 每帧归位：只测 vx 渐进，避免累计位移撞墙（撞墙清零是新特性，别误伤断言）
+      g._tick(0.016, g.gameTime);
+    }
+    const steadyVx = g.player.vx; // 游戏时标：走廊目标 = 400×1.5/2 = 300（实际 600px/s）
+    g.keys = {};
+    return { step1: +step1.toFixed(1), steadyVx: +steadyVx.toFixed(1) };
+  });
+  ok(e1.step1 < 15, `E1 起步有加速缓冲（首帧仅移动 ${e1.step1}px，无瞬移过冲）`);
+  ok(e1.steadyVx > 270 && e1.steadyVx < 320, `E2 走廊稳态速度 ≈ 300（游戏时标，实际 600px/s = 1.5×，实测 ${e1.steadyVx}）`);
+
+  const e2 = await page.evaluate(() => {
+    const g = window.game;
+    // 松键 → 滑行减速不瞬停；再测房内速度 = 基础 400
+    const x0 = g.player.x;
+    for (let i = 0; i < 90; i++) g._tick(0.016, g.gameTime); // 松键 1.5 秒滑停
+    const drifted = g.player.x - x0;
+    const stopped = Math.abs(g.player.vx) < 5;
+    // 房内：绑房后站房间中心按住 D
+    const rm = g.rooms.find(r => r.owners.includes(g.player));
+    g.player.x = (rm.x + rm.w / 2) * 80; g.player.y = (rm.y + rm.h / 2) * 80;
+    g.player.vx = 0;
+    g.keys = {}; g.keys['d'] = true;
+    const startX = g.player.x;
+    for (let i = 0; i < 20; i++) {
+      g.player.x = startX; // 归位防撞墙
+      g._tick(0.016, g.gameTime);
+    }
+    const inVx = g.player.vx; // 游戏时标：房内目标 = 400/2 = 200（实际 400px/s）
+    g.keys = {};
+    return { stopped, inVx: +inVx.toFixed(1) };
+  });
+  ok(e2.stopped, "E3 松键滑行减速自然停住（无惯性漂移失控）");
+  ok(e2.inVx > 185 && e2.inVx < 215, `E4 房内稳态速度 ≈ 200（游戏时标，实际 400px/s，实测 ${e2.inVx}）`);
 
   await sleep(1200);
   ok(errors.length === 0, `D3 主页面无报错${errors.length ? '：' + errors[0] : ''}`);
