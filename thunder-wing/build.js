@@ -70,11 +70,9 @@
   function expNeed(lv) { return 5 + lv * 4 + Math.floor(lv * lv / 6); }
   TW.expNeed = expNeed;
 
-  /* 升级发词条（v1.5.0 子弹时间二选一）：
-     人类玩家升级 → 世界凝滞到 1/10 速，屏幕出两张词条卡，左右移动键选卡、
-     射击/大招键确认，约 2.3 秒不选自动随机。决策权回到玩家手里，而凝滞期间
-     弹幕几乎停住 —— 不存在 v1.4.2 之前「弹幕里读字 / 菜单抢方向键」的问题。
-     AI 代班席位保持全自动发放，不打断 AI 节奏。 */
+  /* 升级发词条（v1.5.1 定稿）：**全自动随机发放，任何情况下不弹卡、不弹窗、
+     不减速、不抢键** —— 用户铁律：坚决不能有弹窗类 UI。升级只飘一行
+     强化提示，操作零打断。 */
   TW.gainExp = function (pl, v) {
     if (pl.out) return;
     pl.exp += v;
@@ -83,17 +81,8 @@
       pl.exp -= pl.nextExp;
       pl.level++;
       pl.nextExp = expNeed(pl.level);
-      if (pl.pick || pl.ai) {
-        /* 屏上已有选择 / AI 席位：直接随机发放，不叠加打断 */
-        const picks = TW.rollPerks(pl, 1);
-        if (picks[0]) TW.autoPerk(pl, picks[0]);
-      } else {
-        const picks = TW.rollPerks(pl, 2);
-        if (picks.length >= 1) {
-          pl.pick = picks; pl.pickIdx = 0; pl.pickT = 140;
-          if (TW.Audio && TW.Audio.pickOpen) TW.Audio.pickOpen();
-        }
-      }
+      const picks = TW.rollPerks(pl, 1);
+      if (picks[0]) TW.autoPerk(pl, picks[0]);
     }
   };
 
@@ -103,13 +92,7 @@
     if (TW.FX && TW.FX.text) TW.FX.text(pl.x, pl.y - 52, p.name + '  Lv.' + pl.perks[p.id], p.color, 14);
   };
 
-  TW.confirmPick = function (pl, idx) {
-    if (!pl || !pl.pick) return;
-    const p = pl.pick[Math.max(0, Math.min(pl.pick.length - 1, idx))];
-    pl.pick = null;
-    TW.autoPerk(pl, p);
-    if (TW.Audio && TW.Audio.pickOk) TW.Audio.pickOk();
-  };
+  /* confirmPick 已随弹卡机制移除（v1.5.1 铁律：坚决不能有弹窗） */
 
   /* ==================== 经验球 ==================== */
   TW.spawnExp = function (x, y, v) {
@@ -189,9 +172,9 @@
     }
   };
 
-  /* v1.5.0 二选一卡片：子弹时间里出现。单人居中；双人各占半屏互不遮挡。
-     只有两张卡 + 一行提示，2 秒内一定能读完 —— 决策快、不打断爽感。 */
+  /* v1.5.1：弹卡 UI 全面禁用（用户铁律），此处永不渲染 */
   TW.drawPick = function (ctx, W, H) {
+    return;
     const g = TW.G;
     if (!g || !g.players) return;
     const act = [];

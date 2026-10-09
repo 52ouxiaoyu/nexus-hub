@@ -20,7 +20,7 @@
   let W = MIN_W;
   /* 战场越宽，自机速度等比补偿，避免横向机动变迟钝 */
   function fieldSpd() { return Math.min(1.25, Math.max(1, W / MIN_W)); }
-  const VERSION = 'v1.5.0';
+  const VERSION = 'v1.5.1';
 
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d', { alpha: false });
@@ -84,7 +84,7 @@
       satN: 0, satA: 0, satT: 0,
       /* 超载 OVERDRIVE（v1.3.0）：擦弹充能换即时战力 */
       od: 0, odCharge: 0, shieldT: 0,
-      /* v1.5.0：升级二选一 + 个人最高连击 */
+      /* v1.5.1：个人最高连击（pick 系字段已废弃，仅保留置空兼容） */
       pick: null, pickIdx: 0, pickT: 0, maxCombo: 0,
       pk(n) { return this.perks[n] || 0; },
     };
@@ -160,17 +160,9 @@
     addBullet(pl, x, y, ang, sp, dmg, kind, pierce, homing);
   };
   TW.hurtEnemy = function (e, dmg, hx, hy, pl) { hurtEnemy(e, dmg, hx, hy, pl); };
-  /* v1.5.0 世界凝滞系数：时空凝滞大招 1/3，升级二选一子弹时间 1/10（取更深者） */
+  /* 世界凝滞系数：时空凝滞大招 1/3（v1.5.1 弹卡凝滞已随弹窗机制移除） */
   TW.worldSlow = function () {
-    let sl = 1;
-    if (G.enemySlow > 0) sl = 1 / 3;
-    if (G.state === 'PLAYING') {
-      for (let i = 0; i < G.players.length; i++) {
-        const pl = G.players[i];
-        if (pl && pl.pick) sl = Math.min(sl, 0.1);
-      }
-    }
-    return sl;
+    return G.enemySlow > 0 ? (1 / 3) : 1;
   };
 
   /* 单人场景的便捷代理：G.xxx / G.player 等价于 1P（仅用于读写的快捷方式，战斗逻辑一律走 p.xxx） */
@@ -258,25 +250,10 @@
       startGame(G.state === 'MENU' ? (document.body.dataset.mode || 'story') : G.mode);
     }
     if (G.state === 'PLAYING') {
-      /* v1.5.0 二选一：左右移动键选卡、射击/大招键确认 —— 凝滞下不抢键 */
-      let pickUsed = false;
       for (let i = 0; i < G.players.length; i++) {
-        const pl = G.players[i];
-        if (!pl || !pl.pick) continue;
         if (e.repeat) continue;
-        const m = KEYMAP[i];
-        const lf = m.lf.indexOf(k) >= 0 || (code && m.lf.indexOf(code) >= 0);
-        const rt = m.rt.indexOf(k) >= 0 || (code && m.rt.indexOf(code) >= 0);
-        if (lf) { pl.pickIdx = 0; pickUsed = true; }
-        else if (rt) { pl.pickIdx = Math.min(1, pl.pick.length - 1); pickUsed = true; }
-        else if (isFire(i, k, code) || isBomb(i, k, code)) { TW.confirmPick(pl, pl.pickIdx); pickUsed = true; }
-      }
-      if (!pickUsed) {
-        for (let i = 0; i < G.players.length; i++) {
-          if (e.repeat) continue;
-          const pl = G.players[i];
-          if (isBomb(i, k, code)) useBomb(pl);
-        }
+        const pl = G.players[i];
+        if (isBomb(i, k, code)) useBomb(pl);
       }
     }
     if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].indexOf(k) >= 0) e.preventDefault();
@@ -1142,14 +1119,6 @@
       }
     }
 
-    /* v1.5.0 二选一超时自动锁定；出局作废 */
-    for (let i = 0; i < G.players.length; i++) {
-      const pl = G.players[i];
-      if (!pl.pick) continue;
-      if (pl.out) { pl.pick = null; continue; }
-      pl.pickT--;
-      if (pl.pickT <= 0) TW.confirmPick(pl, Math.floor(Math.random() * pl.pick.length));
-    }
     /* v1.5.0 贪分热度：擦弹抬升、停手衰减、档位提升有音效 */
     G.heatT++;
     if (G.heatT > 75) G.heat = Math.max(0, G.heat - 0.55);
@@ -1499,7 +1468,6 @@
     }
 
     drawHUD();
-    if (TW.drawPick) TW.drawPick(ctx, W, H);   /* v1.5.0 子弹时间二选一卡片 */
   }
 
   /* ==================== HUD（v1.4.9：全部顶部、左右完全镜像） ==================== */

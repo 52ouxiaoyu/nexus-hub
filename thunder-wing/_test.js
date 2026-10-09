@@ -31,7 +31,7 @@ function ok(name, cond, extra) {
   console.log('\n--- 加载与句柄 ---');
   ok('无页面异常', errors.length === 0, errors.slice(0, 3));
   const ver = await page.evaluate(() => window.__twGame && window.__twGame.VERSION);
-  ok('句柄存在且版本 v1.5.0', ver === 'v1.5.0', ver);
+  ok('句柄存在且版本 v1.5.1', ver === 'v1.5.1', ver);
   ok('初始为菜单态', await page.evaluate(() => window.__twGame.state()) === 'MENU');
   await page.screenshot({ path: OUT + '/_shot_menu.png' });
 
@@ -420,57 +420,40 @@ function ok(name, cond, extra) {
   ok('我方子弹一律冷色（红通道不得主导）', oursWarm.length === 0,
     { bad: oursWarm, sample: hue.ours.missile });
 
-  console.log('\n--- 局内 Build（v1.5.0 子弹时间二选一） ---');
+  console.log('\n--- 局内 Build（v1.5.1 全自动发词条 · 铁律：坚决不能有弹窗） ---');
   await page.evaluate(() => window.__twGame.start('story', false));
   const lv0 = await page.evaluate(() => window.__twGame.G.player.level);
-  await page.evaluate(() => window.__twGame.gainExp(6));
-  const st = await page.evaluate(() => ({
+  await page.evaluate(() => window.__twGame.gainExp(60));   /* 多级连升 */
+  const autoSt = await page.evaluate(() => ({
     lv: window.__twGame.G.player.level,
     pick: !!window.__twGame.G.player.pick,
-    pickN: window.__twGame.G.player.pick ? window.__twGame.G.player.pick.length : 0,
+    nPerks: Object.keys(window.__twGame.perks()).length,
     slow: window.TW.worldSlow(),
   }));
-  ok('升级弹出二选一并进入子弹时间（世界凝滞 1/10）',
-    st.lv > lv0 && st.pick && st.pickN === 2 && st.slow <= 0.11, st);
+  ok('升级全自动发词条（无弹卡、世界不凝滞）',
+    autoSt.lv > lv0 && !autoSt.pick && autoSt.nPerks > 0 && autoSt.slow === 1, autoSt);
 
-  /* 选卡用真实键盘事件（选卡逻辑在 keydown 监听里，S.key 直接调 pressKey 不走监听） */
-  await page.keyboard.press('d');      /* 右移键 → 选第 2 张卡 */
-  const idx1 = await page.evaluate(() => window.__twGame.G.player.pickIdx);
-  const perksBefore = await page.evaluate(() => Object.keys(window.__twGame.perks()).length);
-  await page.keyboard.press('Space');  /* 射击键确认 */
-  const pickDone = await page.evaluate(() => ({
-    pick: !!window.__twGame.G.player.pick,
-    nPerks: Object.keys(window.__twGame.perks()).length,
-  }));
-  ok('左右键选卡、射击键确认生效', idx1 === 1 && !pickDone.pick && pickDone.nPerks > perksBefore,
-    { idx1, pickDone });
-
-  /* 选卡期间照常操作：凝滞的是世界不是玩家，不抢键 */
+  /* 升级后照常操作：不减速、不抢键、零打断 */
   const moveOk = await page.evaluate(() => {
     const S = window.__twGame, g = S.G;
-    S.start('story', false); S.gainExp(60);   /* 多级连升：首级弹卡，后续自动 */
+    S.start('story', false); S.gainExp(60);
     const x0 = g.player.x;
     S.key('d', true); S.frame(30); S.key('d', false);
     return { pick: !!g.player.pick, moved: g.player.x > x0 + 5, nPerks: Object.keys(S.perks()).length };
   });
-  ok('选卡期间仍可正常移动（不抢方向键）', moveOk.pick && moveOk.moved && moveOk.nPerks > 0, moveOk);
+  ok('升级不减速、不抢键、仍可正常移动', !moveOk.pick && moveOk.moved && moveOk.nPerks > 0, moveOk);
 
   const autoTests = await page.evaluate(() => {
     const S = window.__twGame, g = S.G;
-    /* 超时自动锁定 */
-    if (g.player.pick) g.player.pickT = 5;
-    S.frame(8);
-    const timeoutOk = !g.player.pick && Object.keys(S.perks()).length > 0;
-    /* AI 席位保持全自动发放 */
+    /* AI 席位同样全自动发放 */
     S.setAI(true, 1);
     const n1 = Object.keys(g.players[1].perks).length;
     S.gainExp(20, 1);
-    const r = { timeoutOk: timeoutOk, aiNoPick: !g.players[1].pick,
+    const r = { aiNoPick: !g.players[1].pick,
       aiPerk: Object.keys(g.players[1].perks).length > n1 };
     S.setAI(false, 1);
     return r;
   });
-  ok('2.3 秒不选自动随机锁定', autoTests.timeoutOk, autoTests);
   ok('AI 席位升级自动发词条（不打断 AI）', autoTests.aiNoPick && autoTests.aiPerk, autoTests);
 
   /* 单发对比：每次都把射击冷却归零，否则两次统计的射击次数会不同 */
