@@ -151,7 +151,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     g.spawnPlant(spot.c, spot.r, "peashooter");
     const pl = g.plants[g.plants.length - 1];
     pl.shootCd = 0; // 跳过初始冷却，否则 _updateShooting 不出手
-    g.zombies.push({ x: spot.c * 80 + 40 + 90, y: spot.r * 80 + 40, dead: false, hp: 9999 });
+    g._spawnMinion(); // v4.0.20：用真实小怪替代裸对象（裸对象无 el1，真实循环渲染到它会崩）
+    { const zb2 = g.zombies[g.zombies.length - 1]; zb2.x = spot.c * 80 + 40 + 90; zb2.y = spot.r * 80 + 40; zb2.hp = 9999; zb2.maxHp = 9999; }
     g.peas.length = 0;
     g.plantDmgBoostT = 20;
     g._updateShooting(0.01);
@@ -164,7 +165,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     if (door) door.hp = 5;
     HauntedDorm.BLESSINGS.find(b => b.id === "heal").apply(g);
     res.healOk = pl.hp === pl.maxHp && (!door || door.hp === door.maxHp);
-    // 丰收浇水：×3
+    // 丰收浇水：v4.0.20 白天 ×2 叠加口径（增益期 3×2=+6、平时 +2；切夜晚则 ×3/×1）
+    g.isNight = false; // 固定白天，断言叠加结果
     const s0 = g.player.sun;
     g.waterBoostT = 45; g._water(g.player);
     res.water3 = g.player.sun - s0;
@@ -182,7 +184,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   });
   ok(b5.rageOk, `B10 狂怒：豌豆伤害翻倍（${b5.rageDmg}）`);
   ok(b5.healOk, "B11 硬化：所有植物与门板血量回满");
-  ok(b5.water3 === 3 && b5.water1 === 1, `B12 丰收浇水：增益期 +3 ☀/次（平时 +1）`);
+  ok(b5.water3 === 6 && b5.water1 === 2, `B12 丰收浇水：白天增益期 +6 ☀/次（平时 +2，含昼夜 ×2 叠加）`);
   ok(b5.cdOk, "B13 冷却清零：技能 CD 归 0");
   ok(b5.sporeOk, "B14 孢子潮：+200 🦠");
 

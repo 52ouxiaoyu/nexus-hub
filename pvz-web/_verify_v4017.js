@@ -124,6 +124,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // B4 毁灭菇导弹带 owner
   const b3 = await page.evaluate(() => {
     const g = window.game;
+    g.isNight = true; // v4.0.20：毁灭菇是蘑菇系，白天睡觉不开炮——切到夜晚再测
     const myRm = g.player.room;
     const spot = { c: myRm.x + 1, r: myRm.y + 1 };
     if (g.plants.some(p => p.c === spot.c && p.r === spot.r)) return { skip: true };

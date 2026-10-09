@@ -188,6 +188,17 @@ class HauntedDorm {
         this.blessing = null;         // 当前打开的三选一 { options, idx, deadline }
         this.plantDmgBoostT = 0;      // 狂怒：植物伤害翻倍剩余秒数
         this.waterBoostT = 0;         // 丰收浇水：浇水产出 ×3 剩余秒数
+
+        // v4.0.20：尸潮波次 + 昼夜循环 + 内鬼模式
+        this.waveN = 0;               // 已到来的尸潮波数
+        this.waveAt = 75000;          // 下一波尸潮时间（ms，游戏时间）
+        this.waveWarned = false;      // 是否已播报「一大波僵尸正在接近」
+        this.isNight = false;         // 昼夜：false=白天（蘑菇睡觉），true=夜晚
+        this.dnNext = 60000;          // 下一次昼夜切换时间（开局白天 60s）
+        this.traitor = null;          // 内鬼（AI 引用，开局秘密选定）
+        this.traitorRevealed = false;
+        this.traitorRevealAt = 160000; // 160 秒时揭露内鬼
+        this.traitorHinted = false;
         
         this.playerRoles = [
             { id: 'sunflower', name: '向日葵', icon: 'assets/images/Plants/SunFlower/0.gif', skillDesc: '10秒阳光翻倍 (CD:60s)' },
@@ -292,6 +303,16 @@ class HauntedDorm {
     initDOM() {
         this.world1 = document.getElementById('world1');
         this.vp1 = document.getElementById('vp1');
+
+        // v4.0.20：昼夜色调层（夜晚全屏罩一层暗蓝，2.5s 渐变过渡）
+        let dnTint = document.getElementById('dn-tint');
+        if (!dnTint) {
+            dnTint = document.createElement('div');
+            dnTint.id = 'dn-tint';
+            document.body.appendChild(dnTint);
+        }
+        dnTint.style.cssText = 'position:fixed; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:400; background:transparent; transition:background 2.5s;';
+        this.dnTint = dnTint;
         
         // 动态创建键盘 UI 元素（如果不存在）
         const createKUI = (id, html, z) => {
@@ -694,6 +715,11 @@ class HauntedDorm {
             this.allPlayers.push(ai);
         }
 
+        // v4.0.20：内鬼模式——秘密选定一名人机，160 秒时反水（植物阵营专属）
+        if (!this.isZombieFaction && this.ais.length >= 3) {
+            this.traitor = this.ais[Math.floor(Math.random() * this.ais.length)];
+        }
+
     }
 
     spawnPlant(col, row, type, isDoor = false) {
@@ -773,6 +799,7 @@ class HauntedDorm {
         this.world1.appendChild(el1);
         pl.el1 = el1;
         this.plants.push(pl);
+        this._applySleepVisual(pl); // v4.0.20：白天种蘑菇 → 直接套上睡眠滤镜
 
         // 植物下方提示条：升级费用 / 浇水进度
         this._refreshPrompt(pl);
@@ -959,6 +986,7 @@ class HauntedDorm {
     _updateAIs(dt) {
         for (const ai of this.ais) {
             if (ai.dead) continue;
+            if (ai === this.traitor && this.traitorRevealed) continue; // v4.0.20：内鬼由 _updateTraitor 接管
             if (ai.path && ai.path.length > 0) continue; // 还在赶路，等到了床边再开始发育
             
             ai.actTimer = (ai.actTimer || 0) - dt;
@@ -1122,6 +1150,17 @@ class HauntedDorm {
                 ? `Lv.${this.ghostLevel} ${cfg.name}（最终形态）`
                 : `Lv.${this.ghostLevel} ${cfg.name}`;
             chip.innerText = `👻 ${lvTxt} · 击杀 ${this.kills}`;
+        }
+        // v4.0.20：追加尸潮/昼夜倒计时（所有事件都有预告，绝不搞突然袭击）
+        if (!this.isZombieFaction && !this.over) {
+            let extra = '';
+            if (this.ghostSpawned && this.ghostRespawnAt === 0) {
+                extra += ` · 下一波 ${Math.max(0, Math.ceil((this.waveAt - now) / 1000))}s`;
+            }
+            const dnLeft = Math.max(0, Math.ceil((this.dnNext - now) / 1000));
+            extra += this.isNight ? ` · 🌙${dnLeft}s` : ` · ☀${dnLeft}s`;
+            if (this.traitor && !this.traitorRevealed) extra += ' · 👥x6';
+            chip.innerText += extra;
         }
     }
 
@@ -1621,7 +1660,9 @@ class HauntedDorm {
     // ===== 浇水（per-player）：每次 +1 该玩家的阳光，并催熟身边所有蘑菇 =====
     _water(p) {
         p = p || this.player;
-        this.addSun(this.waterBoostT > 0 ? 3 : 1, p); // v4.0.19：丰收浇水中产出 ×3
+        // v4.0.20：白天蘑菇睡觉 → 浇水产出 ×2 作为发育补偿；与丰收祝福 ×3 可叠加（最高 ×6）
+        const amt = (this.waterBoostT > 0 ? 3 : 1) * (!this.isZombieFaction && !this.isNight ? 2 : 1);
+        this.addSun(amt, p);
         this.playSfx('plant_water.mp3', 0.4);
         let fedAny = false;
         for (const pl of this.plants) {
@@ -1642,7 +1683,7 @@ class HauntedDorm {
         // v3.92.0：0.2 秒一浇，飘字节流到约 1 秒一飘（+1 ☀），避免 5 个飘字叠成一柱
         p.waterTick = (p.waterTick || 0) + 1;
         if (p.waterTick % 5 === 1) {
-            this._flyText(p.x, p.y - 20, fedAny ? '+1 ☀·浇水' : '+1 ☀', '#ffe14a');
+            this._flyText(p.x, p.y - 20, fedAny ? `+${amt} ☀·浇水` : `+${amt} ☀`, '#ffe14a');
         }
     }
 
@@ -1810,11 +1851,14 @@ class HauntedDorm {
         for (const pl of this.plants) {
             const sh = pl.def.shoot, lob = pl.def.lob;
             if (!sh && !lob) continue;
+            if (!this._shroomAwake() && this._isShroom(pl.def)) continue; // v4.0.20：白天蘑菇睡觉
             pl.shootCd -= dt;
             if (pl.shootCd > 0) continue;
             const px = pl.c * 80 + 40, py = pl.r * 80 + 40;
             let best = null, bestD = (sh ? sh.range : lob.range);
-            const targets = this.isZombieFaction ? this.allPlayers.filter(p => p.isZombie) : this.zombies;
+            const targets = this.isZombieFaction ? this.allPlayers.filter(p => p.isZombie) : this.zombies.slice();
+            // v4.0.20：内鬼揭露后，植物也会把他当目标
+            if (!this.isZombieFaction && this.traitorRevealed && this.traitor && !this.traitor.dead) targets.push(this.traitor);
             for (const zb of targets) {
                 if (zb.dead) continue;
                 const d = Math.hypot(zb.x - px, zb.y - py);
@@ -1895,7 +1939,9 @@ class HauntedDorm {
             const c = Math.floor(pea.x / this.gridSize), r = Math.floor(pea.y / this.gridSize);
             // if (this.walls.has(`${c},${r}`)) pea.life = 0; // 用户要求子弹能穿透墙壁
             // 命中检测（34px）
-            const targets = this.isZombieFaction ? this.allPlayers.filter(p => p.isZombie) : this.zombies;
+            const targets = this.isZombieFaction ? this.allPlayers.filter(p => p.isZombie) : this.zombies.slice();
+            // v4.0.20：内鬼揭露后豌豆也能打中他
+            if (!this.isZombieFaction && this.traitorRevealed && this.traitor && !this.traitor.dead) targets.push(this.traitor);
             for (const zb of targets) {
                 if (zb.dead) continue; // 撤退时不再免疫，可以被击杀
                 if (Math.hypot(zb.x - pea.x, zb.y - pea.y) < 34) {
@@ -1937,12 +1983,30 @@ class HauntedDorm {
     }
 
     _killZombie(zb, killer = null) {
+        // v4.0.20：内鬼分流必须放在 zb.dead=true 之前——否则 _defeatTraitor 的守卫会被自己短路，奖励发不出来
+        if (zb.isTraitor && !zb.dead) {
+            this._defeatTraitor(killer);
+            return;
+        }
         if (zb.dead) return;
         zb.dead = true;
         this.kills++;
         this.lastKiller = killer; // 记录击杀者
 
-        
+        // v4.0.20：尸潮小怪 / 巨人 BOSS——只做死亡演出，不触发胜负
+        if (zb.isMinion || zb.isBoss) {
+            zb.el1.style.transition = 'all 0.45s ease-in';
+            zb.el1.style.transform = 'translate(-50%, -50%) scale(1.25) rotate(12deg)';
+            zb.el1.style.opacity = '0';
+            setTimeout(() => zb.el1.remove(), 480);
+            this.playSfx('scream.mp3', 0.35);
+            if (zb.isBoss) {
+                this._announce('🏆 僵王机甲被击毁了！它洒落了一地阳光！', 'points.mp3', true);
+                for (const p of this.allPlayers) if (!p.dead) this.addSun(100, p);
+            }
+            return;
+        }
+
         zb.el1.style.transition = 'all 0.45s ease-in';
         zb.el1.style.transform = 'translate(-50%, -50%) scale(1.25) rotate(12deg)';
         zb.el1.style.opacity = '0';
@@ -1981,7 +2045,8 @@ class HauntedDorm {
             const rm = this._insideRoom(pl.c, pl.r);
             const owner = (rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : null;
             if (!owner || owner.dead) continue;
-            
+            if (!this._shroomAwake() && this._isShroom(pl.def)) continue; // v4.0.20：白天蘑菇不产出（浇水 ×2 补偿）
+
             const def = pl.def;
             const wx = pl.c * 80 + 40, wy = pl.r * 80 + 40;
             // 只有站得近才产出（AI 永远在房间里所以始终满足，玩家必须在房间附近）
@@ -2076,6 +2141,7 @@ class HauntedDorm {
         for (const pl of this.plants) {
             const nk = pl.def.nuke;
             if (!nk || !nk.lob) continue;
+            if (!this._shroomAwake()) continue; // v4.0.20：白天毁灭菇睡觉
             pl.nukeT = (pl.nukeT || 0) + dt;
             if (pl.nukeT >= nk.cd) {
                 pl.nukeT = 0;
@@ -2629,6 +2695,184 @@ class HauntedDorm {
         this.blessingAt = this.gameTime + 90000;
     }
 
+    // ===== v4.0.20：昼夜循环 =====
+    _isShroom(def) {
+        return !!def && (def.name.includes('菇') || !!def.mine); // 蘑菇系（含孢子地雷）；向日葵/豌豆/地刺等不受影响
+    }
+    _shroomAwake() {
+        return this.isZombieFaction || this.isNight; // 僵尸阵营不搞昼夜；白天蘑菇睡觉
+    }
+    _applySleepVisual(pl) {
+        if (!pl || !pl.el1 || pl.isDoor || !this._isShroom(pl.def)) return;
+        const img = pl.el1.querySelector('img');
+        if (!img) return;
+        const base = pl.def.tint || '';
+        img.style.filter = this._shroomAwake() ? base
+            : (base ? base + ' grayscale(0.75) brightness(0.9)' : 'grayscale(0.75) brightness(0.9)');
+    }
+
+    _updateDayNight(time) {
+        if (this.isZombieFaction || this.over) return;
+        if (time < this.dnNext) return;
+        this.isNight = !this.isNight;
+        this.dnNext = time + (this.isNight ? 90000 : 60000); // 白天 60s / 夜晚 90s
+        if (this.dnTint) this.dnTint.style.background = this.isNight ? 'rgba(10, 14, 52, 0.45)' : 'transparent';
+        if (this.isNight) {
+            this._announce('🌙 夜幕降临！蘑菇们全部醒来，僵尸提速 15%！', 'evillaugh.mp3', true);
+        } else {
+            this._announce('☀ 天亮了！蘑菇们睡着了，浇水产出 ×2（抓紧发育）', 'points.mp3', true);
+        }
+        for (const pl of this.plants) this._applySleepVisual(pl);
+        this._updateGhostChip();
+    }
+
+    // ===== v4.0.20：尸潮波次（附加小怪/BOSS，不影响单僵尸胜负体系）=====
+    _updateWaves(time) {
+        if (this.isZombieFaction || this.over || !this.ghostSpawned) return;
+        // 开波前 10 秒预警——PVZ 经典台词，绝不搞突然袭击
+        if (!this.waveWarned && time >= this.waveAt - 10000) {
+            this.waveWarned = true;
+            const bossComing = (this.waveN + 1) % 5 === 0;
+            this._announce(bossComing ? '⚠️ 警报：一大波僵尸正在接近——地面在震动！' : '⚠️ 一大波僵尸正在接近！', 'finalwave.mp3', true);
+        }
+        if (time < this.waveAt) return;
+        // 开波
+        this.waveN++;
+        this.waveWarned = false;
+        this.waveAt = time + 75000;
+        const n = Math.min(6, 3 + Math.floor(this.waveN / 2));
+        for (let i = 0; i < n; i++) this._spawnMinion();
+        if (this.waveN % 5 === 0) {
+            this._spawnBoss();
+            this._announce(`🚨 第 ${this.waveN} 波尸潮来袭——僵王机甲驾到！！`, 'scream.mp3', true);
+        } else {
+            this._announce(`🧟 第 ${this.waveN} 波尸潮来袭！`, 'evillaugh.mp3', true);
+        }
+        this._updateGhostChip();
+    }
+
+    _spawnMinion(isBoss = false) {
+        const lv = this.ghostLevel;
+        const cfg = isBoss
+            ? { name: '僵王机甲', img: 'Zombies/LGBOSS/0.gif', hp: Math.round(5000 * (1 + 0.4 * this.waveN)), speed: 170 }
+            : { name: '小鬼僵尸', img: 'Zombies/Imp/0.gif', hp: 250 + lv * 250, speed: 260 };
+        const p = this._ghostSpawnPoint();
+        const zb = { x: p.x, y: p.y, hp: cfg.hp, maxHp: cfg.hp, speed: cfg.speed, level: lv, cfg: cfg,
+                     side: Math.random() < 0.5 ? 1 : -1, stuck: 0, detourT: 0, stunT: 0, slowT: 0, dead: false,
+                     isMinion: !isBoss, isBoss: isBoss };
+        this.zombies.push(zb);
+
+        const zEl1 = document.createElement('div');
+        zEl1.className = 'entity avatar';
+        const size = isBoss ? 'width:220%; height:220%; transform:translate(-42%, -40%);'
+                            : 'width:100%; height:100%; transform:translate(-3%, -25%);';
+        zEl1.innerHTML = `<img src="assets/images/${cfg.img}" style="${size}">` +
+            (isBoss ? `<div class="lv-badge" style="background:#a00000;">僵王</div>` : '') +
+            `<div class="hp-bar-bg" style="top:-14px; display:none;"><div class="hp-bar-fg" style="width:100%; background:#ff5252;"></div></div>`;
+        this.world1.appendChild(zEl1);
+        zb.el1 = zEl1;
+        zb.imgEl = zEl1.querySelector('img');
+        zb.hpBg = zEl1.querySelector('.hp-bar-bg');
+        zb.hpFg = zEl1.querySelector('.hp-bar-fg');
+    }
+
+    _spawnBoss() { this._spawnMinion(true); }
+
+    // ===== v4.0.20：内鬼模式 =====
+    _updateTraitor(dt) {
+        const t = this.traitor;
+        if (!t || t.dead) return;
+        if (!this.traitorRevealed) {
+            // 揭露前 10 秒：气氛提示（不指名道姓，纯铺垫）
+            if (!this.traitorHinted && this.gameTime >= this.traitorRevealAt - 10000) {
+                this.traitorHinted = true;
+                this._announce('🕯 气氛突然安静得可怕……幸存者中，混进了一个内鬼……', 'evillaugh.mp3');
+            }
+            if (this.gameTime < this.traitorRevealAt) return;
+            // 揭露：变红名、上血条、开始反水
+            this.traitorRevealed = true;
+            t.isTraitor = true;
+            t.hp = 600; t.maxHp = 600;
+            const badge = document.createElement('div');
+            badge.className = 'lv-badge';
+            badge.style.background = '#c62828';
+            badge.innerText = '😈 内鬼';
+            t.el1.appendChild(badge);
+            const hb = document.createElement('div');
+            hb.className = 'hp-bar-bg';
+            hb.style.top = '-14px';
+            hb.style.display = 'block';
+            hb.innerHTML = '<div class="hp-bar-fg" style="width:100%; background:#ff5252;"></div>';
+            t.el1.appendChild(hb);
+            t.trHpBg = hb;
+            t.trHpFg = hb.firstChild;
+            this._announce(`😈 内鬼现身：【${t.roleDef.name}】反水了！击败他有重赏！`, 'scream.mp3', true);
+            return;
+        }
+        // 揭露后：追击最近的存活玩家
+        let best = null, bd = Infinity;
+        for (const p of this.allPlayers) {
+            if (p.dead || p === t) continue;
+            const d = Math.hypot(p.x - t.x, p.y - t.y);
+            if (d < bd) { bd = d; best = p; }
+        }
+        if (!best) return;
+        t.pathTimer = (t.pathTimer || 0) + dt;
+        if (t.pathTimer > 1.0 || !t.path) {
+            t.pathTimer = 0;
+            t.path = this._findPath(t.x, t.y, best.x, best.y, true); // 可穿门进屋
+        }
+        let dx, dy;
+        if (t.path && t.path.length > 0) {
+            const nd = t.path[0];
+            dx = nd.x - t.x; dy = nd.y - t.y;
+            if (Math.hypot(dx, dy) < 12) {
+                t.path.shift();
+                if (t.path.length > 0) { dx = t.path[0].x - t.x; dy = t.path[0].y - t.y; }
+            }
+        } else {
+            dx = best.x - t.x; dy = best.y - t.y;
+        }
+        const len = Math.hypot(dx, dy) || 1;
+        const spd = 330; // 比玩家(400)稍慢，跑得掉但甩不干净
+        const nx = t.x + dx / len * spd * dt, ny = t.y + dy / len * spd * dt;
+        if (!this.checkCollision(nx, t.y, 14)) t.x = nx;
+        if (!this.checkCollision(t.x, ny, 14)) t.y = ny;
+        t.el1.style.left = t.x + 'px';
+        t.el1.style.top = t.y + 'px';
+        if (t.trHpFg) t.trHpFg.style.width = Math.max(0, t.hp / t.maxHp * 100) + '%';
+        // 贴身咬人：每 1.2 秒一口 25 血
+        if (bd < 48) {
+            t.biteT = (t.biteT || 0) + dt;
+            if (t.biteT >= 1.2) {
+                t.biteT = 0;
+                best.hp -= 25;
+                this._flyText(best.x, best.y - 26, '-25 😈', '#ff5252');
+                this.playSfx('chomp.mp3', 0.4);
+                if (best === this.player || best === this.player2) this.setHp();
+                if (best.hp <= 0 && !best.dead) {
+                    best.dead = true;
+                    best.el1.classList.add('dead-slash');
+                    best.el1.style.filter = 'grayscale(1)';
+                    if (this.ghostLevel >= 4) this._levelUpGhostDirect();
+                }
+            }
+        }
+    }
+
+    _defeatTraitor(killer) {
+        const t = this.traitor;
+        if (!t || t.dead) return;
+        t.dead = true;
+        t.el1.classList.add('dead-slash');
+        t.el1.style.filter = 'grayscale(1)';
+        this._announce('🎉 内鬼被击败了！全体幸存者 +200🦠 庆功！', 'points.mp3', true);
+        for (const p of this.allPlayers) {
+            if (!p.dead && p !== t) this.addSpore(200, p);
+        }
+        if (killer && killer.roleDef) killer.dmgDealt = (killer.dmgDealt || 0) + 600;
+    }
+
     _tick(dt, time) {
         // v4.0.19：全局祝福计时递减
         if (this.plantDmgBoostT > 0) this.plantDmgBoostT -= dt;
@@ -2642,6 +2886,9 @@ class HauntedDorm {
         for (const zb of this.zombies) { if (zb.hitFlashT > 0) zb.hitFlashT -= dt; }
         this._updateGhostDirector(time);
         this._updateAIs(dt);
+        this._updateWaves(time);      // v4.0.20：尸潮波次
+        this._updateDayNight(time);   // v4.0.20：昼夜循环
+        this._updateTraitor(dt);      // v4.0.20：内鬼模式
         if (Math.floor(time / 500) !== Math.floor((time - dt * 1000) / 500)) this._updateGhostChip(); // 0.5s 刷一次信息牌
         if (Math.floor(time / 1000) !== Math.floor((time - dt * 1000) / 1000)) this._refreshHud(); // 1s 刷一次 HUD (为了技能倒计时)
 
@@ -3165,20 +3412,24 @@ class HauntedDorm {
             }
             if (zb.slowT > 0) zb.slowT -= dt;
             // 根据用户要求，撤退时不再使用 1000 冲刺速度，而是保持普通走路速度
-            const spd = zb.retreating ? zb.speed : (zb.speed * (zb.slowT > 0 ? 0.5 : 1));
+            // v4.0.20：夜晚僵尸提速 15%、白天迟缓 10%（昼夜节奏）
+            const dnMul = (!this.isZombieFaction && !this.over) ? (this.isNight ? 1.15 : 0.9) : 1;
+            const spd = (zb.retreating ? zb.speed : (zb.speed * (zb.slowT > 0 ? 0.5 : 1))) * dnMul;
 
             // 找综合仇恨值最高的目标（距离、门血量、门等级综合判断）
             zb.targetEvalT = (zb.targetEvalT || 0) + dt;
             let closestTarget = zb.lockedTarget;
             
             // 每 8 秒或者当前目标死亡，强制重新评估全场最弱的人
+            if (this.traitorRevealed && zb.lockedTarget === this.traitor) zb.lockedTarget = null; // v4.0.20：僵尸不咬内鬼（自己人）
             if (!closestTarget || closestTarget.dead || zb.targetEvalT > 8) {
                 zb.targetEvalT = 0;
                 let minScore = Infinity;
                 let weakestTarget = null;
                 for (const p of this.allPlayers) {
                     if (p.hp <= 0 || p.dead) continue;
-                    if (p === this.player && this.player.stealthT > 0) continue; 
+                    if (this.traitorRevealed && p === this.traitor) continue; // v4.0.20：内鬼是僵尸方的
+                    if (p === this.player && this.player.stealthT > 0) continue;
                     let score = Math.hypot(p.x - zb.x, p.y - zb.y);
                     const rm = p.room || this.rooms.find(r => p.x >= r.x*80 && p.x <= (r.x+r.w)*80 && p.y >= r.y*80 && p.y <= (r.y+r.h)*80);
                     let doorHpScore = 0;
@@ -3344,6 +3595,7 @@ class HauntedDorm {
             // 接触目标 → 持续掉血
             for (const p of this.allPlayers) {
                 if (p.dead) continue;
+                if (this.traitorRevealed && p === this.traitor) continue; // v4.0.20：僵尸不咬内鬼
                 if (Math.hypot(p.x - zb.x, p.y - zb.y) < 50) {
                     // 如果中间隔着门（玩家在房间里且门活着，僵尸在外面），则免疫接触伤害
                     const pRm = this._insideRoom(Math.floor(p.x/80), Math.floor(p.y/80));
@@ -3367,6 +3619,12 @@ class HauntedDorm {
                                 p.el1.classList.add('dead-slash');
                                 p.el1.style.filter = 'grayscale(1)';
                                 if (this.ghostLevel >= 4) this._levelUpGhostDirect();
+                                // v4.0.20：内鬼如果揭露前就死了，换一名活人机顶上（保证内鬼剧情一定上演）
+                                if (p === this.traitor && !this.traitorRevealed) {
+                                    const alt = this.ais.find(a => a !== p && !a.dead);
+                                    this.traitor = alt || null;
+                                    if (this.traitor) this.traitorRevealAt = Math.max(this.gameTime + 30000, this.traitorRevealAt);
+                                }
                             }
                         }
                         
