@@ -37,28 +37,34 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   ok(a0.inDom === a0.n, "A2 全部推车元素已挂到 DOM");
   ok(a0.noWall, "A3 推车停靠格都不是墙（门外桥上）");
 
-  // 触发 + 冲撞 + 伤害 + 击退 + 一次性
+  // 触发 + 冲撞 + 伤害 + 击退 + 一次性（v4.0.21 白名单语义）
   const a1 = await page.evaluate(() => {
     const g = window.game;
-    g._spawnGhost();
-    const zb = g.zombies[0];
-    zb.hp = 9999; // 防止撞死触发胜利结算
     const mw = g.mowers[0];
-    const owner = (mw.room.owners && mw.room.owners.length > 0) ? mw.room.owners[0] : g.player;
-    const dmg0 = owner.dmgDealt || 0;
-    // 停在触发圈（75px）内、撞击圈（50px）外
-    zb.x = mw.x + mw.dirX * 60; zb.y = mw.y + mw.dirY * 60;
+    g._claimRoom(g.player, mw.room); // 有主房间：伤害记账给主人
+    // 回归：主僵尸（剧情核心）贴推车 → 不触发不被撞（开局被秒杀 bug 修复）
+    g._spawnGhost();
+    const main = g.zombies[0];
+    main.hp = 9999;
+    main.x = mw.x + mw.dirX * 60; main.y = mw.y + mw.dirY * 60;
     for (let i = 0; i < 12; i++) g._updateMowers(0.016);
-    return {
-      active: mw.active, used: mw.used,
-      hpDrop: 9999 - zb.hp, stun: zb.stunT > 0,
-      ownerGotDmg: (owner.dmgDealt || 0) - dmg0,
-    };
+    const mainIgnored = !mw.active && !mw.used && main.hp === 9999;
+    // 小怪贴推车 → 触发 + 撞击
+    g._spawnMinion();
+    const zb = g.zombies[g.zombies.length - 1];
+    zb.x = mw.x + mw.dirX * 60; zb.y = mw.y + mw.dirY * 60;
+    zb.hp = 9999; zb.maxHp = 9999;
+    const dmg0 = g.player.dmgDealt || 0;
+    for (let i = 0; i < 12; i++) g._updateMowers(0.016);
+    return { mainIgnored, active: mw.active, used: mw.used,
+             hpDrop: 9999 - zb.hp, stun: zb.stunT > 0,
+             ownerGotDmg: (g.player.dmgDealt || 0) - dmg0 };
   });
-  ok(a1.active && a1.used, "A4 僵尸逼近门口 75px → 推车自动启动（一次性消耗）");
-  ok(a1.hpDrop >= 800, `A5 冲撞伤害落地（掉血 ${a1.hpDrop} ≥ 800）`);
-  ok(a1.stun, "A6 撞击附带眩晕");
-  ok(a1.ownerGotDmg >= 800, `A7 伤害计入房间主人账本（+${a1.ownerGotDmg}）`);
+  ok(a1.mainIgnored, "A4 主僵尸贴近推车 → 不触发不被撞（开局秒杀修复回归）");
+  ok(a1.active && a1.used, "A5 小怪逼近门口 75px → 推车自动启动（一次性消耗）");
+  ok(a1.hpDrop >= 800, `A6 冲撞伤害落地（掉血 ${a1.hpDrop} ≥ 800）`);
+  ok(a1.stun, "A7 撞击附带眩晕");
+  ok(a1.ownerGotDmg >= 800, `A8 伤害计入房间主人账本（+${a1.ownerGotDmg}）`);
 
   const a2 = await page.evaluate(() => {
     const g = window.game;
@@ -66,13 +72,12 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     for (let i = 0; i < 60; i++) g._updateMowers(0.016); // 跑完 260px 冲程
     const gone = mw.gone && !mw.el1.isConnected;
     // 后备推车：认领该房后恢复
-    g._claimRoom(g.player, mw.room);
     const n = g._restoreMowers(g.player);
     return { gone, restored: n >= 1, back: mw.used === false && mw.el1.isConnected,
              home: mw.x === mw.homeX && mw.y === mw.homeY };
   });
-  ok(a2.gone, "A8 冲完 260px → 推车消失（一次性）");
-  ok(a2.restored && a2.back && a2.home, "A9 「后备推车」恢复：回原位、可再次触发");
+  ok(a2.gone, "A9 冲完 260px → 推车消失（一次性）");
+  ok(a2.restored && a2.back && a2.home, "A10 「后备推车」恢复：回原位、可再次触发");
 
   // A 段收尾：清掉真实僵尸（否则它在真实游戏循环里追杀玩家，把局面打到 over，B 段祝福开不出来）
   await page.evaluate(() => {

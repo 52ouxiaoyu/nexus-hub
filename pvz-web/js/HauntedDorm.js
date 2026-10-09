@@ -2574,9 +2574,11 @@ class HauntedDorm {
         for (const mw of this.mowers) {
             if (mw.gone) continue;
             if (!mw.active) {
-                // 触发：僵尸靠近 75px（啃到门口了）
+                // 触发：尸潮单位（小怪/僵王机甲）靠近 75px（啃到门口了）
+                // v4.0.21：白名单制——主僵尸是剧情核心，开局出笼点可能贴着推车，
+                // 被撞 800 血直接秒杀会瞬间触发「游戏胜利」；内鬼 600 血同理不划算
                 for (const zb of this.zombies) {
-                    if (zb.dead) continue;
+                    if (zb.dead || (!zb.isMinion && !zb.isBoss)) continue;
                     if (Math.hypot(zb.x - mw.x, zb.y - mw.y) < 75) {
                         mw.active = true; mw.used = true;
                         this._announce('🛒 小推车启动！', 'cherrybomb.mp3');
@@ -2591,14 +2593,15 @@ class HauntedDorm {
             mw.dist += 520 * dt;
             mw.el1.style.left = mw.x + 'px';
             mw.el1.style.top = mw.y + 'px';
-            // 撞击僵尸：大伤害 + 击退 + 眩晕（每次冲锋每个僵尸只撞一次；伤害计入房间主人账本）
-            const owner = (mw.room.owners && mw.room.owners.length > 0) ? mw.room.owners[0] : this.player;
+            // 撞击尸潮单位：大伤害 + 击退 + 眩晕（每次冲锋每个僵尸只撞一次）
+            // v4.0.21：白名单制（只认小怪/机甲）；无主房间不再把伤害兜底记给玩家（MVP 冤案根源）
+            const owner = (mw.room.owners && mw.room.owners.length > 0) ? mw.room.owners[0] : null;
             for (const zb of this.zombies) {
-                if (zb.dead || mw.hits.has(zb)) continue;
+                if (zb.dead || mw.hits.has(zb) || (!zb.isMinion && !zb.isBoss)) continue;
                 if (Math.hypot(zb.x - mw.x, zb.y - mw.y) < 50) {
                     const dmg = 800;
                     zb.hp -= dmg;
-                    owner.dmgDealt = (owner.dmgDealt || 0) + dmg;
+                    if (owner) owner.dmgDealt = (owner.dmgDealt || 0) + dmg;
                     mw.hits.add(zb);
                     zb.hitFlashT = 0.3;
                     zb.stunT = Math.max(zb.stunT || 0, 2.5);
