@@ -722,7 +722,7 @@ class HauntedDorm {
 
     }
 
-    spawnPlant(col, row, type, isDoor = false) {
+    spawnPlant(col, row, type, isDoor = false, owner = null) {
         if (type === 'blindbox') {
             const pool = ['peashooter', 'cabbagepult', 'kernelpult', 'dualpea', 'snowpea', 'repeater', 'threepeater', 'gatlingpea', 'puffshroom', 'scaredyshroom', 'fumeshroom', 'hypnoshroom', 'sporemine', 'gloompuff', 'icegloom', 'plantern', 'doomshroom', 'iceshroom', 'garlic'];
             type = pool[Math.floor(Math.random() * pool.length)];
@@ -749,10 +749,9 @@ class HauntedDorm {
 
         if (this.plants.some(pl => pl.c === col && pl.r === row)) return;
         const rm = this._insideRoom(col, row);
-        if (rm && rm.owners.length < rm.capacity && !this.player.room) {
-            rm.owners.push(this.player);
-            this.player.room = rm; // 玩家占领该房间
-        }
+        // v4.0.23：兜底认领改走统一入口且认给真正的种植者——原逻辑写死给 this.player（P1），
+        // 双人模式下 P2 先建房会被顺手记到 P1 名下；初始化/门板等无主生成（owner=null）不认领
+        if (rm && owner) this._claimRoom(owner, rm);
 
         const defs = HauntedDorm.DEFS;
         const def = defs[type];
@@ -761,7 +760,8 @@ class HauntedDorm {
         // 门板血量按图鉴血量的 30% 折算（v3.89.0：跟随升级成长——原先是固定 1200，升级坚果后门板血量不涨，
         // 玩家看不出升级收益；现在墙坚果门板 1200，豌豆坚果门板 1500……逐级变硬）
         const maxHp = isDoor ? Math.round(def.hp * 0.3) : def.hp;
-        const pl = { r: row, c: col, type: type, def: def, hp: maxHp, maxHp: maxHp, isDoor: isDoor,
+        // v4.0.23：植物随身携带种植者——MVP 伤害记账的单一事实来源（不再反查房间 owners[0]，杜绝 P2 输出记到 P1 头上）
+        const pl = { r: row, c: col, type: type, def: def, hp: maxHp, maxHp: maxHp, isDoor: isDoor, owner: owner || null,
                      shootCd: 1.5, prodT: 0, sporeT: 0, fed: 0, freezeT: 0 };
 
         const el1 = document.createElement('div');
@@ -884,7 +884,7 @@ class HauntedDorm {
         pl.el1.remove();
         if (pl.txtEl) pl.txtEl.remove();
         this.plants = this.plants.filter(p => p !== pl);
-        this.spawnPlant(col, row, to, isDoor);
+        this.spawnPlant(col, row, to, isDoor, pl.owner); // v4.0.23：升级后保留原种植者
     }
 
     // ===== 单僵尸：出场 / 升级 / 重生 导演 =====
@@ -1394,6 +1394,7 @@ class HauntedDorm {
 
     openPlantMenu(mouseX, mouseY) {
         if (this.role === 'zombie') return;
+        if (this.player.dead) return; // v4.0.23：倒下的 P1 不能建造
 
         const rect = this.vp1.getBoundingClientRect();
         const worldX = mouseX - rect.left + this.player.camX;
@@ -1416,8 +1417,8 @@ class HauntedDorm {
         }
         if (!inRoomGrid) isSpikeTile = true;
         
-        // 检查房间归属
-        if (this.ais.some(ai => ai.room === targetRm) && !this._ownsRoom(this.player, targetRm)) {
+        // 检查房间归属（v4.0.23：只认真正认领过的 AI——临时避难的 ai.room 不算数，否则会把玩家堵得没法建造）
+        if (this.ais.some(ai => ai.room === targetRm && targetRm.owners.includes(ai)) && !this._ownsRoom(this.player, targetRm)) {
             this._flyText(col * this.gridSize + 40, row * this.gridSize, '这是人机的房间！', '#ff8a8a');
             return;
         }
@@ -1531,7 +1532,7 @@ class HauntedDorm {
             this.addSun(-def.cost);
         }
         this.playSfx('buttonclick.mp3', 0.5);
-        this.spawnPlant(this.menuCol, this.menuRow, type);
+        this.spawnPlant(this.menuCol, this.menuRow, type, false, this.player); // v4.0.23：带上种植者
     }
 
     _useSkill(target = null) {
@@ -1867,7 +1868,8 @@ class HauntedDorm {
             if (!best) continue;
 
             const rm = this._insideRoom(pl.c, pl.r);
-            const owner = (rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : this.player;
+            // v4.0.23：优先按种植者记账；查不到不再兜底给 P1（旧兜底把 P2 的输出全记到 P1 头上，MVP 冤案根源）
+            const owner = pl.owner || ((rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : null);
             const dmgMul = this.plantDmgBoostT > 0 ? 2 : 1; // v4.0.19：狂怒祝福——伤害翻倍
 
             if (lob) {
@@ -1982,6 +1984,23 @@ class HauntedDorm {
         });
     }
 
+    // v4.0.23：P1 倒下的统一处理——双人模式只要 P2 还活着就继续，不再直接结算
+    // 注意：allPlayers 含 5 个人机（他们几乎不会死），结算判定只能看真人玩家
+    _humansAll() { return this.player2 ? [this.player, this.player2] : [this.player]; }
+
+    _checkP1Down() {
+        if (this.player.dead || this.player.hp > 0) return;
+        this.player.dead = true;
+        this.player.el1.classList.add('dead-slash');
+        this.player.el1.style.filter = 'grayscale(1)';
+        this.player.vx = 0; this.player.vy = 0;
+        if (this._humansAll().every(q => q.dead)) {
+            this.gameOver(false);
+        } else {
+            this._announce('💀 P1 倒下了！P2 继续战斗！', 'scream.mp3', true);
+        }
+    }
+
     _killZombie(zb, killer = null) {
         // v4.0.20：内鬼分流必须放在 zb.dead=true 之前——否则 _defeatTraitor 的守卫会被自己短路，奖励发不出来
         if (zb.isTraitor && !zb.dead) {
@@ -2043,7 +2062,7 @@ class HauntedDorm {
     _updateProduce(dt) {
         for (const pl of this.plants) {
             const rm = this._insideRoom(pl.c, pl.r);
-            const owner = (rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : null;
+            const owner = pl.owner || ((rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : null); // v4.0.23：按种植者记账
             if (!owner || owner.dead) continue;
             if (!this._shroomAwake() && this._isShroom(pl.def)) continue; // v4.0.20：白天蘑菇不产出（浇水 ×2 补偿）
 
@@ -2090,17 +2109,16 @@ class HauntedDorm {
                 if (zb.dead) continue;
                 if (Math.hypot(zb.x - px, zb.y - py) < sp.r) {
                     const rm = this._insideRoom(pl.c, pl.r);
-                    const owner = (rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : this.player;
+                    const owner = pl.owner || ((rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : null); // v4.0.23：按种植者记账
                     let fdps = sp.dps;
-                    if (owner.atkBuffT > 0) fdps *= 2;
+                    if (owner && owner.atkBuffT > 0) fdps *= 2;
                     zb.hp -= fdps * dt;
                     if (zb.hpBg) {
                         zb.hpBg.style.display = 'block';
                         zb.hpFg.style.width = Math.max(0, zb.hp / zb.maxHp * 100) + '%';
                     }
                     if (zb.hp <= 0) {
-                        const rm = this._insideRoom(pl.c, pl.r);
-                        this._killZombie(zb, (rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : this.player);
+                        this._killZombie(zb, pl.owner || ((rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : null)); // v4.0.23
                     }
                 }
             }
@@ -2114,9 +2132,9 @@ class HauntedDorm {
         for (const pl of this.plants) {
             const fz = pl.def.freeze;
             if (fz && fz.aura) {
-                const rm = this._insideRoom(pl.c, pl.r);
-                const owner = (rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : this.player;
-                auras.push({ owner, dps: fz.dps });
+            const rm = this._insideRoom(pl.c, pl.r);
+            const owner = pl.owner || ((rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : null); // v4.0.23：按种植者记账
+            auras.push({ owner, dps: fz.dps });
             }
         }
         const hasAura = auras.length > 0;
@@ -2126,7 +2144,7 @@ class HauntedDorm {
                 zb.slowT = 0.5;
                 for (const a of auras) {
                     zb.hp -= a.dps * dt;
-                    if (a.owner.roleDef) a.owner.dmgDealt = (a.owner.dmgDealt || 0) + a.dps * dt;
+                    if (a.owner && a.owner.roleDef) a.owner.dmgDealt = (a.owner.dmgDealt || 0) + a.dps * dt; // v4.0.23：owner 可能为 null
                 }
                 zb.el1.querySelector('img').style.filter = 'saturate(0.35) brightness(1.5) drop-shadow(0 0 8px #7fd8ff)';
                 if (zb.hp <= 0) this._killZombie(zb, auras[auras.length - 1].owner);
@@ -2164,7 +2182,8 @@ class HauntedDorm {
                 // 给导弹加上无限范围追踪属性
                 // v4.0.17：补 owner——原导弹不带 owner，伤害不计入任何人的 MVP 伤害账
                 const nRm = this._insideRoom(pl.c, pl.r);
-                const nOwner = (nRm && nRm.owners && nRm.owners.length > 0) ? nRm.owners[0] : this.player;
+                // v4.0.23：按种植者记账，查不到不再兜底给 P1
+                const nOwner = pl.owner || ((nRm && nRm.owners && nRm.owners.length > 0) ? nRm.owners[0] : null);
                 this.peas.push({
                     x: px, y: py,
                     vx: 0, vy: -200,
@@ -2366,13 +2385,18 @@ class HauntedDorm {
         let midX = this.player.x, midY = this.player.y, scale = 1;
         
         if (this.player2 && !this.player2.dead) {
-            midX = (this.player.x + this.player2.x) / 2;
-            midY = (this.player.y + this.player2.y) / 2;
-            const dx = Math.abs(this.player.x - this.player2.x) + 300;
-            const dy = Math.abs(this.player.y - this.player2.y) + 300;
-            const scaleX = vpw / dx;
-            const scaleY = vph / dy;
-            scale = Math.max(0.4, Math.min(1.2, scaleX, scaleY));
+            if (this.player.dead) {
+                // v4.0.23：P1 倒下后镜头完全跟随 P2，别让尸体把画面拽回原地
+                midX = this.player2.x; midY = this.player2.y;
+            } else {
+                midX = (this.player.x + this.player2.x) / 2;
+                midY = (this.player.y + this.player2.y) / 2;
+                const dx = Math.abs(this.player.x - this.player2.x) + 300;
+                const dy = Math.abs(this.player.y - this.player2.y) + 300;
+                const scaleX = vpw / dx;
+                const scaleY = vph / dy;
+                scale = Math.max(0.4, Math.min(1.2, scaleX, scaleY));
+            }
         }
         
 
@@ -2397,8 +2421,9 @@ class HauntedDorm {
 
     _updateKMenus() {
         // 【优化3】冗余按键映射：为每个操作提供2-3个备用键。如果主键被硬件冲突屏蔽，玩家可以下意识用备用键
-        this._handleKMenu(1, this.player, ['f', 'j'], ['altright', 'g', 'k'], ['w'], ['s'], this.p1Kmenu, this.p1Cursor);
-        if (this.gameMode === '2p' && this.player2) {
+        // v4.0.23：倒下的玩家不能打开建造菜单
+        if (!this.player.dead) this._handleKMenu(1, this.player, ['f', 'j'], ['altright', 'g', 'k'], ['w'], ['s'], this.p1Kmenu, this.p1Cursor);
+        if (this.gameMode === '2p' && this.player2 && !this.player2.dead) {
             // v4.0.16：P2 主键改数字位 1确认/2取消（0浇水/3技能）——原主键 Delete 在 Mac 上是退格(Backspace)根本不触发，
             // 用户实际一直用的是备用键 1；Enter 保留为取消备用
             this._handleKMenu(2, this.player2, ['1', 'shiftright', 'delete'], ['2', 'enter', 'controlright'], ['arrowup'], ['arrowdown'], this.p2Kmenu, this.p2Cursor);
@@ -2560,7 +2585,7 @@ class HauntedDorm {
                 
                 this.addSun(-(def.cost || 0), p);
                 this.addSpore(-(def.sporeCost || 0), p);
-                this.spawnPlant(menu.targetCol, menu.targetRow, type, false);
+                this.spawnPlant(menu.targetCol, menu.targetRow, type, false, p); // v4.0.23：带上种植者（P2 的输出不再记到 P1 头上）
                 this.playSfx('plant.mp3', 0.5);
             } else {
                 this.playSfx('buzzer.mp3', 0.3);
@@ -2956,7 +2981,8 @@ class HauntedDorm {
 
         // P1 Movement - 【SOC防冲突】
         // v4.0.16：菜单打开（建造菜单/升级拆除弹窗）时 P1 停止移动，防止选菜单时人物走位
-        const p1MenuBusy = this.kmenus[1].active || (this.popup && this.popup.style.display === 'block');
+        // v4.0.23：P1 倒下后尸体不再接受移动输入
+        const p1MenuBusy = this.kmenus[1].active || (this.popup && this.popup.style.display === 'block') || this.player.dead;
         let vx1 = 0, vy1 = 0;
         const p1L = this.keys['a'], p1R = this.keys['d'], p1U = this.keys['w'], p1D = this.keys['s'];
         if (!p1MenuBusy) {
@@ -3107,9 +3133,15 @@ class HauntedDorm {
                 const playerCol = Math.floor(this.player.x / this.gridSize);
                 const playerRow = Math.floor(this.player.y / this.gridSize);
                 const playerPhysicalRoom = this._insideRoom(playerCol, playerRow);
-                
-                // 房间被占用的条件：有owner，或者是玩家正站在里面的房间，或者是玩家已经绑定的房间
-                const isTaken = (rm) => rm.owners.length >= rm.capacity || (rm === this.player.room && rm.owners.length >= rm.capacity);
+                // v4.0.23：P2 物理所在房间同样保护——玩家先进去的房间，AI 不许进来宣誓主权
+                const p2PhysicalRoom = (this.player2 && !this.player2.dead)
+                    ? this._insideRoom(Math.floor(this.player2.x / this.gridSize), Math.floor(this.player2.y / this.gridSize)) : null;
+
+                // 房间被占用的条件：满员、玩家已认领（主房/副房）、或玩家正站在里面（哪怕还没建造认领）
+                // v4.0.23：原判定漏掉「玩家物理在房间内但尚未建造认领」——AI 会走进玩家先到的房间抢注，
+                // 玩家再建造就弹「别人的地盘！」（用户实报：我第一个进房间，提示却是别人的）
+                const isTaken = (rm) => rm.owners.length >= rm.capacity || rm === this.player.room ||
+                                       rm === this.player.room2 || rm === playerPhysicalRoom || rm === p2PhysicalRoom;
 
                 const isFleeing = ai.speed === 300;
                 // 动态查房：如果目标房间已经被玩家抢了或玩家正站在里面，立刻换房（逃跑时不介意房间有人，直接躲进去共享）
@@ -3140,7 +3172,10 @@ class HauntedDorm {
                     ai.path.shift(); // 抵达当前路点，切下一个
                     // 彻底抵达床位，宣誓主权
                     if (ai.path.length === 0 && ai.targetRoom) {
-                        if (ai.targetRoom.owners.length < ai.targetRoom.capacity && !(ai.targetRoom === this.player.room && ai.targetRoom.owners.length >= ai.targetRoom.capacity)) {
+                        // v4.0.23：玩家的主房/副房/物理所在房间一律不可认领
+                        const rmBlockedByPlayer = ai.targetRoom === this.player.room || ai.targetRoom === this.player.room2 ||
+                                                  ai.targetRoom === playerPhysicalRoom || ai.targetRoom === p2PhysicalRoom;
+                        if (ai.targetRoom.owners.length < ai.targetRoom.capacity && !rmBlockedByPlayer) {
                             ai.targetRoom.owners.push(ai);
                             ai.room = ai.targetRoom;
                             ai.speed = 200;
@@ -3151,7 +3186,8 @@ class HauntedDorm {
                             // 如果到了床边发现玩家站在这里或满员了，触发重新寻路
                             let foundNew = false;
                             for (const rm of this.rooms) {
-                                if (rm.owners.length < rm.capacity && rm !== this.player.room && rm !== this.player.room2) {
+                                if (rm.owners.length < rm.capacity && rm !== this.player.room && rm !== this.player.room2 &&
+                                    rm !== playerPhysicalRoom && rm !== p2PhysicalRoom) {
                                     ai.targetRoom = rm;
                                     const p = this._findPath(ai.x, ai.y, rm.frontX, rm.frontY);
                                     p.push({ x: (rm.x + rm.tpl.beds[0].c) * this.gridSize + 40, y: (rm.y + rm.tpl.beds[0].r) * this.gridSize + 40 });
@@ -3390,7 +3426,7 @@ class HauntedDorm {
                             this.player.hp -= 10;
                             this.addSun(1500);
                             this._flyText(a.x, a.y, '💰 恶魔交易 (-10血, +1500阳光)', '#ffeb3b');
-                            if (this.player.hp <= 0) this.gameOver(false);
+                            this._checkP1Down(); // v4.0.23
                             break;
                         case 9:
                             if (this.zombies[0] && !this.zombies[0].dead && this.ghostLevel > 1) {
@@ -3410,13 +3446,13 @@ class HauntedDorm {
                             this._flyText(a.x, a.y, '🍄 圣光洗礼 (植物全回血)', '#0f0');
                             break;
                         case 11:
-                            this.spawnPlant(Math.floor(this.player.x/80), Math.floor(this.player.y/80), 'doomshroom');
+                            this.spawnPlant(Math.floor(this.player.x/80), Math.floor(this.player.y/80), 'doomshroom', false, this.player);
                             this._flyText(a.x, a.y, '🎁 意外之喜 (白给毁灭重炮)', '#ff00ff');
                             break;
                         case 12:
                             this.player.hp -= 30;
                             this._flyText(a.x, a.y, '☠️ 倒霉透顶 (-30血)', '#ff0000');
-                            if (this.player.hp <= 0) this.gameOver(false);
+                            this._checkP1Down(); // v4.0.23
                             break;
                         case 13:
                             for(const pl of this.plants) { if(pl.shootCd !== undefined) pl.shootCd = 0; }
@@ -3666,12 +3702,18 @@ class HauntedDorm {
                                 p.dead = true;
                                 p.el1.classList.add('dead-slash');
                                 p.el1.style.filter = 'grayscale(1)';
+                                p.vx = 0; p.vy = 0;
                                 if (this.ghostLevel >= 4) this._levelUpGhostDirect();
                                 // v4.0.20：内鬼如果揭露前就死了，换一名活人机顶上（保证内鬼剧情一定上演）
                                 if (p === this.traitor && !this.traitorRevealed) {
                                     const alt = this.ais.find(a => a !== p && !a.dead);
                                     this.traitor = alt || null;
                                     if (this.traitor) this.traitorRevealAt = Math.max(this.gameTime + 30000, this.traitorRevealAt);
+                                }
+                                // v4.0.23：P2 倒下——真人玩家全倒才结算，P1 还活着就继续
+                                if (p === this.player2) {
+                                    if (this._humansAll().every(q => q.dead)) this.gameOver(false);
+                                    else this._announce('💔 P2 倒下了！', 'scream.mp3', true);
                                 }
                             }
                         }
@@ -3756,10 +3798,7 @@ class HauntedDorm {
             this.setHp();
             this.flashDamage();
             if (this.player.hp <= 0) { 
-                this.player.dead = true;
-                this.player.el1.classList.add('dead-slash');
-                this.player.el1.style.filter = 'grayscale(1)';
-                this.gameOver(false); 
+                this._checkP1Down(); // v4.0.23：P2 还活着就不结算
                 return; 
             }
         }
@@ -3770,8 +3809,10 @@ class HauntedDorm {
         const vpw = this.vp1.clientWidth;
         const vph = this.vp1.clientHeight;
 
-        const cx = Math.max(0, Math.min(this.worldWidth - vpw, this.player.x - vpw / 2));
-        const cy = Math.max(0, Math.min(this.worldHeight - vph, this.player.y - vph / 2));
+        // v4.0.23：P1 倒下后镜头跟随活着的 P2
+        const focusP = (this.player.dead && this.player2 && !this.player2.dead) ? this.player2 : this.player;
+        const cx = Math.max(0, Math.min(this.worldWidth - vpw, focusP.x - vpw / 2));
+        const cy = Math.max(0, Math.min(this.worldHeight - vph, focusP.y - vph / 2));
         this.player.camX = cx; this.player.camY = cy;
         this.world1.style.transform = `translate(${-cx}px, ${-cy}px)`;
     }
