@@ -42,11 +42,13 @@ body.dorm-page { margin: 0; padding: 0; background: #000; overflow: hidden; disp
         @keyframes zzzFloat { 0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.9; } 50% { transform: translateX(-50%) translateY(-4px); opacity: 0.55; } }
 #dorm-screen /* v3.92.0 浇水开启标志（跟随玩家头顶） */
         .water-badge { position: absolute; top: -60px; left: 50%; transform: translateX(-50%); font-size: 40px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); pointer-events: none; z-index: 15; }
-#dorm-screen /* v4.0.15 P1/P2 HUD 公共样式（左右镜像、规格一致）：此前 P1 的 hp-row 没有任何 CSS（块级堆叠变"长块"），P2 靠内联 flex（变"长条"），且 P2 血条复用重复 id hp-track */
+#dorm-screen /* v4.0.15/v4.0.28 P1/P2 HUD 公共样式（绝对左右对称、规格一致） */
         .hp-row { display: flex; align-items: center; margin-top: 8px; }
 #dorm-screen .hp-label { font-size: 14px; color: #fff; text-shadow: 2px 2px 0 #000; }
-#dorm-screen .hp-track { margin: 0 10px; width: 160px; height: 14px; flex: none; background: rgba(0,0,0,0.6); border: 2px solid #000; border-radius: 7px; overflow: hidden; }
+#dorm-screen .hp-track { margin: 0 10px; width: 160px; height: 14px; flex: none; background: rgba(0,0,0,0.6); border: 2px solid #000; border-radius: 7px; overflow: hidden; position: relative; }
 #dorm-screen .hp-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #ff5252, #ff0000); transition: width 0.2s; }
+#dorm-screen #hp-track2 { display: flex; justify-content: flex-end; }
+#dorm-screen #hp-fill2 { background: linear-gradient(270deg, #ff5252, #ff0000); margin-left: auto; }
 #dorm-screen /* 实体 */
         .entity { position: absolute; transform: translate(-50%, -50%); pointer-events: none; }
 #dorm-screen .avatar { width: 100px; height: 100px; z-index: 100; filter: drop-shadow(0 10px 5px rgba(0,0,0,0.5)); }
@@ -62,16 +64,17 @@ body.dorm-page { margin: 0; padding: 0; background: #000; overflow: hidden; disp
         }
 #dorm-screen /* UI 层 */
         #dorm-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1000; }
-#dorm-screen .player-hud { position: absolute; top: 20px; padding: 12px 20px; background: rgba(0,0,0,0.8); color: white; border: 3px solid #4da6ff; border-radius: 12px; font-size: 18px; text-shadow: 2px 2px 0 #000; left: 20px; pointer-events: auto; max-width: 400px; box-sizing: border-box; }
-#dorm-screen /* v4.0.16：控制行拆两行显示——HUD 收窄到 400px，避免与顶部中央的僵尸信息条重叠 */
-        .hud-ctrl { font-size: 14px; line-height: 1.5; font-weight: bold; margin-bottom: 4px; }
-#dorm-screen .sun-text { color: #ffeb3b; font-size: 24px; }
-#dorm-screen /* v3.86.0 玩家 HP 条常显 + 波次/击杀信息（红牌主题） */
-        /* v4.0.15：删除旧 #hp-row/#hp-track/#hp-fill id 规则（flex:1 把 P1 血条拉满整行=长块），统一用上方 .hp-* 类 */
-        #wave-chip { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); padding: 7px 16px; background: rgba(20,5,5,0.85); color: #ff9e9e; border: 3px solid #7a2020; border-radius: 12px; font-size: 16px; text-shadow: 2px 2px 0 #000; font-family: 'Kaiti SC', serif; letter-spacing: 1px; white-space: nowrap; }
-#dorm-screen /* v4.0.17：实时伤害榜（wave-chip 正下方，植物阵营显示） */
-        #dmg-board { position: absolute; top: 66px; left: 50%; transform: translateX(-50%); padding: 4px 14px; background: rgba(0,0,0,0.6); border: 2px solid #3a3a5a; border-radius: 10px; font-size: 14px; color: #ffe14a; text-shadow: 1px 1px 0 #000; white-space: nowrap; pointer-events: none; z-index: 40; }
+#dorm-screen .player-hud { position: absolute; top: 20px; padding: 12px 18px; background: rgba(0,0,0,0.82); color: white; border: 3px solid #4da6ff; border-radius: 12px; font-size: 18px; text-shadow: 2px 2px 0 #000; left: 20px; pointer-events: auto; width: 360px; box-sizing: border-box; display: flex; flex-direction: column; }
+#dorm-screen #p2-hud { border-color: #4fc3f7 !important; }
+#dorm-screen /* v4.0.16/v4.0.28 控制行样式 */
+        .hud-ctrl { font-size: 13.5px; line-height: 1.5; font-weight: bold; margin-bottom: 4px; }
+#dorm-screen .sun-text { color: #ffeb3b; font-size: 22px; }
+#dorm-screen /* 顶部波次与信息条 */
+        #wave-chip { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); padding: 6px 16px; background: rgba(20,5,5,0.85); color: #ff9e9e; border: 3px solid #7a2020; border-radius: 12px; font-size: 15px; text-shadow: 2px 2px 0 #000; font-family: 'Kaiti SC', serif; letter-spacing: 1px; white-space: nowrap; z-index: 50; }
+#dorm-screen /* v4.0.17/v4.0.28：实时伤害榜（置于 wave-chip 下方，合理间距） */
+        #dmg-board { position: absolute; top: 54px; left: 50%; transform: translateX(-50%); padding: 4px 14px; background: rgba(0,0,0,0.65); border: 2px solid #3a3a5a; border-radius: 10px; font-size: 13px; color: #ffe14a; text-shadow: 1px 1px 0 #000; white-space: nowrap; pointer-events: none; z-index: 40; max-width: 520px; overflow: hidden; text-overflow: ellipsis; }
 #dorm-screen #dmg-board .dmg-me { color: #7dff7d; font-weight: bold; }
+#dorm-screen #dmg-board .dmg-p2 { color: #4fc3f7; font-weight: bold; }
 #dorm-screen /* 小地图 */
         #minimap { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); border: 3px solid #5c3b1d; border-radius: 8px; background: rgba(0,0,0,0.75); pointer-events: auto; opacity: 0.4; transition: opacity 0.25s; }
 #dorm-screen #minimap:hover { opacity: 1; }
