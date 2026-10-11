@@ -352,11 +352,12 @@ class Zombie extends Entity {
     }
     
     // v3.23.0：盲盒开箱——随机开出一只僵尸（经典冒险全类型 + 融合植物头家族），在原地出现
+    // v4.0.24：盲盒僵尸也能开出盲盒僵尸（连开链）——与植物盲盒同步
     _openMysteryBox() {
         const pool = ['normal', 'conehead', 'buckethead', 'flag', 'polevaulting', 'newspaper',
             'screendoor', 'football', 'zomboni', 'dancing', 'pogo', 'ladder', 'jackinthebox',
             'imp', 'gargantuar', 'peahead', 'nuthead', 'sunhead', 'snowpeahead',
-            'jalapenohead', 'machinegunhead', 'tallnuthead'];
+            'jalapenohead', 'machinegunhead', 'tallnuthead', 'mysterybox'];
         const type = pool[Math.floor(Math.random() * pool.length)];
         const z = new Zombie(this.game, this.row, type);
         z.x = Math.max(60, this.x);
