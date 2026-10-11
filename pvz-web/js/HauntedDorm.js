@@ -44,7 +44,7 @@ class HauntedDorm {
                              lob: { dmg: 30, cd: 2.0, range: 450, aoe: 50, img: 'Plants/KernelPult/Kernel.png', stunChance: 0.2, stunTime: 2.5 },
                              up: { cost: 250, to: 'dualpea' } },
             dualpea:       { tier: 4, name: '双向(融合)', img: 'Plants/SplitPea/SplitPea.gif',      hp: 600, cost: 0,
-                             shoot: { dmg: 15, cd: 1.5, n: 1, range: 450, img: 'Plants/PB00.gif', homing: true, dualChance: 0.5 },
+                             shoot: { dmg: 15, cd: 1.5, n: 1, range: 450, img: 'Plants/PB00.gif', homing: true, dualChance: 0.5, back: true },
                              up: { cost: 500, to: 'snowpea' } },
             snowpea:       { tier: 5, name: '寒冰射手', img: 'Plants/SnowPea/SnowPea.gif',       hp: 800, cost: 0, scale: 1.1,
                              shoot: { dmg: 20, cd: 1.5, n: 1, range: 450, img: 'Plants/PB01.gif', slow: true, homing: true },
@@ -1673,45 +1673,80 @@ class HauntedDorm {
             p.atkBuffT = 15;
             this._announce('🌿 技能激活：15秒内植物攻击力翻倍！', 'points.mp3');
         } else if (r === 'wallnut') {
-            const myRm = p.room; // 取消位置限制，只要有房间就能用
-            if (myRm) {
-                const doorPlant = this.getPlantAt(myRm.doorCol * this.gridSize, myRm.doorRow * this.gridSize);
-                if (doorPlant && doorPlant.def.up) {
-                    p.skillCd = 60;
-                    this._evolve(doorPlant, doorPlant.def.up.to);
-                    this._announce('🌰 技能激活：大门免费升级完毕！', 'points.mp3');
-                } else {
-                    this._announce('❌ 门不存在或无法再升级！', 'buzzer.mp3');
-                    return; // 失败不扣CD
-                }
-            } else {
+            const rms = this._ownedRooms(p);
+            if (rms.length === 0) {
                 this._announce('❌ 你还没有绑定任何房间！', 'buzzer.mp3');
                 return;
             }
+            // 优先检测当前肉身所在/邻近的房间，否则扫描名下大门可升级的房间
+            let targetRm = null, targetDoor = null;
+            const curRm = this._insideRoom(Math.floor(p.x / 80), Math.floor(p.y / 80));
+            if (curRm && rms.includes(curRm)) {
+                const d = this.getPlantAt(curRm.doorCol * this.gridSize, curRm.doorRow * this.gridSize);
+                if (d && d.def.up) { targetRm = curRm; targetDoor = d; }
+            }
+            if (!targetDoor) {
+                for (const rm of rms) {
+                    const d = this.getPlantAt(rm.doorCol * this.gridSize, rm.doorRow * this.gridSize);
+                    if (d && d.def.up) { targetRm = rm; targetDoor = d; break; }
+                }
+            }
+            if (targetDoor && targetDoor.def.up) {
+                p.skillCd = 60;
+                this._evolve(targetDoor, targetDoor.def.up.to);
+                const rmLabel = (targetRm === p.room2) ? '副房' : '主房';
+                this._announce(`🌰 技能激活：${rmLabel}大门免费升级完毕！`, 'points.mp3');
+            } else {
+                this._announce('❌ 门不存在或无法再升级！', 'buzzer.mp3');
+                return;
+            }
         } else if (r === 'chomper') {
-            if (zb && !zb.dead) {
-                p.skillCd = 60;
-                // v4.0.17：技能伤害计入 MVP 伤害账
-                const dealt = Math.max(0, zb.hp - zb.maxHp * 0.05);
-                if (p.roleDef) p.dmgDealt = (p.dmgDealt || 0) + dealt;
-                zb.hp = Math.min(zb.hp, zb.maxHp * 0.05); // 触发回城
-                zb.retreating = true;
-                this._announce('🌸 技能激活：大嘴花将僵尸吓跑了！', 'chomp.mp3');
-            } else {
+            const hostiles = this._getHostileTargets().filter(z => !z.dead);
+            if (hostiles.length === 0) {
+                this._announce('❌ 当前场上没有敌对僵尸！', 'buzzer.mp3');
                 return;
             }
+            // 寻找离自己最近或正在追杀自己的高威胁目标
+            let targetZb = hostiles[0], bestScore = Infinity;
+            for (const z of hostiles) {
+                const d = Math.hypot(z.x - p.x, z.y - p.y);
+                const score = d - (z.lockedTarget === p ? 250 : 0);
+                if (score < bestScore) { bestScore = score; targetZb = z; }
+            }
+            p.skillCd = 60;
+            const dealt = targetZb.isBoss ? Math.min(targetZb.hp, Math.round(targetZb.maxHp * 0.35)) : Math.max(0, targetZb.hp - Math.round(targetZb.maxHp * 0.05));
+            if (p.roleDef) p.dmgDealt = (p.dmgDealt || 0) + dealt;
+            targetZb.hp -= dealt;
+            if (targetZb.hpBg) targetZb.hpBg.style.display = 'block';
+            if (targetZb.isBoss) {
+                targetZb.stunT = 4.0;
+                this._flyText(targetZb.x, targetZb.y - 30, `-${dealt} 🌸大嘴猛咬!`, '#ff69b4');
+            } else {
+                targetZb.retreating = true;
+                this._flyText(targetZb.x, targetZb.y - 20, '🌸 吓跑了！', '#ff69b4');
+            }
+            if (targetZb.hp <= 0) this._killZombie(targetZb, p);
+            this._announce('🌸 技能激活：大嘴花出击重创了敌人！', 'chomp.mp3');
         } else if (r === 'squash') {
-            if (zb && !zb.dead) {
-                p.skillCd = 60;
-                // v4.0.17：技能伤害计入 MVP 伤害账（按实际扣血计，不虚报）
-                const dealt = zb.hp - Math.max(1, zb.hp - zb.maxHp * 0.5);
-                if (p.roleDef) p.dmgDealt = (p.dmgDealt || 0) + dealt;
-                zb.hp = Math.max(1, zb.hp - zb.maxHp * 0.5); // 取消血量限制，直接扣除半管血
-                if (zb.hpBg) zb.hpBg.style.display = 'block';
-                this._announce('🎃 技能激活：倭瓜重创了僵尸！', 'squash_hmm.mp3');
-            } else {
+            const hostiles = this._getHostileTargets().filter(z => !z.dead);
+            if (hostiles.length === 0) {
+                this._announce('❌ 当前场上没有敌对僵尸！', 'buzzer.mp3');
                 return;
             }
+            let targetZb = hostiles[0], bestScore = Infinity;
+            for (const z of hostiles) {
+                const d = Math.hypot(z.x - p.x, z.y - p.y);
+                const score = d - (z.lockedTarget === p ? 250 : 0);
+                if (score < bestScore) { bestScore = score; targetZb = z; }
+            }
+            p.skillCd = 60;
+            const dealt = Math.min(targetZb.hp, Math.max(1, Math.round(targetZb.maxHp * 0.5)));
+            if (p.roleDef) p.dmgDealt = (p.dmgDealt || 0) + dealt;
+            targetZb.hp -= dealt;
+            if (targetZb.hpBg) targetZb.hpBg.style.display = 'block';
+            this._flyText(targetZb.x, targetZb.y - 30, `-${dealt} 🎃倭瓜泰山压顶!`, '#ff9800');
+            if (targetZb.hp <= 0) this._killZombie(targetZb, p);
+            this._announce('🎃 技能激活：倭瓜重创了敌人！', 'squash_hmm.mp3');
         }
         this._refreshHud();
     }
@@ -1796,8 +1831,19 @@ class HauntedDorm {
                 // 真正催熟身边植物：加速生产周期、加速射击冷却、微量回血自愈
                 if (pl.prodT !== undefined) pl.prodT += 0.2;
                 if (pl.sporeT !== undefined) pl.sporeT += 0.2;
-                if (pl.shootCd !== undefined && pl.shootCd > 0) pl.shootCd = Math.max(0, pl.shootCd - 0.15);
-                if (pl.hp < pl.maxHp) pl.hp = Math.min(pl.maxHp, pl.hp + 15);
+                if (pl.hp < pl.maxHp) {
+                    pl.hp = Math.min(pl.maxHp, pl.hp + 15);
+                    const bg = pl.el1.querySelector('.hp-bar-bg');
+                    const fg = pl.el1.querySelector('.hp-bar-fg');
+                    if (bg && fg) {
+                        if (pl.hp >= pl.maxHp) {
+                            bg.style.display = 'none';
+                        } else {
+                            bg.style.display = 'block';
+                            fg.style.width = Math.max(0, (pl.hp / pl.maxHp) * 100) + '%';
+                        }
+                    }
+                }
                 if (pl.def.feed) {
                     pl.fed = (pl.fed || 0) + 1;
                     if (pl.fed >= pl.def.feed.goal) {
@@ -2033,7 +2079,7 @@ class HauntedDorm {
                     }
                 }
                 if (sh.back) { // 双向射手：脑后再补一发
-                    this._firePea(px, py, base + Math.PI, sh.dmg * dmgMul, { img: sh.img, range: sh.range, slow: sh.slow, owner });
+                    this._firePea(px, py, base + Math.PI, sh.dmg * dmgMul, { img: sh.img, range: sh.range, slow: sh.slow, homing: sh.homing, owner });
                 }
             }
             this.playSfx('ballooninflate.mp3', 0.15);
@@ -2175,6 +2221,15 @@ class HauntedDorm {
                 this._announce('🏆 僵王机甲被击毁了！它洒落了一地阳光！', 'points.mp3', true);
                 for (const p of this.allPlayers) if (!p.dead) this.addSun(100, p);
             }
+            // 若主僵尸此前已被消灭，检查场上残存威胁是否已全部肃清
+            if (this.ghostRespawnAt > 0 && !this.isZombieFaction) {
+                const aliveThreats = this.zombies.filter(z => !z.dead);
+                if (this.traitorRevealed && this.traitor && !this.traitor.dead) aliveThreats.push(this.traitor);
+                if (aliveThreats.length === 0) {
+                    if (this._gameOverTimer) clearTimeout(this._gameOverTimer);
+                    this._gameOverTimer = setTimeout(() => this.gameOver(true), 2000);
+                }
+            }
             return;
         }
 
@@ -2193,6 +2248,13 @@ class HauntedDorm {
         
         this.ghostRespawnAt = 1;
         this._updateGhostChip();
+        // 检查场上是否还有未肃清的波次小怪、BOSS或内鬼
+        const remainingThreats = this.zombies.filter(z => !z.dead && (z.isBoss || z.isMinion));
+        if (this.traitorRevealed && this.traitor && !this.traitor.dead) remainingThreats.push(this.traitor);
+        if (remainingThreats.length > 0) {
+            this._announce('🏆 领主幽灵被击败！肃清剩余残部即可获胜！', 'points.mp3', true);
+            return;
+        }
         if (this._gameOverTimer) clearTimeout(this._gameOverTimer);
         this._gameOverTimer = setTimeout(() => this.gameOver(true), 3000);
     }
@@ -2493,25 +2555,46 @@ class HauntedDorm {
             ctx.fillRect(pl.c * this.gridSize * sx, pl.r * this.gridSize * sy, this.gridSize * sx, this.gridSize * sy);
         }
 
+        // 小推车（门口备用防线）
+        ctx.fillStyle = '#64b5f6';
+        if (this.mowers) {
+            for (const mw of this.mowers) {
+                if (mw.gone || mw.used) continue;
+                ctx.fillRect(mw.x * sx - 2, mw.y * sy - 2, 4, 4);
+            }
+        }
+
         // 阳光袋
         ctx.fillStyle = '#ffe14a';
         for (const s of this.suns) ctx.fillRect(s.x * sx - 1.5, s.y * sy - 1.5, 3, 3);
         
-        // 僵尸
-        ctx.fillStyle = '#ff5252';
+        // 僵尸（小怪/普通僵尸 vs 巨型僵王机甲）
         for (const zb of this.zombies) {
             if (zb.dead) continue;
-            ctx.fillRect(zb.x * sx - 3, zb.y * sy - 3, 6, 6);
+            if (zb.isBoss) {
+                ctx.fillStyle = '#ff1744';
+                ctx.fillRect(zb.x * sx - 5, zb.y * sy - 5, 10, 10);
+            } else {
+                ctx.fillStyle = '#ff5252';
+                ctx.fillRect(zb.x * sx - 3, zb.y * sy - 3, 6, 6);
+            }
         }
         
-        // 玩家与人机
+        // 玩家与人机（内鬼反水后标红）
         for (const p of this.allPlayers) {
             if (p.dead) continue;
             const isMe = p === this.player;
-            let color = isMe ? '#00ff00' : p.color;
+            if (this.traitorRevealed && p === this.traitor) {
+                ctx.fillStyle = '#d50000';
+                ctx.beginPath();
+                ctx.arc(p.x * sx, p.y * sy, 6, 0, Math.PI * 2);
+                ctx.fill();
+                continue;
+            }
+            let color = isMe ? '#00ff00' : (p === this.player2 ? '#4fc3f7' : p.color);
             ctx.fillStyle = color;
             ctx.beginPath();
-            ctx.arc(p.x * sx, p.y * sy, isMe ? 6 : 5, 0, Math.PI * 2);
+            ctx.arc(p.x * sx, p.y * sy, (isMe || p === this.player2) ? 6 : 5, 0, Math.PI * 2);
             ctx.fill();
         }
     }
@@ -2690,6 +2773,8 @@ class HauntedDorm {
         
         if (this._checkAnyKey(keysCancel)) {
             menu.active = false;
+            menu.delArm = null;
+            menu.delArmAt = 0;
             uiEl.style.display = 'none';
         }
         
@@ -2823,14 +2908,16 @@ class HauntedDorm {
             }
         } else if (opt.action === 'del') {
             const pl = menu.targetPl;
-            // v4.0.16：键盘拆除同样二次确认——第一次按只提示，再按一次才拆
-            if (menu.delArm !== pl) {
+            const now = performance.now();
+            if (menu.delArm !== pl || now - (menu.delArmAt || 0) > 2500) {
                 menu.delArm = pl;
-                this._flyText(pl.c * 80 + 40, pl.r * 80, '再按一次确认拆除', '#ffb0b0');
+                menu.delArmAt = now;
+                this._flyText(pl.c * 80 + 40, pl.r * 80, '再按一次确认拆除 (2.5s内)', '#ffb0b0');
                 this.playSfx('buttonclick.mp3', 0.35);
                 return;
             }
             menu.delArm = null;
+            menu.delArmAt = 0;
             pl.el1.remove();
             if (pl.txtEl) pl.txtEl.remove();
             this.plants = this.plants.filter(x => x !== pl);
@@ -3111,9 +3198,10 @@ class HauntedDorm {
         zEl1.className = 'entity avatar';
         const size = isBoss ? 'width:220%; height:220%; transform:translate(-42%, -40%);'
                             : 'width:100%; height:100%; transform:translate(-3%, -25%);';
+        const barTop = isBoss ? 'top:-42px;' : 'top:-14px;';
         zEl1.innerHTML = `<img src="assets/images/${cfg.img}" style="${size}">` +
-            (isBoss ? `<div class="lv-badge" style="background:#a00000;">僵王</div>` : '') +
-            `<div class="hp-bar-bg" style="top:-14px; display:none;"><div class="hp-bar-fg" style="width:100%; background:#ff5252;"></div></div>`;
+            (isBoss ? `<div class="lv-badge" style="background:#a00000; top:-36px;">僵王</div>` : '') +
+            `<div class="hp-bar-bg" style="${barTop} display:none;"><div class="hp-bar-fg" style="width:100%; background:#ff5252;"></div></div>`;
         this.world1.appendChild(zEl1);
         zb.el1 = zEl1;
         zb.imgEl = zEl1.querySelector('img');
@@ -3234,6 +3322,14 @@ class HauntedDorm {
             if (!p.dead && p !== t) this.addSpore(200, p);
         }
         if (killer && killer.roleDef) killer.dmgDealt = (killer.dmgDealt || 0) + 300;
+        // 若主僵尸此前已被消灭，检查场上残存波次与僵尸是否已全部清空
+        if (this.ghostRespawnAt > 0 && !this.isZombieFaction) {
+            const aliveThreats = this.zombies.filter(z => !z.dead);
+            if (aliveThreats.length === 0) {
+                if (this._gameOverTimer) clearTimeout(this._gameOverTimer);
+                this._gameOverTimer = setTimeout(() => this.gameOver(true), 2000);
+            }
+        }
     }
 
     _tick(dt, time) {
@@ -3593,6 +3689,7 @@ class HauntedDorm {
             // 僵尸自动回血（地图中心）
             if (Math.hypot(this.player.x - this.worldWidth / 2, this.player.y - this.worldHeight / 2) < 120) {
                 this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.player.maxHp * 0.25 * dt);
+                this.setHp(); // 实时同步顶部血条
                 this.player.el1.style.filter = 'drop-shadow(0 0 10px #0f0)';
             } else {
                 this.player.el1.style.filter = '';
@@ -3765,19 +3862,33 @@ class HauntedDorm {
                             pickedByPlayer.speedBuffT = 15;
                             this._flyText(a.x, a.y, '🚀 飞毛腿 (移速翻倍)', '#0ff');
                             break;
-                        case 5:
-                            if (this.zombies[0] && !this.zombies[0].dead) {
-                                this.zombies[0].hp -= this.zombies[0].maxHp * 0.1;
-                                this._flyText(a.x, a.y, '💣 全屏核爆 (-10%BOSS血)', '#ff5252');
-                                if (this.zombies[0].hp <= 0) this._killZombie(this.zombies[0]);
+                        case 5: {
+                            const targets = this._getHostileTargets().filter(z => !z.dead);
+                            if (targets.length > 0) {
+                                for (const z of targets) {
+                                    const dmg = Math.max(1, Math.round(z.maxHp * 0.1));
+                                    z.hp -= dmg;
+                                    if (z.hpBg) z.hpBg.style.display = 'block';
+                                    if (z.hp <= 0) this._killZombie(z, pickedByPlayer);
+                                }
+                                this._flyText(a.x, a.y, '💣 全屏核爆 (-10%全体敌人血量)', '#ff5252');
+                            } else {
+                                this.addSun(500, pickedByPlayer);
+                                this._flyText(a.x, a.y, '☀️ 阳光替代 (+500)', '#ffeb3b');
                             }
                             break;
-                        case 6:
-                            if (this.zombies[0] && !this.zombies[0].dead) {
-                                this.zombies[0].stunT = 10;
-                                this._flyText(a.x, a.y, '❄️ 绝对零度 (冻结10s)', '#7fd8ff');
+                        }
+                        case 6: {
+                            const targets = this._getHostileTargets().filter(z => !z.dead);
+                            if (targets.length > 0) {
+                                for (const z of targets) z.stunT = 10;
+                                this._flyText(a.x, a.y, '❄️ 绝对零度 (全体冻结10s)', '#7fd8ff');
+                            } else {
+                                this.addSun(500, pickedByPlayer);
+                                this._flyText(a.x, a.y, '☀️ 阳光替代 (+500)', '#ffeb3b');
                             }
                             break;
+                        }
                         case 7:
                             pickedByPlayer.stealthT = 20;
                             this._flyText(a.x, a.y, '👻 隐身斗篷 (20s无视你)', '#aaa');
@@ -3852,16 +3963,20 @@ class HauntedDorm {
                             for(const pl of this.plants) { if(pl.shootCd !== undefined) pl.shootCd = 0; }
                             this._flyText(a.x, a.y, '⏱️ 时光倒流 (全图植物冷却清零)', '#00ffff');
                             break;
-                        case 14:
-                            if (this.zombies[0] && !this.zombies[0].dead) {
-                                this.zombies[0].speed *= 1.5;
-                                this.zombies[0].hp = this.zombies[0].maxHp;
-                                this._flyText(a.x, a.y, '🧟 僵尸狂暴 (僵尸满血且移速暴增)', '#ff0000');
+                        case 14: {
+                            const targets = this.zombies.filter(z => !z.dead);
+                            if (targets.length > 0) {
+                                for (const zb of targets) {
+                                    zb.speed *= 1.5;
+                                    zb.hp = zb.maxHp;
+                                }
+                                this._flyText(a.x, a.y, '🧟 僵尸狂暴 (全体僵尸满血且移速暴增)', '#ff0000');
                             } else {
                                 this.addSun(500, pickedByPlayer);
                                 this._flyText(a.x, a.y, '☀️ 阳光替代 (+500)', '#ffeb3b');
                             }
                             break;
+                        }
                     }
                     this.playSfx('sun.mp3', 0.5);
                     a.el.remove();
@@ -3958,10 +4073,10 @@ class HauntedDorm {
                 }
             }
 
-            // 残血回城逻辑（仅主僵尸逃跑回血，尸潮小怪不逃跑）
-            if (!zb.isMinion && zb.hp < zb.maxHp * 0.3) zb.retreating = true;
+            // 残血回城逻辑（仅主幽灵僵尸逃跑回血，尸潮小怪与僵王机甲决死进攻不逃跑）
+            if (!zb.isMinion && !zb.isBoss && zb.hp < zb.maxHp * 0.3) zb.retreating = true;
             if (zb.hp >= zb.maxHp) zb.retreating = false;
-            if (zb.isMinion) zb.retreating = false;
+            if (zb.isMinion || zb.isBoss) zb.retreating = false;
             
             if (zb.retreating) {
                 zb.slowT = 0; // 逃跑时免疫减速
@@ -4129,12 +4244,16 @@ class HauntedDorm {
         }
         this.zombies = this.zombies.filter(z => !z.dead || (z.el1 && z.el1.parentNode)); // 清理已完成动画的死尸
 
-        // 警告系统更新
+        // 警告系统更新（全实体与双人覆盖：任意未撤退敌对单位锁定 P1 或 P2 均触发危险红光）
         let isTargeted = false;
-        if (!this.isZombieFaction && this.zombies.length > 0) {
-            const zb = this.zombies[0];
-            if (!zb.dead && zb.lockedTarget === this.player && !zb.retreating) {
-                isTargeted = true;
+        if (!this.isZombieFaction) {
+            const hostiles = this._getHostileTargets().filter(z => !z.dead && !z.retreating);
+            for (const zb of hostiles) {
+                if ((zb.lockedTarget === this.player && !this.player.dead) ||
+                    (this.gameMode === '2p' && this.player2 && !this.player2.dead && zb.lockedTarget === this.player2)) {
+                    isTargeted = true;
+                    break;
+                }
             }
         }
         if (this.warningOverlay === undefined) {
@@ -4237,6 +4356,8 @@ class HauntedDorm {
     }
 
 }
+
+window.HauntedDorm = HauntedDorm;
 
 // v4.0.26：守屋大作战并入主站——index.html 内嵌为 #dorm-screen 界面（选完皮肤原页启动，不再跳独立网页）。
 // 主站通过 window.startHauntedDorm(opts) 显式开局；旧独立页 haunted-dorm.html（直链/书签/历史验证脚本兼容）保持自动开局不变。
