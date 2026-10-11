@@ -756,11 +756,28 @@ class HauntedDorm {
     }
 
     spawnPlant(col, row, type, isDoor = false, owner = null) {
+        if (this.plants.some(pl => pl.c === col && pl.r === row)) return null;
+
         if (type === 'blindbox') {
-            const pool = ['peashooter', 'cabbagepult', 'kernelpult', 'dualpea', 'snowpea', 'repeater', 'threepeater', 'gatlingpea', 'puffshroom', 'scaredyshroom', 'fumeshroom', 'hypnoshroom', 'sporemine', 'gloompuff', 'icegloom', 'plantern', 'doomshroom', 'garlic'];
+            const pool = [
+                'peashooter', 'cabbagepult', 'kernelpult', 'dualpea', 'snowpea',
+                'repeater', 'threepeater', 'gatlingpea', 'puffshroom', 'scaredyshroom',
+                'fumeshroom', 'hypnoshroom', 'sporemine', 'gloompuff', 'icegloom',
+                'plantern', 'doomshroom', 'garlic', 'nutshooter', 'twinsunflower'
+            ];
             type = pool[Math.floor(Math.random() * pool.length)];
-            this._flyText(col * 80 + 40, row * 80, '🎁 盲盒开出：' + HauntedDorm.DEFS[type].name, '#ffd54a');
-            this.playSfx('plant2.mp3', 0.5);
+            if (!HauntedDorm.DEFS[type] || HauntedDorm.DEFS[type].instant) type = 'peashooter';
+
+            this._flyText(col * 80 + 40, row * 80, '🎁 盲盒开出：' + HauntedDorm.DEFS[type].name + '！', '#ffd54a');
+            this.playSfx('plant2.mp3', 0.6);
+            if (this.world1) {
+                const fxEl = document.createElement('div');
+                fxEl.className = 'entity';
+                fxEl.style.cssText = `width:90px; height:90px; left:${col * 80 + 40}px; top:${row * 80 + 40}px; z-index:150; pointer-events:none; font-size:32px; display:flex; align-items:center; justify-content:center; filter:drop-shadow(0 0 10px #ffd54a);`;
+                fxEl.innerHTML = '✨📦✨';
+                this.world1.appendChild(fxEl);
+                setTimeout(() => fxEl.remove(), 700);
+            }
         }
         if (type === 'iceshroom') {
             const hostiles = this._getHostileTargets().filter(z => !z.dead);
@@ -781,10 +798,9 @@ class HauntedDorm {
                 this._flyText(this.player.x, this.player.y, '无敌对目标，已退还50🦠', '#ff8a8a');
                 this.playSfx('buzzer.mp3', 0.3);
             }
-            return;
+            return null;
         }
 
-        if (this.plants.some(pl => pl.c === col && pl.r === row)) return;
         const rm = this._insideRoom(col, row);
         // v4.0.23：兜底认领改走统一入口且认给真正的种植者——原逻辑写死给 this.player（P1），
         // 双人模式下 P2 先建房会被顺手记到 P1 名下；初始化/门板等无主生成（owner=null）不认领
@@ -792,7 +808,7 @@ class HauntedDorm {
 
         const defs = HauntedDorm.DEFS;
         const def = defs[type];
-        if (!def) return;
+        if (!def) return null;
 
         // 门板血量按图鉴血量的 30% 折算（v3.89.0：跟随升级成长——原先是固定 1200，升级坚果后门板血量不涨，
         // 玩家看不出升级收益；现在墙坚果门板 1200，豌豆坚果门板 1500……逐级变硬）
@@ -1545,6 +1561,18 @@ class HauntedDorm {
             } else {
                 opt.style.display = (opt.dataset.t === 'spikeweed' || opt.dataset.t === 'wallnut') ? 'none' : 'block';
             }
+            // 实时状态：若阳光或孢子不足，视觉置灰提示
+            const d = HauntedDorm.DEFS[opt.dataset.t];
+            if (d) {
+                const canAfford = (!d.cost || this.player.sun >= d.cost) && (!d.sporeCost || this.player.spore >= d.sporeCost);
+                if (!canAfford) {
+                    opt.style.opacity = '0.55';
+                    opt.style.filter = 'grayscale(0.7)';
+                } else {
+                    opt.style.opacity = '1';
+                    opt.style.filter = 'none';
+                }
+            }
         });
 
         // v4.0.18：菜单贴边自动回调——格子太靠下/靠右时整体上移/左移，别让下半截被屏幕裁掉
@@ -1615,14 +1643,21 @@ class HauntedDorm {
     doPlant(type) {
         this._closePlantMenu();
 
-        let p = this.player;
-        if (this.gameMode === '2p' && this.player2 && !this.player2.dead) {
-            const rm2 = this._resolveBuildRoom(this.menuCol, this.menuRow, this.player2);
-            if (rm2 && this._ownsRoom(this.player2, rm2)) p = this.player2;
+        const col = this.menuCol;
+        const row = this.menuRow;
+        if (col == null || row == null || col < 0 || col >= this.cols || row < 0 || row >= this.rows) return;
+        const tx = col * 80 + 40, ty = row * 80;
+
+        if (this.plants.some(pl => pl.c === col && pl.r === row)) {
+            this._flyText(tx, ty, '该位置已有植物！', '#ff8a8a');
+            this.playSfx('buzzer.mp3', 0.3);
+            return;
         }
 
+        let p = this.player;
+
         // v4.0.17：统一房间解析器
-        let targetRm = this._resolveBuildRoom(this.menuCol, this.menuRow, p);
+        let targetRm = this._resolveBuildRoom(col, row, p);
 
         // v4.0.18：建造时认领房间（支持主房+副房，最多两间）
         if (targetRm) this._claimRoom(p, targetRm);
@@ -1632,20 +1667,41 @@ class HauntedDorm {
         if (type === 'iceshroom') {
             const hostiles = this._getHostileTargets().filter(z => !z.dead);
             if (hostiles.length === 0) {
+                this._flyText(tx, ty, '当前无敌对目标，无法施放', '#ff8a8a');
                 this._flyText(p.x, p.y, '当前无敌对目标，无法施放', '#ff8a8a');
                 this.playSfx('buzzer.mp3', 0.3);
                 return;
             }
         }
-        if (def.sporeCost) {
-            if (p.spore < def.sporeCost) { this._flyText(p.x, p.y, '孢子不足', '#ff8a8a'); return; }
-            this.addSpore(-def.sporeCost, p);
-        } else if (def.cost > 0) {
-            if (p.sun < def.cost) { this._flyText(p.x, p.y, '阳光不足', '#ff8a8a'); return; }
-            this.addSun(-def.cost, p);
+
+        const cost = def.cost || 0;
+        const sporeCost = def.sporeCost || 0;
+        if (sporeCost > 0) {
+            if (p.spore < sporeCost) {
+                this._flyText(tx, ty, `🦠 孢子不足 (需${sporeCost}，当前${Math.floor(p.spore)})`, '#ff8a8a');
+                this._flyText(p.x, p.y - 20, `🦠 孢子不足 (需${sporeCost})`, '#ff8a8a');
+                this.playSfx('buzzer.mp3', 0.3);
+                return;
+            }
+            this.addSpore(-sporeCost, p);
+        } else if (cost > 0) {
+            if (p.sun < cost) {
+                this._flyText(tx, ty, `☀ 阳光不足 (需${cost}，当前${Math.floor(p.sun)})`, '#ff8a8a');
+                this._flyText(p.x, p.y - 20, `☀ 阳光不足 (需${cost})`, '#ff8a8a');
+                this.playSfx('buzzer.mp3', 0.3);
+                return;
+            }
+            this.addSun(-cost, p);
         }
-        const isDoor = !!targetRm && (this.menuCol === targetRm.doorCol && this.menuRow === targetRm.doorRow);
-        this.spawnPlant(this.menuCol, this.menuRow, type, isDoor, p); // v4.0.23：带上种植者与门板属性
+
+        const isDoor = !!targetRm && (col === targetRm.doorCol && row === targetRm.doorRow);
+        const spawned = this.spawnPlant(col, row, type, isDoor, p); // v4.0.23：带上种植者与门板属性
+        if (!spawned && type !== 'iceshroom') {
+            // 保底兜底：若意外阻断未成功生成植物，全额原路退还
+            if (sporeCost > 0) this.addSpore(sporeCost, p);
+            else if (cost > 0) this.addSun(cost, p);
+            this._flyText(tx, ty, '建造未生效，已全额退还！', '#ff8a8a');
+        }
     }
 
     _useSkill(target = null) {
@@ -2849,6 +2905,7 @@ class HauntedDorm {
             }
             
             menu.active = true;
+            menu.player = p;
             menu.index = 0;
             uiEl.style.display = 'block';
             uiEl.style.left = (col * 80 + 80) + 'px';
@@ -2858,11 +2915,26 @@ class HauntedDorm {
     }
     
     _renderKMenu(menu, uiEl) {
-        uiEl.innerHTML = menu.options.map((opt, i) =>
-            `<div style="padding:5px 10px; background:${i === menu.index ? '#fff' : 'transparent'}; color:${i === menu.index ? '#000' : '#fff'}; border-bottom:1px solid #444;">
+        const p = menu.player || this.player;
+        uiEl.innerHTML = menu.options.map((opt, i) => {
+            let dimStyle = '';
+            if (opt.action === 'buy') {
+                const def = HauntedDorm.DEFS[opt.type];
+                if (def && ((def.cost && p.sun < def.cost) || (def.sporeCost && p.spore < def.sporeCost))) {
+                    dimStyle = 'opacity:0.55;';
+                }
+            } else if (opt.action === 'up') {
+                if (menu.targetPl && menu.targetPl.def && menu.targetPl.def.up) {
+                    const upDef = menu.targetPl.def.up;
+                    if ((upDef.cost && p.sun < upDef.cost) || (upDef.sporeCost && p.spore < upDef.sporeCost)) {
+                        dimStyle = 'opacity:0.55;';
+                    }
+                }
+            }
+            return `<div style="padding:5px 10px; background:${i === menu.index ? '#fff' : 'transparent'}; color:${i === menu.index ? '#000' : '#fff'}; border-bottom:1px solid #444; ${dimStyle}">
                 ${opt.text}
-            </div>`
-        ).join('');
+            </div>`;
+        }).join('');
     }
 
     // v4.0.17：实时伤害榜 + P1/P2 HUD 伤害数字——让「谁对僵尸输出最多」全程可见，MVP 结算不再意外
@@ -2927,25 +2999,48 @@ class HauntedDorm {
         } else if (opt.action === 'buy') {
             const type = opt.type;
             const def = HauntedDorm.DEFS[type];
+            if (!def) return;
+            const tx = menu.targetCol * 80 + 40, ty = menu.targetRow * 80;
+            if (this.plants.some(pl => pl.c === menu.targetCol && pl.r === menu.targetRow)) {
+                this._flyText(tx, ty, '该位置已有植物！', '#ff8a8a');
+                this.playSfx('buzzer.mp3', 0.3);
+                return;
+            }
             if (type === 'iceshroom') {
                 const hostiles = this._getHostileTargets().filter(z => !z.dead);
                 if (hostiles.length === 0) {
+                    this._flyText(tx, ty, '当前无敌对目标，无法施放', '#ff8a8a');
                     this._flyText(p.x, p.y, '当前无敌对目标，无法施放', '#ff8a8a');
                     this.playSfx('buzzer.mp3', 0.3);
                     return;
                 }
             }
-            if (p.sun >= (def.cost || 0) && p.spore >= (def.sporeCost || 0)) {
+            const cost = def.cost || 0;
+            const sporeCost = def.sporeCost || 0;
+            if (p.sun >= cost && p.spore >= sporeCost) {
                 // v4.0.18：统一房间认领（支持主房+副房，最多两间；首个占领者自动补门板坚果）
                 const room = this._resolveBuildRoom(menu.targetCol, menu.targetRow, p);
                 if (room) this._claimRoom(p, room);
                 
-                this.addSun(-(def.cost || 0), p);
-                this.addSpore(-(def.sporeCost || 0), p);
+                if (cost > 0) this.addSun(-cost, p);
+                if (sporeCost > 0) this.addSpore(-sporeCost, p);
                 const isDoor = !!room && (menu.targetCol === room.doorCol && menu.targetRow === room.doorRow);
-                this.spawnPlant(menu.targetCol, menu.targetRow, type, isDoor, p); // v4.0.23：带上种植者与门板属性
-                this.playSfx('plant.mp3', 0.5);
+                const spawned = this.spawnPlant(menu.targetCol, menu.targetRow, type, isDoor, p); // v4.0.23：带上种植者与门板属性
+                if (!spawned && type !== 'iceshroom') {
+                    if (cost > 0) this.addSun(cost, p);
+                    if (sporeCost > 0) this.addSpore(sporeCost, p);
+                    this._flyText(tx, ty, '建造未生效，已全额退还！', '#ff8a8a');
+                } else {
+                    this.playSfx('plant.mp3', 0.5);
+                }
             } else {
+                if (p.spore < sporeCost) {
+                    this._flyText(tx, ty, `🦠 孢子不足 (需${sporeCost}，当前${Math.floor(p.spore)})`, '#ff8a8a');
+                    this._flyText(p.x, p.y - 20, `🦠 孢子不足 (需${sporeCost})`, '#ff8a8a');
+                } else if (p.sun < cost) {
+                    this._flyText(tx, ty, `☀ 阳光不足 (需${cost}，当前${Math.floor(p.sun)})`, '#ff8a8a');
+                    this._flyText(p.x, p.y - 20, `☀ 阳光不足 (需${cost})`, '#ff8a8a');
+                }
                 this.playSfx('buzzer.mp3', 0.3);
             }
         }
