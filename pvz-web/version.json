@@ -1,6 +1,6 @@
 {
-  "version": "v4.0.25-选卡图标+融合卡面+后向冰豆",
+  "version": "v4.0.26-守屋并入主站",
   "build": "2026-10-11",
-  "feature": "v4.0.25：三项视觉/弹种修复——①砸罐子融合免费卡卡面自适应：爆炸弹跳（窝瓜+樱桃）主体素材 Squash.gif 画布 100×226（跳起动画留白、内容只在底部 72×85），旧探针卡面按画布 0.5 倍居中→内容整体裁出 65×39 卡窗（用户：砸出来图片不完整）；新增 PLANT_ART_BBOX 预计算内容边界表（8 个超窗素材，PIL 逐帧扫描），fitOversizedCardArt 把内容中心对到卡面锚点并等比装窗，表外素材退化整画布装窗，画布装得下的保持原样零变化；②对战僵尸方选卡合成图标修复：.vz-card img/.zcard img 全局规则把 .zcard-fusion 内部无内联高度的头图强拉成 46/44px——豌豆头等被拉伸、盲盒礼盒被 contain 居中下移后只剩一半，收窄为 >img 直接子选择器后头图回归战场同比例；③冰双向射手（双向豌豆+寒冰射手）后向冰豆：旧版后向恒为普通绿豌豆 backpea 20 伤，与图鉴「向后 40 冰豌豆」不符（用户：寒冰的裂荚射手发射普通子弹），新增 backsnowpea 弹种（PB-10 冰豆/40 伤/命中减速 10s/过火炬解冻回 backpea），前向冰豆实测本就正常。puppeteer 10/10 + v4024 回归 7/7 + v3817 9/0 全绿；v3819/v3821 失败经 HEAD worktree 对照确认为历史遗留",
-  "assetVersion": 1791687314
+  "feature": "v4.0.26：守屋大作战并入主站——不再是独立网页，改为 index.html 内嵌模式（与砸罐子/我是僵尸同为站内界面）：①index.html 注入 #dorm-screen 骨架（默认隐藏，z-index 4000 fixed 覆盖层），选完模式/皮肤后原页直接开局，URL 不再跳转 haunted-dorm.html；②样式抽取为共享 css/haunted-dorm.css，全部规则作用域限定 #dorm-screen 内（body 规则收窄为 body.dorm-page），主站零冲突；③HauntedDorm 构造器支持 opts 参数注入（mode/role1/role2/faction），新增 window.startHauntedDorm 入口+实例代际号守护（重复开局旧 rAF 循环自动停转）；④旧独立页 haunted-dorm.html 保留直链兼容（body.dorm-page 常显+自动开局，历史链接/书签/验证脚本全部不变）；⑤bump_version.py 纳入 css 缓存戳同步。puppeteer 23/23 全绿+守屋历史回归 v4023/4020/4019/4018/4017=15/41/28/25/17 全绿",
+  "assetVersion": 1791705483
 }

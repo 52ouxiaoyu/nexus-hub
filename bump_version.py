@@ -26,6 +26,7 @@ SCAN_GLOBS = [
     os.path.join(ROOT, "pvz-web", "index.html"),
     os.path.join(ROOT, "pvz-web", "haunted-dorm.html"),
     os.path.join(ROOT, "pvz-web", "js"),
+    os.path.join(ROOT, "pvz-web", "css", "haunted-dorm.css"),
 ]
 SKIP_DIRS = {"node_modules", "_orig"}
 

@@ -165,7 +165,9 @@ class HauntedDorm {
     }
     static get GHOST_MAX_LV() { return HauntedDorm.GHOST_LEVELS.length; }
 
-    constructor() {
+    // v4.0.26：opts 支持主站 index.html 内嵌启动（startHauntedDorm({mode,role1,role2,faction})）；
+    // 未传 opts 的键回退到 URL 参数（旧独立页 haunted-dorm.html 直链兼容，行为不变）
+    constructor(opts = {}) {
         this.cols = 60;
         this.rows = 45;
         this.gridSize = 80;
@@ -176,11 +178,16 @@ class HauntedDorm {
         const cy = this.worldHeight / 2;
 
         const urlParams = new URLSearchParams(window.location.search);
-        this.gameMode = urlParams.get('mode') || '1p'; // '1p' or '2p'
-        this.role1 = urlParams.get('role1') || urlParams.get('role') || 'peashooter';
-        this.role2 = urlParams.get('role2') || 'peashooter';
-        this.faction = urlParams.get('faction') || 'plant';
+        const gp = (k) => (opts[k] !== undefined && opts[k] !== null) ? String(opts[k]) : urlParams.get(k);
+        this.gameMode = gp('mode') || '1p'; // '1p' or '2p'
+        this.role1 = gp('role1') || gp('role') || 'peashooter';
+        this.role2 = gp('role2') || 'peashooter';
+        this.faction = gp('faction') || 'plant';
         this.isZombieFaction = (this.faction === 'zombie');
+
+        // v4.0.26：实例代际号——主站内嵌可重复开局，旧实例的 rAF 循环检测到代际变化自动停转
+        window.__dormGen = (window.__dormGen || 0) + 1;
+        this._dormGen = window.__dormGen;
 
         // v4.0.19：小推车（最后防线）+ 存活三选一祝福
         this.mowers = [];
@@ -2291,6 +2298,7 @@ class HauntedDorm {
 
     loop(time) {
         if (this.over) return;
+        if (window.__dormGen !== this._dormGen) return; // v4.0.26：已被新开的一局取代，旧循环停转
         if (!this.lastTime) this.lastTime = time;
         const realDt = Math.min((time - this.lastTime) / 1000, 0.1);
         this.lastTime = time;
@@ -3819,6 +3827,12 @@ class HauntedDorm {
 
 }
 
-window.onload = () => {
-    window.game = new HauntedDorm();
+// v4.0.26：守屋大作战并入主站——index.html 内嵌为 #dorm-screen 界面（选完皮肤原页启动，不再跳独立网页）。
+// 主站通过 window.startHauntedDorm(opts) 显式开局；旧独立页 haunted-dorm.html（直链/书签/历史验证脚本兼容）保持自动开局不变。
+window.startHauntedDorm = function (opts = {}) {
+    window.game = new HauntedDorm(opts);
+    return window.game;
 };
+if (/haunted-dorm\.html$/.test(window.location.pathname)) {
+    window.addEventListener('load', () => { window.startHauntedDorm(); });
+}

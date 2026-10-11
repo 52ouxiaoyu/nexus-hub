@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1791687314">
+    <link rel="stylesheet" href="css/style.css?v=1791705483">
+    <link rel="stylesheet" href="css/haunted-dorm.css?v=1791705483">
 </head>
 <body>
     <div id="game-container">
@@ -528,6 +529,142 @@
         </div>
     </div>
 
+    <!-- v4.0.26 守屋大作战：内嵌界面（主站模式，不再跳转独立网页） -->
+<div id="dorm-screen">
+    <div id="dorm-container">
+            <!-- 视角 -->
+            <div id="vp1" class="viewport">
+                <div id="world1" class="world"></div>
+            </div>
+    
+            <!-- 全局 UI -->
+            <div id="dorm-ui">
+                <div id="hud-p1" class="player-hud">
+                    <div class="hud-ctrl" style="color:#4da6ff;">
+                        <div>【P1 控制】移动: W/A/S/D ｜ 建造/确认: F或J</div>
+                        <div>浇水: 空格 ｜ 取消: 右Alt或G ｜ 技能: M</div>
+                    </div>
+                    <div style="display:flex; gap:18px; align-items:center;">
+                        <span>阳光: <span id="sun1" class="sun-text">0</span></span>
+                        <span>孢子: <span id="spore1" class="sun-text" style="color:#c79aff;">0</span></span>
+                        <span style="color:#ff9e9e;">⚔伤害: <span id="dmg1" class="sun-text">0</span></span>
+                    </div>
+                    <div id="hp-row" class="hp-row">
+                        <span class="hp-label">HP</span>
+                        <div id="hp-track" class="hp-track"><div id="hp-fill" class="hp-fill"></div></div>
+                        <span id="hp-num" class="hp-label">100</span>
+                    </div>
+                    <div id="skill-hud" style="margin-top: 8px; font-size: 14px;"></div>
+                </div>
+    
+                <div id="speed-hud" style="position: absolute; top: 70px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; background: rgba(0,0,0,0.8); border: 2px solid #aaa; border-radius: 20px; padding: 4px 12px; box-shadow: 0 0 10px rgba(0,0,0,0.5); pointer-events: auto;">
+                    <span style="color:#fff; margin-right: 8px; font-weight: bold; font-size: 14px; text-shadow: 0 1px 2px #000;">🕒 倍速</span>
+                    <div style="display: flex; gap: 4px;">
+                        <button class="speed-btn active" onclick="window.game.setTimeScale(1)">1x</button>
+                        <button class="speed-btn" onclick="window.game.setTimeScale(2)">2x</button>
+                        <button class="speed-btn" onclick="window.game.setTimeScale(5)">5x</button>
+                        <button class="speed-btn" onclick="window.game.setTimeScale(10)">10x</button>
+                    </div>
+                </div>
+    
+                <div id="p2-hud" class="player-hud" style="display:none; right:20px; left:auto; text-align: right;">
+                    <div class="hud-ctrl" style="color:#4fc3f7;">
+                        <div>【P2 控制】移动: 方向键 ｜ 建造/确认: 1</div>
+                        <div>浇水: 0 ｜ 取消: 2或回车 ｜ 技能: 3或/键</div>
+                    </div>
+                    <div style="display:flex; gap:18px; align-items:center; justify-content: flex-end;">
+                        <span>阳光: <span id="sun2" class="sun-text">0</span></span>
+                        <span>孢子: <span id="spore2" class="sun-text" style="color:#c79aff;">0</span></span>
+                        <span style="color:#ff9e9e;">⚔伤害: <span id="dmg2" class="sun-text">0</span></span>
+                    </div>
+                    <div id="hp-row2" class="hp-row" style="justify-content: flex-end;">
+                        <span id="hp-num2" class="hp-label">100</span>
+                        <div id="hp-track2" class="hp-track"><div id="hp-fill2" class="hp-fill"></div></div>
+                        <span class="hp-label">HP</span>
+                    </div>
+                    <div id="skill-hud2" style="margin-top: 8px; font-size: 14px;"></div>
+                </div>
+    
+                <div id="wave-chip">👻 准备中…</div>
+                <!-- v4.0.17：实时伤害榜——MVP 不再是结算时才揭晓的意外 -->
+                <div id="dmg-board" style="display:none;"></div>
+    
+                <canvas id="minimap" width="320" height="240"></canvas>
+                
+                <div style="position: absolute; bottom: 20px; left: 20px; display: flex; flex-direction: column; gap: 12px; pointer-events: none;">
+                    <button class="back-btn" style="position: static; pointer-events: auto;" onclick="document.getElementById('dorm-help').style.display='flex'">玩法说明</button>
+                    <button class="back-btn" style="position: static; pointer-events: auto;" onclick="location.href='index.html'">返回主菜单</button>
+                </div>
+    
+                <!-- 种植菜单（选项由 HauntedDorm.js 按图鉴数据生成） -->
+                <div id="plant-menu"></div>
+    
+                <!-- v3.88.0 点击植物 → 升级/拆除弹窗 -->
+                <div id="plant-popup">
+                    <div id="pp-title">植物</div>
+                    <div id="pp-feed" style="display:none;"></div>
+                    <div class="pp-btns">
+                        <button id="pp-demolish" class="pp-btn">拆除</button>
+                        <button id="pp-upgrade" class="pp-btn">升级 🦠0</button>
+                    </div>
+                </div>
+    
+                <!-- 玩法说明（配方表 + 道具） -->
+                <div id="dorm-help" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2900; align-items:center; justify-content:center; pointer-events:auto;">
+                    <div style="max-width:640px; max-height:82vh; overflow:auto; background:rgba(30,16,8,0.96); border:3px solid #8c6a4d; border-radius:14px; padding:24px 30px; color:#f5e6c8; font-family:'Kaiti SC',serif; font-size:15px; line-height:1.9;">
+                        <div style="text-align:center; font-size:26px; letter-spacing:4px; margin-bottom:12px;">🏠 守屋大作战 · 玩法说明</div>
+                        <b style="color:#ffe14a;">基础操作（双人同屏纯键盘操作）</b><br>
+                        · P1控制：<b>[W/A/S/D] 移动</b> | <b>[F](或J) 呼出菜单/确认购买/升级</b> | <b>[空格] 浇水开关</b> | <b>[G](或右Alt/K) 关闭菜单</b> | <b>[M键] 释放角色主动技能</b><br>
+                        · P2控制：<b>[方向键] 移动</b> | <b>[1](或右Shift) 呼出菜单/确认</b> | <b>[0键] 浇水开关</b> | <b>[2](或回车/右Ctrl) 关闭菜单</b> | <b>[3](或/键) 释放角色主动技能</b><br>
+                        · <b>如何建造</b>：控制你的小人走到房间的某个空地上，按下【确认键】，你的小人身边就会弹出一个黑色的建造菜单（<b>菜单打开时人物会站定不动</b>）。通过【上下键】选择你想种的植物（<b>支持循环翻页</b>：到顶再往上直接跳到最底一条），再按一次【确认键】即可购买！如果是走到已经种了植物的格子上按【确认键】，则会弹出【升级/拆除】菜单——<b>拆除需要二次确认</b>（点/按两下才拆，防手滑）。<br>
+                        · <b>房间归属</b>：每个人<b>最多可拥有两间房</b>——在另一个无主房间里照常建造即可自动认领第二间（人机和别人的房间进不去）；<b>你先进去的房间人机绝不会进来抢注</b>，人机临时躲进来的也不算它的地盘。<br>
+                        · <b>倒下规则</b>：双人模式下一人被抓住<b>游戏不会立刻结束</b>——只要队友还活着就能继续战斗（镜头自动切给存活者），<b>两个人都倒下才算输</b>；谁对僵尸输出最高，结算时谁就是 MVP。<br>
+                        · <b>门口小推车</b>：每间房门口停着一台（原版同款割草机）——僵尸逼近门口时它自动冲出去，撞掉 800 血并击退眩晕，<b>用完即消失</b>，可用祝福「后备推车」补回。<br>
+                        · <b>存活奖励</b>：每存活 90 秒弹出<b>三选一祝福</b>（阳光雨/孢子潮/狂怒/硬化/丰收浇水/冷却清零/后备推车），P1 用 W/S+F、P2 用 ↑/↓+1 选择，15 秒内不选自动跳过。<br>
+                        · <b>尸潮波次</b>：每隔约 75 秒会来一波<b>小鬼僵尸</b>（顶部信息牌有「下一波 Xs」倒计时，来之前 10 秒还会全屏播报「一大波僵尸正在接近！」）——每第 5 波更是有<b>僵王机甲</b>压阵，击杀它全员 +100☀！<br>
+                        · <b>昼夜循环</b>：白天 60 秒 / 夜晚 90 秒循环——<b>白天蘑菇系会打盹</b>（头顶冒 💤、稍微发灰，但不是掉色！不攻击不产出），浇水产出 ×2 适合出门发育；<b>夜晚蘑菇醒来</b>、僵尸提速 15%，是防守的关键期。画面变暗=入夜，信息牌有 ☀/🌙 倒计时。<br>
+                        · <b>内鬼模式</b>：幸存者中<b>秘密混入了一个内鬼</b>！开局毫无破绽，160 秒左右它会突然反水（来之前有剧情播报）——<b>它进不了有主的房间，最多堵在你门口</b>；咬人一口只有 12 血（1.8 秒一口），你的植物可以集火它（它只有 300 血），击败全员 +200🦠！<br>
+                        · <b>移动手感</b>：房内慢（好走位）、走廊快 1.5 倍（跑图用），加减速带缓冲不再急刹过冲；贴墙会自动滑行。<br>
+                        · <b>如何发育</b>：尽早找一个带门的房间，待在阳光菇旁边即可自动每秒生产阳光！另外两人各有<b>浇水开关</b>（P1 空格 / P2 0键）：按一下开启持续浇水（头顶 🚿 标志，每 0.2 秒 +1 ☀、人走到哪浇到哪），再按一下停止。<b>阳光与孢子各算各的</b>：谁买植物扣谁的。<br><br>
+                        <b style="color:#ffe14a;">成长配方（唯一，不撞衫）</b><br>
+                        · 阳光菇(无需购买，房间自带) <span style="color:#9dff6b;">→(☀30)→ 向日葵 →(☀90)→ 双子向日葵 →(☀270)→ 双子向日葵 Lv2 →(☀810)→ 双子向日葵 Lv3</span>，产阳光更多<br>
+                        · 小喷菇(☀200 购买) 靠阳光升级：<span style="color:#9dff6b;">(☀50)→ 大喷菇 →(☀200)→ 忧郁菇 →(☀800)→ 胆小菇 →(☀3200)→ 魅惑菇 →(☀12800)→ 磁力菇</span>，加快孢子产出<br>
+                        · 坚果(纯肉盾防御) <span style="color:#9dff6b;">→(☀80)→ 坚果 Lv2 →(☀160)→ 高坚果 →(☀400)→ 高坚果 Lv2 →(☀800)→ 南瓜头 →(☀1600)→ 南瓜头 Lv2</span>，血量极高<br>
+                        · 豌豆射手三选一分支：<span style="color:#9dff6b;">双发射手→(🦠60)→机枪射手</span> / <span style="color:#9dff6b;">寒冰射手→(🦠80)→冰瓜投手(减速)</span> / <span style="color:#9dff6b;">双向射手→(🦠80)→三线射手→(🦠150)→杨桃</span><br>
+                        · <b>原汁原味</b>：所有植物均严格遵循《植物大战僵尸》原版设定，拒绝魔改缝合怪！<br><br>
+                        <b style="color:#c79aff;">🦠 孢子高级植物</b>（蘑菇系随时间产出孢子）<br>
+                        · <b>地刺(🦠50)</b>：贴地陷阱，僵尸站上持续掉血，不会被啃<br>
+                        · <b>寒冰菇(🦠50)</b>：种下即冰冻全场僵尸（一次性）<br>
+                        · <b>毁灭菇(🦠1000)</b>：超高攻击——僵尸靠近即核爆（一次性）<br>
+                        · <b>植物盲盒(🦠100)</b>：开出随机植物，赌一把！<br><br>
+                        <b style="color:#ff8a8a;">👻 僵尸规则</b>：全场<b>只有一只僵尸</b>，开局 20 秒出笼，之后随时间成长：<br>
+                        <span style="color:#ff9e9e;">普通僵尸 →(30秒)→ 路障 →(90秒)→ 铁桶 →(150秒)→ 橄榄球（当前版本最高 4 级）</span><br>
+                        · <b>打倒僵尸 = 胜利</b>（僵尸被击倒后不会重生）；你的 HP 归零 = 失败<br>
+                        · 房间四周是<b>河道</b>，门口搭着<b>木桥 + 坚果门板</b>：你可以自由过桥，僵尸得把门板啃穿（门板血量随坚果升级一起变硬）
+                        <div style="text-align:center; margin-top:16px;"><button class="back-btn" style="position:static;" onclick="document.getElementById('dorm-help').style.display='none'">知道了</button></div>
+                    </div>
+                </div>
+            </div>
+    
+            <div id="dmg-flash"></div>
+    
+            <!-- 胜负结算 -->
+            <div id="dorm-over">
+                <div class="ov-title" id="ov-title">你活下来了！</div>
+                <div class="ov-stats">
+                    <div class="ov-stat">坚持时间<b id="ov-time">0:00</b></div>
+    
+                    <div class="ov-stat">僵尸等级<b id="ov-waves">0</b></div>
+                    <div class="ov-stat">本局MVP<b id="ov-mvp">你</b></div>
+                </div>
+                <div class="ov-btns">
+                    <button class="ov-btn" id="ov-retry" onclick="location.reload()">再来一局</button>
+                    <button class="ov-btn" id="ov-home" onclick="location.href='index.html'">返回主菜单</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script>
         function resizeGame() {
@@ -575,18 +712,27 @@
             document.getElementById('dorm-back')?.addEventListener('click', () => { roleModal.style.display = 'none'; });
             
             const skinBtns = document.querySelectorAll('.dorm-skin-btn');
+            // v4.0.26：守屋大作战改为主站内嵌界面——不再跳转 haunted-dorm.html，
+            // 原页显示 #dorm-screen 并在页内直接开局（与砸罐子/我是僵尸同为"本页一个模式"）
+            const launchDorm = (mode, r1, r2) => {
+                const opts = { mode };
+                if (r1) opts.role1 = r1;
+                if (r2) opts.role2 = r2;
+                document.getElementById('dorm-screen').style.display = 'block';
+                window.startHauntedDorm(opts);
+            };
             skinBtns.forEach(sb => {
                 sb.addEventListener('click', () => {
                     const role = sb.getAttribute('data-role');
                     if (currentMode === '1p') {
-                        location.href = `haunted-dorm.html?mode=1p&role1=${role}`;
+                        launchDorm('1p', role);
                     } else if (currentMode === '2p') {
                         if (!p1Role) {
                             p1Role = role;
                             roleTitle.innerText = 'HOUSE GUARD · P2 请选择皮肤 (方向键移动)';
                             roleTitle.style.color = '#4fc3f7';
                         } else {
-                            location.href = `haunted-dorm.html?mode=2p&role1=${p1Role}&role2=${role}`;
+                            launchDorm('2p', p1Role, role);
                         }
                     }
                 });
@@ -630,17 +776,18 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1791687314"></script>
-    <script src="js/Board.js?v=1791687314"></script>
-    <script src="js/entities/Entity.js?v=1791687314"></script>
-    <script src="js/entities/Plant.js?v=1791687314"></script>
-    <script src="js/entities/Zombie.js?v=1791687314"></script>
-    <script src="js/entities/Projectile.js?v=1791687314"></script>
-    <script src="js/entities/Sun.js?v=1791687314"></script>
-    <script src="js/managers/WaveManager.js?v=1791687314"></script>
-    <script src="js/managers/CollisionManager.js?v=1791687314"></script>
-    <script src="js/managers/EventManager.js?v=1791687314"></script>
-    <script src="js/GameLoop.js?v=1791687314"></script>
-    <script src="js/HelpGuide.js?v=1791687314"></script>
+    <script src="js/InputManager.js?v=1791705483"></script>
+    <script src="js/Board.js?v=1791705483"></script>
+    <script src="js/entities/Entity.js?v=1791705483"></script>
+    <script src="js/entities/Plant.js?v=1791705483"></script>
+    <script src="js/entities/Zombie.js?v=1791705483"></script>
+    <script src="js/entities/Projectile.js?v=1791705483"></script>
+    <script src="js/entities/Sun.js?v=1791705483"></script>
+    <script src="js/managers/WaveManager.js?v=1791705483"></script>
+    <script src="js/managers/CollisionManager.js?v=1791705483"></script>
+    <script src="js/managers/EventManager.js?v=1791705483"></script>
+    <script src="js/GameLoop.js?v=1791705483"></script>
+    <script src="js/HelpGuide.js?v=1791705483"></script>
+    <script src="js/HauntedDorm.js?v=1791705483"></script>
 </body>
 </html>

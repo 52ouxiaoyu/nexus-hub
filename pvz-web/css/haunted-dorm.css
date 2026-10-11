@@ -1,0 +1,127 @@
+/* ===== 守屋大作战样式（v4.0.26 起与主站 index.html 共享）=====
+   所有规则作用域限定在 #dorm-screen 内，主页面零冲突；
+   haunted-dorm.html（旧直链兼容页）通过 body.dorm-page 让 #dorm-screen 常显。 */
+#dorm-screen { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 4000; }
+body.dorm-page #dorm-screen { display: block; }
+
+body.dorm-page { margin: 0; padding: 0; background: #000; overflow: hidden; display: flex; font-family: 'Arial Black', sans-serif; }
+#dorm-screen #dorm-container { position: relative; width: 100vw; height: 100vh; display: flex; }
+#dorm-screen /* 单视角全屏 */
+        .viewport { flex: 1; position: relative; overflow: hidden; background: #35853e; }
+#dorm-screen /* v3.88.0 草地棋盘格纹路画在 .world 上（80px 两种绿相间）——
+           必须与白底融合素材同处一个层叠上下文（#world1 有 transform），mix-blend-mode 才能混到草地 */
+        .world { position: absolute; top: 0; left: 0; transform-origin: 0 0;
+            background-color: #35853e;
+            background-image: conic-gradient(#3c9145 0 90deg, #35853e 0 180deg, #3c9145 0 270deg, #35853e 0);
+            background-size: 160px 160px; }
+#dorm-screen /* 地图元素 */
+        .tile { position: absolute; width: 80px; height: 80px; box-sizing: border-box; }
+#dorm-screen /* v3.88.0 墙面 = 蓝色河道（静态水波纹，避免大面积动画拖性能） */
+        .tile.wall {
+            background-color: #2e6da8;
+            /* 柔和的深浅渐变 + 淡淡的水平水波纹理，摒弃之前斜向和涂鸦感 */
+            background-image: repeating-linear-gradient(
+                0deg, 
+                transparent, 
+                transparent 14px, 
+                rgba(255, 255, 255, 0.08) 14px, 
+                rgba(255, 255, 255, 0.08) 16px
+            ), linear-gradient(180deg, #4a90c9 0%, #2e6da8 100%);
+            border: none;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.15);
+        }
+#dorm-screen /* v3.88.0 门口木桥（门板坚果铺在桥上，玩家自由穿行） */
+        .tile.bridge {
+            background: repeating-linear-gradient(0deg, #9a6a35 0 12px, #7a4d22 12px 16px);
+            border: 2px solid #5c3b1d; border-radius: 6px;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.35);
+        }
+#dorm-screen .tile.center { background: rgba(255, 255, 255, 0.2); border: 2px dashed #fff; border-radius: 50%; }
+#dorm-screen /* 僵尸等级角标 */
+        .lv-badge { position: absolute; top: -26px; left: 50%; transform: translateX(-50%); background: rgba(90,0,0,0.85); color: #ffd54a; font-size: 13px; font-weight: bold; padding: 2px 8px; border-radius: 8px; border: 1px solid #ff5252; white-space: nowrap; z-index: 12; }
+        @keyframes zzzFloat { 0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.9; } 50% { transform: translateX(-50%) translateY(-4px); opacity: 0.55; } }
+#dorm-screen /* v3.92.0 浇水开启标志（跟随玩家头顶） */
+        .water-badge { position: absolute; top: -60px; left: 50%; transform: translateX(-50%); font-size: 40px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); pointer-events: none; z-index: 15; }
+#dorm-screen /* v4.0.15 P1/P2 HUD 公共样式（左右镜像、规格一致）：此前 P1 的 hp-row 没有任何 CSS（块级堆叠变"长块"），P2 靠内联 flex（变"长条"），且 P2 血条复用重复 id hp-track */
+        .hp-row { display: flex; align-items: center; margin-top: 8px; }
+#dorm-screen .hp-label { font-size: 14px; color: #fff; text-shadow: 2px 2px 0 #000; }
+#dorm-screen .hp-track { margin: 0 10px; width: 160px; height: 14px; flex: none; background: rgba(0,0,0,0.6); border: 2px solid #000; border-radius: 7px; overflow: hidden; }
+#dorm-screen .hp-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #ff5252, #ff0000); transition: width 0.2s; }
+#dorm-screen /* 实体 */
+        .entity { position: absolute; transform: translate(-50%, -50%); pointer-events: none; }
+#dorm-screen .avatar { width: 100px; height: 100px; z-index: 100; filter: drop-shadow(0 10px 5px rgba(0,0,0,0.5)); }
+#dorm-screen .avatar img { width: 100%; height: 100%; object-fit: contain; }
+#dorm-screen /* HP Bar */
+        .hp-bar-bg { position: absolute; top: -10px; left: 0; width: 100%; height: 8px; background: rgba(0,0,0,0.5); border: 1px solid #000; border-radius: 4px; z-index: 10; display: none; }
+#dorm-screen .hp-bar-fg { position: absolute; top: 0; left: 0; height: 100%; background: #0f0; border-radius: 3px; }
+#dorm-screen /* 红斜杠（阵亡） */
+        .dead-slash::after {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to top right, transparent 45%, red 45%, red 55%, transparent 55%);
+            z-index: 1000; pointer-events: none;
+        }
+#dorm-screen /* UI 层 */
+        #dorm-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1000; }
+#dorm-screen .player-hud { position: absolute; top: 20px; padding: 12px 20px; background: rgba(0,0,0,0.8); color: white; border: 3px solid #4da6ff; border-radius: 12px; font-size: 18px; text-shadow: 2px 2px 0 #000; left: 20px; pointer-events: auto; max-width: 400px; box-sizing: border-box; }
+#dorm-screen /* v4.0.16：控制行拆两行显示——HUD 收窄到 400px，避免与顶部中央的僵尸信息条重叠 */
+        .hud-ctrl { font-size: 14px; line-height: 1.5; font-weight: bold; margin-bottom: 4px; }
+#dorm-screen .sun-text { color: #ffeb3b; font-size: 24px; }
+#dorm-screen /* v3.86.0 玩家 HP 条常显 + 波次/击杀信息（红牌主题） */
+        /* v4.0.15：删除旧 #hp-row/#hp-track/#hp-fill id 规则（flex:1 把 P1 血条拉满整行=长块），统一用上方 .hp-* 类 */
+        #wave-chip { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); padding: 7px 16px; background: rgba(20,5,5,0.85); color: #ff9e9e; border: 3px solid #7a2020; border-radius: 12px; font-size: 16px; text-shadow: 2px 2px 0 #000; font-family: 'Kaiti SC', serif; letter-spacing: 1px; white-space: nowrap; }
+#dorm-screen /* v4.0.17：实时伤害榜（wave-chip 正下方，植物阵营显示） */
+        #dmg-board { position: absolute; top: 66px; left: 50%; transform: translateX(-50%); padding: 4px 14px; background: rgba(0,0,0,0.6); border: 2px solid #3a3a5a; border-radius: 10px; font-size: 14px; color: #ffe14a; text-shadow: 1px 1px 0 #000; white-space: nowrap; pointer-events: none; z-index: 40; }
+#dorm-screen #dmg-board .dmg-me { color: #7dff7d; font-weight: bold; }
+#dorm-screen /* 小地图 */
+        #minimap { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); border: 3px solid #5c3b1d; border-radius: 8px; background: rgba(0,0,0,0.75); pointer-events: auto; opacity: 0.4; transition: opacity 0.25s; }
+#dorm-screen #minimap:hover { opacity: 1; }
+#dorm-screen .back-btn { 
+            position: absolute; right: 20px; pointer-events: auto; 
+            padding: 6px 16px; font-size: 15px; font-weight: bold; 
+            background: linear-gradient(180deg, #6d4c41, #3e2723); 
+            color: #f5e6c8; border: 2px solid #2e1a12; 
+            cursor: pointer; border-radius: 6px; 
+            text-shadow: 1px 1px 2px #000; 
+            box-shadow: inset 0 0 6px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.6); 
+            font-family: 'Kaiti SC', serif; letter-spacing: 1px;
+        }
+#dorm-screen .back-btn:hover { filter: brightness(1.2); transform: translateY(-1px); }
+#dorm-screen /* 种植菜单（木牌风；默认隐藏，openPlantMenu 时才显示——v3.87.0 修复 CSS 里 display:flex 覆盖 none 导致常驻） */
+        #plant-menu { position: absolute; display: none; background: rgba(46,26,12,0.92); padding: 10px; border-radius: 10px; border: 3px solid #8c6a4d; box-shadow: 0 6px 16px rgba(0,0,0,0.6); pointer-events: auto; z-index: 2000; gap: 10px; }
+#dorm-screen .plant-option { cursor: pointer; text-align: center; color: #f5e6c8; font-size: 12px; border: 2px solid transparent; padding: 5px; border-radius: 8px; font-family: 'Kaiti SC', serif; }
+#dorm-screen .plant-option:hover { background: rgba(247,230,161,0.18); border-color: #f7e6a1; }
+#dorm-screen .plant-option img { width: 50px; height: auto; min-height: 50px; max-height: 70px; object-fit: contain; image-rendering: pixelated; margin-bottom: 5px; }
+#dorm-screen /* v3.88.0 点击植物 →「升级 / 拆除」弹窗 */
+        #plant-popup { position: absolute; display: none; z-index: 2400; background: rgba(46,26,12,0.95); border: 3px solid #8c6a4d; border-radius: 10px; padding: 10px 12px; pointer-events: auto; box-shadow: 0 6px 16px rgba(0,0,0,0.6); min-width: 160px; }
+#dorm-screen #pp-title { color: #f5e6c8; font-family: 'Kaiti SC', serif; font-size: 16px; margin-bottom: 8px; text-align: center; letter-spacing: 1px; }
+#dorm-screen #pp-feed { color: #ffe14a; font-size: 12px; text-align: center; margin-bottom: 8px; font-family: 'Kaiti SC', serif; }
+#dorm-screen .pp-btns { display: flex; gap: 8px; justify-content: center; }
+#dorm-screen .pp-btn { font-size: 14px; padding: 6px 12px; border-radius: 8px; cursor: pointer; border: 2px solid #5c3b1d; color: #fff; font-family: 'Kaiti SC', serif; letter-spacing: 1px; }
+#dorm-screen .pp-btn:hover { filter: brightness(1.2); }
+#dorm-screen #pp-demolish { background: linear-gradient(180deg, #c62828, #8e0000); }
+#dorm-screen #pp-upgrade { background: linear-gradient(180deg, #2e7d32, #1b5e20); }
+#dorm-screen #pp-upgrade.pp-disabled { opacity: 0.45; cursor: not-allowed; }
+#dorm-screen /* 提示文字 */
+        .float-text { position: absolute; color: white; text-shadow: 1px 1px 2px black; font-size: 14px; font-family: 'Kaiti SC', serif; white-space: nowrap; pointer-events: none; z-index: 200; transform: translate(-50%, -150%); opacity: 0; transition: opacity 0.2s; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; border: 1px solid #fff; }
+#dorm-screen /* 受击红闪（v3.87.0 修复：补 pointer-events:none——此前该层拦截全屏点击，种植/升级菜单在真实点击下完全无法打开） */
+        #dmg-flash { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(ellipse at center, rgba(255,0,0,0) 55%, rgba(200,0,0,0.55) 100%); opacity: 0; transition: opacity 0.25s; z-index: 900; pointer-events: none; }
+#dorm-screen /* 胜负结算面板（与其他模式同款暗色面板） */
+        #dorm-over { position: absolute; display: none; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.78); z-index: 3000; align-items: center; justify-content: center; flex-direction: column; pointer-events: auto; }
+#dorm-screen #dorm-over .ov-title { font-size: 52px; font-family: 'Kaiti SC', serif; letter-spacing: 6px; text-shadow: 3px 3px 0 #000; margin-bottom: 18px; }
+#dorm-screen #dorm-over .ov-stats { display: flex; gap: 26px; margin-bottom: 34px; }
+#dorm-screen #dorm-over .ov-stat { background: rgba(0,0,0,0.55); border: 2px solid #8c6a4d; border-radius: 12px; padding: 14px 26px; text-align: center; color: #f5e6c8; font-family: 'Kaiti SC', serif; }
+#dorm-screen #dorm-over .ov-stat b { display: block; font-size: 30px; color: #ffeb3b; margin-top: 6px; }
+#dorm-screen #dorm-over .ov-btns { display: flex; gap: 20px; }
+#dorm-screen #dorm-over .ov-btn { font-size: 20px; padding: 12px 34px; border-radius: 10px; cursor: pointer; border: 3px solid #8c6a4d; color: #fff; font-family: 'Kaiti SC', serif; letter-spacing: 2px; }
+#dorm-screen #ov-retry { background: linear-gradient(180deg, #2e7d32, #1b5e20); }
+#dorm-screen #ov-home { background: linear-gradient(180deg, #6d4c41, #4a2f1d); }
+#dorm-screen #dorm-over .ov-btn:hover { filter: brightness(1.2); transform: translateY(-2px); }
+#dorm-screen .speed-btn {
+            background: transparent; border: none; color: #aaa; font-size: 13px; font-weight: bold;
+            padding: 4px 10px; border-radius: 14px; cursor: pointer; transition: all 0.2s;
+        }
+#dorm-screen .speed-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+#dorm-screen .speed-btn.active { background: #4da6ff; color: #fff; box-shadow: 0 0 8px #4da6ff; }
+#dorm-screen .shake { transform: translate(4px, 4px) rotate(2deg); }
+#dorm-screen .shake:nth-child(even) { transform: translate(-4px, -2px) rotate(-2deg); }
+    
