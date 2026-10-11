@@ -214,7 +214,14 @@ class Zombie extends Entity {
             this.dieSrc = 'assets/images/Zombies/FootballZombie/Die.gif';
         } else if (type === 'dancing') {
             this.hp = 500; this.maxHp = 500;
-            this.summonTimer = 5.0; // Summons backups periodically
+            // v4.0.27：伴舞机制重做（用户：伴舞太多）——
+            // ①初始波：登场 3s 后四角各召 1 只；②补充：本波死满 3 只且场上无存活伴舞才补新波（还剩 1 只不补）；
+            // ③上限：一只舞王终生最多召 12 只，不再无限 10s 循环
+            this.summonTimer = 3.0;
+            this._danceWaveAlive = 0;    // 当前波存活伴舞数
+            this._danceWaveDead = 0;     // 当前波已死伴舞数
+            this._danceWaveSize = 0;     // 本波实际召出数（贴边行会少于 4）
+            this._danceSpawnedTotal = 0; // 终生已召唤总数（上限 12）
             this.element.src = 'assets/images/Zombies/DancingZombie/DancingZombie.gif';
             this.walkSrc = 'assets/images/Zombies/DancingZombie/DancingZombie.gif';
             this.attackSrc = 'assets/images/Zombies/DancingZombie/Attack.gif';
@@ -672,6 +679,7 @@ class Zombie extends Entity {
         if (this.x > 985) {
             // 走出画面右侧 → 离场（不触发游戏结束，也不计分）
             this.state = 'DYING';
+            if (this._danceOwner) this._danceOwner._onBackupDeath(); // v4.0.27：魅惑伴舞离场同样回报主人
             if (this.element) this.element.src = this.dieSrc;
             if (this.headEl) this.dropPlantHead();
             setTimeout(() => { this.isDead = true; }, 1500);
@@ -687,6 +695,49 @@ class Zombie extends Entity {
             this.state = 'FIGHTING';
             this.fightTarget = foe;
             if (this.element) this.element.src = this.attackSrc;
+        }
+    }
+
+    // ===== v4.0.27 舞王伴舞机制重做 =====
+    // 召出一波伴舞：舞王四角各 1 只（用户：4 个角上）；受终生 12 只上限约束
+    _summonBackupWave() {
+        if (this.hypnotized || this.state === 'DYING') return;
+        if (this._danceSpawnedTotal >= 12 || this._danceWaveAlive > 0) return;
+        const positions = [
+            { r: this.row - 1, dx: -80 },
+            { r: this.row - 1, dx: 80 },
+            { r: this.row + 1, dx: -80 },
+            { r: this.row + 1, dx: 80 },
+        ];
+        this._danceWaveDead = 0;
+        this._danceWaveSize = 0;
+        for (const pos of positions) {
+            if (this._danceSpawnedTotal >= 12) break; // 上限 12：最后一批允许不满 4 只
+            if (pos.r >= 0 && pos.r < this.game.board.rows) {
+                const zombieY = this.game.board.offsetY + pos.r * this.game.board.cellHeight + this.game.board.cellHeight / 2 - 20;
+                const backup = new Zombie(this.game, pos.r, 'backup');
+                backup.x = Math.max(40, this.x + pos.dx); // prevent spawning behind game over line
+                backup.y = zombieY;
+                backup._danceOwner = this; // v4.0.27：阵亡回报主人
+                // 我是僵尸模式：舞王僵尸召出的伴舞继承"我方"标记，
+                // 否则 _checkZombieEnd 会漏判（场上还有伴舞在打，却判定我方僵尸全灭）
+                if (this._playerZombie) backup._playerZombie = true;
+                this.game.entities.push(backup);
+                this._danceSpawnedTotal++;
+                this._danceWaveAlive++;
+                this._danceWaveSize++;
+            }
+        }
+    }
+
+    // 伴舞阵亡回报（含魅惑后走出右侧离场）：本波死满 3 只且场上无存活伴舞 → 补新一波；
+    // 还剩伴舞活着（哪怕只剩 1 只）不补
+    _onBackupDeath() {
+        this._danceWaveAlive = Math.max(0, this._danceWaveAlive - 1);
+        this._danceWaveDead++;
+        if (this._danceWaveAlive > 0) return; // 还有伴舞在场上：不补
+        if (this._danceWaveDead >= Math.min(3, this._danceWaveSize)) {
+            this._summonBackupWave();
         }
     }
     
@@ -837,37 +888,17 @@ class Zombie extends Entity {
             }
         }
 
-        // Handle Dancing Zombie summon (被魅惑后不再召唤敌方伴舞)
+        // v4.0.27：舞王召唤重做——只负责初始波（3s 后四角登场）；后续补充全由伴舞阵亡回报驱动（_onBackupDeath）
         if (this.type === 'dancing' && this.state !== 'DYING' && !this.hypnotized) {
-            this.summonTimer -= deltaTime;
-            if (this.summonTimer <= 0) {
-                this.summonTimer = 10.0; // Summon every 10s
-                
-                // Spawn backups
-                const positions = [
-                    {r: this.row - 1, dx: 0},
-                    {r: this.row + 1, dx: 0},
-                    {r: this.row, dx: -80},
-                    {r: this.row, dx: 80}
-                ];
-                
-                for (let pos of positions) {
-                    if (pos.r >= 0 && pos.r < this.game.board.rows) {
-                        const zombieY = this.game.board.offsetY + pos.r * this.game.board.cellHeight + this.game.board.cellHeight / 2 - 20;
-                        const backup = new Zombie(this.game, pos.r, 'backup');
-                        backup.x = Math.max(40, this.x + pos.dx); // prevent spawning behind game over line
-                        backup.y = zombieY;
-                        // 我是僵尸模式：舞王僵尸召出的伴舞继承"我方"标记，
-                        // 否则 _checkZombieEnd 会漏判（场上还有伴舞在打，却判定我方僵尸全灭）
-                        if (this._playerZombie) backup._playerZombie = true;
-                        this.game.entities.push(backup);
-                    }
-                }
+            if (this._danceSpawnedTotal === 0) {
+                this.summonTimer -= deltaTime;
+                if (this.summonTimer <= 0) this._summonBackupWave();
             }
         }
         
         if (this.hp <= 0 && this.state !== 'DYING') {
             this.state = 'DYING';
+            if (this._danceOwner) this._danceOwner._onBackupDeath(); // v4.0.27：伴舞阵亡回报主人
             if (this.headEl) this.dropPlantHead(); // 头顶植物随僵尸倒地（纯外观）
             this.element.src = this.dieSrc;
             // v3.81.0 双人对战：植物方打死僵尸 → 得该僵尸对应的阳光价
