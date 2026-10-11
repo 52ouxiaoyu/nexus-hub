@@ -31,7 +31,7 @@ class HauntedDorm {
             fourheadsunflower:{ tier: 7, name: '四头向日葵',img: 'Plants/TwinSunflower/TwinSunflower1.gif', hp: 12000, cost: 0, scale: 1.15, tint: 'saturate(1.35) brightness(1.12)',
                              overlay: 'Plants/TwinSunflower/TwinSunflower1.gif',
                              overTransform: 'translate(-50%, -50%) translate(10px, 6px) scaleX(-1) scale(1.15)',
-                             produce: { sun: 250, every: 2.0 }, shoot: {dmg: 150, cd: 0.8, n: 4, range: 450, img: 'Plants/PB10.gif', homing: true} },
+                             produce: { sun: 120, every: 2.0 }, shoot: {dmg: 150, cd: 0.8, n: 4, range: 450, img: 'Plants/PB10.gif', homing: true} },
 
             // —— 豌豆系 (常规单体输出，单线升级) ——
             peashooter:    { tier: 1, name: '豌豆射手', img: 'Plants/Peashooter/Peashooter.gif',   card: 'Peashooter.png', hp: 300, cost: 30,
@@ -179,11 +179,11 @@ class HauntedDorm {
 
         const urlParams = new URLSearchParams(window.location.search);
         const gp = (k) => (opts[k] !== undefined && opts[k] !== null) ? String(opts[k]) : urlParams.get(k);
-        this.gameMode = gp('mode') || '1p'; // '1p' or '2p'
+        this.gameMode = opts.gameMode || gp('mode') || '1p'; // '1p' or '2p'
         this.role1 = gp('role1') || gp('role') || 'peashooter';
         this.role2 = gp('role2') || 'peashooter';
-        this.faction = gp('faction') || 'plant';
-        this.isZombieFaction = (this.faction === 'zombie');
+        this.faction = gp('faction') || (opts.isZombieFaction ? 'zombie' : 'plant');
+        this.isZombieFaction = (this.faction === 'zombie') || !!opts.isZombieFaction;
 
         // v4.0.26：实例代际号——主站内嵌可重复开局，旧实例的 rAF 循环检测到代际变化自动停转
         window.__dormGen = (window.__dormGen || 0) + 1;
@@ -268,10 +268,10 @@ class HauntedDorm {
         this.suns = [];      // 僵尸掉落的阳光袋
 
         // ===== 单僵尸导演系统 =====
-        this.ghostSpawned = false;
+        this.ghostSpawned = this.isZombieFaction ? true : false;
         this.gameTime = 0;
         this.timeScale = 2;
-        this.ghostSpawnAt = 20000; // 开局 20s 出笼，修复准备中 bug
+        this.ghostSpawnAt = this.isZombieFaction ? 0 : 20000; // 开局 20s 出笼（僵尸阵营立刻开战）
         this.ghostLevel = 1;              // 当前等级 1..10
         this.ghostRespawnAt = 0;          // >0 = 死亡等待重生
         this.kills = 0;
@@ -310,6 +310,10 @@ class HauntedDorm {
     initDOM() {
         this.world1 = document.getElementById('world1');
         this.vp1 = document.getElementById('vp1');
+        if (this.world1) this.world1.innerHTML = '';
+        document.getElementById('wave-announce')?.remove();
+        document.getElementById('zombie-warning')?.remove();
+        document.getElementById('bless-board')?.remove();
 
         // v4.0.20：昼夜色调层（夜晚全屏罩一层暗蓝，2.5s 渐变过渡）
         let dnTint = document.getElementById('dn-tint');
@@ -468,13 +472,14 @@ class HauntedDorm {
         this.ppUp.onclick = () => {
             const pl = this.popupPlant;
             if (!pl || !pl.def.up) { this._closePopup(); return; }
+            const p = this.popupPlayer || this.player;
             const cost = pl.def.up.cost || 0;
             const sporeCost = pl.def.up.sporeCost || 0;
-            const canAfford = this.player.sun >= cost && this.player.spore >= sporeCost;
+            const canAfford = p.sun >= cost && p.spore >= sporeCost;
             if (!canAfford) {
                 let err = [];
-                if (this.player.sun < cost) err.push(`☀${cost}`);
-                if (this.player.spore < sporeCost) err.push(`🦠${sporeCost}`);
+                if (p.sun < cost) err.push(`☀${cost}`);
+                if (p.spore < sporeCost) err.push(`🦠${sporeCost}`);
                 this._flyText(pl.c * 80 + 40, pl.r * 80, `资源不足（需 ${err.join(' ')}）`, '#ff8a8a');
                 this.playSfx('buttonclick.mp3', 0.35);
                 return;
@@ -483,8 +488,8 @@ class HauntedDorm {
             const nd = HauntedDorm.DEFS[to];
             const fac = pl.isDoor ? 0.3 : 1;
             this._closePopup();
-            if (cost) this.addSun(-cost);
-            if (sporeCost) this.addSpore(-sporeCost);
+            if (cost) this.addSun(-cost, p);
+            if (sporeCost) this.addSpore(-sporeCost, p);
             this.playSfx('readysetplant.mp3', 0.5);
             this._flyText(pl.c * 80 + 40, pl.r * 80,
                 `${pl.def.name} → ${nd.name}！（血量 ${Math.round(pl.def.hp * fac)}→${Math.round(nd.hp * fac)}）`, '#9dff6b');
@@ -494,13 +499,24 @@ class HauntedDorm {
 
     // 简易音效（独立页面不引 AudioManager，直接用主素材库音频）
     playSfx(name, vol = 0.5) {
+        const SFX_MAP = {
+            'plant.mp3': 'plant_water.mp3',
+            'plant2.mp3': 'plant_water.mp3',
+            'sun.mp3': 'points.mp3',
+            'shovel.mp3': 'plant_water.mp3',
+            'gulp.mp3': 'chomp.mp3',
+            'throw.mp3': 'bowling.mp3',
+            'buzzer.mp3': 'crazydaveshort1.mp3',
+            'squash_hmm.mp3': 'groan3.mp3'
+        };
+        const actualName = SFX_MAP[name] || name;
         const now = performance.now();
         this._sfxT = this._sfxT || {};
         // 对极度频繁的音效进行节流 (50ms)
-        if (this._sfxT[name] && now - this._sfxT[name] < 50) return;
-        this._sfxT[name] = now;
+        if (this._sfxT[actualName] && now - this._sfxT[actualName] < 50) return;
+        this._sfxT[actualName] = now;
         try {
-            const a = new Audio('assets/audio/' + name);
+            const a = new Audio('assets/audio/' + actualName);
             a.volume = vol;
             a.play().catch(() => {});
         } catch (e) {}
@@ -828,16 +844,21 @@ class HauntedDorm {
 
     // ===== 点击植物 → 弹出「升级 / 拆除」面板 =====
     plantClick(pl, clientX, clientY) {
-        if (this.role === 'zombie') return;
+        if (this.isZombieFaction) return;
         
         // 禁止跨房间操作：不能帮人机或其他人升级植物
         // 门和周围地刺也算在该房间的归属内
         let room = this.rooms.find(rm => pl.c >= rm.x && pl.c < rm.x + rm.w && pl.r >= rm.y && pl.r < rm.y + rm.h);
         if (!room) room = this.rooms.find(rm => Math.abs(pl.c - rm.doorCol) + Math.abs(pl.r - rm.doorRow) <= 1);
-        if (room && room.owners && room.owners.length > 0 && !room.owners.includes(this.player)) {
+        let actor = this.player;
+        if (this.gameMode === '2p' && this.player2 && !this.player2.dead) {
+            if (room && this._ownsRoom(this.player2, room)) actor = this.player2;
+        }
+        if (room && room.owners && room.owners.length > 0 && !room.owners.includes(actor)) {
             this._flyText(pl.c * 80 + 40, pl.r * 80 + 40, '不能操作别人的设备！', '#ff4b4b');
             return;
         }
+        this.popupPlayer = actor;
 
         this._closePlantMenu();
         const def = pl.def;
@@ -860,7 +881,7 @@ class HauntedDorm {
             if (def.up.sporeCost) cstr.push(`🦠${def.up.sporeCost}`);
             this.ppUp.style.display = '';
             this.ppUp.innerText = `升级 ${cstr.join(' ')}`;
-            const canAfford = (!def.up.cost || this.player.sun >= def.up.cost) && (!def.up.sporeCost || this.player.spore >= def.up.sporeCost);
+            const canAfford = (!def.up.cost || actor.sun >= def.up.cost) && (!def.up.sporeCost || actor.spore >= def.up.sporeCost);
             this.ppUp.classList.toggle('pp-disabled', !canAfford);
         } else {
             this.ppUp.style.display = 'none';
@@ -1015,7 +1036,7 @@ class HauntedDorm {
                     const cost = HauntedDorm.DEFS['sunshroom'].cost || 0;
                     if (ai.sun >= cost) {
                         ai.sun -= cost;
-                        this.spawnPlant(rm.x + rm.tpl.beds[0].c, rm.y + rm.tpl.beds[0].r, 'sunshroom');
+                        this.spawnPlant(rm.x + rm.tpl.beds[0].c, rm.y + rm.tpl.beds[0].r, 'sunshroom', false, ai);
                     }
                     continue; // 一次只做一个动作
                 }
@@ -1028,22 +1049,22 @@ class HauntedDorm {
                     if (p.def.up) {
                         const c = p.def.up.cost || 0, sc = p.def.up.sporeCost || 0;
                         if (ai.sun >= c && ai.spore >= sc) {
-                            // 【人机战力控制 - 终极削弱版】人机的装备等级绝对不能超过僵尸等级（移除+1宽限）！
                             const targetTier = HauntedDorm.DEFS[p.def.up.to].tier || 1;
                             const zLv = this.ghostLevel || 1;
-                            if (targetTier <= zLv) {
+                            if (targetTier <= zLv + 1) { // 允许+1阶宽限以解锁初级植物升2阶
                                 let weight = p.isDoor ? 3 : (p.def.produce ? 2 : 1);
                                 if (p.isDoor && p.hp < p.maxHp * 0.6) weight += 20; // 门血量低时极高优先级升级补血
                                 actions.push({ type: 'up', pl: p, cost: c, sporeCost: sc, to: p.def.up.to, weight: weight });
                             }
                         }
-                    } else if (p.isDoor && p.hp < p.maxHp * 0.9 && ai.sun >= 20) {
-                        // 增加“修门”逻辑：如果无法升级或无需升级，花20阳光修500血
-                        actions.push({ type: 'repair', pl: p, cost: 20, weight: 15 });
+                    }
+                    // 独立修门逻辑：任何门板受伤且有阳光时均可修补，大残时高权重
+                    if (p.isDoor && p.hp < p.maxHp * 0.9 && ai.sun >= 20) {
+                        actions.push({ type: 'repair', pl: p, cost: 20, weight: (p.hp < p.maxHp * 0.5 ? 40 : 15) });
                     }
                 }
                 
-                // 2. 尝试种武器
+                // 2. 尝试种武器与孢子小喷菇
                 const emptyTiles = [];
                 for(let r = rm.y; r < rm.y + rm.h; r++) {
                     for(let c = rm.x; c < rm.x + rm.w; c++) {
@@ -1056,15 +1077,20 @@ class HauntedDorm {
                 }
                 
                 if (emptyTiles.length > 0) {
-                    // 智能阵型规划：离门近的种武器
+                    // 智能阵型规划：离门近的种武器，靠后的种产孢子小喷菇
                     const doorC = rm.doorCol, doorR = rm.doorRow;
                     emptyTiles.sort((a, b) => Math.hypot(a.c - doorC, a.r - doorR) - Math.hypot(b.c - doorC, b.r - doorR));
                     const frontTile = emptyTiles[0]; // 最靠近门
+                    const backTile = emptyTiles[emptyTiles.length - 1]; // 靠后
                     
                     const peaCost = HauntedDorm.DEFS['peashooter'].cost || 0;
-                    // 限制武器数量最多2个，且绝不建造小喷菇（白嫖太假）和额外阳光菇
                     if (ai.sun >= peaCost && peas.length < 2) {
                         actions.push({ type: 'plant', id: 'peashooter', cost: peaCost, c: frontTile.c, r: frontTile.r, weight: 1 });
+                    }
+                    const puffCost = HauntedDorm.DEFS['puffshroom'].cost || 200;
+                    const sporePlants = myPlants.filter(p => p.def.spore);
+                    if (ai.sun >= puffCost && sporePlants.length < 1) {
+                        actions.push({ type: 'plant', id: 'puffshroom', cost: puffCost, c: backTile.c, r: backTile.r, weight: 2 });
                     }
                 }
 
@@ -1085,7 +1111,7 @@ class HauntedDorm {
                         this._flyText(chosen.pl.c * 80 + 40, chosen.pl.r * 80, `AI 升级！`, '#bfa8e0');
                     } else if (chosen.type === 'plant') {
                         ai.sun -= chosen.cost;
-                        this.spawnPlant(chosen.c, chosen.r, chosen.id);
+                        this.spawnPlant(chosen.c, chosen.r, chosen.id, false, ai);
                         this._flyText(chosen.c * 80 + 40, chosen.r * 80, `AI 种植！`, '#bfa8e0');
                         if (Math.random() < 0.15) this._say(ai, ["门再厚点！僵尸你过来啊！", "阳光怎么这么少，搞快点！", "只要我跑得快，僵尸就吃不到我脑子！", "这局带飞！稳住我们能赢！", "吓死宝宝了，多种点豌豆压压惊！", "僵尸大哥别杀我，我肉酸！", "我这房间风水好，僵尸看不见我！"][Math.floor(Math.random()*7)]);
                     } else if (chosen.type === 'repair') {
@@ -1400,7 +1426,7 @@ class HauntedDorm {
     }
 
     openPlantMenu(mouseX, mouseY) {
-        if (this.role === 'zombie') return;
+        if (this.isZombieFaction) return;
         if (this.player.dead) return; // v4.0.23：倒下的 P1 不能建造
 
         const rect = this.vp1.getBoundingClientRect();
@@ -1523,23 +1549,29 @@ class HauntedDorm {
     doPlant(type) {
         this._closePlantMenu();
 
+        let p = this.player;
+        if (this.gameMode === '2p' && this.player2 && !this.player2.dead) {
+            const rm2 = this._resolveBuildRoom(this.menuCol, this.menuRow, this.player2);
+            if (rm2 && this._ownsRoom(this.player2, rm2)) p = this.player2;
+        }
+
         // v4.0.17：统一房间解析器
-        let targetRm = this._resolveBuildRoom(this.menuCol, this.menuRow, this.player);
+        let targetRm = this._resolveBuildRoom(this.menuCol, this.menuRow, p);
 
         // v4.0.18：建造时认领房间（支持主房+副房，最多两间）
-        if (targetRm) this._claimRoom(this.player, targetRm);
+        if (targetRm) this._claimRoom(p, targetRm);
 
         const def = HauntedDorm.DEFS[type];
         if (!def) return;
         if (def.sporeCost) {
-            if (this.player.spore < def.sporeCost) { this._flyText(this.player.x, this.player.y, '孢子不足', '#ff8a8a'); return; }
-            this.addSpore(-def.sporeCost);
+            if (p.spore < def.sporeCost) { this._flyText(p.x, p.y, '孢子不足', '#ff8a8a'); return; }
+            this.addSpore(-def.sporeCost, p);
         } else if (def.cost > 0) {
-            if (this.player.sun < def.cost) { this._flyText(this.player.x, this.player.y, '阳光不足', '#ff8a8a'); return; }
-            this.addSun(-def.cost);
+            if (p.sun < def.cost) { this._flyText(p.x, p.y, '阳光不足', '#ff8a8a'); return; }
+            this.addSun(-def.cost, p);
         }
         this.playSfx('buttonclick.mp3', 0.5);
-        this.spawnPlant(this.menuCol, this.menuRow, type, false, this.player); // v4.0.23：带上种植者
+        this.spawnPlant(this.menuCol, this.menuRow, type, false, p); // v4.0.23：带上种植者
     }
 
     _useSkill(target = null) {
@@ -1983,7 +2015,7 @@ class HauntedDorm {
                             this.playSfx('explosion.mp3', 0.4);
                         }
                         if (pea.slow) z.slowT = 2.5;
-                        if (pea.stunTime) z.stunT = pea.stunTime;
+                        if (pea.stunTime) z.stunT = Math.max(z.stunT || 0, pea.stunTime);
                         if (z.hpBg) z.hpBg.style.display = 'block';
                         z.hitFlashT = 0.1; // 记录受击闪烁状态交由 _render 处理
                         if (z.hp <= 0) this._killZombie(z, pea.owner);
@@ -2148,12 +2180,19 @@ class HauntedDorm {
     }
 
     // ===== 高级植物（孢子系）=====
+    _getHostileTargets() {
+        const targets = this.isZombieFaction ? this.allPlayers.filter(p => p.isZombie) : this.zombies.slice();
+        if (!this.isZombieFaction && this.traitorRevealed && this.traitor && !this.traitor.dead) targets.push(this.traitor);
+        return targets;
+    }
+
     _updateSpike(dt) {
+        const targets = this._getHostileTargets();
         for (const pl of this.plants) {
             const sp = pl.def.spike;
             if (!sp) continue;
             const px = pl.c * 80 + 40, py = pl.r * 80 + 40;
-            for (const zb of this.zombies) {
+            for (const zb of targets) {
                 if (zb.dead) continue;
                 if (Math.hypot(zb.x - px, zb.y - py) < sp.r) {
                     const rm = this._insideRoom(pl.c, pl.r);
@@ -2186,7 +2225,8 @@ class HauntedDorm {
             }
         }
         const hasAura = auras.length > 0;
-        for (const zb of this.zombies) {
+        const targets = this._getHostileTargets();
+        for (const zb of targets) {
             if (zb.dead) continue;
             let slowedByIcegloom = false;
             // 冰忧郁菇范围寒气减速
@@ -2218,6 +2258,7 @@ class HauntedDorm {
 
     _updateDoomshroom(dt) {
         // 毁灭重炮：无限射程重炮，造成真伤
+        const targets = this._getHostileTargets();
         for (const pl of this.plants) {
             const nk = pl.def.nuke;
             if (!nk || !nk.lob) continue;
@@ -2226,7 +2267,7 @@ class HauntedDorm {
             if (pl.nukeT >= nk.cd) {
                 pl.nukeT = 0;
                 let best = null, bd = Infinity;
-                for (const zb of this.zombies) {
+                for (const zb of targets) {
                     if (zb.dead) continue;
                     const d = Math.hypot(zb.x - pl.c*80, zb.y - pl.r*80);
                     if (d < bd) { bd = d; best = zb; }
@@ -2262,13 +2303,14 @@ class HauntedDorm {
     }
 
     // 土豆雷：僵尸踩上引爆
-    _updateMines() {
+    _updateMines(dt = 1/60) {
+        const targets = this._getHostileTargets();
         for (const pl of [...this.plants]) {
             if (pl.def.mine === undefined) continue;
             if (pl._arming === undefined) pl._arming = 3; // 3s 拱土起爆准备
-            if (pl._arming > 0) { pl._arming -= 1 / 60; continue; }
+            if (pl._arming > 0) { pl._arming -= dt; continue; }
             const px = pl.c * this.gridSize + 40, py = pl.r * this.gridSize + 40;
-            const victim = this.zombies.find(zb => !zb.dead && Math.hypot(zb.x - px, zb.y - py) < 55);
+            const victim = targets.find(zb => !zb.dead && Math.hypot(zb.x - px, zb.y - py) < 55);
             if (!victim) continue;
             // 引爆
             this.playSfx('explosion.mp3', 0.55);
@@ -2277,7 +2319,7 @@ class HauntedDorm {
             this.world1.appendChild(boom);
             setTimeout(() => boom.remove(), 500);
             const MINE_DMG = 2500;
-            for (const zb of [...this.zombies]) {
+            for (const zb of targets) {
                 if (!zb.dead && Math.hypot(zb.x - px, zb.y - py) < 130) {
                     const rm = this._insideRoom(pl.c, pl.r);
                     const owner = pl.owner || ((rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : this.player);
@@ -2439,7 +2481,7 @@ class HauntedDorm {
         const c1 = Math.floor(this.player.x / this.gridSize) * this.gridSize;
         const r1 = Math.floor(this.player.y / this.gridSize) * this.gridSize;
         if (this.p1Cursor) {
-            this.p1Cursor.style.display = 'block';
+            this.p1Cursor.style.display = (this.isZombieFaction || this.player.dead) ? 'none' : 'block';
             this.p1Cursor.style.left = c1 + 'px';
             this.p1Cursor.style.top = r1 + 'px';
         }
@@ -2496,8 +2538,8 @@ class HauntedDorm {
 
     _updateKMenus() {
         // 【优化3】冗余按键映射：为每个操作提供2-3个备用键。如果主键被硬件冲突屏蔽，玩家可以下意识用备用键
-        // v4.0.23：倒下的玩家不能打开建造菜单
-        if (!this.player.dead) this._handleKMenu(1, this.player, ['f', 'j'], ['altright', 'g', 'k'], ['w'], ['s'], this.p1Kmenu, this.p1Cursor);
+        // v4.0.23：倒下的玩家不能打开建造菜单；僵尸阵营玩家禁止打开植物建造菜单
+        if (!this.player.dead && !this.isZombieFaction) this._handleKMenu(1, this.player, ['f', 'j'], ['altright', 'g', 'k'], ['w'], ['s'], this.p1Kmenu, this.p1Cursor);
         if (this.gameMode === '2p' && this.player2 && !this.player2.dead) {
             // v4.0.16：P2 主键改数字位 1确认/2取消（0浇水/3技能）——原主键 Delete 在 Mac 上是退格(Backspace)根本不触发，
             // 用户实际一直用的是备用键 1；Enter 保留为取消备用
@@ -2693,11 +2735,9 @@ class HauntedDorm {
         for (const mw of this.mowers) {
             if (mw.gone) continue;
             if (!mw.active) {
-                // 触发：尸潮单位（小怪/僵王机甲）靠近 75px（啃到门口了）
-                // v4.0.21：白名单制——主僵尸是剧情核心，开局出笼点可能贴着推车，
-                // 被撞 800 血直接秒杀会瞬间触发「游戏胜利」；内鬼 600 血同理不划算
+                // 触发：任何靠近 75px 的敌对僵尸单位（啃到门口了）
                 for (const zb of this.zombies) {
-                    if (zb.dead || (!zb.isMinion && !zb.isBoss)) continue;
+                    if (zb.dead) continue;
                     if (Math.hypot(zb.x - mw.x, zb.y - mw.y) < 75) {
                         mw.active = true; mw.used = true;
                         this._announce('🛒 小推车启动！', 'cherrybomb.mp3');
@@ -2712,11 +2752,10 @@ class HauntedDorm {
             mw.dist += 520 * dt;
             mw.el1.style.left = mw.x + 'px';
             mw.el1.style.top = mw.y + 'px';
-            // 撞击尸潮单位：大伤害 + 击退 + 眩晕（每次冲锋每个僵尸只撞一次）
-            // v4.0.21：白名单制（只认小怪/机甲）；无主房间不再把伤害兜底记给玩家（MVP 冤案根源）
+            // 撞击敌对单位：大伤害 + 击退 + 眩晕（每次冲锋每个僵尸只撞一次）
             const owner = (mw.room.owners && mw.room.owners.length > 0) ? mw.room.owners[0] : null;
             for (const zb of this.zombies) {
-                if (zb.dead || mw.hits.has(zb) || (!zb.isMinion && !zb.isBoss)) continue;
+                if (zb.dead || mw.hits.has(zb)) continue;
                 if (Math.hypot(zb.x - mw.x, zb.y - mw.y) < 50) {
                     const dmg = 800;
                     zb.hp -= dmg;
@@ -2826,14 +2865,14 @@ class HauntedDorm {
     }
     _applySleepVisual(pl) {
         if (!pl || !pl.el1 || pl.isDoor || !this._isShroom(pl.def)) return;
-        const img = pl.el1.querySelector('img');
+        const imgs = pl.el1.querySelectorAll('img');
         const asleep = !this._shroomAwake();
-        if (img) {
+        imgs.forEach(img => {
             // v4.0.22：灰化减磅（0.75→0.45，保留大部分原色）——睡觉是「打盹」不是「换皮」
             const base = pl.def.tint || '';
             const sleepFx = 'grayscale(0.45) brightness(0.95) opacity(0.88)';
             img.style.filter = asleep ? (base ? base + ' ' + sleepFx : sleepFx) : base;
-        }
+        });
         // v4.0.22：头顶 💤 徽标——一眼看懂「在睡觉」，而不是以为掉色 bug
         let badge = pl.sleepBadge;
         if (asleep && !badge) {
@@ -3157,10 +3196,13 @@ class HauntedDorm {
                     this._say(ai, ["好无聊啊，僵尸怎么还不来？", "谁敢跟我比阳光多？", "外面的世界太危险，还是床舒服~", "睡一觉醒来，希望能赢！", "室友别抢我阳光啊！"][Math.floor(Math.random()*5)]);
                 }
                 if (isWellDeveloped && ai.room && (!ai.path || ai.path.length === 0) && !zombieNear && Math.random() < 0.005) {
-                    const drop = this.airdrops[Math.floor(Math.random() * this.airdrops.length)];
-                    ai.targetDrop = drop;
-                    ai.path = this._findPath(ai.x, ai.y, drop.x, drop.y) || ai.path; // v4.0.16：寻路失败不穿墙
-                    if (Math.random() < 0.5) this._say(ai, "发育好了！去抢盲盒！");
+                    const safeDrops = this.airdrops.filter(d => !zbTarget || zbTarget.dead || Math.hypot(d.x - zbTarget.x, d.y - zbTarget.y) > 280);
+                    if (safeDrops.length > 0) {
+                        const drop = safeDrops[Math.floor(Math.random() * safeDrops.length)];
+                        ai.targetDrop = drop;
+                        ai.path = this._findPath(ai.x, ai.y, drop.x, drop.y) || ai.path; // v4.0.16：寻路失败不穿墙
+                        if (Math.random() < 0.5) this._say(ai, "发育好了！去抢盲盒！");
+                    }
                 }
                 // 如果盲盒消失了，或者碰到僵尸靠近，立刻放弃目标回家！
                 if (ai.targetDrop && ai.path && ai.path.length > 0) {
@@ -3321,7 +3363,7 @@ class HauntedDorm {
         this._updateSpike(dt);
         this._updateIceshroom(dt);
         this._updateDoomshroom(dt);
-        this._updateMines();
+        this._updateMines(dt);
         
         // 僵尸阵营玩家啃咬逻辑
         if (this.isZombieFaction && !this.player.dead) {
@@ -3386,17 +3428,28 @@ class HauntedDorm {
                 this._announce(`👻 你已升级为【${cfg.name}】！`, 'finalwave.mp3', true);
             }
             
-            // 接触AI造成秒杀（抓破门后吃人）
+            // 接触幸存者造成秒杀（抓破门后吃人）
             // 开局前 5 秒无敌保护，防止一出生人机就被吃掉
-            for (const ai of this.ais) {
-                if (!ai.dead && this.gameTime > 5000 && Math.hypot(ai.x - this.player.x, ai.y - this.player.y) < 50) {
-                    ai.dead = true;
-                    ai.el1.remove();
-                    this.playSfx('gulp.mp3', 0.8);
-                    this.kills++;
-                    this._announce(`🩸 击杀了一名幸存者！`, 'finalwave.mp3');
-                    if (this.ais.every(a => a.dead)) {
-                        this.gameOver(true); // 僵尸赢了
+            const victims = [...this.ais, ...(this.player2 ? [this.player2] : [])];
+            for (const v of victims) {
+                if (!v.dead && this.gameTime > 5000 && Math.hypot(v.x - this.player.x, v.y - this.player.y) < 50) {
+                    // 如果中间隔着门（幸存者在房间里且门活着，僵尸在外面），则免疫接触伤害
+                    const vRm = this._insideRoom(Math.floor(v.x / 80), Math.floor(v.y / 80));
+                    let safeBehindDoor = false;
+                    if (vRm) {
+                        const doorPlant = this.getPlantAt(vRm.doorCol * 80, vRm.doorRow * 80);
+                        const zRm = this._insideRoom(Math.floor(this.player.x / 80), Math.floor(this.player.y / 80));
+                        if (doorPlant && zRm !== vRm) safeBehindDoor = true;
+                    }
+                    if (!safeBehindDoor) {
+                        v.dead = true;
+                        if (v.el1) v.el1.remove();
+                        this.playSfx('gulp.mp3', 0.8);
+                        this.kills++;
+                        this._announce(`🩸 击杀了一名幸存者！`, 'finalwave.mp3');
+                        if (victims.every(a => a.dead)) {
+                            this.gameOver(true); // 僵尸赢了
+                        }
                     }
                 }
             }
@@ -3742,8 +3795,10 @@ class HauntedDorm {
                             zb.stunT = 2.0;
                             zb.lockedTarget = null;
                             zb.path = null;
-                            zb.x -= dx * 70;
-                            zb.y -= dy * 70;
+                            const pushX = zb.x - dx * 70;
+                            const pushY = zb.y - dy * 70;
+                            if (!this.checkCollision(pushX, zb.y, 15, true)) zb.x = pushX;
+                            if (!this.checkCollision(zb.x, pushY, 15, true)) zb.y = pushY;
                         } else if (Math.random() < 0.05) {
                             this._say(zb, ["这门真硬！", "看我咬碎它！", "饿饿饿饿饿！", "别以为躲在里面就安全！"][Math.floor(Math.random()*4)]);
                         }
@@ -3912,6 +3967,12 @@ class HauntedDorm {
         if (this._onBlur) window.removeEventListener('blur', this._onBlur);
         this.keys = {};
         this.keysJustPressed = {};
+        if (this.world1) this.world1.innerHTML = '';
+        document.getElementById('wave-announce')?.remove();
+        document.getElementById('bless-board')?.remove();
+        document.getElementById('zombie-warning')?.remove();
+        document.getElementById('pulse-style')?.remove();
+        if (this.dnTint) { this.dnTint.remove(); this.dnTint = null; }
     }
 
 }
