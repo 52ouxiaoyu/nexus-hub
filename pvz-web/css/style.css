@@ -590,7 +590,9 @@ body {
     overflow: hidden;
 }
 .zcard:hover { transform: translateY(-2px); filter: brightness(1.1); }
-.zcard img { height: 44px; width: auto; image-rendering: pixelated; pointer-events: none; }
+/* v4.0.25：作用域收窄为直接子 img——`.zcard img` 会命中合成图标(.zcard-fusion)内部的头图，
+   给无内联高度的头顶植物强加 height:44px 造成拉伸/截断（用户：选卡植物头被拉长） */
+.zcard > img { height: 44px; width: auto; image-rendering: pixelated; pointer-events: none; }
 
 /* v3.81.9 植物头/盲盒僵尸的合成卡面图标：僵尸身体 + 头顶植物/礼盒 两层。
    尺寸与头部锚点全部由 zombieIconEl 内联按战场同比例计算，这里只管定位 */

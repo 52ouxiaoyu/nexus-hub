@@ -40,7 +40,7 @@ class CollisionManager {
                                         || p.type === 'fume_burst';   // v3.26.0：大喷菇弹幕穿门
                             z.takeDamage(p.damage, pierce ? { pierce: true } : undefined);
                             
-                            if (p.type === 'snowpea' || p.type === 'wintermelon' || p.type === 'icecabbage' || p.type === 'icekernel') { // v3.57.0：冰雾大喷菇已删，_iceFume 移除
+                            if (p.type === 'snowpea' || p.type === 'backsnowpea' || p.type === 'wintermelon' || p.type === 'icecabbage' || p.type === 'icekernel') { // v3.57.0：冰雾大喷菇已删，_iceFume 移除；v4.0.25 后向冰豆同减速
                                 z.setSlow(10.0);
                             } else if (p.type === 'firepea') {
                                 // v3.80.3 根因修复：火豌豆命中只解除"绝对冰冻"，不再 thaw() 抹掉寒冰减速
@@ -103,7 +103,7 @@ class CollisionManager {
                                            p.type === 'cattail_melon' || p.type === 'cattail_wintermelon') ? 'crash'
                                 : (p.type === 'cabbage' || p.type === 'icecabbage' || p.type === 'kernel' ||
                                    p.type === 'popcorn' || p.type === 'icekernel' || p.type === 'butter' || p.type === 'minicherry') ? 'thud'
-                                : (p.type === 'snowpea') ? 'ice_pop'
+                                : (p.type === 'snowpea' || p.type === 'backsnowpea') ? 'ice_pop'
                                 : (p.type === 'firepea') ? 'fire_pop'
                                 : (p.type === 'fume_burst') ? null
                                 : 'pea_hit';
@@ -123,7 +123,7 @@ class CollisionManager {
         // 正确规则（原版）：寒冰豌豆过树桩=解冻成普通豌豆；普通豌豆过树桩=点燃；后续树桩照常点燃。
         const plants = this.game.entities.filter(e => e instanceof Plant && !e.isDead);
         for (let p of projectiles) {
-            if (p.type === 'peashooter' || p.type === 'snowpea' || p.type === 'backpea') {
+            if (p.type === 'peashooter' || p.type === 'snowpea' || p.type === 'backpea' || p.type === 'backsnowpea') {
                 for (let pl of plants) {
                     if (pl.type === 'torchwood' && pl.row === p.row && Math.abs(pl.x - p.x) < 20) {
                         if (!p._torchSeen) p._torchSeen = new Set();
@@ -131,6 +131,10 @@ class CollisionManager {
                         p._torchSeen.add(pl);
                         if (p.type === 'snowpea') {
                             p.type = 'peashooter'; // Thaws
+                            p.element.src = 'assets/images/Plants/PB00.gif';
+                        } else if (p.type === 'backsnowpea') {
+                            p.type = 'backpea'; // v4.0.25：后向冰豆过火炬同样解冻成普通后向豌豆
+                            p.damage = 20;
                             p.element.src = 'assets/images/Plants/PB00.gif';
                         } else {
                             p.type = 'firepea';
