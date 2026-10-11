@@ -37,6 +37,10 @@
 - 测试：每用例清场（g.entities.length=0）；融合模式走真实菜单；强制 state='PLAYING' 需手动驱动+真实 sleep
 - 紫色系 sprite 转冰蓝：sepia(1) saturate(2.2) hue-rotate(185deg) brightness(1.25)
 - v4.0.0（并行 pvz 会话）：双幸存者协作、共享镜头、双人独立选人（59edbed/6162219/782c682），勿与其冲突
+- 守屋大作战（HauntedDorm.js 单文件，v4.0.23）：**allPlayers 含 5 个人机**，判真人存活用 _humansAll()；AI 行走/认领在 _tick（3043+）不在 _updateAIs（986 只管发育）；植物随身带 owner（spawnPlant 第 5 参），伤害记账 pl.owner||owners[0]||null 绝不兜底给 P1；AI 认领房间避开玩家物理所在房（playerPhysicalRoom）；结算=_humansAll 全灭；测 AI 认领必须驱动 _tick
+- 砸罐子/盲盒（v4.0.24）：植物盲盒=_plantBoxPool（含 plantbox 自身，连开链）；开箱统一走 _openPlantBoxAt（种子卡+金罐免费卡共用），直接 new Plant('plantbox') 会空图（getStats 兜底 GiftBox.png）；金罐内容=_rollGoldenVaseContent（10% cobcannon/10% plantbox）；免费卡种植在 tryPlanting 的 vaseFreeCards 分支
+- 融合卡面/选卡图标（v4.0.25）：融合免费卡探针卡面用 PLANT_ART_BBOX 表（GameLoop.js 顶部，8 个超窗素材内容 bbox）+fitOversizedCardArt 装窗——**大画布+局部内容素材（Squash 100×226）画布居中必裁**，新增此类素材要进表；`.vz-card img`/`.zcard img` 已收窄为 `>` 直接子（合成图标 .zcard-fusion 内部头图不吃全局尺寸，新全局 img 规则同理）；后向冰豆=backsnowpea 弹种（splitpea 融合带 snowpea 自动启用，40 伤+减速+过火炬解冻）；v3817 输出 "9 pass / 0 fail" 非「结果」
+- 诊断范式：全植物图片体检=_diag_plants.js（每批新开对局，勿清场复用——board.grid 毒化后续批次；冻结 Plant.prototype.update 防一次性植物自爆）；全游戏巡检=_audit_all_games.js；旧脚本失败先 git worktree add /tmp 对照 HEAD 判历史遗留（v3819 T4a、v3821 T6/T7、v3813/v3820 均历史遗留）
 
 ## tank-battle（v1.4.20）
 - 单文件 game.js；句柄 window._tankGame；击杀收敛 Tank.destroy(killer,damage)；Boss 覆写不调 super（Boss 回充须单独加进 Boss.update）
@@ -56,18 +60,20 @@
 - 深草 off=1：极速 0.40×/滚阻 0.055/抓地 0.65；LAT_GRIP=36；车对车 Game.carVsCar 动量守恒
 - frame() 给 P2 必须显式传 Input.p2；隔离性断言「只按一方键另一方不动」
 
-## thunder-wing（v1.4.11）
+## thunder-wing（v1.5.1）
 - 纯 Canvas2D 零素材；script 顺序 sprites→fx→enemies→build→meta→ultimate→ai→game；句柄 window.__twGame
 - 玩家状态下沉 G.players[]；新增属性同时改 makePlayer+defineProperty 代理名单+HUD
 - 键位（v1.4.3 定稿+v1.4.11 e.code 兜底）：1P `WASD/空格/M`，2P `方向键/NumpadEnter/NumpadAdd`；NumpadEnter 的 e.key='Enter' 必须靠 e.code 区分主回车；KEYMAP 每键含 code 兜底（IME/布局免疫）；blur/visibilitychange 全量释放防卡键
 - **弹幕契约（用户密集恐惧症）**：敌弹上限 120/我方 80；敌弹速 1.4~2.2/我方 5~7；出弹间隔×2；我方少而重；品红蛇行。改弹幕数值先看 memory 弹幕段
+- **v1.5.1 铁律（用户暴怒定下）：坚决不能有弹窗——任何弹卡/弹窗/暂停选单/强制读字的局内 UI 全部禁止**。升级=全自动随机发放（gainExp→autoPerk），只飘一行文字提示；TW.drawPick 已永久禁用（函数头 return 保险丝）。v1.5.0 的子弹时间二选一被实测否决并回滚
+- **v1.5.0 玩乐性契约（弹卡部分已被 v1.5.1 移除）**：贪分热度 heatMul x1~x8（擦弹累积/停手衰减/中弹清零/addScore 全乘/边缘白辉）；旗舰 spawnDread 横穿+弱点炮塔（护甲 15% 在 hurtEnemy，勿放 collide 双重缩放；无尽 wave%8===4 避开 Boss 波）；乐章横幅+音效分层+MVP 结算（stats.pdmg）
 - 救援信标 G.pods（坠机不出局，接触 46px 复活，双方坠机才 OVER）；PSEP_MIN=52 双机不重叠（updatePlayer 后硬校正）；顶部对称 HUD（中央+左右镜像，y=26/44/59-67/86/104）
 - AI：AI_IDLE=5*60 帧接管；势场 AI 闪避权重恒占优+拾取 VAL 分级（weapon/power1.25/bomb1.1/medal0.75/exp0.45）；AI 自设 firing 不算控制；物理按键 noteActivity 夺回
-- 词条（build.js gainExp 自动发放无弹窗）/超载 OVERDRIVE（倍率在 shoot() 现算，别存 pl.od）/关卡机制（elites/gimmick，激光缺口冷色）/每日挑战（日期种子）/成就 → meta.js
+- 词条表/超载 OVERDRIVE（倍率在 shoot() 现算，别存 pl.od）/关卡机制（elites/gimmick，激光缺口冷色）/每日挑战（日期种子）/成就 → build.js/meta.js
 - 画面自适应：纵向恒 800，W=clamp(vw/vh*800,420,720)，TW.setWidth 广播；**关卡横向字面量必须包 X(v)**
 - 配色契约：有害=暖色+尖锐星芒 hazard()；有利=白环徽章 ITEM_LOOK；**禁绿色敌人/绿弹**；我方冷色
 - 节奏常量：COMBO_WIN=210/COMBO_CAP=30/BOSS_GRACE=240；Boss 触发=清场或 240 帧强制
-- 测试：_test.js 65 项（含像素配色断言）；killOne 先拉开席位 x=100/400；注入敌弹前清 pbullets+players ult=null（残留大招污染）；HUD 断言前手动 S.render()；改键位/输入必跑真实键盘事件用例
+- 测试：_test.js 78 项（含像素配色断言）；killOne 先拉开席位 x=100/400；注入敌弹前清 pbullets+players ult=null（残留大招污染）；HUD 断言前手动 S.render()；改键位/输入必跑真实键盘事件用例
 
 ## tvbox-web-player
 - CF Pages 连 GitHub，push main 自动部署；v0.1.0 多级代理链；functions/api/proxy.js；播放发生在访问者端
