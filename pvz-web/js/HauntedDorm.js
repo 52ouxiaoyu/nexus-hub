@@ -141,8 +141,12 @@ class HauntedDorm {
               apply: (g) => { g.waterBoostT = 45; } },
             { id: 'cd',    icon: '⏱',  name: '冷却清零', desc: 'P1/P2 技能立刻就绪',
               apply: (g) => { for (const p of g.allPlayers) if (!p.isAi) p.skillCd = 0; } },
-            { id: 'mower', icon: '🛒', name: '后备推车', desc: '恢复自家门口的小推车',
-              apply: (g, p) => { if (!g._restoreMowers(p)) { g.addSpore(150, p); g._flyText(p.x, p.y - 30, '推车尚在 +150🦠', '#9dff6b'); } } },
+            { id: 'mower', icon: '🛒', name: '后备推车', desc: '恢复自家门口的小推车，没有则随身送一台',
+              apply: (g, p) => {
+                  if (g._restoreMowers(p)) return;
+                  if (!p.mowerCarry) { p.mowerCarry = 1; g._updateMowerBadge(p); g._flyText(p.x, p.y - 30, '🛒 随身小推车 +1', '#9dff6b'); }
+                  else { g.addSpore(150, p); g._flyText(p.x, p.y - 30, '推车尚在 +150🦠', '#9dff6b'); }
+              } },
         ];
     }
 
@@ -190,7 +194,10 @@ class HauntedDorm {
         this._dormGen = window.__dormGen;
 
         // v4.0.19：小推车（最后防线）+ 存活三选一祝福
+        // v4.0.29：小推车道具化——不再开局自动摆门口（玩家一贴就被压死、进不了别人门），
+        // 改为地图散落可拾取道具，拾取后放回自家门口才成为防线
         this.mowers = [];
+        this.mowerItems = [];
         this.blessingAt = 90000;      // 存活 90 秒后首次送出祝福
         this.blessing = null;         // 当前打开的三选一 { options, idx, deadline }
         this.plantDmgBoostT = 0;      // 狂怒：植物伤害翻倍剩余秒数
@@ -683,28 +690,14 @@ class HauntedDorm {
         this.blessingAt = 90000;
         if (this.blessing) { this.blessing = null; if (this.blessEl) this.blessEl.style.display = 'none'; }
 
-        // v4.0.19：每间房门口一台小推车（最后防线）——敌对单位靠近即冲撞，一次性消耗
+        // v4.0.29：小推车道具化——删掉开局每房自动摆放（僵尸玩家一贴植物门口就被 800 伤压死，根本进不了门）；
+        // 改为地图走廊散落 8 台小推车道具，植物方（含人机）拾取后需亲自放回自家门口才成为防线
         this.mowers.forEach(mw => { if (mw.el1) mw.el1.remove(); });
         this.mowers = [];
-        for (const rm of this.rooms) {
-            const dx = rm.doorCol - (rm.x + rm.w / 2), dy = rm.doorRow - (rm.y + rm.h / 2);
-            const len = Math.hypot(dx, dy) || 1;
-            const dirX = dx / len, dirY = dy / len; // 门外方向
-            // 停在门外一格（桥上）；该格若是墙则退回门口格
-            let mc = rm.doorCol + Math.round(dirX), mr = rm.doorRow + Math.round(dirY);
-            if (this.walls.has(`${mc},${mr}`)) { mc = rm.doorCol; mr = rm.doorRow; }
-            const mx = mc * this.gridSize + 40, my = mr * this.gridSize + 40;
-            const el = document.createElement('div');
-            el.className = 'tile';
-            el.style.left = (mc * this.gridSize) + 'px';
-            el.style.top = (mr * this.gridSize) + 'px';
-            el.style.zIndex = 5;
-            el.innerHTML = `<img src="assets/images/interface/LawnCleaner.png" style="width:100%; height:100%; object-fit:contain; transform:scale(1.1);">`;
-            this.world1.appendChild(el);
-            this.mowers.push({ room: rm, homeX: mx, homeY: my, x: mx, y: my,
-                               dirX, dirY, el1: el, used: false, active: false, dist: 0, gone: false,
-                               hits: new Set() });
-        }
+        this.mowerItems.forEach(it => { if (it.el) it.el.remove(); });
+        this.mowerItems = [];
+        this._spawnMowerItems();
+        this._announce('🛒 小推车已散落地图：拾取后放回自家门口即可布防！', 'readysetplant.mp3');
         for (const rm of this.rooms) {
             rm.owners = [];
             rm.capacity = rm.tpl.beds.length;
@@ -3046,6 +3039,86 @@ class HauntedDorm {
         }
     }
 
+    // ===== v4.0.29：小推车道具化——地图散落拾取，放回自家门口布防 =====
+    _spawnMowerItems() {
+        const N = 8;
+        let tries = 0;
+        while (this.mowerItems.length < N && tries < 600) {
+            tries++;
+            const c = 2 + Math.floor(Math.random() * (this.cols - 4));
+            const r = 2 + Math.floor(Math.random() * (this.rows - 4));
+            if (this.walls.has(`${c},${r}`)) continue;
+            if (this._insideRoom(c, r)) continue; // 只刷在走廊，不进房间
+            if (this.mowerItems.some(it => it.c === c && it.r === r)) continue;
+            const el = document.createElement('div');
+            el.className = 'tile';
+            el.style.left = (c * this.gridSize) + 'px';
+            el.style.top = (r * this.gridSize) + 'px';
+            el.style.zIndex = 5;
+            el.innerHTML = `<img src="assets/images/interface/LawnCleaner.png" style="width:100%; height:100%; object-fit:contain; transform:scale(1.1);">`;
+            this.world1.appendChild(el);
+            this.mowerItems.push({ c, r, x: c * this.gridSize + 40, y: r * this.gridSize + 40, el });
+        }
+    }
+
+    _updateMowerItems() {
+        if (!this.mowerItems || this.mowerItems.length === 0) return;
+        const holders = this.allPlayers.filter(p => !p.isZombie && !p.dead && p.el1);
+        // 拾取：植物方（含人机）靠近即捡，每人最多随身携带 1 台（头顶 🛒 标志）
+        for (let i = this.mowerItems.length - 1; i >= 0; i--) {
+            const it = this.mowerItems[i];
+            const taker = holders.find(p => !p.mowerCarry && Math.hypot(p.x - it.x, p.y - it.y) < 45);
+            if (!taker) continue;
+            taker.mowerCarry = 1;
+            it.el.remove();
+            this.mowerItems.splice(i, 1);
+            this._flyText(taker.x, taker.y - 40, '🛒 拾取小推车！', '#9dff6b');
+            this._updateMowerBadge(taker);
+            if (taker === this.player || taker === this.player2) this.playSfx('pluck.mp3', 0.4);
+        }
+        // 放置：携带者走到自家已认领房间的门口格自动放下一台
+        for (const p of holders) {
+            if (!p.mowerCarry) continue;
+            const c = Math.floor(p.x / this.gridSize), r = Math.floor(p.y / this.gridSize);
+            const rm = this._ownedRooms(p).find(rm => rm.doorCol === c && rm.doorRow === r);
+            if (!rm) continue;
+            if (this.mowers.some(mw => mw.room === rm && !mw.used && !mw.gone)) continue; // 门口已有推车
+            p.mowerCarry = 0;
+            this._updateMowerBadge(p);
+            this._placeMower(rm, c, r);
+            this._flyText(p.x, p.y - 40, '🛒 小推车已就位！', '#ffd54f');
+            if (p === this.player || p === this.player2) this._announce('🛒 小推车已就位：敌方靠近即冲撞！', 'plant.mp3');
+        }
+    }
+
+    _placeMower(rm, mc, mr) {
+        const dx = rm.doorCol - (rm.x + rm.w / 2), dy = rm.doorRow - (rm.y + rm.h / 2);
+        const len = Math.hypot(dx, dy) || 1;
+        const dirX = dx / len, dirY = dy / len; // 门外方向
+        const mx = mc * this.gridSize + 40, my = mr * this.gridSize + 40;
+        const el = document.createElement('div');
+        el.className = 'tile';
+        el.style.left = (mc * this.gridSize) + 'px';
+        el.style.top = (mr * this.gridSize) + 'px';
+        el.style.zIndex = 5;
+        el.innerHTML = `<img src="assets/images/interface/LawnCleaner.png" style="width:100%; height:100%; object-fit:contain; transform:scale(1.1);">`;
+        this.world1.appendChild(el);
+        this.mowers.push({ room: rm, homeX: mx, homeY: my, x: mx, y: my,
+                           dirX, dirY, el1: el, used: false, active: false, dist: 0, gone: false,
+                           hits: new Set() });
+    }
+
+    _updateMowerBadge(p) {
+        if (!p.el1) return;
+        if (!p.mowerBadge) {
+            p.mowerBadge = document.createElement('div');
+            p.mowerBadge.style.cssText = 'position:absolute; top:-52px; left:50%; transform:translateX(-50%); font-size:20px; z-index:2; pointer-events:none;';
+            p.mowerBadge.innerText = '🛒';
+            p.el1.appendChild(p.mowerBadge);
+        }
+        p.mowerBadge.style.display = p.mowerCarry ? 'block' : 'none';
+    }
+
     // ===== v4.0.19：小推车（每房一台的最后防线，撞击所有敌对单位）=====
     _updateMowers(dt) {
         if (!this.mowers || this.mowers.length === 0) return;
@@ -3537,6 +3610,7 @@ class HauntedDorm {
         this._updateKMenus();
         this._updateBlessing(); // v4.0.19：祝福三选一（复用 _checkAnyKey，须在 keysJustPressed 清空前）
         this._updateMowers(dt); // v4.0.19：小推车触发与冲撞
+        this._updateMowerItems(); // v4.0.29：小推车道具拾取与门口放置
         this._updateDmgBoard(); // v4.0.17：实时伤害榜（内部自带节流）
         this.keysJustPressed = {}; // 清空单帧按键缓存
 
