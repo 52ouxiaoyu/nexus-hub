@@ -141,10 +141,23 @@ class HauntedDorm {
               apply: (g) => { g.waterBoostT = 45; } },
             { id: 'cd',    icon: '⏱',  name: '冷却清零', desc: 'P1/P2 技能立刻就绪',
               apply: (g) => { for (const p of g.allPlayers) if (!p.isAi) p.skillCd = 0; } },
-            { id: 'mower', icon: '🛒', name: '后备推车', desc: '恢复自家门口的小推车，没有则随身送一台',
+            { id: 'mower', icon: '🛒', name: '推车布防', desc: '恢复自家门口的小推车，或随身获得一台（走回自家门口自动放置）',
               apply: (g, p) => {
                   if (g._restoreMowers(p)) return;
-                  if (!p.mowerCarry) { p.mowerCarry = 1; g._updateMowerBadge(p); g._flyText(p.x, p.y - 30, '🛒 随身小推车 +1', '#9dff6b'); }
+                  if (p.isAi) {
+                      // v4.0.30：AI 直接布防到自家未防的门口
+                      const rms = g._ownedRooms(p);
+                      for (const rm of rms) {
+                          if (!g.mowers.some(mw => mw.room === rm && !mw.used && !mw.gone)) {
+                              g._placeMower(rm, rm.doorCol, rm.doorRow);
+                              g._flyText(rm.doorCol * 80 + 40, rm.doorRow * 80, '🛒 AI 布防推车！', '#ffd54f');
+                              return;
+                          }
+                      }
+                      g.addSpore(150, p); g._flyText(p.x, p.y - 30, '推车尚在 +150🦠', '#9dff6b');
+                      return;
+                  }
+                  if (!p.mowerCarry) { p.mowerCarry = 1; g._updateMowerBadge(p); g._flyText(p.x, p.y - 30, '🛒 随身小推车 +1，走回自家门口放置', '#9dff6b'); }
                   else { g.addSpore(150, p); g._flyText(p.x, p.y - 30, '推车尚在 +150🦠', '#9dff6b'); }
               } },
         ];
@@ -194,11 +207,11 @@ class HauntedDorm {
         this._dormGen = window.__dormGen;
 
         // v4.0.19：小推车（最后防线）+ 存活三选一祝福
-        // v4.0.29：小推车道具化——不再开局自动摆门口（玩家一贴就被压死、进不了别人门），
-        // 改为地图散落可拾取道具，拾取后放回自家门口才成为防线
+        // v4.0.30：小推车最终形态=存活奖励（祝福发放），不再地图散落；僵尸玩家开局 10 秒禁行动给 AI 布防窗口
         this.mowers = [];
-        this.mowerItems = [];
+        this.zombieFreezeT = this.isZombieFaction ? 10 : 0;
         this.blessingAt = 90000;      // 存活 90 秒后首次送出祝福
+        this.aiBlessAt = 90000;       // 僵尸方模式下 AI 植物的存活奖励计时
         this.blessing = null;         // 当前打开的三选一 { options, idx, deadline }
         this.plantDmgBoostT = 0;      // 狂怒：植物伤害翻倍剩余秒数
         this.waterBoostT = 0;         // 丰收浇水：浇水产出 ×3 剩余秒数
@@ -688,16 +701,16 @@ class HauntedDorm {
 
         // v4.0.19：祝福计时归零
         this.blessingAt = 90000;
+        this.aiBlessAt = 90000;
+        this.zombieFreezeT = this.isZombieFaction ? 10 : 0;
         if (this.blessing) { this.blessing = null; if (this.blessEl) this.blessEl.style.display = 'none'; }
 
-        // v4.0.29：小推车道具化——删掉开局每房自动摆放（僵尸玩家一贴植物门口就被 800 伤压死，根本进不了门）；
-        // 改为地图走廊散落 8 台小推车道具，植物方（含人机）拾取后需亲自放回自家门口才成为防线
+        // v4.0.30：小推车=存活奖励（祝福发放），删地图散落道具；僵尸方开局 10 秒禁行动
         this.mowers.forEach(mw => { if (mw.el1) mw.el1.remove(); });
         this.mowers = [];
-        this.mowerItems.forEach(it => { if (it.el) it.el.remove(); });
-        this.mowerItems = [];
-        this._spawnMowerItems();
-        this._announce('🛒 小推车已散落地图：拾取后放回自家门口即可布防！', 'readysetplant.mp3');
+        this._announce(this.isZombieFaction
+            ? '🧟 开局 10 秒观察期：AI 幸存者将获得存活奖励并加强布防！'
+            : '🛒 小推车已改为存活奖励：在祝福三选一中选取，放回自家门口布防！', 'readysetplant.mp3');
         for (const rm of this.rooms) {
             rm.owners = [];
             rm.capacity = rm.tpl.beds.length;
@@ -1045,8 +1058,8 @@ class HauntedDorm {
             ai.actTimer = (ai.actTimer || 0) - dt;
             if (ai.actTimer > 0) continue;
             
-            // 设定下一次行动间隔：8~15秒（极大地降低人机行动频率，让它们显得笨一点，经济积压严重）
-            ai.actTimer = 8.0 + Math.random() * 7.0;
+            // v4.0.30：行动间隔 8~15秒 → 2.5~6秒（用户反馈 AI 建造太慢，改成正常人的建造速度）
+            ai.actTimer = 2.5 + Math.random() * 3.5;
             
             const rm = ai.room;
             if (!rm) continue;
@@ -1077,7 +1090,7 @@ class HauntedDorm {
                             const targetTier = HauntedDorm.DEFS[p.def.up.to].tier || 1;
                             const zLv = this.ghostLevel || 1;
                             if (targetTier <= zLv + 1) { // 允许+1阶宽限以解锁初级植物升2阶
-                                let weight = p.isDoor ? 3 : (p.def.produce ? 2 : 1);
+                                let weight = p.isDoor ? 5 : (p.def.produce ? 2 : 1); // v4.0.30：升门更积极
                                 if (p.isDoor && p.hp < p.maxHp * 0.6) weight += 20; // 门血量低时极高优先级升级补血
                                 actions.push({ type: 'up', pl: p, cost: c, sporeCost: sc, to: p.def.up.to, weight: weight });
                             }
@@ -1701,6 +1714,7 @@ class HauntedDorm {
         // v4.0.16：接收目标玩家——原实现忽略参数，2P 模式下 P2 按 /键 释放的技能加在了 P1 身上
         const p = target || this.player;
         if (p.skillCd > 0) return;
+        if (this._zombieFrozen()) return; // v4.0.30：开局 10 秒观察期内不可行动
 
         if (this.isZombieFaction) {
             p.skillCd = 60;
@@ -3039,46 +3053,34 @@ class HauntedDorm {
         }
     }
 
-    // ===== v4.0.29：小推车道具化——地图散落拾取，放回自家门口布防 =====
-    _spawnMowerItems() {
-        const N = 8;
-        let tries = 0;
-        while (this.mowerItems.length < N && tries < 600) {
-            tries++;
-            const c = 2 + Math.floor(Math.random() * (this.cols - 4));
-            const r = 2 + Math.floor(Math.random() * (this.rows - 4));
-            if (this.walls.has(`${c},${r}`)) continue;
-            if (this._insideRoom(c, r)) continue; // 只刷在走廊，不进房间
-            if (this.mowerItems.some(it => it.c === c && it.r === r)) continue;
-            const el = document.createElement('div');
-            el.className = 'tile';
-            el.style.left = (c * this.gridSize) + 'px';
-            el.style.top = (r * this.gridSize) + 'px';
-            el.style.zIndex = 5;
-            el.innerHTML = `<img src="assets/images/interface/LawnCleaner.png" style="width:100%; height:100%; object-fit:contain; transform:scale(1.1);">`;
-            this.world1.appendChild(el);
-            this.mowerItems.push({ c, r, x: c * this.gridSize + 40, y: r * this.gridSize + 40, el });
+    // ===== v4.0.30：僵尸玩家开局 10 秒观察期 =====
+    _zombieFrozen() {
+        return this.isZombieFaction && this.zombieFreezeT > 0;
+    }
+    _updateZombieFreeze(dt) {
+        if (!this.isZombieFaction || this.over || !(this.zombieFreezeT > 0)) {
+            if (this.freezeEl) this.freezeEl.style.display = 'none';
+            return;
+        }
+        this.zombieFreezeT -= dt;
+        if (!this.freezeEl) {
+            this.freezeEl = document.createElement('div');
+            this.freezeEl.style.cssText = 'position:fixed; top:14%; left:50%; transform:translateX(-50%); color:#ff8a8a; font-size:30px; font-weight:bold; text-shadow:2px 2px 0 #000; z-index:2500; font-family:"Kaiti SC",serif; pointer-events:none; white-space:nowrap;';
+            document.body.appendChild(this.freezeEl);
+        }
+        if (this.zombieFreezeT > 0) {
+            this.freezeEl.style.display = 'block';
+            this.freezeEl.innerText = '🧟 僵尸还在发呆… ' + Math.ceil(this.zombieFreezeT) + ' 秒后开始行动（AI 正在布防）';
+        } else {
+            this.freezeEl.style.display = 'none';
+            this._announce('🧟 观察期结束，行动开始！', 'scream.mp3');
         }
     }
 
-    _updateMowerItems() {
-        if (!this.mowerItems || this.mowerItems.length === 0) return;
-        const holders = this.allPlayers.filter(p => !p.isZombie && !p.dead && p.el1);
-        // 拾取：植物方（含人机）靠近即捡，每人最多随身携带 1 台（头顶 🛒 标志）
-        for (let i = this.mowerItems.length - 1; i >= 0; i--) {
-            const it = this.mowerItems[i];
-            const taker = holders.find(p => !p.mowerCarry && Math.hypot(p.x - it.x, p.y - it.y) < 45);
-            if (!taker) continue;
-            taker.mowerCarry = 1;
-            it.el.remove();
-            this.mowerItems.splice(i, 1);
-            this._flyText(taker.x, taker.y - 40, '🛒 拾取小推车！', '#9dff6b');
-            this._updateMowerBadge(taker);
-            if (taker === this.player || taker === this.player2) this.playSfx('pluck.mp3', 0.4);
-        }
-        // 放置：携带者走到自家已认领房间的门口格自动放下一台
+    // ===== v4.0.30：小推车=存活奖励——随身推车走到自家门口自动放置 =====
+    _updateMowerPlacement() {
+        const holders = this.allPlayers.filter(p => !p.isZombie && !p.dead && p.el1 && p.mowerCarry);
         for (const p of holders) {
-            if (!p.mowerCarry) continue;
             const c = Math.floor(p.x / this.gridSize), r = Math.floor(p.y / this.gridSize);
             const rm = this._ownedRooms(p).find(rm => rm.doorCol === c && rm.doorRow === r);
             if (!rm) continue;
@@ -3252,8 +3254,23 @@ class HauntedDorm {
     }
 
     _updateBlessing() {
+        // v4.0.30：僵尸方模式——AI 植物的存活奖励：每 90 秒自动发放，AI 自动挑选（推车双倍权重）
+        if (this.isZombieFaction) {
+            if (!this.over && this.gameTime >= this.aiBlessAt) {
+                this.aiBlessAt = this.gameTime + 90000;
+                for (const ai of this.ais) {
+                    if (ai.dead) continue;
+                    const weighted = [];
+                    for (const bl of HauntedDorm.BLESSINGS) weighted.push(bl, ...(bl.id === 'mower' ? [bl] : []));
+                    const pick = weighted[Math.floor(Math.random() * weighted.length)];
+                    pick.apply(this, ai);
+                    this._flyText(ai.x, ai.y - 46, '🎁 AI 存活奖励：' + pick.name, '#ffd54f');
+                }
+            }
+            return;
+        }
         // 计时触发（每 90 秒一次）
-        if (!this.blessing && !this.over && !this.isZombieFaction && this.gameTime >= this.blessingAt) {
+        if (!this.blessing && !this.over && this.gameTime >= this.blessingAt) {
             this._offerBlessings();
         }
         const b = this.blessing;
@@ -3553,7 +3570,7 @@ class HauntedDorm {
         // P1 Movement - 【SOC防冲突】
         // v4.0.16：菜单打开（建造菜单/升级拆除弹窗）时 P1 停止移动，防止选菜单时人物走位
         // v4.0.23：P1 倒下后尸体不再接受移动输入
-        const p1MenuBusy = this.kmenus[1].active || (this.popup && this.popup.style.display === 'block') || this.player.dead || !!this.blessing;
+        const p1MenuBusy = this.kmenus[1].active || (this.popup && this.popup.style.display === 'block') || this.player.dead || !!this.blessing || this._zombieFrozen(); // v4.0.30：观察期禁移动
         let vx1 = 0, vy1 = 0;
         const p1L = this.keys['a'] || this.keys['KeyA'], p1R = this.keys['d'] || this.keys['KeyD'], p1U = this.keys['w'] || this.keys['KeyW'], p1D = this.keys['s'] || this.keys['KeyS'];
         if (!p1MenuBusy) {
@@ -3579,7 +3596,7 @@ class HauntedDorm {
         // P2 Movement - 【SOC防冲突】
         if (this.player2 && !this.player2.dead) {
             // v4.0.16：P2 建造菜单打开时同样停止移动；祝福时亦停步
-            const p2MenuBusy = this.kmenus[2].active || !!this.blessing;
+            const p2MenuBusy = this.kmenus[2].active || !!this.blessing || this._zombieFrozen(); // v4.0.30：观察期禁移动
             let vx2 = 0, vy2 = 0;
             let moveSpeed2 = this.player2.speedBuffT > 0 ? 800 : 400;
             const p2PhysRoom = this._insideRoom(Math.floor(this.player2.x/this.gridSize), Math.floor(this.player2.y/this.gridSize));
@@ -3610,7 +3627,8 @@ class HauntedDorm {
         this._updateKMenus();
         this._updateBlessing(); // v4.0.19：祝福三选一（复用 _checkAnyKey，须在 keysJustPressed 清空前）
         this._updateMowers(dt); // v4.0.19：小推车触发与冲撞
-        this._updateMowerItems(); // v4.0.29：小推车道具拾取与门口放置
+        this._updateMowerPlacement(); // v4.0.30：随身推车走到自家门口自动放置
+        this._updateZombieFreeze(dt); // v4.0.30：僵尸玩家开局 10 秒观察期倒计时
         this._updateDmgBoard(); // v4.0.17：实时伤害榜（内部自带节流）
         this.keysJustPressed = {}; // 清空单帧按键缓存
 
