@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1791733200">
-    <link rel="stylesheet" href="css/haunted-dorm.css?v=1791733200">
+    <link rel="stylesheet" href="css/style.css?v=1791810851">
+    <link rel="stylesheet" href="css/haunted-dorm.css?v=1791810851">
 </head>
 <body>
     <div id="game-container">
@@ -68,7 +68,7 @@
                     <!-- Seeds will be injected here -->
                 </div>
                 <div style="display: flex; justify-content: center; gap: 20px;">
-                    <button id="btn-back" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 30px; font-size: 18px; font-family: monospace; font-weight: bold; color: white; cursor: pointer; border-radius: 10px; text-shadow: 1px 1px 2px black;">Return</button>
+                    <button id="btn-back" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 30px; font-size: 18px; font-family: monospace; font-weight: bold; color: white; cursor: pointer; border-radius: 10px; text-shadow: 1px 1px 2px black;">返回</button>
                     <button id="btn-lets-rock" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 40px; font-size: 20px; font-family: monospace; font-weight: bold; color: white; cursor: pointer; border-radius: 10px; opacity: 0.5; text-shadow: 1px 1px 2px black;" disabled>Let's Rock!</button>
                 </div>
             </div>
@@ -138,6 +138,30 @@
             #btn-vs .pkt-tag, #btn-dorm .pkt-tag { font-size: 11px; margin-top: 3px; letter-spacing: 3px; padding: 1px 8px; }
             #btn-vs .pkt-sub, #btn-dorm .pkt-sub { font-size: 12px; margin-top: 5px; line-height: 1.5; }
             /* v3.87.0：猛鬼宿舍不再使用专属配色，文字与其他模式卡完全一致 */
+            /* ===== v4.0.28 守屋卡片「守护大自然」插图：明亮草地上植物守护小队 ===== */
+            #btn-dorm .pkt-art.dorm { gap: 0; }
+            #btn-dorm .pkt-art.dorm .dorm-hero {
+                height: 100px; z-index: 2;
+                filter: drop-shadow(0 5px 5px rgba(30, 60, 10, 0.4));
+            }
+            #btn-dorm .pkt-art.dorm .dorm-side { height: 62px; z-index: 1; }
+            #btn-dorm .pkt-art.dorm .dorm-side-l { transform: translate(10px, 10px); }
+            #btn-dorm .pkt-art.dorm .dorm-side-r { transform: translate(-10px, 10px); }
+            #btn-dorm .pkt-art.dorm .dorm-leaf {
+                position: absolute; font-size: 20px; z-index: 3; opacity: 0.9;
+                filter: drop-shadow(1px 2px 2px rgba(20, 50, 10, 0.45));
+            }
+            #btn-dorm .pkt-art.dorm .dorm-leaf-l { left: 6px; top: 4px; transform: rotate(-24deg); }
+            #btn-dorm .pkt-art.dorm .dorm-leaf-r { right: 6px; top: 4px; transform: rotate(24deg) scaleX(-1); }
+            #btn-dorm .pkt-art.dorm .dorm-sun {
+                position: absolute; right: 10px; bottom: 6px; font-size: 17px; z-index: 3; opacity: 0.95;
+                filter: drop-shadow(0 0 5px rgba(255, 220, 80, 0.85));
+                animation: dorm-sun-glow 2.4s ease-in-out infinite;
+            }
+            @keyframes dorm-sun-glow {
+                0%, 100% { transform: scale(1); opacity: 0.85; }
+                50% { transform: scale(1.14); opacity: 1; }
+            }
             /* v3.87.0 猛鬼宿舍阵营弹窗：按钮名文字统一为同一颜色（不再绿/红区分），僵尸阵营按钮也用米黄底 */
             #dorm-role-modal .diff-btn .diff-name { color: #9a4a10 !important; text-shadow: 1px 1px 0 rgba(255,255,255,0.8); }
             #dorm-role-modal .diff-btn.diff-hell { border-color: #a14b18; background: linear-gradient(180deg, #fcebd4 0%, #f4d8ab 70%, #ecc189 100%); }
@@ -324,12 +348,16 @@
                         </div>
                     </button>
 
-                    <!-- v3.87.0 猛鬼宿舍：卡面改为「阳光菇养成 + 猛鬼来袭」（突出玩法特点），文字颜色与其他模式卡统一 -->
+                    <!-- v4.0.28 守屋卡片重做：弃用暗色截图封面，改为明亮草地「向日葵+高坚果+豌豆射手」守护组合
+                         （与其他模式卡同款原版手绘素材风，高坚果居中=守护家园，凸显守护大自然主题） -->
                     <button id="btn-dorm" class="mode-card" title="守屋大作战：大地图双人协作，建造植物防线，打倒僵尸即胜利！">
-                        <div class="pkt-art">
-                            <div class="vs-duel" style="padding: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 8px;">
-                                <img src="assets/images/UI/pvz_dorm_cover.png" alt="守屋大作战" style="width: 100%; height: 100%; object-fit: cover;">
-                            </div>
+                        <div class="pkt-art dorm">
+                            <span class="dorm-leaf dorm-leaf-l">🌿</span>
+                            <img src="assets/images/Plants/SunFlower/0.gif" alt="向日葵" class="dorm-side dorm-side-l">
+                            <img src="assets/images/Plants/TallNut/0.gif" alt="高坚果" class="dorm-hero">
+                            <img src="assets/images/Plants/Peashooter/0.gif" alt="豌豆射手" class="dorm-side dorm-side-r">
+                            <span class="dorm-leaf dorm-leaf-r">🌿</span>
+                            <span class="dorm-sun">☀️</span>
                         </div>
                         <div class="vs-text">
                             <div class="pkt-name">守屋大作战</div>
@@ -454,7 +482,7 @@
                     </button>
                 </div>
                 <div class="diff-foot">
-                    <button id="dorm-back" style="display:inline-flex; align-items:center; padding:6px 20px; font-family:'Kaiti SC',serif; font-size:16px; font-weight:700; letter-spacing:2px; color:#fff; cursor:pointer; background:#000; border:1px solid rgba(255,255,255,0.45); border-radius:8px; box-shadow:none;">返回</button>
+                    <button id="dorm-back">返回</button>
                 </div>
             </div>
         </div>
@@ -811,18 +839,18 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1791733200"></script>
-    <script src="js/Board.js?v=1791733200"></script>
-    <script src="js/entities/Entity.js?v=1791733200"></script>
-    <script src="js/entities/Plant.js?v=1791733200"></script>
-    <script src="js/entities/Zombie.js?v=1791733200"></script>
-    <script src="js/entities/Projectile.js?v=1791733200"></script>
-    <script src="js/entities/Sun.js?v=1791733200"></script>
-    <script src="js/managers/WaveManager.js?v=1791733200"></script>
-    <script src="js/managers/CollisionManager.js?v=1791733200"></script>
-    <script src="js/managers/EventManager.js?v=1791733200"></script>
-    <script src="js/GameLoop.js?v=1791733200"></script>
-    <script src="js/HelpGuide.js?v=1791733200"></script>
-    <script src="js/HauntedDorm.js?v=1791733200"></script>
+    <script src="js/InputManager.js?v=1791810851"></script>
+    <script src="js/Board.js?v=1791810851"></script>
+    <script src="js/entities/Entity.js?v=1791810851"></script>
+    <script src="js/entities/Plant.js?v=1791810851"></script>
+    <script src="js/entities/Zombie.js?v=1791810851"></script>
+    <script src="js/entities/Projectile.js?v=1791810851"></script>
+    <script src="js/entities/Sun.js?v=1791810851"></script>
+    <script src="js/managers/WaveManager.js?v=1791810851"></script>
+    <script src="js/managers/CollisionManager.js?v=1791810851"></script>
+    <script src="js/managers/EventManager.js?v=1791810851"></script>
+    <script src="js/GameLoop.js?v=1791810851"></script>
+    <script src="js/HelpGuide.js?v=1791810851"></script>
+    <script src="js/HauntedDorm.js?v=1791810851"></script>
 </body>
 </html>

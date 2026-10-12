@@ -474,8 +474,9 @@ body {
 .diff-btn.diff-hell .diff-desc { color: rgba(70, 10, 30, 0.78); }
 .diff-foot { margin-top: 20px; }
 /* 双人对战玩法弹窗（普通/融合正下方）的「返回主菜单」——与砸罐子/我是僵尸难度弹窗的同款木牌
-   （v3.81.2 曾把木牌错加到两处选卡页，v3.81.4 按用户澄清改回正确位置） */
-#diff-back, #zdiff-back, #vs-back {
+   （v3.81.2 曾把木牌错加到两处选卡页，v3.81.4 按用户澄清改回正确位置）
+   v4.0.28：守屋三弹窗（阵营/模式/皮肤）的返回键统一为同款木牌（用户：原来只是普通的字） */
+#diff-back, #zdiff-back, #vs-back, #dorm-faction-back, #dorm-mode-back, #dorm-back {
     font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif;
     font-size: 17px;
     font-weight: bold;
@@ -489,8 +490,10 @@ body {
     box-shadow: 0 4px 0 #241708, 0 6px 12px rgba(0,0,0,0.4);
     transition: transform 0.1s ease, filter 0.1s ease;
 }
-#diff-back:hover, #zdiff-back:hover, #vs-back:hover { filter: brightness(1.15); }
-#diff-back:active, #zdiff-back:active, #vs-back:active { transform: translateY(2px); box-shadow: 0 1px 0 #241708; }
+#diff-back:hover, #zdiff-back:hover, #vs-back:hover,
+#dorm-faction-back:hover, #dorm-mode-back:hover, #dorm-back:hover { filter: brightness(1.15); }
+#diff-back:active, #zdiff-back:active, #vs-back:active,
+#dorm-faction-back:active, #dorm-mode-back:active, #dorm-back:active { transform: translateY(2px); box-shadow: 0 1px 0 #241708; }
 
 /* ================= v3.5.2 砸罐子胜利弹窗(居中 modal) ================= */
 .vase-win-overlay {
