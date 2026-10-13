@@ -737,9 +737,10 @@ class HauntedDorm {
                 x: sx,
                 y: sy,
                 path: p || [],
-                sun: 0, spore: 0, hp: 100, maxHp: 100, actTimer: 5.0 + Math.random() * 3.0,
+                // v4.0.31：血量 100→300（不再一碰就死）、初始阳光 100（开局就能建造）、自动浇水（像正常人一样发育）
+                sun: 100, spore: 0, hp: 300, maxHp: 300, actTimer: 5.0 + Math.random() * 3.0,
                 isAi: true, targetRoom: rm, room: null, roleDef: roleDef,
-                icon: roleDef.icon, dead: false,
+                icon: roleDef.icon, dead: false, waterOn: true,
                 el1: document.createElement('div')
             };
             ai.el1.className = 'entity avatar';
@@ -749,6 +750,13 @@ class HauntedDorm {
             ai.el1.innerHTML = `<img src="${ai.icon}" style="${ai.roleDef.imgStyle || ''}">` +
                                `<div style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); color:${color}; font-size:18px; font-weight:bold; text-shadow:1px 1px 2px black, -1px -1px 2px black; white-space:nowrap;">人机 - ${ai.roleDef.name}</div>`;
             ai.el1.style.filter = `drop-shadow(0 0 10px ${color})`;
+            // v4.0.31：AI 血条（受伤时显示）
+            const aiHb = document.createElement('div');
+            aiHb.className = 'hp-bar-bg';
+            aiHb.style.cssText = 'top:-16px; display:none;';
+            aiHb.innerHTML = '<div class="hp-bar-fg" style="width:100%; background:#7cff6b;"></div>';
+            ai.el1.appendChild(aiHb);
+            ai.hpBg = aiHb; ai.hpFg = aiHb.firstChild;
             this.world1.appendChild(ai.el1);
             this.ais.push(ai);
             this.allPlayers.push(ai);
@@ -1121,14 +1129,19 @@ class HauntedDorm {
                     const frontTile = emptyTiles[0]; // 最靠近门
                     const backTile = emptyTiles[emptyTiles.length - 1]; // 靠后
                     
+                    // v4.0.31：AI 持续建造——武器上限 2→4、孢子菇 1→2、新增大蒜布防（诊断发现开局预置满编后 AI 永远不再新建）
                     const peaCost = HauntedDorm.DEFS['peashooter'].cost || 0;
-                    if (ai.sun >= peaCost && peas.length < 2) {
+                    if (ai.sun >= peaCost && peas.length < 4) {
                         actions.push({ type: 'plant', id: 'peashooter', cost: peaCost, c: frontTile.c, r: frontTile.r, weight: 1 });
                     }
                     const puffCost = HauntedDorm.DEFS['puffshroom'].cost || 200;
                     const sporePlants = myPlants.filter(p => p.def.spore);
-                    if (ai.sun >= puffCost && sporePlants.length < 1) {
+                    if (ai.sun >= puffCost && sporePlants.length < 2) {
                         actions.push({ type: 'plant', id: 'puffshroom', cost: puffCost, c: backTile.c, r: backTile.r, weight: 2 });
+                    }
+                    const garlics = myPlants.filter(p => p.def.isGarlic);
+                    if (ai.sun >= 100 && garlics.length < 1 && emptyTiles.length > 1) {
+                        actions.push({ type: 'plant', id: 'garlic', cost: 100, c: frontTile.c, r: frontTile.r, weight: 2 });
                     }
                 }
 
@@ -1885,7 +1898,7 @@ class HauntedDorm {
         // v4.0.20：白天蘑菇睡觉 → 浇水产出 ×2 作为发育补偿；与丰收祝福 ×3 可叠加（最高 ×6）
         const amt = (this.waterBoostT > 0 ? 3 : 1) * (!this.isZombieFaction && !this.isNight ? 2 : 1);
         this.addSun(amt, p);
-        this.playSfx('plant_water.mp3', 0.4);
+        if (p === this.player || p === this.player2) this.playSfx('plant_water.mp3', 0.4); // v4.0.31：AI 自动浇水不播声
         let fedAny = false;
         for (const pl of this.plants) {
             const px = pl.c * 80 + 40, py = pl.r * 80 + 40;
@@ -3642,6 +3655,24 @@ class HauntedDorm {
             if (zbTarget && !zbTarget.dead && Math.hypot(ai.x - zbTarget.x, ai.y - zbTarget.y) < 350) {
                 zombieNear = true;
             }
+            // v4.0.31b：无房流浪 AI 遇僵尸 → 背向僵尸主动撤离（原站桩蹲避会被围殴到团灭）；逃到安全距离后恢复去房间
+            if (zombieNear && !ai.room && zbTarget && !zbTarget.dead) {
+                const dToZb = Math.hypot(ai.x - zbTarget.x, ai.y - zbTarget.y);
+                if (dToZb < 130) { // 贴脸才逃——半径太大会被玩家站着不动无限放风筝，永远进不了房
+                    ai.fleeT = (ai.fleeT || 0) - dt;
+                    if (ai.fleeT <= 0 || !ai.fleeing) {
+                        ai.fleeT = 2; ai.fleeing = true;
+                        const nx = ai.x + (ai.x - zbTarget.x) / (dToZb || 1) * 400;
+                        const ny = ai.y + (ai.y - zbTarget.y) / (dToZb || 1) * 400;
+                        const p2 = this._findPath(ai.x, ai.y,
+                            Math.max(80, Math.min(this.worldWidth - 80, nx)),
+                            Math.max(80, Math.min(this.worldHeight - 80, ny)));
+                        if (p2 && p2.length > 0) { ai.path = p2; ai.speed = 300; }
+                    }
+                } else if (dToZb > 320) {
+                    ai.fleeing = false; ai.speed = 200; // 已安全，恢复常速
+                }
+            }
 
             // 【新增】人机抢盲盒机制
             if (!ai.dead && this.ghostSpawned && this.airdrops && this.airdrops.length > 0) {
@@ -3690,12 +3721,18 @@ class HauntedDorm {
                     ai.room = null;
                     this._flyText(ai.x, ai.y, "门破了！快跑！", "#ff5252");
                     
-                    const candidateRooms = this.rooms.filter(r => {
+                    let candidateRooms = this.rooms.filter(r => {
                         if (r === oldRoom) return false;
                         const hasDoor = this.getPlantAt(r.doorCol*80, r.doorRow*80);
                         if (r.owners.length >= r.capacity && !hasDoor) return false; // 不去没门且被占的死胡同
                         return true;
                     });
+                    // v4.0.31：优先逃向门口 250px 内没有僵尸玩家的房间（不再往枪口上撞）
+                    if (this.isZombieFaction && this.player && !this.player.dead) {
+                        const safeRooms = candidateRooms.filter(r =>
+                            Math.hypot((r.doorCol * 80 + 40) - this.player.x, (r.doorRow * 80 + 40) - this.player.y) > 250);
+                        if (safeRooms.length > 0) candidateRooms = safeRooms;
+                    }
                     if (candidateRooms.length > 0) {
                         ai.targetRoom = candidateRooms[Math.floor(Math.random() * candidateRooms.length)];
                         const p = this._findPath(ai.x, ai.y, ai.targetRoom.frontX, ai.targetRoom.frontY);
@@ -3758,7 +3795,12 @@ class HauntedDorm {
                 const dx = target.x - ai.x;
                 const dy = target.y - ai.y;
                 const dist = Math.hypot(dx, dy);
-                if (dist > 5) {
+                // v4.0.31b：无房流浪 AI 感到僵尸逼近（180 内）→ 就地停步并丢弃路点（安全后由重试逻辑重新寻路去房间），
+                // 不再撞进僵尸怀里；原「保留路点站桩」会让 AI 永远卡在路上不进房
+                if (dist > 5 && zbTarget && !zbTarget.dead && !ai.room && !isFleeing &&
+                    Math.hypot(ai.x - zbTarget.x, ai.y - zbTarget.y) < 180) {
+                    ai.path = [];
+                } else if (dist > 5) {
                     ai.x += (dx / dist) * 200 * dt; // speed 200
                     ai.y += (dy / dist) * 200 * dt;
                 } else {
@@ -3908,7 +3950,7 @@ class HauntedDorm {
                 this._announce(`👻 你已进化为【${cfg.name}】！`, 'finalwave.mp3', true);
             }
             
-            // 接触幸存者造成秒杀（抓破门后吃人）
+            // v4.0.31：接触幸存者改为按血量啃咬——AI 有血量能扛（不再一碰到就死），隔门免疫保留
             // 开局前 5 秒无敌保护，防止一出生人机就被吃掉
             const victims = [...this.ais, ...(this.player2 ? [this.player2] : [])];
             for (const v of victims) {
@@ -3922,15 +3964,27 @@ class HauntedDorm {
                         if (doorPlant && zRm !== vRm) safeBehindDoor = true;
                     }
                     if (!safeBehindDoor) {
-                        v.dead = true;
-                        if (v.el1) v.el1.remove();
-                        this.playSfx('gulp.mp3', 0.8);
-                        this.kills++;
-                        this._announce(`🩸 击杀了一名幸存者！`, 'finalwave.mp3');
-                        if (victims.every(a => a.dead)) {
-                            this.gameOver(true); // 僵尸赢了
+                        v.biteT = (v.biteT || 0) + dt;
+                        if (v.biteT >= 1.5) {
+                            v.biteT = 0;
+                            const dmg = Math.round((80 + 40 * (this.player.level - 1)) * (this.player.speedBuffT > 0 ? 1.6 : 1.0));
+                            v.hp -= dmg;
+                            v.fleeing = true; v.fleeT = 0; // v4.0.31b：被咬立即刷新逃离目标
+                            if (v.hpBg) { v.hpBg.style.display = 'block'; v.hpFg.style.width = Math.max(0, v.hp / v.maxHp * 100) + '%'; }
+                            this._flyText(v.x, v.y - 26, '-' + dmg + ' 😈', '#ff5252');
+                            this.playSfx('chomp.mp3', 0.4);
+                            if (v.hp <= 0 && !v.dead) {
+                                this.kills++;
+                                this._announce('🩸 击杀了一名幸存者！', 'finalwave.mp3');
+                                this._checkPlayerDown(v);
+                                if (victims.every(a => a.dead)) {
+                                    this.gameOver(true); // 僵尸赢了
+                                }
+                            }
                         }
                     }
+                } else if (!v.dead && v.biteT) {
+                    v.biteT = 0; // 离开接触范围重置咬合计时
                 }
             }
         }
