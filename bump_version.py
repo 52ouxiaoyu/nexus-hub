@@ -34,6 +34,11 @@ SKIP_DIRS = {"node_modules", "_orig"}
 def bump(label=None):
     new_asset_version = int(time.time())
     new_version_label = label or f"v3.2.{new_asset_version % 1000}"
+    # 防御：version 字段直接显示在开始菜单版本条上，必须是短标签。
+    # 曾经误把整段 commit 说明当 label 传入，导致版本条占满屏宽。
+    if len(new_version_label) > 30:
+        print(f"⚠️ label 过长({len(new_version_label)}字符)，已截断为 30 字符；详细说明请写进 git commit message")
+        new_version_label = new_version_label[:30]
     new_build_date = time.strftime("%Y-%m-%d")
 
     # 1. Update version.json
