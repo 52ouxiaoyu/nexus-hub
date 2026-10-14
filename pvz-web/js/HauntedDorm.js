@@ -181,6 +181,9 @@ class HauntedDorm {
         ];
     }
     static get GHOST_MAX_LV() { return HauntedDorm.GHOST_LEVELS.length; }
+    // v4.0.36：真人僵尸玩家血量倍率——AI 植物火力（豌豆/投掷/地刺/毁灭菇真伤）对 500 血玩家几秒融化（用户实报），
+    // 仅放大真人玩家血池，AI 僵尸小怪不变；所有伤害源按数值照扣，等效生存 ×3，地图中心 %回血自动同步放大
+    static get PLAYER_HP_MUL() { return 3; }
 
     // v4.0.26：opts 支持主站 index.html 内嵌启动（startHauntedDorm({mode,role1,role2,faction})）；
     // 未传 opts 的键回退到 URL 参数（旧独立页 haunted-dorm.html 直链兼容，行为不变）
@@ -277,8 +280,8 @@ class HauntedDorm {
         
         if (this.isZombieFaction) {
             const zCfg = HauntedDorm.GHOST_LEVELS[0];
-            this.player.hp = zCfg.hp;
-            this.player.maxHp = zCfg.hp;
+            this.player.hp = zCfg.hp * HauntedDorm.PLAYER_HP_MUL; // v4.0.36：真人玩家血池 ×3
+            this.player.maxHp = zCfg.hp * HauntedDorm.PLAYER_HP_MUL;
             this.player.x = this.worldWidth ? this.worldWidth / 2 : cx;
             this.player.y = this.worldHeight ? this.worldHeight / 2 : cy;
             this.player.isZombie = true;
@@ -4037,8 +4040,8 @@ class HauntedDorm {
                 this.player.level = targetLevel;
                 this.ghostLevel = this.player.level; // 同步给AI升级判断
                 const cfg = HauntedDorm.GHOST_LEVELS[this.player.level - 1];
-                this.player.maxHp = cfg.hp;
-                this.player.hp = Math.min(this.player.maxHp, this.player.hp + cfg.hp * 0.4); // 升级奖励回血
+                this.player.maxHp = cfg.hp * HauntedDorm.PLAYER_HP_MUL; // v4.0.36：升级同步 ×3
+                this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.player.maxHp * 0.4); // 升级奖励回血（40% 最大血）
                 this.setHp();
                 const im = this.player.el1.querySelector('img');
                 if (im) im.src = 'assets/images/' + cfg.img;
