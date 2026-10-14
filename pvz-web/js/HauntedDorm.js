@@ -202,6 +202,15 @@ class HauntedDorm {
         this.faction = gp('faction') || (opts.isZombieFaction ? 'zombie' : 'plant');
         this.isZombieFaction = (this.faction === 'zombie') || !!opts.isZombieFaction;
 
+        // v4.0.35：同页复玩 HUD 还原——僵尸局会改写 #hud-p1（控制行换僵尸文案、属性行 id 改 zombie-stats-bar
+        // 并整体覆盖内容，阳光/孢子 span 被销毁），destroy 未还原导致下一局植物方 P1 HUD 永久显示僵尸属性（用户实报）。
+        // 开局先把 P1 HUD 恢复出厂结构（首次捕获 pristine 模板，之后每局重放；僵尸分支随后再按阵营改写）。
+        const hudP1El = document.getElementById('hud-p1');
+        if (hudP1El) {
+            if (!window._dormP1HudTpl) window._dormP1HudTpl = hudP1El.innerHTML;
+            hudP1El.innerHTML = window._dormP1HudTpl;
+        }
+
         // v4.0.26：实例代际号——主站内嵌可重复开局，旧实例的 rAF 循环检测到代际变化自动停转
         window.__dormGen = (window.__dormGen || 0) + 1;
         this._dormGen = window.__dormGen;
@@ -4680,6 +4689,9 @@ class HauntedDorm {
         }
         this._closePopup();
         this._closePlantMenu();
+        // v4.0.35：退出时还原 P1 HUD 出厂结构（防僵尸局的控制行/属性行残留到同页下一局）
+        const hudP1El = document.getElementById('hud-p1');
+        if (hudP1El && window._dormP1HudTpl) hudP1El.innerHTML = window._dormP1HudTpl;
         this.keys = {};
         this.keysJustPressed = {};
         if (this.world1) this.world1.innerHTML = '';
