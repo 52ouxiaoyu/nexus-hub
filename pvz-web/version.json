@@ -1,6 +1,6 @@
 {
-  "version": "v4.0.32-版本条精简",
+  "version": "v4.0.33-大蒜守卫与AI强化",
   "build": "2026-10-14",
   "feature": "v4.0.32：版本条精简——开始菜单左下角版本条恢复短标签（v4.0.29~31 误把整段提交说明写进 version 字段导致超长），bump_version.py 加 30 字符截断防御，feature 字段同步精简为一句话概括",
-  "assetVersion": 1791983025
+  "assetVersion": 1791984551
 }

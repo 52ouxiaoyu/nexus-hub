@@ -737,8 +737,8 @@ class HauntedDorm {
                 x: sx,
                 y: sy,
                 path: p || [],
-                // v4.0.31：血量 100→300（不再一碰就死）、初始阳光 100（开局就能建造）、自动浇水（像正常人一样发育）
-                sun: 100, spore: 0, hp: 300, maxHp: 300, actTimer: 5.0 + Math.random() * 3.0,
+                // v4.0.33：血量 300→500（AI 队友存活更久）+ 血条常显（像真人一样可见掉血过程）
+                sun: 100, spore: 0, hp: 500, maxHp: 500, actTimer: 5.0 + Math.random() * 3.0,
                 isAi: true, targetRoom: rm, room: null, roleDef: roleDef,
                 icon: roleDef.icon, dead: false, waterOn: true,
                 el1: document.createElement('div')
@@ -753,7 +753,7 @@ class HauntedDorm {
             // v4.0.31：AI 血条（受伤时显示）
             const aiHb = document.createElement('div');
             aiHb.className = 'hp-bar-bg';
-            aiHb.style.cssText = 'top:-16px; display:none;';
+            aiHb.style.cssText = 'top:-16px; display:block;'; // v4.0.33：血条常显
             aiHb.innerHTML = '<div class="hp-bar-fg" style="width:100%; background:#7cff6b;"></div>';
             ai.el1.appendChild(aiHb);
             ai.hpBg = aiHb; ai.hpFg = aiHb.firstChild;
@@ -1140,7 +1140,7 @@ class HauntedDorm {
                         actions.push({ type: 'plant', id: 'puffshroom', cost: puffCost, c: backTile.c, r: backTile.r, weight: 2 });
                     }
                     const garlics = myPlants.filter(p => p.def.isGarlic);
-                    if (ai.sun >= 100 && garlics.length < 1 && emptyTiles.length > 1) {
+                    if (ai.sun >= 100 && garlics.length < 2 && emptyTiles.length > 1) { // v4.0.33：大蒜上限 2
                         actions.push({ type: 'plant', id: 'garlic', cost: 100, c: frontTile.c, r: frontTile.r, weight: 2 });
                     }
                 }
@@ -3090,6 +3090,61 @@ class HauntedDorm {
         }
     }
 
+    // ===== v4.0.33：大蒜守卫——坚果墙/门板血量过半，大蒜飞过去臭晕所有进攻僵尸 =====
+    _updateGarlicGuard(dt) {
+        if (this.over || !this.plants) return;
+        for (const g of this.plants) {
+            if (!g.def || !g.def.isGarlic) continue;
+            if (g.guardCd > 0) { g.guardCd -= dt; continue; }
+            const rm = this._insideRoom(g.c, g.r);
+            if (!rm) continue;
+            // 找本房间内血量过半的坚果墙（含门板）
+            let nut = null;
+            for (const p of this.plants) {
+                if (p === g || p.hp <= 0) continue;
+                if (!(p.isDoor || p.def.name === '坚果墙')) continue;
+                if (p.hp > p.maxHp * 0.5) continue;
+                if (this._insideRoom(p.c, p.r) !== rm && !(p.c === rm.doorCol && p.r === rm.doorRow)) continue;
+                nut = p; break;
+            }
+            if (!nut) continue;
+            // 大蒜飞到坚果旁最近的空格（找不到空格则短暂冷却后重试）
+            const nx = nut.c * 80 + 40, ny = nut.r * 80 + 40;
+            let spot = null;
+            for (const [dc, dr] of [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
+                const c = nut.c + dc, r = nut.r + dr;
+                if (this.walls.has(`${c},${r}`)) continue;
+                if (this.plants.some(p => p.c === c && p.r === r && p.hp > 0)) continue;
+                // v4.0.33：落点避开有僵尸的格——否则大蒜落在僵尸脚下，僵尸会被植物碰撞卡死走不开
+                if (this.zombies.some(z => !z.dead && Math.floor(z.x / 80) === c && Math.floor(z.y / 80) === r)) continue;
+                spot = { c, r }; break;
+            }
+            if (!spot) { g.guardCd = 3; continue; }
+            g.guardCd = 45; // 触发后冷却
+            g.c = spot.c; g.r = spot.r;
+            if (g.el1) {
+                g.el1.style.transition = 'all 0.8s ease-in-out';
+                g.el1.style.left = (spot.c * 80) + 'px';
+                g.el1.style.top = (spot.r * 80) + 'px';
+                setTimeout(() => { if (g.el1) g.el1.style.transition = 'none'; }, 850);
+            }
+            this._flyText(nx, ny - 40, '🧄 大蒜驰援！', '#c8ff6b');
+            // 臭晕坚果周围所有进攻僵尸：晕 2.5 秒 + 20 秒内不敢回此目标
+            let hit = 0;
+            for (const zb of this.zombies) {
+                if (zb.dead) continue;
+                if (Math.hypot(zb.x - nx, zb.y - ny) < 120) {
+                    zb.stunT = Math.max(zb.stunT || 0, 2.5);
+                    zb.garlicScareT = 20;
+                    zb.targetSwitched = true;
+                    hit++;
+                    this._flyText(zb.x, zb.y - 26, '🤢 臭晕！20 秒不敢再来！', '#9dff6b');
+                }
+            }
+            if (hit > 0) this.playSfx('gulp.mp3', 0.5);
+        }
+    }
+
     // ===== v4.0.30：小推车=存活奖励——随身推车走到自家门口自动放置 =====
     _updateMowerPlacement() {
         const holders = this.allPlayers.filter(p => !p.isZombie && !p.dead && p.el1 && p.mowerCarry);
@@ -3642,6 +3697,7 @@ class HauntedDorm {
         this._updateMowers(dt); // v4.0.19：小推车触发与冲撞
         this._updateMowerPlacement(); // v4.0.30：随身推车走到自家门口自动放置
         this._updateZombieFreeze(dt); // v4.0.30：僵尸玩家开局 10 秒观察期倒计时
+        this._updateGarlicGuard(dt); // v4.0.33：大蒜守卫——坚果墙过半血自动飞去臭晕僵尸
         this._updateDmgBoard(); // v4.0.17：实时伤害榜（内部自带节流）
         this.keysJustPressed = {}; // 清空单帧按键缓存
 
@@ -3649,9 +3705,17 @@ class HauntedDorm {
         for (const ai of this.ais) {
             if (ai.dead) continue;
             
-            // 发现僵尸逻辑
+            // 发现僵尸逻辑（v4.0.33：原只检测 zombies[0] 一只——其他僵尸贴脸也发现不了，AI 会撞进僵尸群里）
             let zombieNear = false;
-            const zbTarget = this.isZombieFaction ? this.player : this.zombies[0];
+            let zbTarget = this.isZombieFaction ? this.player : null;
+            if (!this.isZombieFaction) {
+                let bestD = Infinity;
+                for (const z of this.zombies) {
+                    if (z.dead) continue;
+                    const d = Math.hypot(ai.x - z.x, ai.y - z.y);
+                    if (d < bestD) { bestD = d; zbTarget = z; }
+                }
+            }
             if (zbTarget && !zbTarget.dead && Math.hypot(ai.x - zbTarget.x, ai.y - zbTarget.y) < 350) {
                 zombieNear = true;
             }
@@ -4314,6 +4378,12 @@ class HauntedDorm {
                 }
             }
 
+            // v4.0.33：被大蒜臭晕恐吓——20 秒内不回此目标，直接走开去别处
+            if (zb.garlicScareT > 0) {
+                zb.garlicScareT -= dt;
+                targetX = this.worldWidth / 2;
+                targetY = 200;
+            }
             // 残血回城逻辑（仅主幽灵僵尸逃跑回血，尸潮小怪与僵王机甲决死进攻不逃跑）
             if (!zb.isMinion && !zb.isBoss && zb.hp < zb.maxHp * 0.3) zb.retreating = true;
             if (zb.hp >= zb.maxHp) zb.retreating = false;
@@ -4385,7 +4455,7 @@ class HauntedDorm {
                 const probeX = zb.x + dx * 25;
                 const probeY = zb.y + dy * 25;
                 const atkPlant = this.getPlantAt(probeX, probeY);
-                if (atkPlant && !atkPlant.def.ground && !zb.retreating) {
+                if (atkPlant && !atkPlant.def.ground && !zb.retreating && !(zb.garlicScareT > 0)) { // v4.0.33：被大蒜臭吓的僵尸径直走开不啃食
                     // 站定慢啃：每 2.4s 一口，一口一口咬
                     zb.biteT = (zb.biteT || 0) + dt;
                     if (zb.biteT >= BITE_CD) {
