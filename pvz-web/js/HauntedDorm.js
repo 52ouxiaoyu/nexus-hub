@@ -1273,10 +1273,14 @@ class HauntedDorm {
     }
 
     // v4.0.15：修复严重 bug——调用处传了第二参 p（双人模式 P2 购买/升级/拆除退款），旧定义却忽略它，全部扣到/加到 P1 头上
+    // v4.0.38：AI 产出也走 addSun，旧判定「非 P2 一律写 sun1」把 AI 的阳光写进了 P1 显示框——P1 阳光随 AI 产出不停乱跳（用户实报）
+    // 只有点名是真人（P1/P2）才刷对应 DOM，AI 的增减不碰 HUD
     addSun(n, p) {
         p = p || this.player;
         p.sun = Math.max(0, p.sun + n);
-        const el = document.getElementById(p === this.player2 ? 'sun2' : 'sun1');
+        let el = null;
+        if (p === this.player2) el = document.getElementById('sun2');
+        else if (p === this.player) el = document.getElementById('sun1');
         if (el) el.innerText = p.sun;
         this._refreshPopupCurrency();
     }
@@ -1284,7 +1288,9 @@ class HauntedDorm {
     addSpore(n, p) {
         p = p || this.player;
         p.spore = Math.max(0, p.spore + n);
-        const el = document.getElementById(p === this.player2 ? 'spore2' : 'spore1');
+        let el = null;
+        if (p === this.player2) el = document.getElementById('spore2');
+        else if (p === this.player) el = document.getElementById('spore1');
         if (el) el.innerText = p.spore;
         this._refreshPopupCurrency();
     }
