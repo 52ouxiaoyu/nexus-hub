@@ -3719,19 +3719,42 @@ class HauntedDorm {
             if (zbTarget && !zbTarget.dead && Math.hypot(ai.x - zbTarget.x, ai.y - zbTarget.y) < 350) {
                 zombieNear = true;
             }
-            // v4.0.31b：无房流浪 AI 遇僵尸 → 背向僵尸主动撤离（原站桩蹲避会被围殴到团灭）；逃到安全距离后恢复去房间
+            // v4.0.34：无房流浪 AI 遇僵尸 → 直接冲进房间避难（原「背向逃向地图边缘」会把 AI 赶到场地外卡死，永远进不了房）
             if (zombieNear && !ai.room && zbTarget && !zbTarget.dead) {
                 const dToZb = Math.hypot(ai.x - zbTarget.x, ai.y - zbTarget.y);
                 if (dToZb < 130) { // 贴脸才逃——半径太大会被玩家站着不动无限放风筝，永远进不了房
                     ai.fleeT = (ai.fleeT || 0) - dt;
                     if (ai.fleeT <= 0 || !ai.fleeing) {
                         ai.fleeT = 2; ai.fleeing = true;
-                        const nx = ai.x + (ai.x - zbTarget.x) / (dToZb || 1) * 400;
-                        const ny = ai.y + (ai.y - zbTarget.y) / (dToZb || 1) * 400;
-                        const p2 = this._findPath(ai.x, ai.y,
-                            Math.max(80, Math.min(this.worldWidth - 80, nx)),
-                            Math.max(80, Math.min(this.worldHeight - 80, ny)));
-                        if (p2 && p2.length > 0) { ai.path = p2; ai.speed = 300; }
+                        // 逃进房间：优先自己分到的目标房，其次最近的可用空房（避开玩家所在/已认领的房）
+                        const pPhysRoom = this._insideRoom(Math.floor(this.player.x / this.gridSize), Math.floor(this.player.y / this.gridSize));
+                        const canEnter = (r) => r && r.owners.length < r.capacity &&
+                            r !== this.player.room && r !== this.player.room2 && r !== pPhysRoom;
+                        let refuge = canEnter(ai.targetRoom) ? ai.targetRoom : null;
+                        if (!refuge) {
+                            const cand = this.rooms.filter(r => canEnter(r) &&
+                                Math.hypot((r.doorCol * 80 + 40) - zbTarget.x, (r.doorRow * 80 + 40) - zbTarget.y) > 200);
+                            cand.sort((a, b) =>
+                                Math.hypot((a.doorCol * 80 + 40) - ai.x, (a.doorRow * 80 + 40) - ai.y) -
+                                Math.hypot((b.doorCol * 80 + 40) - ai.x, (b.doorRow * 80 + 40) - ai.y));
+                            if (cand.length > 0) refuge = cand[0];
+                        }
+                        if (refuge) {
+                            ai.targetRoom = refuge;
+                            const p2 = this._findPath(ai.x, ai.y, refuge.frontX, refuge.frontY);
+                            if (p2 && p2.length > 0) {
+                                p2.push({ x: (refuge.x + refuge.tpl.beds[0].c) * this.gridSize + 40, y: (refuge.y + refuge.tpl.beds[0].r) * this.gridSize + 40 });
+                                ai.path = p2; ai.speed = 300;
+                            }
+                        } else {
+                            // 无房可逃的兜底：背向僵尸撤到安全点（保留 v4.0.31b 行为）
+                            const nx = ai.x + (ai.x - zbTarget.x) / (dToZb || 1) * 400;
+                            const ny = ai.y + (ai.y - zbTarget.y) / (dToZb || 1) * 400;
+                            const p2 = this._findPath(ai.x, ai.y,
+                                Math.max(80, Math.min(this.worldWidth - 80, nx)),
+                                Math.max(80, Math.min(this.worldHeight - 80, ny)));
+                            if (p2 && p2.length > 0) { ai.path = p2; ai.speed = 300; }
+                        }
                     }
                 } else if (dToZb > 320) {
                     ai.fleeing = false; ai.speed = 200; // 已安全，恢复常速
@@ -3859,14 +3882,15 @@ class HauntedDorm {
                 const dx = target.x - ai.x;
                 const dy = target.y - ai.y;
                 const dist = Math.hypot(dx, dy);
-                // v4.0.31b：无房流浪 AI 感到僵尸逼近（180 内）→ 就地停步并丢弃路点（安全后由重试逻辑重新寻路去房间），
-                // 不再撞进僵尸怀里；原「保留路点站桩」会让 AI 永远卡在路上不进房
+                // v4.0.34：原「180 内丢路点蹲避」会被僵尸玩家站在旁边无限卡死在场地外——
+                // 改为加速冲向房间（路点本来通向房内床边，房间就是避难所，进去才算安全）
                 if (dist > 5 && zbTarget && !zbTarget.dead && !ai.room && !isFleeing &&
                     Math.hypot(ai.x - zbTarget.x, ai.y - zbTarget.y) < 180) {
-                    ai.path = [];
+                    ai.speed = 300;
                 } else if (dist > 5) {
-                    ai.x += (dx / dist) * 200 * dt; // speed 200
-                    ai.y += (dy / dist) * 200 * dt;
+                    const spd = ai.speed || 200; // v4.0.34：速度字段真正生效（原硬编码 200，「极速逃生」从未加速）
+                    ai.x += (dx / dist) * spd * dt;
+                    ai.y += (dy / dist) * spd * dt;
                 } else {
                     ai.path.shift(); // 抵达当前路点，切下一个
                     // 彻底抵达床位，宣誓主权
