@@ -1116,10 +1116,7 @@ class HauntedDorm {
                             }
                         }
                     }
-                    // 独立修门逻辑：任何门板受伤且有阳光时均可修补，大残时高权重
-                    if (p.isDoor && p.hp < p.maxHp * 0.9 && ai.sun >= 20) {
-                        actions.push({ type: 'repair', pl: p, cost: 20, weight: (p.hp < p.maxHp * 0.5 ? 40 : 15) });
-                    }
+                    // v4.0.37：删除「AI 修补」——门板受伤 AI 花 20 阳光瞬间回 800 血，用户反馈太难（僵尸啃门白啃）
                 }
                 
                 // 2. 尝试种武器与孢子小喷菇
@@ -1186,12 +1183,8 @@ class HauntedDorm {
                         ai.sun -= chosen.cost;
                         this.spawnPlant(chosen.c, chosen.r, chosen.id, true, ai);
                         this._flyText(chosen.c * 80 + 40, chosen.r * 80, `AI 补门！`, '#bfa8e0');
-                    } else if (chosen.type === 'repair') {
-                        ai.sun -= chosen.cost;
-                        chosen.pl.hp = Math.min(chosen.pl.maxHp, chosen.pl.hp + 800);
-                        this._flyText(chosen.pl.c * 80 + 40, chosen.pl.r * 80, "AI 修补！", "#0f0");
-                        if (Math.random() < 0.3) this._say(ai, ["门快碎了，吓尿了，赶紧修修！", "僵尸牙口真好，门都啃秃了！", "门在人在，门亡我跑！"][Math.floor(Math.random()*3)]);
                     }
+                    // v4.0.37：repair 分支已随「AI 修补」机制一并删除
                 }
         }
     }
