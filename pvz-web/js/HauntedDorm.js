@@ -2614,16 +2614,18 @@ class HauntedDorm {
             const rm = this._insideRoom(pl.c, pl.r);
             const owner = pl.owner || ((rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : null); // v4.0.23：按种植者记账
             if (!owner || owner.dead) continue;
+            if (owner.isAi) continue; // v4.0.45：削人机——人机的产出类植物（向日葵/小喷菇等）不再自动产资源，人机主要靠开局资金+事件奖励行动
             if (owner === this.player && (this.playerAngelic || this.playerTraitor)) continue; // v4.0.44：天使无产出；内鬼不再享受植物供奉
             const def = pl.def;
             const wx = pl.c * 80 + 40, wy = pl.r * 80 + 40;
             // v4.0.39：阳光系（nightOnly）白天停摆——只在夜晚产阳光（僵尸阵营无昼夜，不受限）
             if (def.produce && def.nightOnly && !this._shroomAwake()) continue;
-            // v4.0.20：菇类（孢子线）白天打盹不产（AI 浇水开关免疫；旧「打盹保底 +1☀」已随阳光重构移除）
-            if (!this._shroomAwake() && this._isShroom(def) && !owner.isAi) continue;
+            // v4.0.20：菇类（孢子线）白天打盹不产
+            if (!this._shroomAwake() && this._isShroom(def)) continue;
 
-            // 只有站得近才产出（AI 永远在房间里所以始终满足，玩家必须在房间附近）
-            if (Math.hypot(wx - owner.x, wy - owner.y) > 300) continue;
+            // v4.0.45：房间内的植物一律常产（用户：「在房间里的所有东西，无论人在不在身边，都应该处于在浇水的状态」），不再要求主人贴身；
+            // 只有房外植物（野外地堡）仍需主人在 300px 内照看才产出
+            if (!rm && Math.hypot(wx - owner.x, wy - owner.y) > 300) continue;
 
             const boost = this.waterBoostT > 0 ? 2 : 1; // v4.0.39：丰收祝福改「全植物产出 ×2」
             if (def.produce) {
