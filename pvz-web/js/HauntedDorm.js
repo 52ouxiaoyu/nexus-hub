@@ -14,7 +14,7 @@ class HauntedDorm {
     // ===== 植物图鉴（配方唯一，绝不撞衫）=====
     static get DEFS() {
         return {
-            // —— 阳光系 (v4.0.39：只在夜晚产阳光、每 0.4s 一跳、无需浇水按键；产 1→512 翻倍，升费 25/50/100/200 后 800☀+16🦠 起翻倍) ——
+            // —— 阳光系 (v4.0.39：每 0.4s 一跳、无需浇水按键；产 1→512 翻倍，升费 25/50/100/200 后 800☀+16🦠 起翻倍；v4.0.46：作息反转——白天醒着产阳光，夜晚熄灯睡觉) ——
             sunshroom:     { tier: 1, name: '阳光菇',   img: 'Plants/SunShroom/0.gif',   hp: 1000, cost: 0, nightOnly: true,
                              produce: { sun: 1, every: 0.4 }, up: { cost: 25, to: 'bigsunshroom' } },
             bigsunshroom:  { tier: 2, name: '大阳光菇', img: 'Plants/SunShroom/0.gif',   hp: 1500, cost: 0, scale: 1.2, nightOnly: true,
@@ -143,13 +143,13 @@ class HauntedDorm {
             ultimatefirespikeweed: { name: '终极火焰地刺', img: 'Plants/Spikerock/Spikerock.gif', hp: 99999, cost: 0, scale: 1.1, tint: 'hue-rotate(-50deg) saturate(3) drop-shadow(0 0 10px #f00)', ground: true,
                              spike: { dps: 256, r: 60 } },
 
-            // —— 路灯花 (v4.0.39：128🦠 种植每 0.4s 产 8☀；升费 1024/2028/4056/4056 🦠，产 32/128/512/1024) ——
-            plantern:      { name: '路灯花', img: 'Plants/Plantern/Plantern.gif', card: 'Plantern.png', hp: 2000, cost: 0, sporeCost: 128, scale: 1.8,
+            // —— 路灯花 (v4.0.39：128🦠 种植每 0.4s 产 8☀；升费 1024/2028/4056/4056 🦠，产 32/128/512/1024；v4.0.46：夜班作息——只在夜晚产阳光) ——
+            plantern:      { name: '路灯花', img: 'Plants/Plantern/Plantern.gif', card: 'Plantern.png', hp: 2000, cost: 0, sporeCost: 128, scale: 1.8, nightProduce: true,
                              produce: { sun: 8, every: 0.4 }, up: { sporeCost: 1024, to: 'plantern2' } },
-            plantern2:     { name: '路灯花 Lv2', img: 'Plants/Plantern/Plantern.gif', hp: 2500, cost: 0, scale: 1.8, produce: { sun: 32, every: 0.4 }, tint: 'brightness(1.1)', up: { sporeCost: 2028, to: 'plantern3' } },
-            plantern3:     { name: '路灯花 Lv3', img: 'Plants/Plantern/Plantern.gif', hp: 3000, cost: 0, scale: 1.8, produce: { sun: 128, every: 0.4 }, tint: 'brightness(1.4) drop-shadow(0 0 10px #ff0)', up: { sporeCost: 4056, to: 'plantern4' } },
-            plantern4:     { name: '路灯花 Lv4', img: 'Plants/Plantern/Plantern.gif', hp: 4000, cost: 0, scale: 1.8, produce: { sun: 512, every: 0.4 }, tint: 'brightness(1.8) drop-shadow(0 0 20px #ff0)', up: { sporeCost: 4056, to: 'plantern5' } },
-            plantern5:     { name: '路灯花 Lv5', img: 'Plants/Plantern/Plantern.gif', hp: 5000, cost: 0, scale: 1.8, produce: { sun: 1024, every: 0.4 }, tint: 'brightness(2.2) drop-shadow(0 0 28px #ffd700)' },
+            plantern2:     { name: '路灯花 Lv2', img: 'Plants/Plantern/Plantern.gif', hp: 2500, cost: 0, scale: 1.8, nightProduce: true, produce: { sun: 32, every: 0.4 }, tint: 'brightness(1.1)', up: { sporeCost: 2028, to: 'plantern3' } },
+            plantern3:     { name: '路灯花 Lv3', img: 'Plants/Plantern/Plantern.gif', hp: 3000, cost: 0, scale: 1.8, nightProduce: true, produce: { sun: 128, every: 0.4 }, tint: 'brightness(1.4) drop-shadow(0 0 10px #ff0)', up: { sporeCost: 4056, to: 'plantern4' } },
+            plantern4:     { name: '路灯花 Lv4', img: 'Plants/Plantern/Plantern.gif', hp: 4000, cost: 0, scale: 1.8, nightProduce: true, produce: { sun: 512, every: 0.4 }, tint: 'brightness(1.8) drop-shadow(0 0 20px #ff0)', up: { sporeCost: 4056, to: 'plantern5' } },
+            plantern5:     { name: '路灯花 Lv5', img: 'Plants/Plantern/Plantern.gif', hp: 5000, cost: 0, scale: 1.8, nightProduce: true, produce: { sun: 1024, every: 0.4 }, tint: 'brightness(2.2) drop-shadow(0 0 28px #ffd700)' },
 
             // —— 特殊 ——
             iceshroom:     { name: '寒冰菇', img: 'Plants/IceShroom/0.gif',  card: 'IceShroom.png',  hp: 99999,  cost: 0, sporeCost: 50, instant: true },
@@ -272,8 +272,8 @@ class HauntedDorm {
         this.waveN = 0;               // 已到来的尸潮波数
         this.waveAt = 75000;          // 下一波尸潮时间（ms，游戏时间）
         this.waveWarned = false;      // 是否已播报「一大波僵尸正在接近」
-        this.isNight = true;          // v4.0.39：开局即夜晚——阳光植物立刻开始产出（白天 0 收入会死开局 60s）；夜晚 90s
-        this.dnNext = 90000;          // 下一次昼夜切换时间（开局夜晚 90s）
+        this.isNight = false;         // v4.0.46：作息反转后开局即白天——阳光系白天醒着产出（夜晚开局会 90s 零收入死局）；白天 60s
+        this.dnNext = 60000;          // 下一次昼夜切换时间（开局白天 60s）
         this.traitor = null;          // 内鬼（AI 引用，开局秘密选定）
         this.traitorRevealed = false;
         this.traitorRevealAt = 160000; // 160 秒时揭露内鬼
@@ -1144,6 +1144,16 @@ class HauntedDorm {
         for (const ai of this.ais) {
             if (ai.dead) continue;
             if (ai === this.traitor && this.traitorRevealed) continue; // v4.0.20：内鬼由 _updateTraitor 接管
+            // v4.0.46：人机会使用手持技能——CD 好了之后 1 分钟内随机时机释放，随后 CD 重新计时（赶路/干活时不耽误放技能）
+            if (ai.skillAt === undefined) ai.skillAt = this.gameTime + 10000 + Math.random() * 50000;
+            if (this.gameTime >= ai.skillAt && (!ai.skillCd || ai.skillCd <= 0)) {
+                this._useSkill(ai);
+                if (!ai.skillCd || ai.skillCd <= 0) {
+                    ai.skillAt = this.gameTime + 8000 + Math.random() * 7000;   // 没放出来（无敌可咬/门不可升）→ 8~15s 后再试
+                } else {
+                    ai.skillAt = this.gameTime + 60000 + Math.random() * 60000; // 放成功 → 等 CD(60s) 结束后再随机 0~60s
+                }
+            }
             if (ai.path && ai.path.length > 0) continue; // 还在赶路，等到了床边再开始发育
             
             ai.actTimer = (ai.actTimer || 0) - dt;
@@ -2607,7 +2617,7 @@ class HauntedDorm {
     }
 
     // ===== 植物产出：阳光 / 孢子 =====
-    // v4.0.39：阳光经济全面重构——阳光系夜晚限定自动产出（走进房屋即产，无需浇水按键，打盹保底取消）；
+    // v4.0.39：阳光经济全面重构——阳光系自动产出（走进房屋即产，无需浇水按键，打盹保底取消）；v4.0.46：作息反转（白天阳光系/夜晚菇类+路灯花）；
     //          产出 0.4s 高频化，飘字/音效节流累计显示
     _updateProduce(dt) {
         for (const pl of this.plants) {
@@ -2618,10 +2628,12 @@ class HauntedDorm {
             if (owner === this.player && (this.playerAngelic || this.playerTraitor)) continue; // v4.0.44：天使无产出；内鬼不再享受植物供奉
             const def = pl.def;
             const wx = pl.c * 80 + 40, wy = pl.r * 80 + 40;
-            // v4.0.39：阳光系（nightOnly）白天停摆——只在夜晚产阳光（僵尸阵营无昼夜，不受限）
-            if (def.produce && def.nightOnly && !this._shroomAwake()) continue;
-            // v4.0.20：菇类（孢子线）白天打盹不产
-            if (!this._shroomAwake() && this._isShroom(def)) continue;
+            // v4.0.46：作息反转——阳光系（nightOnly：阳光菇/向日葵链）白天醒着产出，夜晚熄灯睡觉（僵尸阵营无昼夜，不受限）
+            if (def.produce && def.nightOnly && this.isNight && !this.isZombieFaction) continue;
+            // v4.0.46：路灯花（nightProduce）只在夜晚产阳光，白天睡觉
+            if (def.produce && def.nightProduce && !this._shroomAwake()) continue;
+            // v4.0.20：孢子线（def.spore：小喷菇/孢子地雷等）白天打盹不产，只上夜班
+            if (!this._shroomAwake() && def.spore) continue;
 
             // v4.0.45：房间内的植物一律常产（用户：「在房间里的所有东西，无论人在不在身边，都应该处于在浇水的状态」），不再要求主人贴身；
             // 只有房外植物（野外地堡）仍需主人在 300px 内照看才产出
@@ -3627,9 +3639,10 @@ class HauntedDorm {
         return this.isZombieFaction || this.isNight; // 僵尸阵营不搞昼夜；白天蘑菇睡觉
     }
     _applySleepVisual(pl) {
-        if (!pl || !pl.el1 || pl.isDoor || (!this._isShroom(pl.def) && !pl.def.nightOnly)) return; // v4.0.39：阳光系（nightOnly）白天同样打盹
+        if (!pl || !pl.el1 || pl.isDoor || (!this._isShroom(pl.def) && !pl.def.nightOnly && !pl.def.nightProduce)) return; // v4.0.46：路灯花（nightProduce）同样有作息
         const imgs = pl.el1.querySelectorAll('img');
-        const asleep = !this._shroomAwake();
+        // v4.0.46：作息反转——阳光系（nightOnly，优先判定：阳光菇名字带「菇」但作息跟向日葵）夜晚熄灯；菇类/路灯花白天睡觉
+        const asleep = this.isZombieFaction ? false : (pl.def.nightOnly ? this.isNight : !this.isNight);
         imgs.forEach(img => {
             // v4.0.22：灰化减磅（0.75→0.45，保留大部分原色）——睡觉是「打盹」不是「换皮」
             const base = pl.def.tint || '';
@@ -3676,9 +3689,9 @@ class HauntedDorm {
         this.dnNext = time + (this.isNight ? 90000 : 60000); // 白天 60s / 夜晚 90s
         if (this.dnTint) this.dnTint.style.background = this.isNight ? 'rgba(10, 14, 52, 0.45)' : 'transparent';
         if (this.isNight) {
-            this._announce('🌙 夜幕降临！阳光植物们开始产出，僵尸提速 15%！', 'evillaugh.mp3', true);
+            this._announce('🌙 夜幕降临！向日葵们熄灯睡觉，蘑菇和路灯花开始上夜班（僵尸提速 15%）', 'evillaugh.mp3', true);
         } else {
-            this._announce('☀ 天亮了！阳光植物们睡着了（暂停产阳光），抓紧布防发育', 'points.mp3', true);
+            this._announce('☀ 天亮了！向日葵们醒来产阳光，蘑菇们睡觉去了，抓紧布防发育', 'points.mp3', true);
         }
         for (const pl of this.plants) this._applySleepVisual(pl);
         this._updateGhostChip();
