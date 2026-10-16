@@ -206,16 +206,18 @@ class HauntedDorm {
         // 用户要求：僵尸速度变成原来的 3 倍（原来150 -> 450），比玩家还快！
         // 等级顺序：1 普通，2 路障，3 铁桶，4 橄榄球，后续铁门舞王等
         return [
+            // v4.0.42：血量与植物攻击力曲线匹配（用户铁律：僵尸血量必须跟得上植物翻倍攻击链）——
+            // 豌豆伤害 2^(tier-1) 翻倍，僵尸血量同步 50×2^(L-1)，保证各级「集火数秒」的击杀节奏恒定
             { name: '普通僵尸',   img: 'Zombies/Zombie/Zombie.gif',                    hp: 50,    speed: 450 },
-            { name: '路障僵尸',   img: 'Zombies/ConeheadZombie/ConeheadZombie.gif',    hp: 120,   speed: 450 },
-            { name: '铁桶僵尸',   img: 'Zombies/BucketheadZombie/BucketheadZombie.gif', hp: 300,  speed: 450 },
-            { name: '橄榄球僵尸', img: 'Zombies/FootballZombie/FootballZombie.gif',    hp: 500,   speed: 450 },
+            { name: '路障僵尸',   img: 'Zombies/ConeheadZombie/ConeheadZombie.gif',    hp: 100,   speed: 450 },
+            { name: '铁桶僵尸',   img: 'Zombies/BucketheadZombie/BucketheadZombie.gif', hp: 200,  speed: 450 },
+            { name: '橄榄球僵尸', img: 'Zombies/FootballZombie/FootballZombie.gif',    hp: 400,   speed: 450 },
             { name: '铁门僵尸',   img: 'Zombies/ScreenDoorZombie/ScreenDoorZombie.gif', hp: 800,  speed: 450 },
-            { name: '舞王僵尸',   img: 'Zombies/DancingZombie/0.gif',                  hp: 1200,  speed: 450 },
-            { name: '冰车僵尸',   img: 'Zombies/Zomboni/1.gif',                        hp: 1800,  speed: 450 },
-            { name: '小丑僵尸',   img: 'Zombies/JackinTheBoxZombie/0.gif',             hp: 2800,  speed: 450 },
-            { name: '气球僵尸',   img: 'Zombies/BalloonZombie/0.gif',                  hp: 5000,  speed: 450 },
-            { name: '机甲僵王',   img: 'Zombies/LGBOSS/0.gif',                         hp: 10000, speed: 450 }
+            { name: '舞王僵尸',   img: 'Zombies/DancingZombie/0.gif',                  hp: 1600,  speed: 450 },
+            { name: '冰车僵尸',   img: 'Zombies/Zomboni/1.gif',                        hp: 3200,  speed: 450 },
+            { name: '小丑僵尸',   img: 'Zombies/JackinTheBoxZombie/0.gif',             hp: 6400,  speed: 450 },
+            { name: '气球僵尸',   img: 'Zombies/BalloonZombie/0.gif',                  hp: 12800, speed: 450 },
+            { name: '机甲僵王',   img: 'Zombies/LGBOSS/0.gif',                         hp: 25600, speed: 450 }
         ];
     }
     static get GHOST_MAX_LV() { return HauntedDorm.GHOST_LEVELS.length; }
@@ -3511,8 +3513,8 @@ class HauntedDorm {
     _spawnMinion(isBoss = false) {
         const lv = this.ghostLevel;
         const cfg = isBoss
-            ? { name: '僵王机甲', img: 'Zombies/LGBOSS/0.gif', hp: Math.round(500 * (1 + 0.4 * this.waveN)), speed: 170 } // v4.0.39：血量 ÷10 对齐新经济
-            : { name: '小鬼僵尸', img: 'Zombies/Imp/0.gif', hp: 25 + lv * 25, speed: 260 };
+            ? { name: '僵王机甲', img: 'Zombies/LGBOSS/0.gif', hp: Math.round(800 * Math.pow(2, Math.min(this.waveN, 5))), speed: 170 } // v4.0.42：随波次翻倍（封顶 25600=机甲僵王级）
+            : { name: '小鬼僵尸', img: 'Zombies/Imp/0.gif', hp: Math.round(25 * Math.pow(2, lv - 1)), speed: 260 }; // v4.0.42：线性 25+lv×25 改 ×2 翻倍链，与豌豆伤害曲线匹配
         const p = this._ghostSpawnPoint();
         const zb = { x: p.x, y: p.y, hp: cfg.hp, maxHp: cfg.hp, speed: cfg.speed, level: lv, cfg: cfg,
                      side: Math.random() < 0.5 ? 1 : -1, stuck: 0, detourT: 0, stunT: 0, slowT: 0, dead: false,
