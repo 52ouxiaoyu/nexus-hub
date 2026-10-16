@@ -3566,10 +3566,13 @@ class HauntedDorm {
             t.el1.appendChild(hb);
             t.trHpBg = hb;
             t.trHpFg = hb.firstChild;
-            this._announce(`😈 内鬼现身：【${t.roleDef.name}】反水了！用植物集火它——它进不了有主的房间！击败有重赏！`, 'scream.mp3', true);
+            this._announce(`😈 内鬼现身：【${t.roleDef.name}】反水了！它会像僵尸一样挠门破房——护好自己的门板！击败有重赏！`, 'scream.mp3', true);
             return;
         }
-        // v4.0.22 重做：追击最近的存活玩家，但绝不进入有主的房间——只能堵在门外蹲守
+        // v4.0.43 重做（用户实报：内鬼卡在墙里、不挠门）：跟正常僵尸同一套行为——
+        // ①穿门寻路走出自己的房间（旧 passDoors=false 被自己的门锁死 → BFS 失败走直线撞墙卡死）
+        // ②目标在房内且门活着 → 走到门口格「挠门」（前方 25px probe 咬门，同僵尸范式）
+        // ③破门后自然穿门进屋贴身咬人
         let best = null, bd = Infinity;
         for (const p of this.allPlayers) {
             if (p.dead || p === t) continue;
@@ -3577,22 +3580,21 @@ class HauntedDorm {
             if (d < bd) { bd = d; best = p; }
         }
         if (!best) return;
-        // 目标躲在房间里 → 追到「门外一格」驻点（沿房间中心→门方向外推 1.3 格），进屋咬人不存在
-        let tx = best.x, ty = best.y;
+        // 目标所在房间与门板状态
         const bcol = Math.floor(best.x / this.gridSize), brow = Math.floor(best.y / this.gridSize);
         const brm = this._insideRoom(bcol, brow)
             || this.rooms.find(r => best.x >= r.x * 80 && best.x < (r.x + r.w) * 80 && best.y >= r.y * 80 && best.y < (r.y + r.h) * 80);
-        if (brm) {
-            let ddx = brm.doorCol - (brm.x + brm.w / 2), ddy = brm.doorRow - (brm.y + brm.h / 2);
-            const dl = Math.hypot(ddx, ddy) || 1;
-            ddx /= dl; ddy /= dl;
-            tx = (brm.doorCol + ddx * 1.3) * this.gridSize + 40;
-            ty = (brm.doorRow + ddy * 1.3) * this.gridSize + 40;
-        }
+        const doorPlant = brm ? this.getPlantAt(brm.doorCol * 80, brm.doorRow * 80) : null;
+        const scratchingDoor = !!(brm && doorPlant);
+
+        // 追击点：门活着 → 门口格（挠门）；门没了/目标在屋外 → 目标本体
+        const tx = scratchingDoor ? brm.doorCol * this.gridSize + 40 : best.x;
+        const ty = scratchingDoor ? brm.doorRow * this.gridSize + 40 : best.y;
         t.pathTimer = (t.pathTimer || 0) + dt;
         if (t.pathTimer > 1.0 || !t.path) {
             t.pathTimer = 0;
-            t.path = this._findPath(t.x, t.y, tx, ty, false); // v4.0.22：不可穿门——走廊游荡，进不了任何房间
+            t.path = this._findPath(t.x, t.y, tx, ty, true); // v4.0.43：穿门寻路——能出自己的房、破门后能进别人的房
+            if (t.path && t.path.length > 0) t.path.push({ x: tx, y: ty }); // 末步精确定位
         }
         let dx, dy;
         if (t.path && t.path.length > 0) {
@@ -3613,26 +3615,50 @@ class HauntedDorm {
         t.el1.style.left = t.x + 'px';
         t.el1.style.top = t.y + 'px';
         if (t.trHpFg) t.trHpFg.style.width = Math.max(0, t.hp / t.maxHp * 100) + '%';
-        // 贴身咬人：v4.0.22 每 1.8 秒一口 12 血，且只在非隔门状态发生（门活着时房内人免疫）
-        if (bd < 48) {
-            const bRm = this._insideRoom(Math.floor(best.x / 80), Math.floor(best.y / 80));
-            const tRm = this._insideRoom(Math.floor(t.x / 80), Math.floor(t.y / 80));
-            let safeBehindDoor = false;
-            if (bRm) {
-                const doorPlant = this.getPlantAt(bRm.doorCol * 80, bRm.doorRow * 80);
-                if (doorPlant && tRm !== bRm) safeBehindDoor = true;
-            }
-            if (!safeBehindDoor) {
+
+        // 挠门：门口 60px 内站定，每 1.8s 一口 50 血（同僵尸啃门范式：血条+抖动+破门移除）
+        if (scratchingDoor) {
+            const dDoor = Math.hypot(t.x - (brm.doorCol * this.gridSize + 40), t.y - (brm.doorRow * this.gridSize + 40));
+            if (dDoor < 60) {
                 t.biteT = (t.biteT || 0) + dt;
                 if (t.biteT >= 1.8) {
                     t.biteT = 0;
-                    best.hp -= 12;
-                    this._flyText(best.x, best.y - 26, '-12 😈', '#ff5252');
-                    this.playSfx('chomp.mp3', 0.4);
-                    if (best === this.player || best === this.player2) this.setHp();
-                    if (best.hp <= 0 && !best.dead) {
-                        this._checkPlayerDown(best);
+                    doorPlant.hp -= 50;
+                    this._flyText(doorPlant.c * 80 + 40, doorPlant.r * 80, '-50 😈挠门', '#ff5252');
+                    this.playSfx('chomp.mp3', 0.35);
+                    const bg = doorPlant.el1.querySelector('.hp-bar-bg');
+                    const fg = doorPlant.el1.querySelector('.hp-bar-fg');
+                    if (bg) {
+                        bg.style.display = 'block';
+                        fg.style.width = Math.max(0, (doorPlant.hp / doorPlant.maxHp) * 100) + '%';
                     }
+                    doorPlant.el1.classList.add('shake');
+                    if (!doorPlant._shakeT) {
+                        doorPlant._shakeT = setTimeout(() => { if (doorPlant && doorPlant.el1) doorPlant.el1.classList.remove('shake'); doorPlant._shakeT = null; }, 100);
+                    }
+                    if (doorPlant.hp <= 0) {
+                        doorPlant.el1.remove();
+                        if (doorPlant.txtEl) doorPlant.txtEl.remove();
+                        this.plants = this.plants.filter(pl => pl !== doorPlant);
+                        this._flyText(doorPlant.c * 80 + 40, doorPlant.r * 80, '😈 门被内鬼拆了！', '#ff5252');
+                        t.path = null; // 立即重寻路进屋
+                    }
+                }
+            }
+            return; // 挠门期不咬人
+        }
+
+        // 贴身咬人：v4.0.22 每 1.8 秒一口 12 血（v4.0.43：删 safeBehindDoor——破门后进屋照咬）
+        if (bd < 48) {
+            t.biteT = (t.biteT || 0) + dt;
+            if (t.biteT >= 1.8) {
+                t.biteT = 0;
+                best.hp -= 12;
+                this._flyText(best.x, best.y - 26, '-12 😈', '#ff5252');
+                this.playSfx('chomp.mp3', 0.4);
+                if (best === this.player || best === this.player2) this.setHp();
+                if (best.hp <= 0 && !best.dead) {
+                    this._checkPlayerDown(best);
                 }
             }
         }
