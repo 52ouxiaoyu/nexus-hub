@@ -548,14 +548,18 @@ class HauntedDorm {
             this._delArmed = null;
             this._closePopup();
             const p = this.popupPlayer || this.player;
-            const refSun = Math.floor((pl.def.cost || 0) * 0.5);
-            const refSpore = Math.floor((pl.def.sporeCost || 0) * 0.5);
+            // v4.0.47：返还=累计真实投入的一半（种植+历次升级）；盲盒/白得的植物没有投入，不返还（用户规格）
+            const refSun = Math.floor((pl.investSun || 0) * 0.5);
+            const refSpore = Math.floor((pl.investSpore || 0) * 0.5);
             if (refSun > 0) this.addSun(refSun, p);
             if (refSpore > 0) this.addSpore(refSpore, p);
             pl.el1.remove();
             if (pl.txtEl) pl.txtEl.remove();
             this.plants = this.plants.filter(p => p !== pl);
-            this._flyText(pl.c * 80 + 40, pl.r * 80, `${pl.def.name} 已拆除（返还50%）`, '#ffb0b0');
+            this._flyText(pl.c * 80 + 40, pl.r * 80,
+                (refSun > 0 || refSpore > 0)
+                    ? `${pl.def.name} 已拆除（返还 ${refSun > 0 ? '☀' + refSun + ' ' : ''}${refSpore > 0 ? '🦠' + refSpore : ''}）`
+                    : `${pl.def.name} 已拆除（白得的，无返还）`, '#ffb0b0');
             this.playSfx('chomp.mp3', 0.4);
         };
         this.ppUp.onclick = () => {
@@ -582,7 +586,7 @@ class HauntedDorm {
             this.playSfx('readysetplant.mp3', 0.5);
             this._flyText(pl.c * 80 + 40, pl.r * 80,
                 `${pl.def.name} → ${nd.name}！（血量 ${Math.round(pl.def.hp * fac)}→${Math.round(nd.hp * fac)}）`, '#9dff6b');
-            this._evolve(pl, to);
+            this._evolve(pl, to, cost, sporeCost); // v4.0.47：升级花费计入累计投入（拆除返还依据）
         };
     }
 
@@ -897,7 +901,8 @@ class HauntedDorm {
         const maxHp = isDoor ? Math.round(def.hp * 0.3) : def.hp;
         // v4.0.23：植物随身携带种植者——MVP 伤害记账的单一事实来源（不再反查房间 owners[0]，杜绝 P2 输出记到 P1 头上）
         const pl = { r: row, c: col, type: type, def: def, hp: maxHp, maxHp: maxHp, isDoor: isDoor, owner: owner || null,
-                     shootCd: 1.5, prodT: 0, sporeT: 0, fed: 0, freezeT: 0 };
+                     shootCd: 1.5, prodT: 0, sporeT: 0, fed: 0, freezeT: 0,
+                     investSun: 0, investSpore: 0 }; // v4.0.47：累计真实投入（拆除返还一半的依据；盲盒/白给路径没人付钱，保持 0）
 
         const el1 = document.createElement('div');
         el1.className = 'tile';
@@ -982,7 +987,11 @@ class HauntedDorm {
         this.popupPlant = pl;
         // v4.0.16：重置拆除确认状态
         this._delArmed = null;
-        this.ppDemolish.innerText = '拆除';
+        this.ppDemolish.innerText = '拆除' + (() => { // v4.0.47：按钮上直接显示预计返还（累计投入的一半）
+            const rs = Math.floor((pl.investSun || 0) * 0.5), rp = Math.floor((pl.investSpore || 0) * 0.5);
+            if (!rs && !rp) return '（无返还）';
+            return `（返${rs ? '☀' + rs : ''}${rp ? '🦠' + rp : ''}）`;
+        })();
         this.ppDemolish.style.background = '';
         this.ppTitle.innerText = (def.tier ? `Lv${def.tier} ` : '') + def.name + (pl.isDoor ? '（门板）' : '');
         // 用户反馈：因为已经有升级按键了，不需要长篇大论的升级预览框了，简化UI
@@ -1023,15 +1032,18 @@ class HauntedDorm {
         }
     }
 
-    _evolve(pl, to) {
+    _evolve(pl, to, costSun = 0, costSpore = 0) {
         const col = pl.c, row = pl.r;
         const isDoor = pl.isDoor;
+        const oldInvestSun = pl.investSun || 0, oldInvestSpore = pl.investSpore || 0; // v4.0.47：传承累计投入
         pl.el1.remove();
         if (pl.txtEl) pl.txtEl.remove();
         this.plants = this.plants.filter(p => p !== pl);
         const np = this.spawnPlant(col, row, to, isDoor, pl.owner); // v4.0.23：升级后保留原种植者
         // v4.0.40：升级结果可视化——报出新等级与新增益（用户实报：等级/技能点不凸显）
         if (np) {
+            np.investSun = oldInvestSun + (costSun || 0);   // v4.0.47：累计投入=旧投入+本次升级花费
+            np.investSpore = oldInvestSpore + (costSpore || 0);
             const d = np.def;
             let detail = '';
             if (d.produce) detail = ` 产${d.produce.sun}☀`;
@@ -1253,16 +1265,18 @@ class HauntedDorm {
                     if (chosen.type === 'up') {
                         ai.sun -= chosen.cost;
                         ai.spore -= chosen.sporeCost;
-                        this._evolve(chosen.pl, chosen.to);
+                        this._evolve(chosen.pl, chosen.to, chosen.cost, chosen.sporeCost); // v4.0.47：AI 升级花费同样计入累计投入
                         this._flyText(chosen.pl.c * 80 + 40, chosen.pl.r * 80, `AI 升级！`, '#bfa8e0');
                     } else if (chosen.type === 'plant') {
                         ai.sun -= chosen.cost;
-                        this.spawnPlant(chosen.c, chosen.r, chosen.id, false, ai);
+                        const sp = this.spawnPlant(chosen.c, chosen.r, chosen.id, false, ai);
+                        if (sp) sp.investSun = chosen.cost; // v4.0.47
                         this._flyText(chosen.c * 80 + 40, chosen.r * 80, `AI 种植！`, '#bfa8e0');
                         if (Math.random() < 0.15) this._say(ai, ["门再厚点！僵尸你过来啊！", "阳光怎么这么少，搞快点！", "只要我跑得快，僵尸就吃不到我脑子！", "这局带飞！稳住我们能赢！", "吓死宝宝了，多种点豌豆压压惊！", "僵尸大哥别杀我，我肉酸！", "我这房间风水好，僵尸看不见我！"][Math.floor(Math.random()*7)]);
                     } else if (chosen.type === 'plant_door') {
                         ai.sun -= chosen.cost;
-                        this.spawnPlant(chosen.c, chosen.r, chosen.id, true, ai);
+                        const spd = this.spawnPlant(chosen.c, chosen.r, chosen.id, true, ai);
+                        if (spd) spd.investSun = chosen.cost; // v4.0.47
                         this._flyText(chosen.c * 80 + 40, chosen.r * 80, `AI 补门！`, '#bfa8e0');
                     }
                     // v4.0.37：repair 分支已随「AI 修补」机制一并删除
@@ -1827,6 +1841,11 @@ class HauntedDorm {
             if (sporeCost > 0) this.addSpore(sporeCost, p);
             else if (cost > 0) this.addSun(cost, p);
             this._flyText(tx, ty, '建造未生效，已全额退还！', '#ff8a8a');
+        } else if (spawned) {
+            // v4.0.47：记录真实投入（拆除返还一半的依据）；盲盒开出的是随机赠品，不计投入（用户规格：从盲盒里开到的除外）
+            const isBoxRoll = (type === 'blindbox');
+            spawned.investSun = isBoxRoll ? 0 : cost;
+            spawned.investSpore = isBoxRoll ? 0 : sporeCost;
         }
     }
 
@@ -3156,7 +3175,8 @@ class HauntedDorm {
                 // 有植物 -> 升级/拆除
                 menu.options = [];
                 if (pl.def.up) menu.options.push({ action: 'up', text: `升级 (${pl.def.up.cost ? '☀'+pl.def.up.cost : ''} ${pl.def.up.sporeCost ? '🦠'+pl.def.up.sporeCost : ''})` });
-                menu.options.push({ action: 'del', text: '拆除' });
+                const refSunPrev = Math.floor((pl.investSun || 0) * 0.5), refSporePrev = Math.floor((pl.investSpore || 0) * 0.5); // v4.0.47
+                menu.options.push({ action: 'del', text: '拆除' + ((refSunPrev || refSporePrev) ? `（返${refSunPrev ? '☀' + refSunPrev : ''}${refSporePrev ? '🦠' + refSporePrev : ''}）` : '（无返还）') });
                 menu.targetPl = pl;
             } else {
                 // 没植物 -> 种植
@@ -3260,7 +3280,7 @@ class HauntedDorm {
             if (p.sun >= (up.cost || 0) && p.spore >= (up.sporeCost || 0)) {
                 this.addSun(-(up.cost || 0), p);
                 this.addSpore(-(up.sporeCost || 0), p);
-                this._evolve(pl, up.to);
+                this._evolve(pl, up.to, up.cost || 0, up.sporeCost || 0); // v4.0.47：升级花费计入累计投入
                 this.playSfx('plant.mp3', 0.5);
             } else {
                 this.playSfx('buzzer.mp3', 0.3);
@@ -3280,8 +3300,12 @@ class HauntedDorm {
             pl.el1.remove();
             if (pl.txtEl) pl.txtEl.remove();
             this.plants = this.plants.filter(x => x !== pl);
-            this.addSun(Math.floor((pl.def.cost||0) * 0.5), p);
-            this.addSpore(Math.floor((pl.def.sporeCost||0) * 0.5), p);
+            const refSun = Math.floor((pl.investSun || 0) * 0.5);   // v4.0.47：返还=累计投入一半（盲盒/白得=0）
+            const refSpore = Math.floor((pl.investSpore || 0) * 0.5);
+            if (refSun > 0) this.addSun(refSun, p);
+            if (refSpore > 0) this.addSpore(refSpore, p);
+            this._flyText(pl.c * 80 + 40, pl.r * 80,
+                (refSun > 0 || refSpore > 0) ? `返还 ${refSun > 0 ? '☀' + refSun + ' ' : ''}${refSpore > 0 ? '🦠' + refSpore : ''}` : '白得的，无返还', '#ffb0b0');
             this.playSfx('shovel.mp3', 0.5);
         } else if (opt.action === 'buy') {
             const type = opt.type;
@@ -3318,6 +3342,12 @@ class HauntedDorm {
                     if (sporeCost > 0) this.addSpore(sporeCost, p);
                     this._flyText(tx, ty, '建造未生效，已全额退还！', '#ff8a8a');
                 } else {
+                    // v4.0.47：记录真实投入；盲盒开出不计投入（同 doPlant）
+                    if (spawned) {
+                        const isBoxRoll = (type === 'blindbox');
+                        spawned.investSun = isBoxRoll ? 0 : cost;
+                        spawned.investSpore = isBoxRoll ? 0 : sporeCost;
+                    }
                     this.playSfx('plant.mp3', 0.5);
                 }
             } else {
