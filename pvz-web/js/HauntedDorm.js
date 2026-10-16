@@ -288,7 +288,7 @@ class HauntedDorm {
             { id: 'sunflower', name: '向日葵', icon: 'assets/images/Plants/SunFlower/0.gif', skillDesc: '10秒阳光翻倍 (CD:60s)' },
             { id: 'peashooter', name: '豌豆射手', icon: 'assets/images/Plants/Peashooter/0.gif', skillDesc: '15秒攻击翻倍 (CD:60s)', imgStyle: 'width: 120%; height: 120%; margin-left: -10%; margin-top: -10%;' },
             { id: 'wallnut', name: '坚果', icon: 'assets/images/Plants/WallNut/0.gif', skillDesc: '免费升一级门 (CD:60s)' },
-            { id: 'chomper', name: '大嘴花', icon: 'assets/images/Plants/Chomper/0.gif', skillDesc: '强制赶跑僵尸 (CD:60s)', imgStyle: 'width: 120%; height: 120%; margin-left: -10%; margin-top: -10%;' },
+            { id: 'chomper', name: '大嘴花', icon: 'assets/images/Plants/Chomper/0.gif', skillDesc: '赶跑全场僵尸10秒 (CD:30s)', imgStyle: 'width: 120%; height: 120%; margin-left: -10%; margin-top: -10%;' },
             { id: 'squash', name: '倭瓜', icon: 'assets/images/Plants/Squash/0.gif', skillDesc: '重创僵尸半血 (CD:60s)', imgStyle: 'width: 200%; height: 200%; margin-left: -50%; margin-top: -50%;' }
         ];
         
@@ -456,7 +456,7 @@ class HauntedDorm {
             const p1Ctl = document.querySelector('#hud-p1 > div');
             if (p1Ctl) {
                 p1Ctl.innerHTML = '<div>【僵尸 控制】移动: W/A/S/D ｜ 靠近植物自动慢咬 ｜ 技能: M 狂暴冲刺</div>' +
-                                  '<div>地图中心绿圈自动回血 ｜ 啃破大门吃掉幸存者获胜</div>';
+                                  '<div>最上排中心绿圈自动回血 ｜ 啃破大门吃掉幸存者获胜</div>';
             }
             const p1Stats = document.querySelector('#hud-p1 > div:nth-child(2)');
             if (p1Stats) p1Stats.id = 'zombie-stats-bar';
@@ -483,8 +483,13 @@ class HauntedDorm {
             // v4.0.15：补 flex-direction:column——此前容器级 display:flex 让 P2 HUD 所有子元素横排成"长条"，
             // 而 P1 HUD 是 block 竖排"长块"，这正是用户反馈的左右显示不一致的直接根源
             const p2hud = document.getElementById('p2-hud');
-            p2hud.style.display = 'flex';
-            p2hud.style.flexDirection = 'column';
+            // v4.0.49：植物方出生时控制框隐藏（选定房间后由 _positionPlayerHud 显示）；僵尸阵营立即显示
+            if (this.isZombieFaction) {
+                p2hud.style.display = 'flex';
+                p2hud.style.flexDirection = 'column';
+            } else {
+                p2hud.style.display = 'none';
+            }
             this.player2.el1 = document.createElement('div');
             this.player2.el1.className = 'entity avatar';
             this.player2.el1.innerHTML = `<img src="${this.player2.icon}" style="${this.playerRoleDef2.imgStyle || ''}">` + 
@@ -501,6 +506,11 @@ class HauntedDorm {
             // 隐藏 P2 相关的 UI
             document.getElementById('p2-cursor').style.display = 'none';
             document.getElementById('p2-hud').style.display = 'none';
+        }
+        // v4.0.49：植物方出生时 P1 控制框也隐藏（选定房间后才显示）；僵尸阵营保持可见
+        {
+            const p1hud = document.getElementById('hud-p1');
+            if (p1hud) p1hud.style.display = this.isZombieFaction ? 'flex' : 'none';
         }
         
 
@@ -618,44 +628,52 @@ class HauntedDorm {
     }
 
     generateMap() {
-        const center1 = document.createElement('div');
-        center1.className = 'tile center';
-        center1.style.left = (this.worldWidth / 2 - 120) + 'px';
-        center1.style.top = (this.worldHeight / 2 - 120) + 'px';
-        center1.style.width = '240px'; center1.style.height = '240px';
-        this.world1.appendChild(center1);
-
         this.rooms = [];
         const makeGrid = (w, h) => Array.from({length: h}, () => Array(w).fill(1));
-        
-        // 5对门对门的对称房间布局 (共10个房间)
-        const pairCoords = [
-            {x: 4, y: 6},   // 左上
-            {x: 36, y: 6},  // 右上
-            {x: 4, y: 28},  // 左下
-            {x: 36, y: 28}, // 右下
-            {x: 20, y: 17}  // 中间
+        // v4.0.49：中间缺一块的 8×8 房间（缺 2×2 形成庭院缺口；洞格留空不生成墙，墙面依然平直）
+        const notchGrid = () => {
+            const g = makeGrid(8, 8);
+            g[3][3] = g[3][4] = g[4][3] = g[4][4] = 0;
+            return g;
+        };
+        // v4.0.49：L 形 8×8 房间（缺右上 4×4）
+        const lGrid = () => {
+            const g = makeGrid(8, 8);
+            for (let r = 0; r < 4; r++) for (let c = 4; c < 8; c++) g[r][c] = 0;
+            return g;
+        };
+
+        // v4.0.49：房屋布局多样化——大小不一（8×8 / 6×6 / 8×6 / 6×8）、形状各异（正方/缺块/L形），
+        // 门不再全部两两相对：仅上排左侧 A-B 一对门对门，其余全部单独立户（门朝上/下/左/右各不相同）。
+        // 全部网格对齐生成，不存在“半个方块”。
+        const roomsDef = [
+            // —— 上排左组（唯一一对门对门）——
+            { x: 4,  y: 6,  w: 8, h: 8, grid: makeGrid(8,8), door: {r: 4, c: 8},  beds: [{r: 4, c: 2}] },  // A 大正方·门朝右
+            { x: 16, y: 6,  w: 8, h: 8, grid: makeGrid(8,8), door: {r: 4, c: -1}, beds: [{r: 4, c: 5}] }, // B 大正方·门朝左（与 A 对门）
+            // —— 上排右组（独立户）——
+            { x: 38, y: 6,  w: 8, h: 8, grid: makeGrid(8,8), door: {r: 8, c: 4},  beds: [{r: 4, c: 2}] },  // C 大正方·门朝下
+            { x: 50, y: 6,  w: 6, h: 6, grid: makeGrid(6,6), door: {r: 6, c: 3},  beds: [{r: 3, c: 1}] },  // D 小正方·门朝下
+            // —— 中排（独立户）——
+            { x: 14, y: 16, w: 8, h: 8, grid: notchGrid(), door: {r: 8, c: 4},  beds: [{r: 1, c: 1}] },    // E 中间缺块·门朝下
+            { x: 32, y: 16, w: 6, h: 8, grid: makeGrid(6,8), door: {r: 8, c: 3},  beds: [{r: 4, c: 1}] },  // F 高房·门朝下（远离地图中心玩家出生点）
+            { x: 42, y: 18, w: 8, h: 8, grid: lGrid(),      door: {r: 4, c: 8},  beds: [{r: 4, c: 1}] },   // G L形·门朝右
+            // —— 下排（独立户，门都朝上）——
+            { x: 6,  y: 30, w: 8, h: 8, grid: makeGrid(8,8), door: {r: -1, c: 4}, beds: [{r: 4, c: 2}] },  // H 大正方·门朝上
+            { x: 24, y: 30, w: 8, h: 6, grid: makeGrid(8,6), door: {r: -1, c: 4}, beds: [{r: 3, c: 2}] },  // I 宽房·门朝上
+            { x: 44, y: 30, w: 8, h: 8, grid: makeGrid(8,8), door: {r: -1, c: 4}, beds: [{r: 4, c: 5}] }   // J 大正方·门朝上
         ];
 
-        pairCoords.forEach(p => {
-            // 左边房间，门朝右
-            this.rooms.push({
-                x: p.x, y: p.y, w: 8, h: 8,
-                tpl: { grid: makeGrid(8,8), door: {r: 4, c: 8}, beds: [{r: 4, c: 2}] }
-            });
-            // 右边房间，门朝左
-            this.rooms.push({
-                x: p.x + 12, y: p.y, w: 8, h: 8,
-                tpl: { grid: makeGrid(8,8), door: {r: 4, c: -1}, beds: [{r: 4, c: 5}] }
-            });
-        });
-
-        // 较高几率刷出有一个双床房间（他们共同守护这一个房间）
-        if (Math.random() < 0.3) {
-            const idx = Math.floor(Math.random() * this.rooms.length);
-            const baseBed = this.rooms[idx].tpl.beds[0];
-            // 在上或下加一张床
-            this.rooms[idx].tpl.beds.push({ r: baseBed.r === 4 ? 2 : 6, c: baseBed.c });
+        // 随机给一户加第二张床（两人合住一房），床必须落在实心地板上
+        if (Math.random() < 0.4) {
+            const idx = Math.floor(Math.random() * roomsDef.length);
+            const b = roomsDef[idx].beds[0];
+            const up = (b.r - 2 >= 0 && roomsDef[idx].grid[b.r - 2][b.c] === 1);
+            const down = (b.r + 2 < roomsDef[idx].h && roomsDef[idx].grid[b.r + 2][b.c] === 1);
+            if (up) roomsDef[idx].beds.push({ r: b.r - 2, c: b.c });
+            else if (down) roomsDef[idx].beds.push({ r: b.r + 2, c: b.c });
+        }
+        for (const d of roomsDef) {
+            this.rooms.push({ x: d.x, y: d.y, w: d.w, h: d.h, tpl: { grid: d.grid, door: d.door, beds: d.beds } });
         }
 
         for (const rm of this.rooms) {
@@ -665,6 +683,16 @@ class HauntedDorm {
             rm.frontX = rm.doorCol * 80 + 40;
             rm.frontY = rm.doorRow * 80 + 40;
         }
+
+        // v4.0.49：僵尸出生/回血圆圈——最上排两组房间的正中心（原地图中心圆圈取消）
+        this._computeSpawnCenter();
+        const sc = this._spawnCenterPx();
+        const center1 = document.createElement('div');
+        center1.className = 'tile center';
+        center1.style.left = (sc.x - 120) + 'px';
+        center1.style.top = (sc.y - 120) + 'px';
+        center1.style.width = '240px'; center1.style.height = '240px';
+        this.world1.appendChild(center1);
 
         // 初始化所有房间归属信息
         for (const rm of this.rooms) {
@@ -691,9 +719,11 @@ class HauntedDorm {
         // 渲染墙体（v3.88.0：墙=蓝色河道）
         for (const rm of this.rooms) {
             const isInside = (r, c) => r>=0 && r<rm.h && c>=0 && c<rm.w && rm.tpl.grid[r][c] === 1;
+            const isHole = (r, c) => r>=0 && r<rm.h && c>=0 && c<rm.w && rm.tpl.grid[r][c] === 0; // v4.0.49：房间内的缺块（洞/庭院）
             for (let r = -1; r <= rm.h; r++) {
                 for (let c = -1; c <= rm.w; c++) {
                     if (isInside(r, c)) continue;
+                    if (isHole(r, c)) continue; // v4.0.49：洞格留空不生成墙——形成缺口/庭院，墙面保持平直
 
                     if (isInside(r-1, c) || isInside(r+1, c) || isInside(r, c-1) || isInside(r, c+1) ||
                         isInside(r-1, c-1) || isInside(r-1, c+1) || isInside(r+1, c-1) || isInside(r+1, c+1)) {
@@ -1083,6 +1113,15 @@ class HauntedDorm {
         // v4.0.16：出笼点必须离所有存活玩家 ≥600px——原主路径只查了格子非墙，可能正好出在玩家房间门口，
         // 僵尸 20s 出笼即堵门，玩家开局没门板没植物直接被吃（用户实拍 bug）
         const farFromPlayers = (x, y) => this.allPlayers.every(p => p.dead || Math.hypot(p.x - x, p.y - y) >= 600);
+        // v4.0.49：僵尸出生优先在最上排中心圆圈（出生/回血点）附近——出生和回血同处一圆
+        const scp = this._spawnCenterPx();
+        for (let tries = 0; tries < 40; tries++) {
+            const x = scp.x + (Math.random() * 240 - 120);
+            const y = scp.y + (Math.random() * 240 - 120);
+            const c = Math.floor(x / this.gridSize), r = Math.floor(y / this.gridSize);
+            if (x < 60 || y < 60 || x > this.worldWidth - 60 || y > this.worldHeight - 60) continue;
+            if (!this.walls.has(`${c},${r}`) && !this.checkCollision(x, y) && farFromPlayers(x, y)) return { x, y };
+        }
         for (let tries = 0; tries < 40; tries++) {
             const rm = this.rooms[Math.floor(Math.random() * this.rooms.length)];
             const d = rm.tpl.door;
@@ -1165,7 +1204,9 @@ class HauntedDorm {
                 if (!ai.skillCd || ai.skillCd <= 0) {
                     ai.skillAt = this.gameTime + 8000 + Math.random() * 7000;   // 没放出来（无敌可咬/门不可升）→ 8~15s 后再试
                 } else {
-                    ai.skillAt = this.gameTime + 60000 + Math.random() * 60000; // 放成功 → 等 CD(60s) 结束后再随机 0~60s
+                    // v4.0.49：大嘴花 CD 30s，其余角色仍 60s——AI 按角色实际 CD 重新计时
+                    const cdMs = (ai.roleDef && ai.roleDef.id === 'chomper') ? 30000 : 60000;
+                    ai.skillAt = this.gameTime + cdMs + Math.random() * cdMs; // 放成功 → 等 CD 结束后再随机 0~1 个 CD
                 }
             }
             if (ai.path && ai.path.length > 0) continue; // 还在赶路，等到了床边再开始发育
@@ -1741,6 +1782,21 @@ class HauntedDorm {
         return null;
     }
 
+    // v4.0.49：僵尸出生/回血点 = 最上排两组房间的正中心（原地图中心圆圈取消，圆圈随布局上移）
+    _computeSpawnCenter() {
+        const topY = Math.min(...this.rooms.map(r => r.y));
+        const topRooms = this.rooms.filter(r => r.y === topY);
+        const minX = Math.min(...topRooms.map(r => r.x));
+        const maxX = Math.max(...topRooms.map(r => r.x + r.w));
+        const minY = Math.min(...topRooms.map(r => r.y));
+        const maxY = Math.max(...topRooms.map(r => r.y + r.h));
+        this.spawnCenter = { c: Math.round((minX + maxX) / 2), r: Math.round((minY + maxY) / 2) };
+    }
+    _spawnCenterPx() {
+        const sc = this.spawnCenter || { c: Math.round(this.cols / 2), r: Math.round(this.rows / 2) };
+        return { x: sc.c * this.gridSize + 40, y: sc.r * this.gridSize + 40 };
+    }
+
     // v4.0.17：统一的「目标格 → 可建造房间」解析——修「站在自己房间却提示『你已经有房间了！』」
     // 根因：键盘建造菜单用外接矩形判定 + 门邻格兜底 find 首个匹配——站在自家门口/桥上（门邻格、
     // 属于房间但不在地形格内）时，门的两侧房间都可能命中，find 抓到隔壁房间 → p.room !== room → 误报
@@ -1772,12 +1828,45 @@ class HauntedDorm {
         if (rm.owners && rm.owners.length >= (rm.capacity || 1)) return false;
         rm.owners.push(p);
         if (!p.room) p.room = rm; else p.room2 = rm;
+        // v4.0.49：选定房间后，顶部控制框按房间左右位置显示（P1 在哪边框在哪边，上下住房自动 P1 左 P2 右）
+        if (p === this.player || p === this.player2) this._positionPlayerHud(p);
         // 首个占领者自动在门口放一块坚果门板
         if (rm.owners.length === 1 && !this.plants.some(x => x.c === rm.doorCol && x.r === rm.doorRow)) {
             this.spawnPlant(rm.doorCol, rm.doorRow, 'wallnut', true);
             this.playSfx('plant.mp3', 0.5);
         }
         return true;
+    }
+
+    // v4.0.49：玩家选定房间后，顶部“阳光/孢子”控制框才出现，并按房间左右位置落在对应小角
+    _positionPlayerHud(p) {
+        const rm = p.room || p.room2;
+        if (!rm) return;
+        const isLeft = (rm.x + rm.w / 2) * this.gridSize < this.worldWidth / 2;
+        const place = (el, left) => {
+            if (!el) return;
+            el.style.display = 'flex';
+            el.style.flexDirection = 'column';
+            if (left) { el.style.left = '20px'; el.style.right = 'auto'; }
+            else { el.style.right = '20px'; el.style.left = 'auto'; }
+        };
+        if (p === this.player) {
+            place(document.getElementById('hud-p1'), isLeft);
+        } else if (p === this.player2) {
+            place(document.getElementById('p2-hud'), isLeft);
+        }
+        this._fixVerticalPairHuds(); // 双人上下住房 → 强制 P1 左、P2 右
+    }
+    // 双人且房间一上一下（中心行差 ≥4 格）：不按左右判位置，固定 P1 左上、P2 右上
+    _fixVerticalPairHuds() {
+        if (!this.player2 || !this.player.room || !this.player2.room) return;
+        const p1c = this.player.room.y + this.player.room.h / 2;
+        const p2c = this.player2.room.y + this.player2.room.h / 2;
+        if (Math.abs(p1c - p2c) < 4) return;
+        const p1 = document.getElementById('hud-p1');
+        const p2 = document.getElementById('p2-hud');
+        if (p1) { p1.style.left = '20px'; p1.style.right = 'auto'; }
+        if (p2) { p2.style.right = '20px'; p2.style.left = 'auto'; }
     }
 
     doPlant(type) {
@@ -1916,27 +2005,33 @@ class HauntedDorm {
                 this._announce('❌ 当前场上没有敌对僵尸！', 'buzzer.mp3');
                 return;
             }
-            // 寻找离自己最近或正在追杀自己的高威胁目标
-            let targetZb = hostiles[0], bestScore = Infinity;
+            // v4.0.49：大嘴花大招重做——不再单体重创（那是倭瓜的事），改为怒吼赶跑全场僵尸 10 秒：
+            // 场上有“别人”（其他幸存者）→ 全场僵尸全部被赶到最近别人的房间门口；
+            // 只剩自己 → 赶到回血台待 10 秒再返回。CD 由 60s 缩短为 30s。
+            p.skillCd = 30;
+            const others = [...this.ais, ...(this.player2 ? [this.player2] : [])].filter(v => !v.dead && v !== p);
+            const scP = this._spawnCenterPx();
             for (const z of hostiles) {
-                const d = Math.hypot(z.x - p.x, z.y - p.y);
-                const score = d - (z.lockedTarget === p ? 250 : 0);
-                if (score < bestScore) { bestScore = score; targetZb = z; }
+                z.chomperScareT = 10;
+                z.retreating = false; // 赶跑≠撤退：不许借机跑回家回血
+                z.isHealing = false;
+                let tx = scP.x, ty = scP.y; // 只剩自己 → 回血台
+                if (others.length > 0) {
+                    let best = null, bestD = Infinity;
+                    for (const o of others) {
+                        const orm = o.room || o.room2;
+                        if (!orm) continue;
+                        const d = Math.hypot(orm.doorCol * this.gridSize + 40 - z.x, orm.doorRow * this.gridSize + 40 - z.y);
+                        if (d < bestD) { bestD = d; best = orm; }
+                    }
+                    if (best) { tx = best.doorCol * this.gridSize + 40; ty = best.doorRow * this.gridSize + 40; }
+                }
+                z.scareX = tx;
+                z.scareY = ty;
+                this._flyText(z.x, z.y - 20, '🌸 吓跑了！', '#ff69b4');
+                if (z.hpBg) z.hpBg.style.display = 'block';
             }
-            p.skillCd = 60;
-            const dealt = targetZb.isBoss ? Math.min(targetZb.hp, Math.round(targetZb.maxHp * 0.35)) : Math.max(0, targetZb.hp - Math.round(targetZb.maxHp * 0.05));
-            if (p.roleDef) p.dmgDealt = (p.dmgDealt || 0) + dealt;
-            targetZb.hp -= dealt;
-            if (targetZb.hpBg) targetZb.hpBg.style.display = 'block';
-            if (targetZb.isBoss) {
-                targetZb.stunT = 4.0;
-                this._flyText(targetZb.x, targetZb.y - 30, `-${dealt} 🌸大嘴猛咬!`, '#ff69b4');
-            } else {
-                targetZb.retreating = true;
-                this._flyText(targetZb.x, targetZb.y - 20, '🌸 吓跑了！', '#ff69b4');
-            }
-            if (targetZb.hp <= 0) this._killZombie(targetZb, p);
-            this._announce('🌸 技能激活：大嘴花出击重创了敌人！', 'chomp.mp3');
+            this._announce('🌸 技能激活：大嘴花怒吼——僵尸全被赶跑10秒！', 'chomp.mp3');
         } else if (r === 'squash') {
             const hostiles = this._getHostileTargets().filter(z => !z.dead);
             if (hostiles.length === 0) {
@@ -2474,6 +2569,11 @@ class HauntedDorm {
         this.keys = {}; this.keysJustPressed = {};
         const p = this.player;
         this.playerAngelic = true;
+        // v4.0.49：天使无房间——直接显示 P1 控制框（技能面板 M/N 键提示可见）
+        {
+            const p1hud = document.getElementById('hud-p1');
+            if (p1hud) { p1hud.style.display = 'flex'; p1hud.style.flexDirection = 'column'; p1hud.style.left = '20px'; p1hud.style.right = 'auto'; }
+        }
         p.dead = false; p.hp = 100; p.maxHp = 100;
         p.capCd = 0; p.spdCd = 0;
         p.waterOn = false; // v4.0.44：天使不再浇水
@@ -4282,6 +4382,9 @@ class HauntedDorm {
                     if (emptyRooms.length > 0) {
                         ai.targetRoom = emptyRooms[Math.floor(Math.random() * emptyRooms.length)];
                         const p = this._findPath(ai.x, ai.y, ai.targetRoom.frontX, ai.targetRoom.frontY);
+                        // v4.0.49：寻路失败返回 null 时跳过（原代码 null.push 直接抛错中断整帧 AI 更新——
+                        // 新多样化布局下门朝向更多，AI 临时换房路径偶发不可达的几率上升，必须有保护）
+                        if (!p) continue;
                         p.push({ x: (ai.targetRoom.x + ai.targetRoom.tpl.beds[0].c) * this.gridSize + 40, y: (ai.targetRoom.y + ai.targetRoom.tpl.beds[0].r) * this.gridSize + 40 });
                         ai.path = p;
                         continue;
@@ -4424,8 +4527,9 @@ class HauntedDorm {
                 if (bitten) this.player.biteT = 0;
             }
             
-            // 僵尸自动回血（地图中心）
-            if (Math.hypot(this.player.x - this.worldWidth / 2, this.player.y - this.worldHeight / 2) < 120) {
+            // 僵尸自动回血（v4.0.49：随圆圈上移到最上排中心回血台）
+            const scP = this._spawnCenterPx();
+            if (Math.hypot(this.player.x - scP.x, this.player.y - scP.y) < 120) {
                 this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.player.maxHp * 0.25 * dt);
                 this.setHp(); // 实时同步顶部血条
                 this.player.el1.style.filter = 'drop-shadow(0 0 10px #0f0)';
@@ -4835,8 +4939,21 @@ class HauntedDorm {
             // v4.0.33：被大蒜臭晕恐吓——20 秒内不回此目标，直接走开去别处
             if (zb.garlicScareT > 0) {
                 zb.garlicScareT -= dt;
-                targetX = this.worldWidth / 2;
-                targetY = 200;
+                const scP = this._spawnCenterPx(); // v4.0.49：回城点随圆圈上移到最上排中心
+                targetX = scP.x;
+                targetY = scP.y;
+            }
+            // v4.0.49：大嘴花怒吼赶跑——10 秒内逃往别处/回血台，不攻击不回血（优先级高于撤退回城）
+            if (zb.chomperScareT > 0) {
+                zb.chomperScareT -= dt;
+                zb.retreating = false;
+                zb.isHealing = false;
+                if (zb.chomperScareT <= 0) {
+                    zb.targetSwitched = true; // 时间到 → 重新评估目标返回进攻
+                } else if (zb.scareX != null) {
+                    targetX = zb.scareX;
+                    targetY = zb.scareY;
+                }
             }
             // 残血回城逻辑（仅主幽灵僵尸逃跑回血，尸潮小怪与僵王机甲决死进攻不逃跑）
             if (!zb.isMinion && !zb.isBoss && zb.hp < zb.maxHp * 0.3) zb.retreating = true;
@@ -4846,8 +4963,9 @@ class HauntedDorm {
             if (zb.retreating) {
                 zb.slowT = 0; // 逃跑时免疫减速
                 zb.stunT = 0; // 逃跑时免疫眩晕
-                targetX = this.worldWidth / 2;
-                targetY = 200; // 回到地图上方主干道，而不是中心（中心可能是墙壁）
+                const scP = this._spawnCenterPx(); // v4.0.49：回城点随圆圈上移到最上排中心
+                targetX = scP.x;
+                targetY = scP.y;
                 if (Math.hypot(targetX - zb.x, targetY - zb.y) < 120) {
                     zb.hp = Math.min(zb.maxHp, zb.hp + zb.maxHp * 0.25 * dt); // 回血变快
                     if (zb.hpBg) zb.hpBg.style.display = 'block';
