@@ -278,6 +278,11 @@ class HauntedDorm {
         this.traitorRevealed = false;
         this.traitorRevealAt = 160000; // 160 秒时揭露内鬼
         this.traitorHinted = false;
+        // v4.0.44：单人死亡抉择——天使 / 内鬼 二选一
+        this.playerAngelic = false;   // 天使形态：光环、无房、N捕获/M加速、一条命
+        this.playerTraitor = false;   // 内鬼形态：僵尸血量、挠人机门、团灭幸存者
+        this.fateOpen = false;        // 抉择弹窗打开中（全场冻结）
+        this._fateShown = false;
         
         this.playerRoles = [
             { id: 'sunflower', name: '向日葵', icon: 'assets/images/Plants/SunFlower/0.gif', skillDesc: '10秒阳光翻倍 (CD:60s)' },
@@ -776,7 +781,12 @@ class HauntedDorm {
             rm.tpl.beds.forEach((bed, idx) => allBeds.push({ room: rm, bedIdx: idx, bedCoords: bed }));
         }
         let shuffledBeds = allBeds.sort(() => Math.random() - 0.5);
-        
+
+        // v4.0.44：AI 实力分配——2 强 3 弱（用户：不能开局全员强势；强者≈玩家水平，弱者先倒下，胜负靠玩家决胜）
+        const aiCount = Math.min(5, shuffledBeds.length);
+        const strongPool = new Set();
+        while (strongPool.size < Math.min(2, aiCount)) strongPool.add(Math.floor(Math.random() * aiCount));
+
         for (let i = 0; i < 5; i++) {
             if (i >= shuffledBeds.length) break;
             const bedChoice = shuffledBeds[i];
@@ -786,13 +796,16 @@ class HauntedDorm {
             const sy = (this.worldHeight / 2) + (Math.random() * 40 - 20);
             const p = this._findPath(sx, sy, rm.frontX, rm.frontY);
             if (p) p.push({ x: (rm.x + bedChoice.bedCoords.c) * this.gridSize + 40, y: (rm.y + bedChoice.bedCoords.r) * this.gridSize + 40 }); // 走到专属床位（v4.0.16：寻路失败为 null，靠 update 里的重试兜底）
+            const isStrong = strongPool.has(i); // v4.0.44：2强3弱
             const ai = {
                 x: sx,
                 y: sy,
                 path: p || [],
                 // v4.0.33：血量 300→500（AI 队友存活更久）+ 血条常显（像真人一样可见掉血过程）
-                sun: 100, spore: 0, hp: 500, maxHp: 500, actTimer: 5.0 + Math.random() * 3.0,
-                isAi: true, targetRoom: rm, room: null, roleDef: roleDef,
+                // v4.0.44：强者 sun150/行动 1.2~2.7s，弱者 sun60/行动 3.5~7s
+                sun: isStrong ? 150 : 60, spore: 0, hp: 500, maxHp: 500,
+                actTimer: isStrong ? 1.2 + Math.random() * 1.5 : 3.5 + Math.random() * 3.5,
+                isAi: true, isStrong: isStrong, targetRoom: rm, room: null, roleDef: roleDef,
                 icon: roleDef.icon, dead: false, waterOn: true,
                 el1: document.createElement('div')
             };
@@ -801,7 +814,7 @@ class HauntedDorm {
             const color = colors[i % colors.length];
             ai.color = color;
             ai.el1.innerHTML = `<img src="${ai.icon}" style="${ai.roleDef.imgStyle || ''}">` +
-                               `<div style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); color:${color}; font-size:18px; font-weight:bold; text-shadow:1px 1px 2px black, -1px -1px 2px black; white-space:nowrap;">人机 - ${ai.roleDef.name}</div>`;
+                               `<div style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); color:${color}; font-size:18px; font-weight:bold; text-shadow:1px 1px 2px black, -1px -1px 2px black; white-space:nowrap;">人机 - ${ai.roleDef.name}${isStrong ? ' 💪' : ' 🌱'}</div>`;
             ai.el1.style.filter = `drop-shadow(0 0 10px ${color})`;
             // v4.0.31：AI 血条（受伤时显示）
             const aiHb = document.createElement('div');
@@ -818,6 +831,12 @@ class HauntedDorm {
         // v4.0.20：内鬼模式——秘密选定一名人机，160 秒时反水（植物阵营专属）
         if (!this.isZombieFaction && this.ais.length >= 3) {
             this.traitor = this.ais[Math.floor(Math.random() * this.ais.length)];
+        }
+
+        // v4.0.44：阵容播报——让玩家知道谁是老手谁是新手
+        if (!this.isZombieFaction && this.ais.length >= 3) {
+            const nStrong = this.ais.filter(a => a.isStrong).length;
+            this._announce(`🤖 幸存者阵容：${nStrong} 名老手 💪 · ${this.ais.length - nStrong} 名新手 🌱——关键时刻还得靠你！`);
         }
 
     }
@@ -942,7 +961,7 @@ class HauntedDorm {
 
     // ===== 点击植物 → 弹出「升级 / 拆除」面板 =====
     plantClick(pl, clientX, clientY) {
-        if (this.isZombieFaction) return;
+        if (this.isZombieFaction || this.playerAngelic || this.playerTraitor) return; // v4.0.44：天使/内鬼不可操作植物
         
         // 禁止跨房间操作：不能帮人机或其他人升级植物
         // 门和周围地刺也算在该房间的归属内
@@ -1379,7 +1398,16 @@ class HauntedDorm {
         }
         const skillEl = document.getElementById('skill-hud');
         if (skillEl) {
-            if (this.isZombieFaction) {
+            if (this.playerAngelic) {
+                // v4.0.44：天使双技能面板（取代角色技能）
+                const cap = this.player.capCd > 0
+                    ? `<span style="color:#777777;"><s>【N】捕获</s> (CD:${Math.ceil(this.player.capCd)}s)</span>`
+                    : `<span style="color:#7fd8ff;">【N】捕获</span> <span style="color:#aaaaaa;">(定身僵尸3秒)</span>`;
+                const spd = this.player.spdCd > 0
+                    ? `<span style="color:#777777;"><s>【M】加速</s> (CD:${Math.ceil(this.player.spdCd)}s)</span>`
+                    : `<span style="color:#ffd700;">【M】加速</span> <span style="color:#aaaaaa;">(6秒疾跑)</span>`;
+                skillEl.innerHTML = `😇 ${cap} ｜ ${spd}`;
+            } else if (this.isZombieFaction) {
                 if (this.player.skillCd > 0) {
                     skillEl.innerHTML = `<span style="color:#aaa;"><s>【M键】狂暴冲刺</s> (CD: ${Math.ceil(this.player.skillCd)}s)</span>`;
                 } else {
@@ -1542,7 +1570,13 @@ class HauntedDorm {
         this.playSfx(win ? 'winmusic.mp3' : 'losemusic.mp3', 0.6);
         this._closePopup();
         const secs = Math.floor((this.gameTime) / 1000);
-        if (this.isZombieFaction) {
+        if (this.playerTraitor) {
+            // v4.0.44：内鬼结局
+            document.getElementById('ov-title').innerText = win ? '😈 内鬼得逞！幸存者团灭！' : '🏠 植物们守住了家园…';
+        } else if (this.playerAngelic) {
+            // v4.0.44：天使结局
+            document.getElementById('ov-title').innerText = win ? '😇 天使的胜利！幸存者都活了下来！' : '😇 天使陨落…';
+        } else if (this.isZombieFaction) {
             document.getElementById('ov-title').innerText = win ? '🏆 猎杀完成！' : '💀 猎杀失败…';
         } else {
             document.getElementById('ov-title').innerText = win ? '🏆 僵尸被击倒了！' : '💀 被僵尸抓住了…';
@@ -1587,7 +1621,7 @@ class HauntedDorm {
     }
 
     openPlantMenu(mouseX, mouseY) {
-        if (this.isZombieFaction) return;
+        if (this.isZombieFaction || this.playerAngelic || this.playerTraitor) return; // v4.0.44：天使/内鬼不可建造
         if (this.player.dead) return; // v4.0.23：倒下的 P1 不能建造
 
         const rect = this.vp1.getBoundingClientRect();
@@ -1901,8 +1935,17 @@ class HauntedDorm {
                 if (e.key) this.keysJustPressed[e.key] = true;
                 if (e.code) this.keysJustPressed[e.code] = true;
             }
-            if ((key === 'm' || e.code === 'KeyM') && !e.repeat && this.player && this.player.skillCd <= 0) {
-                this._useSkill(this.player);
+            if ((key === 'm' || e.code === 'KeyM') && !e.repeat && this.player && !this.player.dead) {
+                // v4.0.44：天使形态 M=加速；内鬼/普通形态 M=角色技能
+                if (this.playerAngelic) {
+                    if (this.player.spdCd <= 0) this._angelSpeed();
+                } else if (!this.playerTraitor && this.player.skillCd <= 0) {
+                    this._useSkill(this.player);
+                }
+            }
+            // v4.0.44：天使捕获（N）——100% 命中定身 3 秒
+            if ((key === 'n' || e.code === 'KeyN') && !e.repeat && this.playerAngelic && this.player && !this.player.dead) {
+                if (this.player.capCd <= 0) this._angelCapture();
             }
             if ((key === '/' || key === '3' || key === 'pagedown' || e.code === 'Slash' || e.code === 'Digit3' || e.code === 'Numpad3' || e.code === 'PageDown') && !e.repeat && this.gameMode === '2p' && this.player2 && this.player2.skillCd <= 0) {
                 this._useSkill(this.player2);
@@ -1910,7 +1953,7 @@ class HauntedDorm {
             if (e.code === 'Space') {
                 e.preventDefault();
             }
-            if ((key === ' ' || e.code === 'Space') && !e.repeat && !this.isZombieFaction) {
+            if ((key === ' ' || e.code === 'Space') && !e.repeat && !this.isZombieFaction && !this.playerAngelic && !this.playerTraitor) {
                 this.setWatering(this.player, !this.player.waterOn);
             }
             // v4.0.15：P2 浇水开关（0键 / 小键盘0）——全量支持 e.code
@@ -2305,6 +2348,12 @@ class HauntedDorm {
         this.player.el1.classList.add('dead-slash');
         this.player.el1.style.filter = 'grayscale(1)';
         this.player.vx = 0; this.player.vy = 0;
+        // v4.0.44：单人模式首次阵亡 → 弹出「天使 / 内鬼」抉择框（天使/内鬼形态下再倒下=直接结算）
+        if (this.gameMode !== '2p' && !this.playerAngelic && !this.playerTraitor && !this.over) {
+            this._showFateChoice();
+            return;
+        }
+        if (this.playerAngelic) this._announce('😇 天使陨落！你被僵尸抓住了…', 'scream.mp3', true);
         if (this._humansAll().every(q => q.dead)) {
             this.gameOver(false);
         } else {
@@ -2331,8 +2380,143 @@ class HauntedDorm {
             p.el1.classList.add('dead-slash');
             p.el1.style.filter = 'grayscale(1)';
             p.vx = 0; p.vy = 0;
+            // v4.0.44：天使形态下——人机全灭=没人可帮，直接失败结算
+            if (this.playerAngelic && this.ais.every(a => a.dead)) {
+                this.gameOver(false);
+                return;
+            }
             if (this.ghostLevel >= 4) this._levelUpGhostDirect();
         }
+    }
+
+    // ===== v4.0.44：单人死亡抉择——天使 / 内鬼 二选一 =====
+    _showFateChoice() {
+        if (this._fateShown) return;
+        this._fateShown = true;
+        this.fateOpen = true; // 全场冻结（loop 里拦截）
+        document.getElementById('fate-choice')?.remove();
+        const ov = document.createElement('div');
+        ov.id = 'fate-choice';
+        ov.style.cssText = 'position:fixed; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.82); z-index:9000; display:flex; align-items:center; justify-content:center; font-family:"Kaiti SC",serif;';
+        ov.innerHTML = `
+            <div style="background:#2a2118; border:3px solid #8a6d2f; border-radius:16px; padding:30px 42px; text-align:center; box-shadow:0 0 40px rgba(0,0,0,0.9); max-width:700px;">
+                <div style="font-size:34px; color:#ffd54a; font-weight:bold; text-shadow:2px 2px 0 #000; margin-bottom:6px;">💀 你倒下了…</div>
+                <div style="font-size:17px; color:#cccccc; margin-bottom:22px;">最后的执念让你获得了第二次选择——</div>
+                <div style="display:flex; gap:22px; justify-content:center;">
+                    <div id="fate-angel" style="cursor:pointer; width:264px; background:#3a2f14; border:2px solid #ffd700; border-radius:12px; padding:16px 14px; transition:transform 0.15s;">
+                        <div style="font-size:42px;">😇</div>
+                        <div style="font-size:24px; color:#ffd700; font-weight:bold; margin:4px 0 8px;">天 使</div>
+                        <div style="font-size:13.5px; color:#dddddd; line-height:1.7; text-align:left;">
+                            · 头顶光环，无房无产出，不可建造升级<br>
+                            · <b style="color:#7fd8ff;">【N】捕获</b>：100% 命中，定住僵尸 3 秒（不能挠门、不能回血，站桩挨打）<br>
+                            · <b style="color:#ffd700;">【M】加速</b>：6 秒疾跑，甩开僵尸的追杀<br>
+                            · 两技能 CD 均 30 秒<br>
+                            · <b style="color:#ff8a8a;">僵尸会来追杀你，只有一条命——被抓住直接 Game Over！</b><br>
+                            · 帮人机活到僵尸被消灭即胜利！
+                        </div>
+                    </div>
+                    <div id="fate-traitor" style="cursor:pointer; width:264px; background:#33161a; border:2px solid #c62828; border-radius:12px; padding:16px 14px; transition:transform 0.15s;">
+                        <div style="font-size:42px;">😈</div>
+                        <div style="font-size:24px; color:#ff5252; font-weight:bold; margin:4px 0 8px;">内 鬼</div>
+                        <div style="font-size:13.5px; color:#dddddd; line-height:1.7; text-align:left;">
+                            · 旁边贴上「😈 内鬼」标签<br>
+                            · 血量 = 当前僵尸的血量<br>
+                            · 走到人机门口挠门、贴身咬人（跟僵尸一样）<br>
+                            · <b style="color:#ffd54a;">团灭所有幸存者即胜利！</b><br>
+                            · 若主僵尸被植物消灭，内鬼计划失败…
+                        </div>
+                    </div>
+                </div>
+                <div id="fate-giveup" style="cursor:pointer; margin-top:18px; font-size:13px; color:#888888; text-decoration:underline;">放弃机会，直接结算失败</div>
+            </div>`;
+        document.body.appendChild(ov);
+        ov.querySelector('#fate-angel').onclick = () => this._becomeAngel(ov);
+        ov.querySelector('#fate-traitor').onclick = () => this._becomeTraitor(ov);
+        ov.querySelector('#fate-giveup').onclick = () => { ov.remove(); this.fateOpen = false; this.gameOver(false); };
+    }
+
+    _becomeAngel(ov) {
+        ov.remove();
+        this.fateOpen = false;
+        this.keys = {}; this.keysJustPressed = {};
+        const p = this.player;
+        this.playerAngelic = true;
+        p.dead = false; p.hp = 100; p.maxHp = 100;
+        p.capCd = 0; p.spdCd = 0;
+        p.waterOn = false; // v4.0.44：天使不再浇水
+        p.invincibleT = 3; // 复活短暂无敌
+        p.el1.classList.remove('dead-slash');
+        p.el1.style.filter = 'drop-shadow(0 0 14px #ffd700)';
+        const halo = document.createElement('div');
+        halo.className = 'angel-halo'; // 头顶光环
+        p.el1.appendChild(halo);
+        const nameEl = p.el1.querySelector('div[style*="top:-35px"]');
+        if (nameEl) { nameEl.innerText = '你 (天使)'; nameEl.style.color = '#ffd700'; }
+        // HUD：阳光/孢子/伤害 → 天使状态条（技能显示走 #skill-hud）
+        const statsRow = document.querySelector('#hud-p1 > div:nth-child(2)');
+        if (statsRow) statsRow.innerHTML = '<span style="color:#ffd700;">😇 天使形态</span><span style="color:#aaaaaa; font-size:13px;">无房 · 不可建造 · 只有一条命</span>';
+        this.setHp();
+        this._refreshHud();
+        this._announce('😇 你化作天使！【N】捕获定住僵尸、【M】加速逃离追杀——帮人机活到胜利！小心：你只有一条命！', 'points.mp3', true);
+    }
+
+    _becomeTraitor(ov) {
+        ov.remove();
+        this.fateOpen = false;
+        this.keys = {}; this.keysJustPressed = {};
+        const p = this.player;
+        this.playerTraitor = true;
+        p.dead = false;
+        const cfg = HauntedDorm.GHOST_LEVELS[Math.max(0, this.ghostLevel - 1)];
+        p.maxHp = cfg.hp;     // 血量 = 当前僵尸的血量
+        p.hp = cfg.hp;
+        p.isZombie = true;    // 碰撞按僵尸处理：被门板/植物阻挡，站门口挠
+        p.waterOn = false;    // v4.0.44：内鬼不再浇水
+        p.invincibleT = 3;
+        p.el1.classList.remove('dead-slash');
+        p.el1.style.filter = 'drop-shadow(0 0 12px #ff5252)';
+        const badge = document.createElement('div');
+        badge.className = 'lv-badge';
+        badge.style.background = '#c62828';
+        badge.innerText = '😈 内鬼';
+        p.el1.appendChild(badge);
+        const nameEl = p.el1.querySelector('div[style*="top:-35px"]');
+        if (nameEl) { nameEl.innerText = '你 (内鬼)'; nameEl.style.color = '#ff5252'; }
+        const p1Ctl = document.querySelector('#hud-p1 > div');
+        if (p1Ctl) p1Ctl.innerHTML = '<div>【内鬼 控制】移动: W/A/S/D ｜ 靠近门/植物自动慢咬 ｜ 靠近幸存者啃咬</div><div>血量=当前僵尸血量 ｜ 团灭所有幸存者即胜利 ｜ 主僵尸被消灭=失败</div>';
+        this.setHp();
+        this._announce('😈 你化身内鬼！去挠开人机的门，咬杀所有幸存者——主僵尸被消灭则计划失败！', 'evillaugh.mp3', true);
+    }
+
+    // 天使技能①：捕获（N）——100% 命中，定身最近僵尸 3 秒
+    _angelCapture() {
+        const p = this.player;
+        const zbs = this.zombies.filter(z => !z.dead);
+        if (zbs.length === 0) {
+            this._flyText(p.x, p.y - 30, '场上没有僵尸', '#ff8a8a');
+            this.playSfx('buzzer.mp3', 0.3);
+            return; // 空放不消耗 CD
+        }
+        let best = null, bd = Infinity;
+        for (const z of zbs) { const d = Math.hypot(z.x - p.x, z.y - p.y); if (d < bd) { bd = d; best = z; } }
+        best.stunT = 3;
+        best.capturedT = 3; // 捕获期：挠门/啃咬被眩晕短路，撤退回血同样被眩晕短路
+        best.lockedTarget = null; best.path = null;
+        this._applyFrozenFx(best, true);
+        this._flyText(best.x, best.y - 30, '🔒 天使捕获！(定身3秒)', '#7fd8ff');
+        this.playSfx('frozen.mp3', 0.5);
+        p.capCd = 30;
+        this._refreshHud();
+    }
+
+    // 天使技能②：加速（M）——6 秒疾跑甩开追杀
+    _angelSpeed() {
+        const p = this.player;
+        p.speedBuffT = 6; // 复用全局疾跑通道（移速 800）
+        p.spdCd = 30;
+        this._flyText(p.x, p.y - 30, '💨 天使加速！(6秒)', '#ffd700');
+        this.playSfx('readysetplant.mp3', 0.4);
+        this._refreshHud();
     }
 
     _killZombie(zb, killer = null) {
@@ -2381,6 +2565,14 @@ class HauntedDorm {
             this._gameOverTimer = setTimeout(() => this.gameOver(false), 3000);
             return;
         }
+
+        // v4.0.44：内鬼模式下主僵尸被植物消灭 → 植物阵营胜利，内鬼计划失败
+        if (this.playerTraitor && !zb.isMinion && !zb.isBoss) {
+            this._announce('🎉 植物们守住了家园！内鬼计划失败…', 'losemusic.mp3', true);
+            if (this._gameOverTimer) clearTimeout(this._gameOverTimer);
+            this._gameOverTimer = setTimeout(() => this.gameOver(false), 3000);
+            return;
+        }
         
         this.ghostRespawnAt = 1;
         this._updateGhostChip();
@@ -2422,6 +2614,7 @@ class HauntedDorm {
             const rm = this._insideRoom(pl.c, pl.r);
             const owner = pl.owner || ((rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : null); // v4.0.23：按种植者记账
             if (!owner || owner.dead) continue;
+            if (owner === this.player && (this.playerAngelic || this.playerTraitor)) continue; // v4.0.44：天使无产出；内鬼不再享受植物供奉
             const def = pl.def;
             const wx = pl.c * 80 + 40, wy = pl.r * 80 + 40;
             // v4.0.39：阳光系（nightOnly）白天停摆——只在夜晚产阳光（僵尸阵营无昼夜，不受限）
@@ -2737,6 +2930,10 @@ class HauntedDorm {
         if (!this.lastTime) this.lastTime = time;
         const realDt = Math.min((time - this.lastTime) / 1000, 0.1);
         this.lastTime = time;
+        if (this.fateOpen) { // v4.0.44：死亡抉择弹窗期间全场冻结（只保留渲染）
+            this._animId = requestAnimationFrame(t => this.loop(t));
+            return;
+        }
 
         const simulatedDt = realDt * (this.timeScale || 1.0);
         const steps = Math.max(1, Math.ceil(simulatedDt / 0.016));
@@ -2868,7 +3065,7 @@ class HauntedDorm {
     _updateKMenus() {
         // 【优化3】冗余按键映射：为每个操作提供2-3个备用键。如果主键被硬件冲突屏蔽，玩家可以下意识用备用键
         // v4.0.23：倒下的玩家不能打开建造菜单；僵尸阵营玩家禁止打开植物建造菜单
-        if (!this.player.dead && !this.isZombieFaction) this._handleKMenu(1, this.player, ['f', 'j'], ['altright', 'g', 'k'], ['w'], ['s'], this.p1Kmenu, this.p1Cursor);
+        if (!this.player.dead && !this.isZombieFaction && !this.playerAngelic && !this.playerTraitor) this._handleKMenu(1, this.player, ['f', 'j'], ['altright', 'g', 'k'], ['w'], ['s'], this.p1Kmenu, this.p1Cursor); // v4.0.44：天使/内鬼不可开建造菜单
         if (this.gameMode === '2p' && this.player2 && !this.player2.dead) {
             // v4.0.16：P2 主键改数字位 1确认/2取消（0浇水/3技能）——原主键 Delete 在 Mac 上是退格(Backspace)根本不触发，
             // 用户实际一直用的是备用键 1；Enter 保留为取消备用
@@ -3576,6 +3773,7 @@ class HauntedDorm {
         let best = null, bd = Infinity;
         for (const p of this.allPlayers) {
             if (p.dead || p === t) continue;
+            if (this.playerTraitor && p === this.player) continue; // v4.0.44：玩家也是内鬼——内鬼不咬内鬼
             const d = Math.hypot(p.x - t.x, p.y - t.y);
             if (d < bd) { bd = d; best = p; }
         }
@@ -3693,6 +3891,15 @@ class HauntedDorm {
             if (p.skillCd > 0) {
                 p.skillCd -= dt;
                 if (p.skillCd <= 0) this._refreshHud();
+            }
+            // v4.0.44：天使双技能 CD
+            if (p.capCd > 0) {
+                p.capCd -= dt;
+                if (p.capCd <= 0) this._refreshHud();
+            }
+            if (p.spdCd > 0) {
+                p.spdCd -= dt;
+                if (p.spdCd <= 0) this._refreshHud();
             }
         }
         for (const zb of this.zombies) { if (zb.hitFlashT > 0) zb.hitFlashT -= dt; }
@@ -4034,6 +4241,7 @@ class HauntedDorm {
         // v4.0.39：走进空房自动认领——「只要一走进房屋就可以产阳光」；旧版靠浇水产sun开局，浇水不再产sun后需此入口破死局
         for (const p of this.allPlayers) {
             if (p.isAi || p.dead) continue;
+            if (p === this.player && (this.playerAngelic || this.playerTraitor)) continue; // v4.0.44：天使没有房间；内鬼也不再认领
             const rmHere = this._insideRoom(Math.floor(p.x / 80), Math.floor(p.y / 80));
             if (rmHere && rmHere.owners && rmHere.owners.length < (rmHere.capacity || 1) && !rmHere.owners.includes(p)) {
                 if (this._claimRoom(p, rmHere)) {
@@ -4065,8 +4273,8 @@ class HauntedDorm {
         this._updateDoomshroom(dt);
         this._updateMines(dt);
         
-        // 僵尸阵营玩家啃咬逻辑
-        if (this.isZombieFaction && !this.player.dead) {
+        // 僵尸阵营玩家啃咬逻辑（v4.0.44：内鬼玩家同享——挠门/咬幸存者/中心回血）
+        if ((this.isZombieFaction || this.playerTraitor) && !this.player.dead) {
             // 每 2.4s 啃食身边的植物（优先啃门）
             this.player.biteT = (this.player.biteT || 0) + dt;
             if (this.player.biteT >= 2.4) {
@@ -4122,7 +4330,8 @@ class HauntedDorm {
                 this.player.el1.style.filter = '';
             }
             
-            // 玩家僵尸时间升级逻辑（全面拉齐至 Lv.10 机甲僵王）
+            // 玩家僵尸时间升级逻辑（全面拉齐至 Lv.10 机甲僵王；v4.0.44：内鬼不升僵尸形态——保持植物外观与转化时血量）
+            if (!this.playerTraitor) {
             const activeSeconds = this.gameTime / 1000;
             let targetLevel = 1;
             const timeLevels = [
@@ -4147,6 +4356,7 @@ class HauntedDorm {
                 if (bdg) bdg.innerText = 'Lv.' + this.player.level;
                 this._announce(`👻 你已进化为【${cfg.name}】！`, 'finalwave.mp3', true);
             }
+            } // v4.0.44：end !playerTraitor（内鬼不走僵尸升级链）
             
             // v4.0.31：接触幸存者改为按血量啃咬——AI 有血量能扛（不再一碰到就死），隔门免疫保留
             // 开局前 5 秒无敌保护，防止一出生人机就被吃掉
@@ -4165,7 +4375,7 @@ class HauntedDorm {
                         v.biteT = (v.biteT || 0) + dt;
                         if (v.biteT >= 1.5) {
                             v.biteT = 0;
-                            const dmg = Math.round((80 + 40 * (this.player.level - 1)) * (this.player.speedBuffT > 0 ? 1.6 : 1.0));
+                            const dmg = Math.round((80 + 40 * ((this.playerTraitor ? this.ghostLevel : this.player.level) - 1)) * (this.player.speedBuffT > 0 ? 1.6 : 1.0)); // v4.0.44：内鬼咬力跟当前僵尸等级走
                             v.hp -= dmg;
                             v.fleeing = true; v.fleeT = 0; // v4.0.31b：被咬立即刷新逃离目标
                             if (v.hpBg) { v.hpBg.style.display = 'block'; v.hpFg.style.width = Math.max(0, v.hp / v.maxHp * 100) + '%'; }
@@ -4439,6 +4649,10 @@ class HauntedDorm {
             // 眩晕（眩晕菇/冰冻）：停住不动、不咬人
             if (zb.stunT > 0) {
                 zb.stunT -= dt;
+                if (zb.capturedT > 0) { // v4.0.44：天使捕获锁——定身期内不可被撤退逻辑清掉眩晕（不挠门不回血）
+                    zb.capturedT -= dt;
+                    zb.stunT = Math.max(zb.stunT, zb.capturedT);
+                }
                 if (zb.iceFxT > 0) { zb.iceFxT -= dt; if (zb.iceFxT <= 0) this._applyFrozenFx(zb, false); } // v4.0.39：冰冻特效倒计时
                 if (zb.el1) { zb.el1.style.left = zb.x + 'px'; zb.el1.style.top = zb.y + 'px'; }
                 continue;
@@ -4463,6 +4677,7 @@ class HauntedDorm {
                 for (const p of this.allPlayers) {
                     if (p.hp <= 0 || p.dead) continue;
                     if (this.traitorRevealed && p === this.traitor) continue; // v4.0.20：内鬼是僵尸方的
+                    if (this.playerTraitor && p === this.player) continue; // v4.0.44：玩家内鬼=僵尸方
                     if (p === this.player && this.player.stealthT > 0) continue;
                     let score = Math.hypot(p.x - zb.x, p.y - zb.y);
                     const rm = p.room || this.rooms.find(r => p.x >= r.x*80 && p.x <= (r.x+r.w)*80 && p.y >= r.y*80 && p.y <= (r.y+r.h)*80);
@@ -4650,6 +4865,7 @@ class HauntedDorm {
             for (const p of this.allPlayers) {
                 if (p.dead) continue;
                 if (this.traitorRevealed && p === this.traitor) continue; // v4.0.20：僵尸不咬内鬼
+                if (this.playerTraitor && p === this.player) continue; // v4.0.44：僵尸不咬玩家内鬼
                 if (Math.hypot(p.x - zb.x, p.y - zb.y) < 50) {
                     // 如果中间隔着门（玩家在房间里且门活着，僵尸在外面），则免疫接触伤害
                     const pRm = this._insideRoom(Math.floor(p.x/80), Math.floor(p.y/80));

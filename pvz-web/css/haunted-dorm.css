@@ -128,3 +128,16 @@ body.dorm-page { margin: 0; padding: 0; background: #000; overflow: hidden; disp
 #dorm-screen .shake { transform: translate(4px, 4px) rotate(2deg); }
 #dorm-screen .shake:nth-child(even) { transform: translate(-4px, -2px) rotate(-2deg); }
     
+
+/* ===== v4.0.44：天使光环 ===== */
+#dorm-screen .angel-halo {
+    position: absolute; left: 50%; top: -26px; width: 54px; height: 18px; margin-left: -27px;
+    border: 4px solid #ffd700; border-radius: 50%;
+    box-shadow: 0 0 14px #ffd700, inset 0 0 8px rgba(255, 215, 0, 0.65);
+    animation: angelHaloPulse 1.6s ease-in-out infinite;
+    pointer-events: none; z-index: 3;
+}
+@keyframes angelHaloPulse {
+    0%, 100% { transform: scale(1); opacity: 0.95; }
+    50% { transform: scale(1.18); opacity: 0.65; }
+}
