@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1792158383">
-    <link rel="stylesheet" href="css/haunted-dorm.css?v=1792158383">
+    <link rel="stylesheet" href="css/style.css?v=1792159290">
+    <link rel="stylesheet" href="css/haunted-dorm.css?v=1792159290">
 </head>
 <body>
     <div id="game-container">
@@ -570,7 +570,7 @@
                 <div id="hud-p1" class="player-hud">
                     <div class="hud-ctrl" style="color:#4da6ff;">
                         <div>【P1 控制】移动: W/A/S/D ｜ 建造/确认: F或J</div>
-                        <div>浇水: 空格 ｜ 取消: 右Alt或G ｜ 技能: M</div>
+                        <div>浇水: 空格 ｜ 取消: 右Alt或G ｜ 技能: M ｜ 修门: N</div>
                     </div>
                     <div style="display:flex; gap:18px; align-items:center;">
                         <span>阳光: <span id="sun1" class="sun-text">0</span></span>
@@ -598,7 +598,7 @@
                 <div id="p2-hud" class="player-hud" style="display:none; right:20px; left:auto; text-align: right;">
                     <div class="hud-ctrl" style="color:#4fc3f7;">
                         <div>【P2 控制】移动: 方向键 ｜ 建造/确认: 1</div>
-                        <div>浇水: 0 ｜ 取消: 2或回车 ｜ 技能: 3或/键</div>
+                        <div>浇水: 0 ｜ 取消: 2或回车 ｜ 技能: 3或/键 ｜ 修门: 加号键</div>
                     </div>
                     <div style="display:flex; gap:18px; align-items:center; justify-content: flex-end;">
                         <span>阳光: <span id="sun2" class="sun-text">0</span></span>
@@ -643,9 +643,9 @@
                         <div style="text-align:center; font-size:24px; letter-spacing:4px; margin-bottom:10px; flex:none; color:#ffe14a;">🏠 守屋大作战 · 玩法说明与完整图鉴</div>
                         <div style="flex:1; overflow-y:auto; padding-right:12px;">
                             <b style="color:#ffe14a;">🎮 操作控制</b><br>
-                            · <b>P1 控制</b>：<b>[W/A/S/D] 移动</b> | <b>[F 或 J] 呼出菜单/确认购买升级</b> | <b>[空格] 浇水开关</b> | <b>[G 或 右Alt] 关闭菜单</b> | <b>[M键] 角色主动技能</b><br>
+                            · <b>P1 控制</b>：<b>[W/A/S/D] 移动</b> | <b>[F 或 J] 呼出菜单/确认购买升级</b> | <b>[空格] 浇水开关</b> | <b>[G 或 右Alt] 关闭菜单</b> | <b>[M键] 角色主动技能</b> | <b>[N键] 修复自家门板（回25%总血，CD 60秒）</b><br>
                             &nbsp;&nbsp;<i>* 单人模式下亦可直接用鼠标点击地面呼出种植菜单，或点击植物进行升级/拆除。</i><br>
-                            · <b>P2 控制</b>：<b>[方向键] 移动</b> | <b>[1 或 右Shift] 呼出菜单/确认</b> | <b>[0键] 浇水开关</b> | <b>[2 或 回车] 关闭菜单</b> | <b>[3 或 /键] 角色主动技能</b><br>
+                            · <b>P2 控制</b>：<b>[方向键] 移动</b> | <b>[1 或 右Shift] 呼出菜单/确认</b> | <b>[0键] 浇水开关</b> | <b>[2 或 回车] 关闭菜单</b> | <b>[3 或 /键] 角色主动技能</b> | <b>[加号键] 修复自家门板</b><br>
                             · <b>如何建造</b>：控制角色移动到房间空地上按【确认键】，身边弹出建造菜单（支持循环翻页，打开时角色站定防误走）。按【上下键】选择植物，再按【确认键】即可购买！走到已有植物上按确认可升级或拆除（<b>拆除需二次确认防误删</b>）。<br>
                             · <b>房间归属</b>：每人<b>最多可拥有两间房</b>。在无主房间建造即可自动认领副房；你先进去的房间人机绝不抢注；人机临时避难不占用房间归属。<br>
                             · <b>倒下规则</b>：双人模式中一人倒地<b>游戏不结束</b>（镜头跟随存活者），<b>全员阵亡才算输</b>！结算时累计伤害最高者荣获 MVP。<br>
@@ -839,18 +839,18 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1792158383"></script>
-    <script src="js/Board.js?v=1792158383"></script>
-    <script src="js/entities/Entity.js?v=1792158383"></script>
-    <script src="js/entities/Plant.js?v=1792158383"></script>
-    <script src="js/entities/Zombie.js?v=1792158383"></script>
-    <script src="js/entities/Projectile.js?v=1792158383"></script>
-    <script src="js/entities/Sun.js?v=1792158383"></script>
-    <script src="js/managers/WaveManager.js?v=1792158383"></script>
-    <script src="js/managers/CollisionManager.js?v=1792158383"></script>
-    <script src="js/managers/EventManager.js?v=1792158383"></script>
-    <script src="js/GameLoop.js?v=1792158383"></script>
-    <script src="js/HelpGuide.js?v=1792158383"></script>
-    <script src="js/HauntedDorm.js?v=1792158383"></script>
+    <script src="js/InputManager.js?v=1792159290"></script>
+    <script src="js/Board.js?v=1792159290"></script>
+    <script src="js/entities/Entity.js?v=1792159290"></script>
+    <script src="js/entities/Plant.js?v=1792159290"></script>
+    <script src="js/entities/Zombie.js?v=1792159290"></script>
+    <script src="js/entities/Projectile.js?v=1792159290"></script>
+    <script src="js/entities/Sun.js?v=1792159290"></script>
+    <script src="js/managers/WaveManager.js?v=1792159290"></script>
+    <script src="js/managers/CollisionManager.js?v=1792159290"></script>
+    <script src="js/managers/EventManager.js?v=1792159290"></script>
+    <script src="js/GameLoop.js?v=1792159290"></script>
+    <script src="js/HelpGuide.js?v=1792159290"></script>
+    <script src="js/HauntedDorm.js?v=1792159290"></script>
 </body>
 </html>

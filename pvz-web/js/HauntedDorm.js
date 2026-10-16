@@ -301,7 +301,8 @@ class HauntedDorm {
             icon: this.playerRoleDef1.icon,
             roleDef: this.playerRoleDef1,
             camX: 0, camY: 0, skillCd: 0, sunBuffT: 0, atkBuffT: 0,
-            biteT: 0, level: 1, speedBuffT: 0, waterOn: false, waterTick: 0, lastWaterTime: 0
+            biteT: 0, level: 1, speedBuffT: 0, waterOn: false, waterTick: 0, lastWaterTime: 0,
+            nutHealCd: 0 // v4.0.48：坚果门板修复 CD（60s，回 25% 总血）
         };
         
         if (this.gameMode === '2p') {
@@ -311,7 +312,8 @@ class HauntedDorm {
                 icon: this.playerRoleDef2.icon,
                 roleDef: this.playerRoleDef2,
                 camX: 0, camY: 0, skillCd: 0, sunBuffT: 0, atkBuffT: 0,
-                biteT: 0, level: 1, speedBuffT: 0, waterOn: false, waterTick: 0, lastWaterTime: 0
+                biteT: 0, level: 1, speedBuffT: 0, waterOn: false, waterTick: 0, lastWaterTime: 0,
+                nutHealCd: 0
             };
             this.allPlayers = [this.player, this.player2];
         } else {
@@ -1247,10 +1249,7 @@ class HauntedDorm {
                     }
                 }
 
-                // AI 补门逻辑：门被毁坏且阳光足够时，优先重新补建坚果大门
-                if (!door && ai.sun >= 50) {
-                    actions.push({ type: 'plant_door', id: 'wallnut', cost: 50, c: rm.doorCol, r: rm.doorRow, weight: 100 });
-                }
+                // v4.0.48：AI 补门逻辑已删（用户实报「它竟然能修复坚果」很抽象）——大门被咬毁即永久消失，谁都补不回来
 
                 // 随机轮盘选择执行
                 if (actions.length > 0) {
@@ -1273,13 +1272,8 @@ class HauntedDorm {
                         if (sp) sp.investSun = chosen.cost; // v4.0.47
                         this._flyText(chosen.c * 80 + 40, chosen.r * 80, `AI 种植！`, '#bfa8e0');
                         if (Math.random() < 0.15) this._say(ai, ["门再厚点！僵尸你过来啊！", "阳光怎么这么少，搞快点！", "只要我跑得快，僵尸就吃不到我脑子！", "这局带飞！稳住我们能赢！", "吓死宝宝了，多种点豌豆压压惊！", "僵尸大哥别杀我，我肉酸！", "我这房间风水好，僵尸看不见我！"][Math.floor(Math.random()*7)]);
-                    } else if (chosen.type === 'plant_door') {
-                        ai.sun -= chosen.cost;
-                        const spd = this.spawnPlant(chosen.c, chosen.r, chosen.id, true, ai);
-                        if (spd) spd.investSun = chosen.cost; // v4.0.47
-                        this._flyText(chosen.c * 80 + 40, chosen.r * 80, `AI 补门！`, '#bfa8e0');
                     }
-                    // v4.0.37：repair 分支已随「AI 修补」机制一并删除
+                    // v4.0.37：repair 分支已随「AI 修补」机制一并删除；v4.0.48：plant_door 补门分支一并删除（门毁即永久消失）
                 }
         }
     }
@@ -1438,10 +1432,13 @@ class HauntedDorm {
                     skillEl.innerHTML = `<span style="color:#ff5252;">【M键】狂暴冲刺 (5秒内极速免疫)</span>`;
                 }
             } else if (this.player.roleDef) {
+                const nut = this.player.nutHealCd > 0
+                    ? `<span style="color:#777777;"><s>【N】修门</s> (CD:${Math.ceil(this.player.nutHealCd)}s)</span>`
+                    : `<span style="color:#9dff6b;">【N】修门</span> <span style="color:#aaaaaa;">(回25%门板血)</span>`;
                 if (this.player.skillCd > 0) {
-                    skillEl.innerHTML = `<span style="color:#aaa;"><s>${this.player.roleDef.skillDesc}</s> (CD: ${Math.ceil(this.player.skillCd)}s)</span>`;
+                    skillEl.innerHTML = `<span style="color:#aaa;"><s>${this.player.roleDef.skillDesc}</s> (CD: ${Math.ceil(this.player.skillCd)}s)</span> ｜ ${nut}`;
                 } else {
-                    skillEl.innerHTML = `<span style="color:#0f0;">【M键】${this.player.roleDef.skillDesc}</span>`;
+                    skillEl.innerHTML = `<span style="color:#0f0;">【M键】${this.player.roleDef.skillDesc}</span> ｜ ${nut}`;
                 }
             }
         }
@@ -1453,10 +1450,13 @@ class HauntedDorm {
             if (spore2El) spore2El.innerText = this.player2.spore;
             const skillEl2 = document.getElementById('skill-hud2');
             if (skillEl2 && this.player2.roleDef) {
+                const nut2 = (this.player2.nutHealCd || 0) > 0
+                    ? `<span style="color:#777777;"><s>【+】修门</s> (CD:${Math.ceil(this.player2.nutHealCd)}s)</span>`
+                    : `<span style="color:#9dff6b;">【+】修门</span>`;
                 if (this.player2.skillCd > 0) {
-                    skillEl2.innerHTML = `<span style="color:#aaa;"><s>【3键】${this.player2.roleDef.skillDesc}</s> (CD: ${Math.ceil(this.player2.skillCd)}s)</span>`;
+                    skillEl2.innerHTML = `<span style="color:#aaa;"><s>【3键】${this.player2.roleDef.skillDesc}</s> (CD: ${Math.ceil(this.player2.skillCd)}s)</span> ｜ ${nut2}`;
                 } else {
-                    skillEl2.innerHTML = `<span style="color:#4fc3f7;">【3键】${this.player2.roleDef.skillDesc}</span>`;
+                    skillEl2.innerHTML = `<span style="color:#4fc3f7;">【3键】${this.player2.roleDef.skillDesc}</span> ｜ ${nut2}`;
                 }
             }
         }
@@ -1835,6 +1835,14 @@ class HauntedDorm {
         }
 
         const isDoor = !!targetRm && (col === targetRm.doorCol && row === targetRm.doorRow);
+        // v4.0.48：门毁即永久——门口格空着（原门已被咬毁）时禁止任何人重种门板（AI 补门已删，玩家同样不行）
+        if (isDoor && !this.plants.some(q => q.c === col && q.r === row)) {
+            if (sporeCost > 0) this.addSpore(sporeCost, p); // 已扣费，全额原路退还
+            else if (cost > 0) this.addSun(cost, p);
+            this._flyText(tx, ty, '🚪 大门已被咬毁，永久失效，无法重建！', '#ff8a8a');
+            this.playSfx('buzzer.mp3', 0.3);
+            return;
+        }
         const spawned = this.spawnPlant(col, row, type, isDoor, p); // v4.0.23：带上种植者与门板属性
         if (!spawned && type !== 'iceshroom') {
             // 保底兜底：若意外阻断未成功生成植物，全额原路退还
@@ -1972,9 +1980,17 @@ class HauntedDorm {
                     this._useSkill(this.player);
                 }
             }
-            // v4.0.44：天使捕获（N）——100% 命中定身 3 秒
-            if ((key === 'n' || e.code === 'KeyN') && !e.repeat && this.playerAngelic && this.player && !this.player.dead) {
-                if (this.player.capCd <= 0) this._angelCapture();
+            // N 键：v4.0.44 天蛇形态=捕获；v4.0.48 普通植物形态=坚果门板修复（CD 60s）
+            if ((key === 'n' || e.code === 'KeyN') && !e.repeat && this.player && !this.player.dead) {
+                if (this.playerAngelic) {
+                    if (this.player.capCd <= 0) this._angelCapture();
+                } else if (!this.isZombieFaction && !this.playerTraitor) {
+                    this._healDoor(this.player);
+                }
+            }
+            // v4.0.48：P2 加号键（小键盘+）坚果门板修复
+            if ((key === '+' || e.code === 'NumpadAdd') && !e.repeat && this.gameMode === '2p' && this.player2 && !this.player2.dead && !this.isZombieFaction) {
+                this._healDoor(this.player2);
             }
             if ((key === '/' || key === '3' || key === 'pagedown' || e.code === 'Slash' || e.code === 'Digit3' || e.code === 'Numpad3' || e.code === 'PageDown') && !e.repeat && this.gameMode === '2p' && this.player2 && this.player2.skillCd <= 0) {
                 this._useSkill(this.player2);
@@ -2027,7 +2043,7 @@ class HauntedDorm {
         this.vp1.addEventListener('mousedown', this._onVp1MouseDown);
     }
 
-    // ===== 浇水（per-player）：v4.0.39 不再直接产阳光（阳光一律由植物夜晚自动产出），保留催熟身边植物（加速生产/射击周期）与微量回血 =====
+    // ===== 浇水（per-player）：v4.0.39 不再直接产阳光（阳光一律由植物夜晚自动产出），保留催熟身边植物（加速生产/射击周期）；v4.0.48 回血自愈已删（用户实报：僵尸啃向日葵时它自己回血很抽象——植物不再有任何自愈途径，门板只能靠 N/加号键修复） =====
     _water(p) {
         p = p || this.player;
         if (p === this.player || p === this.player2) this.playSfx('plant_water.mp3', 0.4); // v4.0.31：AI 自动浇水不播声
@@ -2036,22 +2052,9 @@ class HauntedDorm {
             const px = pl.c * 80 + 40, py = pl.r * 80 + 40;
             if (Math.hypot(p.x - px, p.y - py) < 130) {
                 fedAny = true;
-                // 真正催熟身边植物：加速生产周期、加速射击冷却、微量回血自愈
+                // 真正催熟身边植物：加速生产周期、加速射击冷却（v4.0.48：微量回血自愈已删——植物血量不可再生）
                 if (pl.prodT !== undefined) pl.prodT += 0.2;
                 if (pl.sporeT !== undefined) pl.sporeT += 0.2;
-                if (pl.hp < pl.maxHp) {
-                    pl.hp = Math.min(pl.maxHp, pl.hp + 15);
-                    const bg = pl.el1.querySelector('.hp-bar-bg');
-                    const fg = pl.el1.querySelector('.hp-bar-fg');
-                    if (bg && fg) {
-                        if (pl.hp >= pl.maxHp) {
-                            bg.style.display = 'none';
-                        } else {
-                            bg.style.display = 'block';
-                            fg.style.width = Math.max(0, (pl.hp / pl.maxHp) * 100) + '%';
-                        }
-                    }
-                }
                 if (pl.def.feed) {
                     pl.fed = (pl.fed || 0) + 1;
                     if (pl.fed >= pl.def.feed.goal) {
@@ -2378,7 +2381,8 @@ class HauntedDorm {
         this.player.el1.style.filter = 'grayscale(1)';
         this.player.vx = 0; this.player.vy = 0;
         // v4.0.44：单人模式首次阵亡 → 弹出「天使 / 内鬼」抉择框（天使/内鬼形态下再倒下=直接结算）
-        if (this.gameMode !== '2p' && !this.playerAngelic && !this.playerTraitor && !this.over) {
+        // v4.0.48：僵尸阵营不弹抉择（用户实报：当僵尸死了也弹天使/内鬼很抽象）——只有单人植物方才有，僵尸玩家死亡直接结算
+        if (this.gameMode !== '2p' && !this.isZombieFaction && !this.playerAngelic && !this.playerTraitor && !this.over) {
             this._showFateChoice();
             return;
         }
@@ -2545,6 +2549,47 @@ class HauntedDorm {
         p.spdCd = 30;
         this._flyText(p.x, p.y - 30, '💨 天使加速！(6秒)', '#ffd700');
         this.playSfx('readysetplant.mp3', 0.4);
+        this._refreshHud();
+    }
+
+    // v4.0.48：坚果门板修复（P1=N键 / P2=加号键）——给自己的门板回 25% 总血，CD 60 秒
+    // 门毁即永久：门板没了就无从修复（提示玩家）；满血时不消耗 CD
+    _healDoor(p) {
+        if (p.dead || this.isZombieFaction || this.playerAngelic || this.playerTraitor) return;
+        if ((p.nutHealCd || 0) > 0) {
+            this._flyText(p.x, p.y - 30, `🔧 门板修复冷却中 (${Math.ceil(p.nutHealCd)}s)`, '#ff8a8a');
+            this.playSfx('buzzer.mp3', 0.3);
+            return;
+        }
+        // 找 p 名下房间的门板（主房+副房），优先修损毁最重的
+        const myRooms = this._ownedRooms(p);
+        let door = null, worst = 1;
+        for (const rm of myRooms) {
+            const d = this.plants.find(q => q.isDoor && q.c === rm.doorCol && q.r === rm.doorRow);
+            if (d && d.hp < d.maxHp) {
+                const ratio = d.hp / d.maxHp;
+                if (ratio < worst) { worst = ratio; door = d; }
+            }
+        }
+        if (!door) {
+            const anyDoor = myRooms.some(rm => this.plants.some(q => q.isDoor && q.c === rm.doorCol && q.r === rm.doorRow));
+            this._flyText(p.x, p.y - 30, anyDoor ? '🔧 门板完好无损，无需修复' : '🚪 没有门板可修（已毁的门板无法重建）', '#ff8a8a');
+            this.playSfx('buzzer.mp3', 0.3);
+            return;
+        }
+        const heal = Math.round(door.maxHp * 0.25);
+        const oldHp = door.hp;
+        door.hp = Math.min(door.maxHp, door.hp + heal);
+        const bg = door.el1.querySelector('.hp-bar-bg');
+        const fg = door.el1.querySelector('.hp-bar-fg');
+        if (bg && fg) {
+            if (door.hp >= door.maxHp) { bg.style.display = 'none'; }
+            else { bg.style.display = 'block'; fg.style.width = Math.max(0, (door.hp / door.maxHp) * 100) + '%'; }
+        }
+        this._flyText(door.c * 80 + 40, door.r * 80, `🔧 门板修复 +${door.hp - oldHp} 血`, '#9dff6b');
+        this._flyText(p.x, p.y - 30, '🔧 门板修复！', '#9dff6b');
+        this.playSfx('plant.mp3', 0.5);
+        p.nutHealCd = 60;
         this._refreshHud();
     }
 
@@ -3336,6 +3381,14 @@ class HauntedDorm {
                 if (cost > 0) this.addSun(-cost, p);
                 if (sporeCost > 0) this.addSpore(-sporeCost, p);
                 const isDoor = !!room && (menu.targetCol === room.doorCol && menu.targetRow === room.doorRow);
+                // v4.0.48：门毁即永久——门口格空着（原门已被咬毁）时禁止重种门板（键盘菜单路径，同 doPlant）
+                if (isDoor && !this.plants.some(q => q.c === menu.targetCol && q.r === menu.targetRow)) {
+                    if (cost > 0) this.addSun(cost, p);
+                    if (sporeCost > 0) this.addSpore(sporeCost, p);
+                    this._flyText(tx, ty, '🚪 大门已被咬毁，永久失效，无法重建！', '#ff8a8a');
+                    this.playSfx('buzzer.mp3', 0.3);
+                    return;
+                }
                 const spawned = this.spawnPlant(menu.targetCol, menu.targetRow, type, isDoor, p); // v4.0.23：带上种植者与门板属性
                 if (!spawned && type !== 'iceshroom') {
                     if (cost > 0) this.addSun(cost, p);
@@ -3945,6 +3998,11 @@ class HauntedDorm {
             if (p.spdCd > 0) {
                 p.spdCd -= dt;
                 if (p.spdCd <= 0) this._refreshHud();
+            }
+            // v4.0.48：门板修复 CD
+            if ((p.nutHealCd || 0) > 0) {
+                p.nutHealCd -= dt;
+                if (p.nutHealCd <= 0) this._refreshHud();
             }
         }
         for (const zb of this.zombies) { if (zb.hitFlashT > 0) zb.hitFlashT -= dt; }
