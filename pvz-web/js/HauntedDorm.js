@@ -898,6 +898,11 @@ class HauntedDorm {
         // 血条 (只要受伤就会显示)
         const hpBar = `<div class="hp-bar-bg"><div class="hp-bar-fg" style="width:100%;"></div></div>`;
 
+        // v4.0.40：等级徽标——升级链层级一眼可见（用户实报：技能点/等级不凸显）
+        if (def.tier) {
+            inner += `<div style="position:absolute; right:3px; top:12px; background:rgba(40,26,8,0.88); color:#ffd54a; border:1px solid #8a6d2f; border-radius:8px; padding:0 5px; font-size:11px; font-weight:bold; line-height:15px; pointer-events:none; z-index:5; text-shadow:0 1px 2px #000;">Lv${def.tier}</div>`;
+        }
+
         el1.innerHTML = hpBar + inner;
         this.world1.appendChild(el1);
         pl.el1 = el1;
@@ -947,7 +952,7 @@ class HauntedDorm {
         this._delArmed = null;
         this.ppDemolish.innerText = '拆除';
         this.ppDemolish.style.background = '';
-        this.ppTitle.innerText = def.name + (pl.isDoor ? '（门板）' : '');
+        this.ppTitle.innerText = (def.tier ? `Lv${def.tier} ` : '') + def.name + (pl.isDoor ? '（门板）' : '');
         // 用户反馈：因为已经有升级按键了，不需要长篇大论的升级预览框了，简化UI
         if (def.feed) {
             this.ppFeed.style.display = 'block';
@@ -992,7 +997,17 @@ class HauntedDorm {
         pl.el1.remove();
         if (pl.txtEl) pl.txtEl.remove();
         this.plants = this.plants.filter(p => p !== pl);
-        this.spawnPlant(col, row, to, isDoor, pl.owner); // v4.0.23：升级后保留原种植者
+        const np = this.spawnPlant(col, row, to, isDoor, pl.owner); // v4.0.23：升级后保留原种植者
+        // v4.0.40：升级结果可视化——报出新等级与新增益（用户实报：等级/技能点不凸显）
+        if (np) {
+            const d = np.def;
+            let detail = '';
+            if (d.produce) detail = ` 产${d.produce.sun}☀`;
+            else if (d.spore) detail = ` 产${d.spore.n}🦠`;
+            else if (d.shoot) detail = ` 伤${d.shoot.dmg}`;
+            else if (d.spike) detail = ` 伤${d.spike.dps}/s`;
+            this._flyText(col * 80 + 40, row * 80, `⬆ Lv${d.tier} ${d.name}${detail}`, '#ffd54a');
+        }
     }
 
     // ===== 单僵尸：出场 / 升级 / 重生 导演 =====
@@ -2414,11 +2429,9 @@ class HauntedDorm {
                     if (owner === this.player || owner === this.player2) {
                         this.addSun(sAmt, owner);
                         pl._tickN = (pl._tickN || 0) + 1;
-                        pl._acc = (pl._acc || 0) + sAmt;
-                        // v4.0.39：0.4s 高频 → 约 1.6s 一飘（累计数）、3.2s 一响，防刷屏
+                        // v4.0.40：飘字显示「单跳真实产出」（原累计数 +4 会被误读成一次产 4 点——用户实报开局应产 1 点）；仍 1.6s 一飘防刷屏
                         if (pl._tickN % 4 === 0) {
-                            this._flyText(wx, pl.r * 80, `+${pl._acc} ☀`, 'yellow');
-                            pl._acc = 0;
+                            this._flyText(wx, pl.r * 80, `+${sAmt} ☀`, 'yellow');
                             if (pl._tickN % 8 === 0) this.playSfx('points.mp3', 0.25);
                         }
                     } else {
@@ -2434,11 +2447,9 @@ class HauntedDorm {
                     if (owner === this.player || owner === this.player2) {
                         this.addSpore(spAmt, owner);
                         pl._tickS = (pl._tickS || 0) + 1;
-                        pl._accS = (pl._accS || 0) + spAmt;
-                        // v4.0.39：0.4s 高频 → 约 1.6s 一飘（累计数），防刷屏
+                        // v4.0.40：同阳光——飘字显示单跳真实产出
                         if (pl._tickS % 4 === 0) {
-                            this._flyText(wx, pl.r * 80 + 10, `+${pl._accS} 🦠`, '#c79aff');
-                            pl._accS = 0;
+                            this._flyText(wx, pl.r * 80 + 10, `+${spAmt} 🦠`, '#c79aff');
                         }
                     } else {
                         owner.spore = (owner.spore || 0) + spAmt;
