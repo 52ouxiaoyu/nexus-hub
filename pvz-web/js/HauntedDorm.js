@@ -32,12 +32,18 @@ class HauntedDorm {
                              overlay: 'Plants/TwinSunflower/TwinSunflower1.gif',
                              overTransform: 'translate(-50%, -50%) translate(10px, 6px) scaleX(-1) scale(1.15)',
                              produce: { sun: 64, every: 0.4 }, up: { cost: 3200, sporeCost: 64, to: 'sungold1' } },
-            sungold1:      { tier: 8, name: '五头向日葵',img: 'Plants/TwinSunflower/TwinSunflower1.gif', hp: 15000, cost: 0, scale: 1.25, tint: 'saturate(1.5) brightness(1.2)', nightOnly: true,
-                             produce: { sun: 128, every: 0.4 }, up: { cost: 6400, sporeCost: 128, to: 'sungold2' } },
-            sungold2:      { tier: 9, name: '六头向日葵',img: 'Plants/TwinSunflower/TwinSunflower1.gif', hp: 18000, cost: 0, scale: 1.35, tint: 'saturate(1.7) brightness(1.3)', nightOnly: true,
-                             produce: { sun: 256, every: 0.4 }, up: { cost: 12800, sporeCost: 256, to: 'sungold3' } },
-            sungold3:      { tier: 10, name: '黄金向日葵',img: 'Plants/TwinSunflower/TwinSunflower1.gif', hp: 22000, cost: 0, scale: 1.45, tint: 'sepia(1) saturate(2.4) hue-rotate(-15deg) brightness(1.35) drop-shadow(0 0 14px #ffd700)', nightOnly: true,
-                             produce: { sun: 512, every: 0.4 } },
+            sungold1:      { tier: 8, name: '五头向日葵',img: 'Plants/TwinSunflower/TwinSunflower1.gif', hp: 15000, cost: 0, scale: 1.25,
+                             overlay: 'Plants/TwinSunflower/TwinSunflower1.gif', overTransform: 'translate(-50%, -50%) translate(6px, 5px) scaleX(-1) scale(0.95)',
+                             overlays: ['Plants/SunFlower/0.gif'], nightOnly: true,
+                             produce: { sun: 128, every: 0.4 }, up: { cost: 6400, sporeCost: 128, to: 'sungold2' } }, // v4.0.52：2主头+镜像2头+1小头=五头
+            sungold2:      { tier: 9, name: '六头向日葵',img: 'Plants/TwinSunflower/TwinSunflower1.gif', hp: 18000, cost: 0, scale: 1.35,
+                             overlay: 'Plants/TwinSunflower/TwinSunflower1.gif', overTransform: 'translate(-50%, -50%) translate(6px, 5px) scaleX(-1) scale(0.95)',
+                             overlays: ['Plants/SunFlower/0.gif', 'Plants/SunFlower/0.gif'], nightOnly: true,
+                             produce: { sun: 256, every: 0.4 }, up: { cost: 12800, sporeCost: 256, to: 'sungold3' } }, // v4.0.52：2主头+镜像2头+2小头=六头
+            sungold3:      { tier: 10, name: '黄金向日葵',img: 'Plants/TwinSunflower/TwinSunflower1.gif', hp: 22000, cost: 0, scale: 1.45,
+                             overlay: 'Plants/TwinSunflower/TwinSunflower1.gif', overTransform: 'translate(-50%, -50%) translate(6px, 5px) scaleX(-1) scale(0.95)',
+                             overlays: ['Plants/SunFlower/0.gif', 'Plants/SunFlower/0.gif', 'Plants/SunFlower/0.gif'], nightOnly: true,
+                             produce: { sun: 512, every: 0.4 } }, // v4.0.52：2主头+镜像2头+3小头=多头黄金
 
             // —— 豌豆系 (v4.0.39：8☀ 种植、伤害 1→1024 翻倍、射程 3→8 格、升费 16 起翻倍；外观沿用变身链) ——
             peashooter:    { tier: 1, name: '豌豆射手', img: 'Plants/Peashooter/Peashooter.gif',   card: 'Peashooter.png', hp: 300, cost: 8,
@@ -84,12 +90,12 @@ class HauntedDorm {
                              overlay: 'Plants/CabbagePult/CabbagePult.png', overTransform: 'translate(-50%, -50%) translate(4px, -34px) scale(0.62)',
                              up: { cost: 64, to: 'nutlv4' } },
             nutlv4:        { tier: 4,  name: '地刺坚果',   img: 'Plants/WallNut/WallNut.gif',       hp: 13500,  cost: 0,
-                             overlay: 'Plants/Spikeweed/Spikeweed.gif', overTransform: 'translate(-50%, -50%) translate(0px, 48px)',
+                             overlay: 'Plants/Spikeweed/Spikeweed.gif', overTransform: 'translate(-50%, -50%) translate(0px, 34px)', // v4.0.52：地刺上抬14px（原48px），避免与下方格的地刺本体视觉重合
                              up: { cost: 128, to: 'tallnut' } },
             tallnut:       { tier: 5,  name: '高坚果',     img: 'Plants/TallNut/TallNut.gif',       card: 'TallNut.png',     hp: 20000,  cost: 0, scale: 1.0,
                              up: { cost: 256, to: 'nutlv6' } },
             nutlv6:        { tier: 6,  name: '钢刺高坚果', img: 'Plants/TallNut/TallNut.gif',       hp: 30000,  cost: 0,
-                             overlay: 'Plants/Spikerock/Spikerock.gif', overTransform: 'translate(-50%, -50%) translate(0px, 58px)',
+                             overlay: 'Plants/Spikerock/Spikerock.gif', overTransform: 'translate(-50%, -50%) translate(0px, 44px)', // v4.0.52：地刺上抬14px（原58px），避免与下方格的地刺本体视觉重合
                              up: { cost: 512, sporeCost: 16, to: 'nutlv7' } },
             nutlv7:        { tier: 7,  name: '辣椒高坚果', img: 'Plants/TallNut/TallNut.gif',       hp: 45000,  cost: 0,
                              tint: 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.1)',
