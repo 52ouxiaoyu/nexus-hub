@@ -630,7 +630,8 @@ class HauntedDorm {
     generateMap() {
         this.rooms = [];
         const makeGrid = (w, h) => Array.from({length: h}, () => Array(w).fill(1));
-        // v4.0.49：中间缺一块的 8×8 房间（缺 2×2 形成庭院缺口；洞格留空不生成墙，墙面依然平直）
+        // v4.0.50：中间庭院 8×8 房间——中间缺 2×2 但四面用墙围成封闭庭院（房间外墙闭合、内部为环形走廊），
+        // 不再是 v4.0.49 的"漏风地洞"（用户实报：中间扣一个洞=未封闭图形）
         const notchGrid = () => {
             const g = makeGrid(8, 8);
             g[3][3] = g[3][4] = g[4][3] = g[4][4] = 0;
@@ -643,7 +644,7 @@ class HauntedDorm {
             return g;
         };
 
-        // v4.0.49：房屋布局多样化——大小不一（8×8 / 6×6 / 8×6 / 6×8）、形状各异（正方/缺块/L形），
+        // v4.0.49：房屋布局多样化——大小不一（8×8 / 6×6 / 8×6 / 6×8）、形状各异（正方/中间庭院/L形），
         // 门不再全部两两相对：仅上排左侧 A-B 一对门对门，其余全部单独立户（门朝上/下/左/右各不相同）。
         // 全部网格对齐生成，不存在“半个方块”。
         const roomsDef = [
@@ -654,7 +655,7 @@ class HauntedDorm {
             { x: 38, y: 6,  w: 8, h: 8, grid: makeGrid(8,8), door: {r: 8, c: 4},  beds: [{r: 4, c: 2}] },  // C 大正方·门朝下
             { x: 50, y: 6,  w: 6, h: 6, grid: makeGrid(6,6), door: {r: 6, c: 3},  beds: [{r: 3, c: 1}] },  // D 小正方·门朝下
             // —— 中排（独立户）——
-            { x: 14, y: 16, w: 8, h: 8, grid: notchGrid(), door: {r: 8, c: 4},  beds: [{r: 1, c: 1}] },    // E 中间缺块·门朝下
+            { x: 14, y: 16, w: 8, h: 8, grid: notchGrid(), door: {r: 8, c: 4},  beds: [{r: 1, c: 1}] },    // E 中间庭院（墙围·封闭）·门朝下
             { x: 32, y: 16, w: 6, h: 8, grid: makeGrid(6,8), door: {r: 8, c: 3},  beds: [{r: 4, c: 1}] },  // F 高房·门朝下（远离地图中心玩家出生点）
             { x: 42, y: 18, w: 8, h: 8, grid: lGrid(),      door: {r: 4, c: 8},  beds: [{r: 4, c: 1}] },   // G L形·门朝右
             // —— 下排（独立户，门都朝上）——
@@ -719,11 +720,11 @@ class HauntedDorm {
         // 渲染墙体（v3.88.0：墙=蓝色河道）
         for (const rm of this.rooms) {
             const isInside = (r, c) => r>=0 && r<rm.h && c>=0 && c<rm.w && rm.tpl.grid[r][c] === 1;
-            const isHole = (r, c) => r>=0 && r<rm.h && c>=0 && c<rm.w && rm.tpl.grid[r][c] === 0; // v4.0.49：房间内的缺块（洞/庭院）
+            // v4.0.50：洞格（庭院/缺口）同样按"8 邻域有实心格"生成墙——房间外墙沿实心区边界闭合，
+            // 中间庭院四面墙围死、L 形缺口内壁封口，任何房间都是封闭图形（不再有漏风地洞）
             for (let r = -1; r <= rm.h; r++) {
                 for (let c = -1; c <= rm.w; c++) {
                     if (isInside(r, c)) continue;
-                    if (isHole(r, c)) continue; // v4.0.49：洞格留空不生成墙——形成缺口/庭院，墙面保持平直
 
                     if (isInside(r-1, c) || isInside(r+1, c) || isInside(r, c-1) || isInside(r, c+1) ||
                         isInside(r-1, c-1) || isInside(r-1, c+1) || isInside(r+1, c-1) || isInside(r+1, c+1)) {
