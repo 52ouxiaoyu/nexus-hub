@@ -82,7 +82,7 @@ class HauntedDorm {
             melonpult:     { tier: 10, name: '西瓜投手', img: 'Plants/MelonPult/MelonPult.png',   hp: 3200, cost: 0, scale: 1.2, // v4.0.53：新——抛射大西瓜范围溅射
                              shoot: { dmg: 512, cd: 2.2, n: 1, range: 540, img: 'Plants/MelonPult/Melon.png', homing: true, aoe: 70 },
                              up: { cost: 8192, to: 'wintermelon' } },
-            wintermelon:   { tier: 11, name: '冰西瓜投手', img: 'Plants/MelonPult/WinterMelon.png', hp: 3800, cost: 0, scale: 1.2, // v4.0.53：新——冰西瓜溅射+减速
+            wintermelon:   { tier: 11, name: '冰西瓜投手', img: 'Plants/WinterMelon/WinterMelon.png', hp: 3800, cost: 0, scale: 1.2, // v4.0.53：新——冰西瓜溅射+减速（v4.0.54 修复：本体图原来是 MelonPult 目录的弹药小图，改回正确投手本体）
                              shoot: { dmg: 1024, cd: 2.2, n: 1, range: 560, img: 'Plants/MelonPult/WinterMelon_small.png', homing: true, aoe: 80, slow: true },
                              up: { cost: 16384, to: 'cattail' } },
             cattail:       { tier: 12, name: '猫尾草', img: 'Plants/Cattail/Cattail.gif',       hp: 4200, cost: 0, scale: 1.15, // v4.0.53：新——尖刺针雨自动索敌
@@ -1993,18 +1993,30 @@ class HauntedDorm {
         } else if (p === this.player2) {
             place(document.getElementById('p2-hud'), isLeft);
         }
-        this._fixVerticalPairHuds(); // 双人上下住房 → 强制 P1 左、P2 右
+        this._fixVerticalPairHuds(); // 双人：上下住房或同侧住房 → 强制 P1 左、P2 右，防 HUD 重叠
     }
-    // 双人且房间一上一下（中心行差 ≥4 格）：不按左右判位置，固定 P1 左上、P2 右上
+    // 双人 HUD 防重叠：房间一上一下（中心行差 ≥4 格）或两人房间同在画面一侧时，
+    // 不按左右判位置，固定 P1 左上、P2 右上；只有明确一左一右时各自归位。
     _fixVerticalPairHuds() {
-        if (!this.player2 || !this.player.room || !this.player2.room) return;
-        const p1c = this.player.room.y + this.player.room.h / 2;
-        const p2c = this.player2.room.y + this.player2.room.h / 2;
-        if (Math.abs(p1c - p2c) < 4) return;
+        if (!this.player2) return;
         const p1 = document.getElementById('hud-p1');
         const p2 = document.getElementById('p2-hud');
-        if (p1) { p1.style.left = '20px'; p1.style.right = 'auto'; }
-        if (p2) { p2.style.right = '20px'; p2.style.left = 'auto'; }
+        const p1rm = this.player.room || this.player.room2;
+        const p2rm = this.player2.room || this.player2.room2;
+        if (!p1rm || !p2rm) return;
+        const p1c = p1rm.y + p1rm.h / 2;
+        const p2c = p2rm.y + p2rm.h / 2;
+        const p1Left = (p1rm.x + p1rm.w / 2) * this.gridSize < this.worldWidth / 2;
+        const p2Left = (p2rm.x + p2rm.w / 2) * this.gridSize < this.worldWidth / 2;
+        // 上下住房 或 两人同侧住房（都会叠在一起）→ P1 左、P2 右
+        if (Math.abs(p1c - p2c) >= 4 || p1Left === p2Left) {
+            if (p1) { p1.style.left = '20px'; p1.style.right = 'auto'; }
+            if (p2) { p2.style.right = '20px'; p2.style.left = 'auto'; }
+            return;
+        }
+        // 一左一右 → 各自归位（v4.0.49 用户要求：P1 在哪边框在哪边）
+        if (p1) { if (p1Left) { p1.style.left = '20px'; p1.style.right = 'auto'; } else { p1.style.right = '20px'; p1.style.left = 'auto'; } }
+        if (p2) { if (p2Left) { p2.style.left = '20px'; p2.style.right = 'auto'; } else { p2.style.right = '20px'; p2.style.left = 'auto'; } }
     }
 
     doPlant(type) {
@@ -4313,7 +4325,7 @@ class HauntedDorm {
     _spawnMinion(isBoss = false) {
         const lv = this.ghostLevel;
         const cfg = isBoss
-            ? { name: '僵王机甲', img: 'Zombies/LGBOSS/0.gif', hp: Math.round(800 * Math.pow(2, Math.min(this.waveN, 5))), speed: 170 } // v4.0.42：随波次翻倍（封顶 25600=机甲僵王级）
+            ? { name: '僵王机甲', img: 'Zombies/LGBOSS/0.gif', hp: Math.round(3000 * Math.pow(2, Math.min(this.waveN, 6))), speed: 170 } // v4.0.42：随波次翻倍；v4.0.54：基数 800→3000、封顶 25600→192000（玩家豌豆链已到 32768 单发，原 25600 一炮即秒，用户实报 Boss 太弱）
             : { name: '小鬼僵尸', img: 'Zombies/Imp/0.gif', hp: Math.round(25 * Math.pow(2, lv - 1)), speed: 260 }; // v4.0.42：线性 25+lv×25 改 ×2 翻倍链，与豌豆伤害曲线匹配
         const p = this._ghostSpawnPoint();
         const zb = { x: p.x, y: p.y, hp: cfg.hp, maxHp: cfg.hp, speed: cfg.speed, level: lv, cfg: cfg,
