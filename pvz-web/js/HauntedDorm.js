@@ -878,18 +878,37 @@ class HauntedDorm {
 
     }
 
+    // v4.0.51：盲盒战力下调（用户：盲盒战力值太强）——主池=用户点名的植物（权重10，约占 91%）：
+    // 阳光菇一级二级 / 大蒜 / 寒冰菇 / 路灯花一级二级 / 豌豆射手一级到四级 / 坚果一级 / 小喷菇一级二级；
+    // 其余强力植物（忧郁菇/冰忧郁菇/毁灭菇/机枪射手等）权重 1——开出其他概率很小，但不是没有。
+    _blindBoxType() {
+        const main = [
+            'sunshroom', 'bigsunshroom',                 // 阳光菇 Lv1/Lv2
+            'garlic',                                    // 大蒜
+            'iceshroom',                                 // 寒冰菇（开出即冰全场 5 秒）
+            'plantern', 'plantern2',                     // 路灯花 Lv1/Lv2
+            'peashooter', 'cabbagepult', 'kernelpult', 'dualpea', // 豌豆射手 Lv1–Lv4
+            'wallnut',                                   // 坚果墙 Lv1
+            'puffshroom', 'scaredyshroom'                // 小喷菇 Lv1/Lv2
+        ];
+        const rare = [
+            'snowpea', 'repeater', 'threepeater', 'gatlingpea', // 豌豆系 5–8 级
+            'fumeshroom', 'hypnoshroom', 'sporemine', 'gloompuff', 'icegloom', // 孢子系高阶
+            'tallnut', 'twinsunflower', 'doomshroom'
+        ];
+        const weighted = [];
+        for (const t of main) for (let i = 0; i < 10; i++) weighted.push(t);
+        for (const t of rare) weighted.push(t);
+        return weighted[Math.floor(Math.random() * weighted.length)];
+    }
+
     spawnPlant(col, row, type, isDoor = false, owner = null) {
         if (this.plants.some(pl => pl.c === col && pl.r === row)) return null;
 
         if (type === 'blindbox') {
-            const pool = [
-                'peashooter', 'cabbagepult', 'kernelpult', 'dualpea', 'snowpea',
-                'repeater', 'threepeater', 'gatlingpea', 'puffshroom', 'scaredyshroom',
-                'fumeshroom', 'hypnoshroom', 'sporemine', 'gloompuff', 'icegloom',
-                'plantern', 'doomshroom', 'garlic', 'tallnut', 'twinsunflower'
-            ];
-            type = pool[Math.floor(Math.random() * pool.length)];
-            if (!HauntedDorm.DEFS[type] || HauntedDorm.DEFS[type].instant) type = 'peashooter';
+            type = this._blindBoxType();
+            // 兜底：DEFS 缺失或 instant（一次性）且非寒冰菇（寒冰菇走下方特判：开出即冰全场）→ 退化为豌豆射手
+            if (!HauntedDorm.DEFS[type] || (HauntedDorm.DEFS[type].instant && type !== 'iceshroom')) type = 'peashooter';
 
             this._flyText(col * 80 + 40, row * 80, '🎁 盲盒开出：' + HauntedDorm.DEFS[type].name + '！', '#ffd54a');
             this.playSfx('plant2.mp3', 0.6);
