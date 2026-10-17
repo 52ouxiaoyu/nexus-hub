@@ -3656,13 +3656,20 @@ class HauntedDorm {
         }
         
         if (menu.active) {
-            // v4.0.53：三栏分类切换（P1 A/D、P2 ←/→）——只有种植菜单才可切栏，升级/拆除菜单不可切
+            // v4.0.53：三栏分类切换（P1 A/D、P2 ←/→）——只有房内地皮的种植菜单才可切栏，升级/拆除菜单、门格/地刺格不可切
             if (menu.planting) {
-                if (this._checkAnyKey(keysTabL) || this._checkAnyKey(keysTabR)) {
+                const c0 = menu.targetCol, r0 = menu.targetRow;
+                const inRoom0 = c0 !== undefined && !!this._insideRoom(c0, r0);
+                const rm0 = inRoom0 ? this._insideRoom(c0, r0) : this._resolveBuildRoom(c0, r0, menu.player || this.player);
+                const isDoor0 = !!rm0 && (c0 === rm0.doorCol && r0 === rm0.doorRow);
+                if ((inRoom0 && !isDoor0) && (this._checkAnyKey(keysTabL) || this._checkAnyKey(keysTabR))) {
                     const dir = this._checkAnyKey(keysTabL) ? -1 : 1;
                     const tabs = HauntedDorm.MENU_TABS;
+                    if (menu.tab === undefined || menu.tab === null) menu.tab = 0; // v4.0.53 修复：门格打开时 tab 未初始化，直接取模会 NaN
                     menu.tab = (menu.tab + dir + tabs.length) % tabs.length;
                     menu.index = 0;
+                    // v4.0.53 修复：切栏后必须重建可选植物列表，否则渲染的仍是旧栏内容（用户：除常用以外全部出现不了）
+                    this._rebuildKMenuPlantOptions(menu);
                     this._renderKMenu(menu, uiEl);
                 }
             }
@@ -3709,30 +3716,13 @@ class HauntedDorm {
                 if (this.walls.has(`${col},${row}`)) return;
                 const inRoomGrid = !!this._insideRoom(col, row);
                 const isDoorTile = !!room && (col === room.doorCol && row === room.doorRow);
-                let isSpikeTile = false;
                 if (!room) return; // 不在房间
-                if (!inRoomGrid && !isDoorTile) isSpikeTile = true;
-                
-                let availableTypes = [];
-                const doorSpike = ['spikeweed', 'firespikeweed', 'spikerock', 'ultimatefirespikeweed', 'potatomine', 'firemine']; // v4.0.53：门口可种地刺+土豆雷
-                if (isDoorTile) {
-                    availableTypes = doorSpike;
-                } else if (isSpikeTile) {
-                    availableTypes = doorSpike;
-                } else {
-                    // v4.0.53：房内按当前栏（常用/陷阱/高级），F/1 初次打开即「常用」
-                    menu.tab = (menu.tab === undefined) ? 0 : menu.tab;
-                    availableTypes = HauntedDorm.MENU_TABS[menu.tab].types.slice();
-                }
-                
-                menu.options = availableTypes.map(t => {
-                    const d = HauntedDorm.DEFS[t];
-                    const price = d.sporeCost ? `🦠${d.sporeCost}` : (d.cost > 0 ? `☀${d.cost}` : '免费');
-                    return { action: 'buy', type: t, text: `${d.name} (${price})` };
-                });
+
                 menu.targetCol = col;
                 menu.targetRow = row;
                 menu.planting = true;
+                // v4.0.53：统一入口（门格/门邻格只给地刺+土豆雷，房内按当前栏；F/1 初次打开即「常用」）
+                this._rebuildKMenuPlantOptions(menu);
                 
                 // v4.0.18：支持第二间房——空房且自己未满两间即可建造（建造时自动认领）
                 if (!this._ownsRoom(p, room) && this._ownedRooms(p).length >= 2) {
@@ -3751,6 +3741,32 @@ class HauntedDorm {
         }
     }
     
+    // v4.0.53：重建键盘种植菜单的可选植物列表（打开菜单与切栏共用）——门格/门邻格只给地刺+土豆雷，房内按当前栏
+    _rebuildKMenuPlantOptions(menu) {
+        const p = menu.player || this.player;
+        const col = menu.targetCol, row = menu.targetRow;
+        const doorSpike = ['spikeweed', 'firespikeweed', 'spikerock', 'ultimatefirespikeweed', 'potatomine', 'firemine'];
+        let availableTypes;
+        if (col === undefined || row === undefined) {
+            availableTypes = HauntedDorm.MENU_TABS[(menu.tab === undefined || menu.tab === null) ? 0 : menu.tab].types.slice();
+        } else {
+            const inRoomGrid = !!this._insideRoom(col, row);
+            const room = this._resolveBuildRoom(col, row, p);
+            const isDoorTile = !!room && (col === room.doorCol && row === room.doorRow);
+            if (isDoorTile || (!inRoomGrid && !isDoorTile)) {
+                availableTypes = doorSpike; // 门格/门邻地刺格：只有地刺系+土豆雷系
+            } else {
+                menu.tab = (menu.tab === undefined || menu.tab === null) ? 0 : menu.tab;
+                availableTypes = HauntedDorm.MENU_TABS[menu.tab].types.slice();
+            }
+        }
+        menu.options = availableTypes.map(t => {
+            const d = HauntedDorm.DEFS[t];
+            const price = d.sporeCost ? `🦠${d.sporeCost}` : (d.cost > 0 ? `☀${d.cost}` : '免费');
+            return { action: 'buy', type: t, text: `${d.name} (${price})` };
+        });
+    }
+
     _renderKMenu(menu, uiEl) {
         const p = menu.player || this.player;
         let header = '';
