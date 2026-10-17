@@ -14,7 +14,8 @@ class HauntedDorm {
     // ===== 植物图鉴（配方唯一，绝不撞衫）=====
     static get DEFS() {
         return {
-            // —— 阳光系 (v4.0.39：每 0.4s 一跳、无需浇水按键；产 1→512 翻倍，升费 25/50/100/200 后 800☀+16🦠 起翻倍；v4.0.46：作息反转——白天醒着产阳光，夜晚熄灯睡觉) ——
+            // —— 阳光系 (v4.0.53 重排：按用户清单与产阳光量定级——阳光菇→大阳光菇→向日葵→豌豆向日葵→双子向日葵→杨桃(星星果)→毁灭向日葵→四头向日葵→水晶向日葵→魅惑向日葵→石芒杨桃；
+            //      每 0.4s 一跳、无需浇水按键；产 1→1024 翻倍；v4.0.46：作息反转——白天醒着产阳光，夜晚熄灯睡觉) ——
             sunshroom:     { tier: 1, name: '阳光菇',   img: 'Plants/SunShroom/0.gif',   hp: 1000, cost: 0, nightOnly: true,
                              produce: { sun: 1, every: 0.4 }, up: { cost: 25, to: 'bigsunshroom' } },
             bigsunshroom:  { tier: 2, name: '大阳光菇', img: 'Plants/SunShroom/0.gif',   hp: 1500, cost: 0, scale: 1.2, nightOnly: true,
@@ -25,59 +26,86 @@ class HauntedDorm {
                              overTransform: 'translate(-50%, -50%) translate(0px, -28px) scale(0.6)',
                              produce: { sun: 8, every: 0.4 }, up: { cost: 200, to: 'twinsunflower' } },
             twinsunflower: { tier: 5, name: '双子向日葵',img: 'Plants/TwinSunflower/TwinSunflower1.gif', hp: 5000, cost: 0, scale: 1.1, nightOnly: true,
-                             produce: { sun: 16, every: 0.4 }, up: { cost: 800, sporeCost: 16, to: 'doomsunflower' } },
-            doomsunflower: { tier: 6, name: '毁灭向日葵',img: 'Plants/SunFlower/SunFlower1.gif', hp: 8000, cost: 0, scale: 1.2, tint: 'grayscale(0.8) brightness(0.6) sepia(1) hue-rotate(240deg) saturate(3)', nightOnly: true,
-                             produce: { sun: 32, every: 0.4 }, up: { cost: 1600, sporeCost: 32, to: 'fourheadsunflower' } },
-            fourheadsunflower:{ tier: 7, name: '四头向日葵',img: 'Plants/TwinSunflower/TwinSunflower1.gif', hp: 12000, cost: 0, scale: 1.15, tint: 'saturate(1.35) brightness(1.12)', nightOnly: true,
+                             produce: { sun: 16, every: 0.4 }, up: { cost: 800, sporeCost: 16, to: 'starfruit' } },
+            starfruit:     { tier: 6, name: '杨桃',     img: 'Plants/Starfruit/Starfruit.gif', hp: 7000, cost: 0, scale: 1.1, nightOnly: true, // v4.0.53：新——杨桃=星星果，五角放射产阳光
+                             produce: { sun: 32, every: 0.4 }, up: { cost: 1600, sporeCost: 32, to: 'doomsunflower' } },
+            doomsunflower: { tier: 7, name: '毁灭向日葵',img: 'Plants/SunFlower/SunFlower1.gif', hp: 8000, cost: 0, scale: 1.2, tint: 'grayscale(0.8) brightness(0.6) sepia(1) hue-rotate(240deg) saturate(3)', nightOnly: true,
+                             produce: { sun: 64, every: 0.4 }, up: { cost: 3200, sporeCost: 64, to: 'fourheadsunflower' } },
+            fourheadsunflower:{ tier: 8, name: '四头向日葵',img: 'Plants/TwinSunflower/TwinSunflower1.gif', hp: 12000, cost: 0, scale: 1.15, tint: 'saturate(1.35) brightness(1.12)', nightOnly: true,
                              overlay: 'Plants/TwinSunflower/TwinSunflower1.gif',
                              overTransform: 'translate(-50%, -50%) translate(10px, 6px) scaleX(-1) scale(1.15)',
-                             produce: { sun: 64, every: 0.4 }, up: { cost: 3200, sporeCost: 64, to: 'sungold1' } },
-            sungold1:      { tier: 8, name: '五头向日葵',img: 'Plants/TwinSunflower/TwinSunflower1.gif', hp: 15000, cost: 0, scale: 1.25,
-                             overlay: 'Plants/TwinSunflower/TwinSunflower1.gif', overTransform: 'translate(-50%, -50%) translate(6px, 5px) scaleX(-1) scale(0.95)',
-                             overlays: ['Plants/SunFlower/0.gif'], nightOnly: true,
-                             produce: { sun: 128, every: 0.4 }, up: { cost: 6400, sporeCost: 128, to: 'sungold2' } }, // v4.0.52：2主头+镜像2头+1小头=五头
-            sungold2:      { tier: 9, name: '六头向日葵',img: 'Plants/TwinSunflower/TwinSunflower1.gif', hp: 18000, cost: 0, scale: 1.35,
-                             overlay: 'Plants/TwinSunflower/TwinSunflower1.gif', overTransform: 'translate(-50%, -50%) translate(6px, 5px) scaleX(-1) scale(0.95)',
-                             overlays: ['Plants/SunFlower/0.gif', 'Plants/SunFlower/0.gif'], nightOnly: true,
-                             produce: { sun: 256, every: 0.4 }, up: { cost: 12800, sporeCost: 256, to: 'sungold3' } }, // v4.0.52：2主头+镜像2头+2小头=六头
-            sungold3:      { tier: 10, name: '黄金向日葵',img: 'Plants/TwinSunflower/TwinSunflower1.gif', hp: 22000, cost: 0, scale: 1.45,
-                             overlay: 'Plants/TwinSunflower/TwinSunflower1.gif', overTransform: 'translate(-50%, -50%) translate(6px, 5px) scaleX(-1) scale(0.95)',
-                             overlays: ['Plants/SunFlower/0.gif', 'Plants/SunFlower/0.gif', 'Plants/SunFlower/0.gif'], nightOnly: true,
-                             produce: { sun: 512, every: 0.4 } }, // v4.0.52：2主头+镜像2头+3小头=多头黄金
+                             produce: { sun: 128, every: 0.4 }, up: { cost: 6400, sporeCost: 128, to: 'crystalsunflower' } },
+            crystalsunflower:{ tier: 9, name: '水晶向日葵',img: 'Plants/TwinSunflower/TwinSunflower1.gif', hp: 16000, cost: 0, scale: 1.25, // v4.0.53：新——冰蓝水晶质感多头
+                             tint: 'hue-rotate(180deg) saturate(1.6) brightness(1.3) drop-shadow(0 0 8px #7fd8ff)',
+                             overlay: 'Plants/TwinSunflower/TwinSunflower1.gif',
+                             overTransform: 'translate(-50%, -50%) translate(10px, 6px) scaleX(-1) scale(1.15)',
+                             produce: { sun: 256, every: 0.4 }, up: { cost: 12800, sporeCost: 256, to: 'charmsunflower' } },
+            charmsunflower:{ tier: 10, name: '魅惑向日葵',img: 'Plants/TwinSunflower/TwinSunflower1.gif', hp: 20000, cost: 0, scale: 1.35, // v4.0.53：新——粉紫魅惑光晕多头
+                             tint: 'hue-rotate(290deg) saturate(1.8) brightness(1.15) drop-shadow(0 0 10px #ff9de0)',
+                             overlay: 'Plants/TwinSunflower/TwinSunflower1.gif',
+                             overTransform: 'translate(-50%, -50%) translate(10px, 6px) scaleX(-1) scale(1.15)',
+                             produce: { sun: 512, every: 0.4 }, up: { cost: 25600, sporeCost: 512, to: 'stonestarfruit' } },
+            stonestarfruit:{ tier: 11, name: '石芒杨桃', img: 'Plants/Starfruit/Starfruit.gif', hp: 25000, cost: 0, scale: 1.35, // v4.0.53：新——岩石质感巨型杨桃
+                             tint: 'grayscale(0.35) sepia(0.6) saturate(1.6) brightness(0.95) drop-shadow(0 0 8px #ffcc80)',
+                             produce: { sun: 1024, every: 0.4 } },
 
-            // —— 豌豆系 (v4.0.39：8☀ 种植、伤害 1→1024 翻倍、射程 3→8 格、升费 16 起翻倍；外观沿用变身链) ——
+            // —— 豌豆系 (v4.0.53 重排：豌豆射手→卷心菜投手→玉米投手→双向投手→双向豌豆→寒冰豌豆→双发豌豆→三线豌豆→机枪射手→
+            //      西瓜投手→冰西瓜投手→猫尾草→超级机箱→机箱猫尾草→西瓜猫尾草→冰西瓜猫尾草；伤害 1→32768 翻倍、射程 3→8 格) ——
             peashooter:    { tier: 1, name: '豌豆射手', img: 'Plants/Peashooter/Peashooter.gif',   card: 'Peashooter.png', hp: 300, cost: 8,
                              shoot: { dmg: 1, cd: 1.5, n: 1, range: 240, img: 'Plants/PB00.gif', homing: true },
                              up: { cost: 16, to: 'cabbagepult' } },
-            cabbagepult:   { tier: 2, name: '卷心菜射手', img: 'Plants/CabbagePult/CabbagePult.png',   hp: 400, cost: 0,
+            cabbagepult:   { tier: 2, name: '卷心菜投手', img: 'Plants/CabbagePult/CabbagePult.png',   hp: 400, cost: 0,
                              shoot: { dmg: 2, cd: 1.5, n: 1, range: 280, img: 'Plants/PB00.gif', homing: true },
                              up: { cost: 32, to: 'kernelpult' } },
-            kernelpult:    { tier: 3, name: '玉米射手',   img: 'Plants/KernelPult/KernelPult.png',    hp: 500, cost: 0,
+            kernelpult:    { tier: 3, name: '玉米投手',   img: 'Plants/KernelPult/KernelPult.png',    hp: 500, cost: 0,
                              shoot: { dmg: 4, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif', homing: true },
                              up: { cost: 64, to: 'dualpea' } },
-            dualpea:       { tier: 4, name: '双向射手', img: 'Plants/SplitPea/SplitPea.gif',      hp: 600, cost: 0,
+            dualpea:       { tier: 4, name: '双向投手', img: 'Plants/SplitPea/SplitPea.gif',      hp: 600, cost: 0,
                              shoot: { dmg: 8, cd: 1.5, n: 1, range: 360, img: 'Plants/PB00.gif', homing: true },
-                             up: { cost: 128, to: 'snowpea' } },
-            snowpea:       { tier: 5, name: '寒冰射手', img: 'Plants/SnowPea/SnowPea.gif',       hp: 800, cost: 0, scale: 1.1,
-                             shoot: { dmg: 16, cd: 1.5, n: 1, range: 400, img: 'Plants/PB00.gif', homing: true },
-                             up: { cost: 256, to: 'repeater' } },
-            repeater:      { tier: 6, name: '双发射手', img: 'Plants/Repeater/Repeater.gif',      hp: 1000, cost: 0, scale: 1.1,
-                             shoot: { dmg: 32, cd: 1.5, n: 1, range: 440, img: 'Plants/PB00.gif', homing: true },
-                             up: { cost: 512, to: 'threepeater' } },
-            threepeater:   { tier: 7, name: '三线射手', img: 'Plants/Threepeater/Threepeater.gif',   hp: 1500, cost: 0, scale: 1.2,
-                             shoot: { dmg: 64, cd: 1.5, n: 1, range: 480, img: 'Plants/PB00.gif', homing: true },
-                             up: { cost: 1024, to: 'gatlingpea' } },
-            gatlingpea:    { tier: 8, name: '机枪射手', img: 'Plants/GatlingPea/GatlingPea.gif',    hp: 2500, cost: 0, scale: 1.2,
-                             shoot: { dmg: 128, cd: 1.5, n: 1, range: 520, img: 'Plants/PB00.gif', homing: true },
-                             up: { cost: 2048, to: 'pealaser' } },
-            pealaser:      { tier: 9, name: '激光豌豆', img: 'Plants/LaserPea/LaserPea.gif',    hp: 3000, cost: 0, scale: 1.2,
-                             shoot: { dmg: 256, cd: 1.5, n: 1, range: 560, img: 'Plants/PB00.gif', homing: true },
-                             up: { cost: 4096, to: 'peafrost' } },
-            peafrost:      { tier: 10, name: '冰雪豌豆', img: 'Plants/SnowRepeater/SnowPea.gif',    hp: 3500, cost: 0, scale: 1.25,
-                             shoot: { dmg: 512, cd: 1.5, n: 1, range: 600, img: 'Plants/PB00.gif', homing: true },
-                             up: { cost: 8192, to: 'peacactus' } },
-            peacactus:     { tier: 11, name: '仙人掌炮手', img: 'Plants/Cactus/Cactus.gif',    hp: 4000, cost: 0, scale: 1.3,
-                             shoot: { dmg: 1024, cd: 1.5, n: 1, range: 640, img: 'Plants/PB00.gif', homing: true } },
+                             up: { cost: 128, to: 'bidipea' } },
+            bidipea:       { tier: 5, name: '双向豌豆', img: 'Plants/SplitPea/SplitPea.gif',      hp: 700, cost: 0, // v4.0.53：新——前后双向连发
+                             tint: 'hue-rotate(200deg) saturate(1.4) brightness(1.05)',
+                             shoot: { dmg: 16, cd: 1.3, n: 2, range: 400, img: 'Plants/PB00.gif', homing: true },
+                             up: { cost: 256, to: 'snowpea' } },
+            snowpea:       { tier: 6, name: '寒冰豌豆', img: 'Plants/SnowPea/SnowPea.gif',       hp: 800, cost: 0, scale: 1.1,
+                             shoot: { dmg: 32, cd: 1.5, n: 1, range: 420, img: 'Plants/PB00.gif', homing: true, slow: true },
+                             up: { cost: 512, to: 'repeater' } },
+            repeater:      { tier: 7, name: '双发豌豆', img: 'Plants/Repeater/Repeater.gif',      hp: 1000, cost: 0, scale: 1.1,
+                             shoot: { dmg: 64, cd: 1.5, n: 2, range: 440, img: 'Plants/PB00.gif', homing: true },
+                             up: { cost: 1024, to: 'threepeater' } },
+            threepeater:   { tier: 8, name: '三线豌豆', img: 'Plants/Threepeater/Threepeater.gif',   hp: 1500, cost: 0, scale: 1.2,
+                             shoot: { dmg: 128, cd: 1.5, n: 3, range: 480, img: 'Plants/PB00.gif', homing: true },
+                             up: { cost: 2048, to: 'gatlingpea' } },
+            gatlingpea:    { tier: 9, name: '机枪射手', img: 'Plants/GatlingPea/GatlingPea.gif',    hp: 2500, cost: 0, scale: 1.2,
+                             shoot: { dmg: 256, cd: 1.2, n: 4, range: 520, img: 'Plants/PB00.gif', homing: true },
+                             up: { cost: 4096, to: 'melonpult' } },
+            melonpult:     { tier: 10, name: '西瓜投手', img: 'Plants/MelonPult/MelonPult.png',   hp: 3200, cost: 0, scale: 1.2, // v4.0.53：新——抛射大西瓜范围溅射
+                             shoot: { dmg: 512, cd: 2.2, n: 1, range: 540, img: 'Plants/MelonPult/Melon.png', homing: true, aoe: 70 },
+                             up: { cost: 8192, to: 'wintermelon' } },
+            wintermelon:   { tier: 11, name: '冰西瓜投手', img: 'Plants/MelonPult/WinterMelon.png', hp: 3800, cost: 0, scale: 1.2, // v4.0.53：新——冰西瓜溅射+减速
+                             shoot: { dmg: 1024, cd: 2.2, n: 1, range: 560, img: 'Plants/MelonPult/WinterMelon_small.png', homing: true, aoe: 80, slow: true },
+                             up: { cost: 16384, to: 'cattail' } },
+            cattail:       { tier: 12, name: '猫尾草', img: 'Plants/Cattail/Cattail.gif',       hp: 4200, cost: 0, scale: 1.15, // v4.0.53：新——尖刺针雨自动索敌
+                             shoot: { dmg: 2048, cd: 1.1, n: 3, range: 580, img: 'Plants/Cattail/Cattail.png', homing: true },
+                             up: { cost: 32768, to: 'superbox' } },
+            superbox:      { tier: 13, name: '超级机箱', img: 'Plants/GatlingPea/GatlingPea.gif', hp: 5000, cost: 0, scale: 1.25, // v4.0.53：新——金色重炮机箱
+                             tint: 'sepia(1) saturate(2.4) hue-rotate(-12deg) brightness(1.1) drop-shadow(0 0 6px #ffd54a)',
+                             shoot: { dmg: 4096, cd: 1.0, n: 5, range: 600, img: 'Plants/PB00.gif', homing: true },
+                             up: { cost: 65536, to: 'machinestail' } },
+            machinestail:  { tier: 14, name: '机箱猫尾草', img: 'Plants/Cattail/Cattail.gif',   hp: 6000, cost: 0, scale: 1.2, // v4.0.53：新——机枪猫尾草（金属色）
+                             tint: 'grayscale(0.3) sepia(0.8) saturate(1.6) brightness(1.05) drop-shadow(0 0 6px #bdbdbd)',
+                             overlay: 'Plants/GatlingPea/GatlingPea.gif', overTransform: 'translate(-50%, -50%) translate(0px, -24px) scale(0.55)',
+                             shoot: { dmg: 8192, cd: 0.95, n: 5, range: 620, img: 'Plants/PB00.gif', homing: true },
+                             up: { cost: 131072, to: 'melonstail' } },
+            melonstail:    { tier: 15, name: '西瓜猫尾草', img: 'Plants/Cattail/Cattail.gif',   hp: 7000, cost: 0, scale: 1.2, // v4.0.53：新——西瓜猫尾草（绿瓜纹）
+                             tint: 'hue-rotate(90deg) saturate(1.5) brightness(1.0)',
+                             overlay: 'Plants/MelonPult/Melon.png', overTransform: 'translate(-50%, -50%) translate(0px, -22px) scale(0.6)',
+                             shoot: { dmg: 16384, cd: 1.05, n: 4, range: 640, img: 'Plants/MelonPult/Melon.png', homing: true, aoe: 70 },
+                             up: { cost: 262144, to: 'icemelonstail' } },
+            icemelonstail: { tier: 16, name: '冰西瓜猫尾草', img: 'Plants/Cattail/Cattail.gif', hp: 8000, cost: 0, scale: 1.25, // v4.0.53：新——冰西瓜猫尾草（冰蓝终级）
+                             tint: 'hue-rotate(180deg) saturate(1.7) brightness(1.25) drop-shadow(0 0 10px #7fd8ff)',
+                             overlay: 'Plants/MelonPult/WinterMelon.png', overTransform: 'translate(-50%, -50%) translate(0px, -22px) scale(0.6)',
+                             shoot: { dmg: 32768, cd: 1.0, n: 5, range: 660, img: 'Plants/MelonPult/WinterMelon_small.png', homing: true, aoe: 85, slow: true } },
 
             // —— 坚果系 (v4.0.41：12 级每级换模型——回归旧链「坚果射手/卷心菜堡垒/地刺坚果/高坚果/钢刺/辣椒」外观，
             //      高阶沿用「操作与说明」里的坚果模型（寒冰坚果/大嘴坚果/十人坚果/南瓜壳）；升费与血量沿用 v4.0.39 不变) ——
@@ -139,15 +167,22 @@ class HauntedDorm {
             sporelv11:     { tier: 11, name: '宇宙忧郁菇', img: 'Plants/GloomShroom/GloomShroom.gif', hp: 15000, cost: 0, scale: 1.45, tint: 'hue-rotate(280deg) saturate(2.2) brightness(1.3) drop-shadow(0 0 14px #9d6bff)',
                              spore: { n: 50, every: 0.4 } },
 
-            // —— 地刺系 (v4.0.39：50🦠 起步伤害 4，升费 250/1250/6250，伤害 16/64/256) ——
+            // —— 地刺系 + 土豆雷（v4.0.53：门口可种地刺与土豆雷；火焰地刺改用钢地刺模型+火焰色，图鉴一致） ——
             spikeweed:     { name: '地刺',   img: 'Plants/Spikeweed/Spikeweed.gif',  card: 'Spikeweed.png',  hp: 99999, cost: 0, sporeCost: 50, ground: true,
                              spike: { dps: 4, r: 55 }, up: { sporeCost: 250, to: 'firespikeweed' } },
-            firespikeweed: { name: '火焰地刺',img: 'Plants/Spikeweed/Spikeweed.gif', hp: 99999, cost: 0, scale: 1.0, tint: 'sepia(1) saturate(3) hue-rotate(-25deg) brightness(1.15)', ground: true,
+            firespikeweed: { name: '火焰地刺',img: 'Plants/Spikerock/Spikerock.gif', hp: 99999, cost: 0, scale: 1.0, tint: 'sepia(1) saturate(3.2) hue-rotate(-22deg) brightness(1.2)', ground: true, // v4.0.53：改用钢地刺模型（火焰钢刺）
                              spike: { dps: 16, r: 55 }, up: { sporeCost: 1250, to: 'spikerock' } },
             spikerock:     { name: '钢地刺', img: 'Plants/Spikerock/Spikerock.gif', hp: 99999, cost: 0, scale: 1.0, ground: true,
                              spike: { dps: 64, r: 55 }, up: { sporeCost: 6250, to: 'ultimatefirespikeweed' } },
             ultimatefirespikeweed: { name: '终极火焰地刺', img: 'Plants/Spikerock/Spikerock.gif', hp: 99999, cost: 0, scale: 1.1, tint: 'hue-rotate(-50deg) saturate(3) drop-shadow(0 0 10px #f00)', ground: true,
                              spike: { dps: 256, r: 60 } },
+
+            // —— 土豆地雷（v4.0.53 新：门口可种；30 秒引信后伸头待爆；被啃不炸直接消失；威慑僵尸 50% 绕开；升级烈焰地雷） ——
+            potatomine:    { name: '土豆地雷', img: 'Plants/PotatoMine/PotatoMineNotReady.gif', card: 'PotatoMine.png', hp: 1000, cost: 0, sporeCost: 100, scale: 0.9,
+                             potatoMine: true, deter: 0.5, up: { sporeCost: 250, to: 'firemine' } },
+            firemine:      { name: '烈焰地雷', img: 'Plants/PotatoMine/PotatoMine.gif', hp: 1200, cost: 0, sporeCost: 250, scale: 1.0, // v4.0.53：火焰版——引信更短、伤害更高
+                             tint: 'sepia(1) saturate(2.8) hue-rotate(-18deg) brightness(1.2) drop-shadow(0 0 6px #ff6d3d)',
+                             potatoMine: true, deter: 0.5 },
 
             // —— 路灯花 (v4.0.39：128🦠 种植每 0.4s 产 8☀；升费 1024/2028/4056/4056 🦠，产 32/128/512/1024；v4.0.46：夜班作息——只在夜晚产阳光) ——
             plantern:      { name: '路灯花', img: 'Plants/Plantern/Plantern.gif', card: 'Plantern.png', hp: 2000, cost: 0, sporeCost: 128, scale: 1.8, nightProduce: true,
@@ -158,16 +193,59 @@ class HauntedDorm {
             plantern5:     { name: '路灯花 Lv5', img: 'Plants/Plantern/Plantern.gif', hp: 5000, cost: 0, scale: 1.8, nightProduce: true, produce: { sun: 1024, every: 0.4 }, tint: 'brightness(2.2) drop-shadow(0 0 28px #ffd700)' },
 
             // —— 特殊 ——
-            iceshroom:     { name: '寒冰菇', img: 'Plants/IceShroom/0.gif',  card: 'IceShroom.png',  hp: 99999,  cost: 0, sporeCost: 50, instant: true },
+            iceshroom:     { name: '寒冰菇', img: 'Plants/IceShroom/0.gif',  card: 'IceShroom.png',  hp: 99999,  cost: 0, sporeCost: 200, instant: true }, // v4.0.53：涨价 50→200
             doomshroom:    { name: '毁灭菇', img: 'Plants/DoomShroom/0.gif', card: 'DoomShroom.png', hp: 2000,  cost: 0, sporeCost: 2000,
                              nuke: { lob: true, dmg: 2048, cd: 2.0, img: 'Plants/DoomShroom/0.gif' } },
-            garlic:        { name: '大蒜',   img: 'Plants/Garlic/0.gif',     card: 'Garlic.png',     hp: 1000,  cost: 100, isGarlic: true },
-            blindbox:      { name: '植物盲盒',img: 'Plants/FlowerPot/0.gif', card: 'PlantBox.png', hp: 100,  cost: 0, sporeCost: 100, isBlindBox: true }
+            garlic:        { name: '大蒜',   img: 'Plants/Garlic/0.gif',     card: 'Garlic.png',     hp: 1000,  cost: 100, isGarlic: true,
+                             up: { cost: 200, to: 'icgarlic' } },
+            icgarlic:      { name: '冰蒜卫士', img: 'Plants/Garlic/0.gif',    card: 'Garlic.png',     hp: 1000,  cost: 0, scale: 1.1, // v4.0.53：新——血量不变，僵尸吃后减速
+                             tint: 'hue-rotate(175deg) saturate(1.7) brightness(1.25)',
+                             isGarlic: true, iceGarlic: true, up: { cost: 600, to: 'goldgarlic' } },
+            goldgarlic:    { name: '金蒜坚果', img: 'Plants/Garlic/0.gif',    card: 'Garlic.png',     hp: 5000,  cost: 0, scale: 1.2, // v4.0.53：新——任意僵尸要啃 4 下才啃掉
+                             tint: 'sepia(1) saturate(2.2) hue-rotate(8deg) brightness(1.25) drop-shadow(0 0 6px #ffd54a)',
+                             isGarlic: true, biteArmor: 4, up: { cost: 2000, to: 'supergarlic' } },
+            supergarlic:   { name: '蒜味高坚果', img: 'Plants/Garlic/0.gif', card: 'Garlic.png',     hp: 20000, cost: 0, scale: 1.35, // v4.0.53：新——僵尸要啃 10 下才啃掉
+                             tint: 'sepia(0.7) saturate(1.6) brightness(0.9) hue-rotate(20deg)',
+                             isGarlic: true, biteArmor: 10 },
+            blindbox:      { name: '植物盲盒',img: 'Plants/FlowerPot/0.gif', card: 'PlantBox.png', hp: 100,  cost: 0, sporeCost: 100, isBlindBox: true },
+
+            // —— 高级植物（v4.0.53 新增：火爆辣椒/南瓜壳/倭瓜/火炬树桩/樱桃炸弹，全部 🦠 种植，进「高级」栏） ——
+            jalapeno:      { name: '火爆辣椒', img: 'Plants/Jalapeno/Jalapeno.gif', card: 'Jalapeno.png', hp: 2000, cost: 0, sporeCost: 2048,
+                             jalapeno: true }, // 距离伤害光环：攻击植物离僵尸越近伤害越高
+            pumpkinshell:  { name: '南瓜壳', img: 'Plants/Plantern/Plantern.gif', card: 'PumpkinHead.png', hp: 3000, cost: 0, sporeCost: 128, scale: 1.8, // 外貌=路灯花不变
+                             tint: 'sepia(1) saturate(1.8) hue-rotate(-20deg) brightness(1.1)',
+                             healDoor: 35, up: { sporeCost: 512, to: 'pumpkinshell2' } },
+            pumpkinshell2: { name: '南瓜壳·愈', img: 'Plants/Plantern/Plantern.gif', hp: 3500, cost: 0, sporeCost: 0, scale: 1.8,
+                             tint: 'sepia(1) saturate(2) hue-rotate(-15deg) brightness(1.15)',
+                             healDoor: 30, up: { sporeCost: 2048, to: 'pumpkinshell3' } },
+            pumpkinshell3: { name: '南瓜壳·愈金', img: 'Plants/Plantern/Plantern.gif', hp: 4000, cost: 0, sporeCost: 0, scale: 1.8,
+                             tint: 'sepia(1) saturate(2.3) hue-rotate(0deg) brightness(1.2) drop-shadow(0 0 6px #ffd54a)',
+                             healDoor: 20, up: { sporeCost: 8192, to: 'pumpkinshell4' } },
+            pumpkinshell4: { name: '南瓜壳·不朽', img: 'Plants/Plantern/Plantern.gif', hp: 5000, cost: 0, sporeCost: 0, scale: 1.8,
+                             tint: 'sepia(1) saturate(2.5) hue-rotate(10deg) brightness(1.25) drop-shadow(0 0 10px #ffb74d)',
+                             healDoor: 15 },
+            squash:        { name: '倭瓜',   img: 'Plants/Squash/Squash.gif',    card: 'Squash.png',    hp: 2500, cost: 0, sporeCost: 2048, scale: 1.1,
+                             squashSkill: 120 }, // B/5 技能：2分钟CD，打掉僵尸一半血
+            torchwood:     { name: '火炬树桩', img: 'Plants/Torchwood/Torchwood.gif', card: 'Torchwood.png', hp: 4000, cost: 0, sporeCost: 2048, scale: 1.1,
+                             torch: true }, // 攻击命中产阳光
+            cherrybomb:    { name: '樱桃炸弹', img: 'Plants/CherryBomb/CherryBomb.gif', card: 'CherryBomb.png', hp: 99999, cost: 0, sporeCost: 1000,
+                             instant: true, cherry: true } // 一次性：3×3 外圈爆炸+全植物增益
         };
     }
-    // 商店可购清单（阳光 / 孢子两种货币）
+    // 商店可购清单（阳光 / 孢子两种货币）——v4.0.53：MENU 保留为「全部可购」基线（AI 建家用），菜单三栏另行分组
     static get MENU() {
-        return ['wallnut', 'puffshroom', 'peashooter', 'plantern', 'spikeweed', 'iceshroom', 'doomshroom', 'garlic', 'blindbox'];
+        return ['wallnut', 'puffshroom', 'peashooter', 'plantern', 'spikeweed', 'potatomine', 'iceshroom', 'doomshroom', 'garlic', 'blindbox', 'jalapeno', 'pumpkinshell', 'squash', 'torchwood', 'cherrybomb'];
+    }
+    // v4.0.53：种植菜单三栏分类（常用=豌豆射手/小喷菇/路灯花；陷阱=土豆地雷/地刺；高级=寒冰菇等全部新植物）
+    static get MENU_COMMON() { return ['peashooter', 'puffshroom', 'plantern']; }
+    static get MENU_TRAP() { return ['potatomine', 'spikeweed']; }
+    static get MENU_ADV() { return ['iceshroom', 'doomshroom', 'garlic', 'blindbox', 'jalapeno', 'pumpkinshell', 'squash', 'torchwood', 'cherrybomb']; }
+    static get MENU_TABS() {
+        return [
+            { id: 0, label: '常用', types: HauntedDorm.MENU_COMMON },
+            { id: 1, label: '陷阱', types: HauntedDorm.MENU_TRAP },
+            { id: 2, label: '高级', types: HauntedDorm.MENU_ADV }
+        ];
     }
 
     // ===== v4.0.19：存活祝福池（每 90 秒三选一，全局生效）=====
@@ -531,14 +609,19 @@ class HauntedDorm {
         else document.body.appendChild(this.blessEl);
         this.minimap = document.getElementById('minimap').getContext('2d');
 
-        // 商店菜单（数据驱动生成）
+        // 商店菜单（数据驱动生成）——v4.0.53：三栏分类（常用/陷阱/高级），默认打开「常用」
         const defs = HauntedDorm.DEFS;
-        this.plantMenu.innerHTML = HauntedDorm.MENU.map(t => {
-            const d = defs[t];
-            const price = d.sporeCost ? `🦠${d.sporeCost}` : (d.cost > 0 ? `☀${d.cost}` : '免费');
-            return `<div class="plant-option" data-t="${t}"><img src="assets/images/Card/Plants/${d.card}"><br>${d.name}(${price})</div>`;
-        }).join('');
+        this.menuTab = 0; // 当前菜单栏：0=常用 1=陷阱 2=高级
+        this._renderPlantMenuTabs();
         this._onPlantMenuClick = e => {
+            const tab = e.target.closest('.pm-tab');
+            if (tab) {
+                this.menuTab = parseInt(tab.dataset.tab, 10);
+                this._renderPlantMenuTabs();
+                if (this.menuOpen) this._applyPlantMenuFilters();
+                this.playSfx('buttonclick.mp3', 0.25);
+                return;
+            }
             const opt = e.target.closest('.plant-option');
             if (opt) this.doPlant(opt.dataset.t);
         };
@@ -938,10 +1021,18 @@ class HauntedDorm {
                 }
                 this.playSfx('frozen.mp3', 0.5);
             } else {
-                if (owner) this.addSpore(50, owner);
-                this._flyText(this.player.x, this.player.y, '无敌对目标，已退还50🦠', '#ff8a8a');
+                if (owner) this.addSpore(200, owner); // v4.0.53：寒冰菇涨价 50→200，退款同步
+                this._flyText(this.player.x, this.player.y, '无敌对目标，已退还200🦠', '#ff8a8a');
                 this.playSfx('buzzer.mp3', 0.3);
             }
+            return null;
+        }
+
+        // v4.0.53：樱桃炸弹——一次性：种下立即爆炸（3×3 外圈）+ 范围内植物增益，本体不保留
+        if (type === 'cherrybomb') {
+            const tmpPl = { r: row, c: col, def: HauntedDorm.DEFS[type], owner: owner || null };
+            this._cherryBoom(tmpPl);
+            this.playSfx('boom.mp3', 0.6);
             return null;
         }
 
@@ -1711,6 +1802,20 @@ class HauntedDorm {
         document.getElementById('dorm-over').style.display = 'flex';
     }
 
+    // v4.0.53：种植菜单三栏渲染（常用/陷阱/高级）——标签+网格同源一次重绘
+    _renderPlantMenuTabs() {
+        const defs = HauntedDorm.DEFS;
+        const tabs = HauntedDorm.MENU_TABS.map(t =>
+            `<span class="pm-tab${t.id === this.menuTab ? ' active' : ''}" data-tab="${t.id}">${t.label}</span>`
+        ).join('');
+        const grid = HauntedDorm.MENU_TABS[this.menuTab].types.map(t => {
+            const d = defs[t];
+            const price = d.sporeCost ? `🦠${d.sporeCost}` : (d.cost > 0 ? `☀${d.cost}` : '免费');
+            return `<div class="plant-option" data-t="${t}"><img src="assets/images/Card/Plants/${d.card}"><br>${d.name}(${price})</div>`;
+        }).join('');
+        this.plantMenu.innerHTML = `<div class="pm-tabs">${tabs}</div><div class="pm-grid">${grid}</div>`;
+    }
+
     openPlantMenu(mouseX, mouseY) {
         if (this.isZombieFaction || this.playerAngelic || this.playerTraitor) return; // v4.0.44：天使/内鬼不可建造
         if (this.player.dead) return; // v4.0.23：倒下的 P1 不能建造
@@ -1758,15 +1863,33 @@ class HauntedDorm {
 
         this.plantMenu.style.display = 'flex';
 
-        // 门格专供坚果大门；地刺格专供地刺；房内地皮种其余植物
+        // 门格：大门(坚果) / 地刺 / 土豆地雷均可；地刺格：地刺/土豆地雷；房内地皮：其余植物（v4.0.53：门口可种地刺与土豆雷）
+        this._applyPlantMenuFilters(isDoorTile, isSpikeTile);
+
+        // v4.0.18：菜单贴边自动回调——格子太靠下/靠右时整体上移/左移，别让下半截被屏幕裁掉
+        this.plantMenu.style.left = (mouseX + 20) + 'px';
+        this.plantMenu.style.top = (mouseY - 20) + 'px';
+        const mr = this.plantMenu.getBoundingClientRect();
+        if (mr.bottom > window.innerHeight - 8) {
+            this.plantMenu.style.top = Math.max(8, mouseY - 20 - (mr.bottom - window.innerHeight + 8)) + 'px';
+        }
+        if (mr.right > window.innerWidth - 8) {
+            this.plantMenu.style.left = Math.max(8, mouseX + 20 - (mr.right - window.innerWidth + 8)) + 'px';
+        }
+    }
+
+    // v4.0.53：菜单过滤（门格/地刺格/房内）——tab 切换时也会重跑
+    _applyPlantMenuFilters(isDoorTile, isSpikeTile) {
         const opts = this.plantMenu.querySelectorAll('.plant-option');
+        const doorOk = t => t === 'wallnut' || t === 'spikeweed' || t === 'firespikeweed' || t === 'spikerock' || t === 'ultimatefirespikeweed' || t === 'potatomine' || t === 'firemine';
+        const spikeOk = t => t === 'spikeweed' || t === 'firespikeweed' || t === 'spikerock' || t === 'ultimatefirespikeweed' || t === 'potatomine' || t === 'firemine';
         opts.forEach(opt => {
             if (isDoorTile) {
-                opt.style.display = (opt.dataset.t === 'wallnut') ? 'block' : 'none';
+                opt.style.display = doorOk(opt.dataset.t) ? 'block' : 'none';
             } else if (isSpikeTile) {
-                opt.style.display = (opt.dataset.t === 'spikeweed') ? 'block' : 'none';
+                opt.style.display = spikeOk(opt.dataset.t) ? 'block' : 'none';
             } else {
-                opt.style.display = (opt.dataset.t === 'spikeweed' || opt.dataset.t === 'wallnut') ? 'none' : 'block';
+                opt.style.display = (opt.dataset.t === 'spikeweed' || opt.dataset.t === 'firespikeweed' || opt.dataset.t === 'spikerock' || opt.dataset.t === 'ultimatefirespikeweed' || opt.dataset.t === 'wallnut') ? 'none' : 'block';
             }
             // 实时状态：若阳光或孢子不足，视觉置灰提示
             const d = HauntedDorm.DEFS[opt.dataset.t];
@@ -1781,17 +1904,6 @@ class HauntedDorm {
                 }
             }
         });
-
-        // v4.0.18：菜单贴边自动回调——格子太靠下/靠右时整体上移/左移，别让下半截被屏幕裁掉
-        this.plantMenu.style.left = (mouseX + 20) + 'px';
-        this.plantMenu.style.top = (mouseY - 20) + 'px';
-        const mr = this.plantMenu.getBoundingClientRect();
-        if (mr.bottom > window.innerHeight - 8) {
-            this.plantMenu.style.top = Math.max(8, mouseY - 20 - (mr.bottom - window.innerHeight + 8)) + 'px';
-        }
-        if (mr.right > window.innerWidth - 8) {
-            this.plantMenu.style.left = Math.max(8, mouseX + 20 - (mr.right - window.innerWidth + 8)) + 'px';
-        }
     }
 
     _closePlantMenu() {
@@ -1959,8 +2071,8 @@ class HauntedDorm {
             return;
         }
         const spawned = this.spawnPlant(col, row, type, isDoor, p); // v4.0.23：带上种植者与门板属性
-        if (!spawned && type !== 'iceshroom') {
-            // 保底兜底：若意外阻断未成功生成植物，全额原路退还
+        if (!spawned && type !== 'iceshroom' && type !== 'cherrybomb') {
+            // 保底兜底：若意外阻断未成功生成植物，全额原路退还（v4.0.53：樱桃炸弹一次性不退还）
             if (sporeCost > 0) this.addSpore(sporeCost, p);
             else if (cost > 0) this.addSun(cost, p);
             this._flyText(tx, ty, '建造未生效，已全额退还！', '#ff8a8a');
@@ -2112,6 +2224,13 @@ class HauntedDorm {
             // v4.0.48：P2 加号键（小键盘+）坚果门板修复
             if ((key === '+' || e.code === 'NumpadAdd') && !e.repeat && this.gameMode === '2p' && this.player2 && !this.player2.dead && !this.isZombieFaction) {
                 this._healDoor(this.player2);
+            }
+            // v4.0.53：倭瓜技能——P1 B 键、P2 5 键（2 分钟 CD，打掉僵尸一半血）
+            if ((key === 'b' || e.code === 'KeyB') && !e.repeat && this.player && !this.player.dead) {
+                this._squashSkill(this.player);
+            }
+            if ((key === '5' || e.code === 'Digit5' || e.code === 'Numpad5') && !e.repeat && this.gameMode === '2p' && this.player2 && !this.player2.dead) {
+                this._squashSkill(this.player2);
             }
             if ((key === '/' || key === '3' || key === 'pagedown' || e.code === 'Slash' || e.code === 'Digit3' || e.code === 'Numpad3' || e.code === 'PageDown') && !e.repeat && this.gameMode === '2p' && this.player2 && this.player2.skillCd <= 0) {
                 this._useSkill(this.player2);
@@ -2377,10 +2496,17 @@ class HauntedDorm {
             const rm = this._insideRoom(pl.c, pl.r);
             // v4.0.23：优先按种植者记账；查不到不再兜底给 P1（旧兜底把 P2 的输出全记到 P1 头上，MVP 冤案根源）
             const owner = pl.owner || ((rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : null);
-            const dmgMul = this.plantDmgBoostT > 0 ? 2 : 1; // v4.0.19：狂怒祝福——伤害翻倍
+            let dmgMul = this.plantDmgBoostT > 0 ? 2 : 1; // v4.0.19：狂怒祝福——伤害翻倍
+            // v4.0.53：火爆辣椒光环——攻击植物离僵尸越近伤害越高（隔 1 格 ×1.5、远一点 ×1.25、再远 ×1.1，永不减伤）
+            if (this._jalapenoActive) {
+                const dd = Math.hypot(best.x - px, best.y - py);
+                if (dd < 160) dmgMul *= 1.5;
+                else if (dd < 240) dmgMul *= 1.25;
+                else if (dd < 320) dmgMul *= 1.1;
+            }
 
             if (lob) {
-                pl.shootCd = lob.cd;
+                pl.shootCd = (lob.cd || 1.5) * (pl._cbShootMul || 1); // v4.0.53：樱桃炸弹攻速增益
                 const isButter = lob.stunChance && Math.random() < lob.stunChance;
                 this._firePea(px, py, Math.atan2(best.y - py, best.x - px), lob.dmg * dmgMul,
                     { img: isButter ? 'Plants/KernelPult/butter.png' : lob.img, range: lob.range, aoe: lob.aoe, speed: 300, size: 34, owner, stunTime: isButter ? lob.stunTime : 0 });
@@ -2393,7 +2519,7 @@ class HauntedDorm {
                     pl.shootCd = 0.1;
                     pl.crazySpray--;
                 } else {
-                    pl.shootCd = sh.cd;
+                    pl.shootCd = (sh.cd || 1.5) * (pl._cbShootMul || 1); // v4.0.53：樱桃炸弹攻速增益
                 }
                 
                 let isFocus = sh.focus && (best.lockedTarget === this.player || (best.lockedTarget && best.lockedTarget === owner));
@@ -2462,6 +2588,12 @@ class HauntedDorm {
                     for (const z of hits) {
                         z.hp -= pea.dmg;
                         if (pea.pctDmg) z.hp -= z.maxHp * pea.pctDmg;
+                        // v4.0.53：火炬树桩——攻击每命中一次，为出手者产一个阳光（伤害越高阳光越多）
+                        if (this._torchActive && pea.owner && !pea.owner.isAi) {
+                            const tsun = Math.max(1, Math.round(pea.dmg / 16));
+                            if (pea.owner === this.player || pea.owner === this.player2) this.addSun(tsun, pea.owner);
+                            else pea.owner.sun = (pea.owner.sun || 0) + tsun;
+                        }
                         // v4.0.16：MVP 伤害归属——按出手者（玩家/人机）累计对僵尸的实际伤害
                         if (pea.owner && pea.owner.roleDef) {
                             pea.owner.dmgDealt = (pea.owner.dmgDealt || 0) + pea.dmg + (pea.pctDmg ? z.maxHp * pea.pctDmg : 0);
@@ -2832,7 +2964,7 @@ class HauntedDorm {
             const boost = this.waterBoostT > 0 ? 2 : 1; // v4.0.39：丰收祝福改「全植物产出 ×2」
             if (def.produce) {
                 pl.prodT += dt;
-                if (pl.prodT >= def.produce.every) {
+                if (pl.prodT >= (def.produce.every * (pl._cbProduceMul || 1))) { // v4.0.53：樱桃炸弹产速增益（+1/8）
                     pl.prodT = 0;
                     let sAmt = def.produce.sun * boost;
                     if (owner.sunBuffT > 0) sAmt *= 2; // 向日葵技能生效
@@ -2851,7 +2983,7 @@ class HauntedDorm {
             }
             if (def.spore) {
                 pl.sporeT += dt;
-                if (pl.sporeT >= def.spore.every) {
+                if (pl.sporeT >= (def.spore.every * (pl._cbProduceMul || 1))) { // v4.0.53：樱桃炸弹产速增益（+1/8）
                     pl.sporeT = 0;
                     const spAmt = def.spore.n * boost;
                     if (owner === this.player || owner === this.player2) {
@@ -3044,6 +3176,218 @@ class HauntedDorm {
                 this.plants = this.plants.filter(p => p !== pl);
             }
         }
+    }
+
+    // v4.0.53：土豆地雷——30 秒引信（烈焰地雷 15 秒）后伸头待爆；踩上即爆；被啃不炸直接被砍掉
+    _updatePotatoMines(dt = 1/60) {
+        const targets = this._getHostileTargets();
+        for (const pl of this.plants) {
+            if (!pl.def.potatoMine) continue;
+            const px = pl.c * this.gridSize + 40, py = pl.r * this.gridSize + 40;
+            if (pl._pArming === undefined) {
+                pl._pArming = (pl.def === HauntedDorm.DEFS.firemine) ? 15 : 30; // 引信：土豆雷 30s / 烈焰地雷 15s
+            }
+            if (pl._pArming > 0) {
+                pl._pArming -= dt;
+                if (pl._pArming <= 0) {
+                    // 到点伸头——换成已就绪外观
+                    const img = pl.el1.querySelector('img');
+                    if (img) img.src = 'assets/images/Plants/PotatoMine/PotatoMine.gif';
+                    this._flyText(px, py - 30, '💣 土豆雷就绪！', '#ffd54a');
+                    // 检查是否一就绪就被踩
+                }
+                continue;
+            }
+            const victim = targets.find(zb => !zb.dead && Math.hypot(zb.x - px, zb.y - py) < 55);
+            if (!victim) continue;
+            // 引爆
+            this.playSfx('explosion.mp3', 0.55);
+            const boom = document.createElement('div');
+            boom.style.cssText = `position:absolute; left:${px - 150}px; top:${py - 150}px; width:300px; height:300px; border-radius:50%; background:radial-gradient(circle, rgba(255,230,120,0.95) 0%, rgba(255,110,30,0.7) 45%, rgba(255,0,0,0) 72%); z-index:600; pointer-events:none;`;
+            this.world1.appendChild(boom);
+            setTimeout(() => boom.remove(), 500);
+            const MINE_DMG = (pl.def === HauntedDorm.DEFS.firemine) ? 4000 : 2000; // 烈焰地雷伤害翻倍
+            for (const zb of targets) {
+                if (!zb.dead && Math.hypot(zb.x - px, zb.y - py) < 130) {
+                    const rm = this._insideRoom(pl.c, pl.r);
+                    const owner = pl.owner || ((rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : this.player);
+                    const dealt = Math.min(zb.hp, MINE_DMG);
+                    zb.hp -= dealt;
+                    if (owner && owner.roleDef) owner.dmgDealt = (owner.dmgDealt || 0) + dealt;
+                    this._flyText(zb.x, zb.y - 20, `-${dealt} 💥`, '#ff5252');
+                    if (zb.hpBg) {
+                        zb.hpBg.style.display = 'block';
+                        zb.hpFg.style.width = Math.max(0, zb.hp / zb.maxHp * 100) + '%';
+                    }
+                    if (zb.hp <= 0) this._killZombie(zb, owner);
+                }
+            }
+            pl.el1.remove();
+            if (pl.txtEl) pl.txtEl.remove();
+            this.plants = this.plants.filter(p => p !== pl);
+        }
+    }
+
+    // v4.0.53：南瓜壳——每秒回复自己门板 maxHp 的 1/N（35→30→20→15），外貌与路灯花一致
+    _updatePumpkin(dt = 1/60) {
+        for (const pl of this.plants) {
+            const hd = pl.def.healDoor;
+            if (!hd) continue;
+            if (pl.owner && !pl.owner.dead) {
+                pl._phT = (pl._phT || 0) + dt;
+                if (pl._phT >= 1.0) {
+                    pl._phT = 0;
+                    // 找 owner 名下所有房间的门板，修损毁最重的
+                    const myRooms = this._ownedRooms(pl.owner);
+                    let door = null, worst = 1;
+                    for (const rm of myRooms) {
+                        const d = this.plants.find(q => q.isDoor && q.c === rm.doorCol && q.r === rm.doorRow);
+                        if (d && d.hp < d.maxHp) {
+                            const ratio = d.hp / d.maxHp;
+                            if (ratio < worst) { worst = ratio; door = d; }
+                        }
+                    }
+                    if (!door) continue;
+                    const heal = Math.max(1, Math.round(door.maxHp / hd));
+                    const oldHp = door.hp;
+                    door.hp = Math.min(door.maxHp, door.hp + heal);
+                    const bg = door.el1.querySelector('.hp-bar-bg');
+                    const fg = door.el1.querySelector('.hp-bar-fg');
+                    if (bg && fg) {
+                        if (door.hp >= door.maxHp) { bg.style.display = 'none'; }
+                        else { bg.style.display = 'block'; fg.style.width = Math.max(0, (door.hp / door.maxHp) * 100) + '%'; }
+                    }
+                    if (door.hp - oldHp > 0) {
+                        const dx = door.c * 80 + 40, dy = door.r * 80;
+                        this._flyText(dx, dy, `🎃 南瓜壳修复 +${door.hp - oldHp}`, '#ffb74d');
+                    }
+                }
+            }
+        }
+    }
+
+    // v4.0.53：倭瓜——技能冷却刷新（B/5 键触发见按键处理；CD 2 分钟）
+    _updateSquash(dt = 1/60) {
+        for (const pl of this.plants) {
+            if (!pl.def.squashSkill) continue;
+            if (pl._sqCd === undefined) pl._sqCd = 0;
+            if (pl._sqCd > 0) pl._sqCd -= dt;
+        }
+    }
+
+    // v4.0.53：火炬树桩——存在时攻击植物每次命中僵尸产生阳光（伤害越高阳光越多），这里做光环开关；火爆辣椒光环同算
+    _updateTorch(dt = 1/60) {
+        const has = this.plants.some(pl => pl.def.torch && !pl._gone);
+        if (this._torchActive !== has) this._torchActive = has;
+        const hasJ = this.plants.some(pl => pl.def.jalapeno && !pl._gone);
+        if (this._jalapenoActive !== hasJ) this._jalapenoActive = hasJ;
+        // 樱桃增益倒计时
+        for (const pl of this.plants) {
+            if (pl._cbBuffT) {
+                pl._cbBuffT -= dt;
+                if (pl._cbBuffT <= 0) { pl._cbShootMul = null; pl._cbProduceMul = null; pl._cbBuffT = 0; }
+            }
+        }
+    }
+
+    // v4.0.53：僵尸盯上印记——被任何未撤退僵尸锁定的角色，四周显示醒目的红色角框
+    _updateTargetMarks(dt = 1/60) {
+        if (this.isZombieFaction) return; // 僵尸阵营：植物方不锁人，维持全屏警告即可
+        const targeted = new Set();
+        for (const zb of this.zombies) {
+            if (zb.dead || zb.retreating) continue;
+            const t = zb.lockedTarget;
+            if (t && !t.dead && !t.isZombie && t !== zb) targeted.add(t);
+        }
+        for (const p of this.allPlayers) {
+            if (!p.el1) continue;
+            const on = targeted.has(p);
+            if (on) {
+                if (!p._markEl) {
+                    p._markEl = document.createElement('div');
+                    p._markEl.className = 'target-mark';
+                    p.el1.appendChild(p._markEl);
+                }
+                p._markEl.style.display = 'block';
+            } else if (p._markEl) {
+                p._markEl.style.display = 'none';
+            }
+        }
+    }
+
+    // v4.0.53：樱桃炸弹——以自身为中心 3×3 外圈爆炸，范围内己方植物获得增益（射击攻速+1/4、产阳光+1/8）
+    _cherryBoom(pl) {
+        const px = pl.c, py = pl.r;
+        const hostiles = this._getHostileTargets().filter(z => !z.dead);
+        const cx = px * this.gridSize + 40, cy = py * this.gridSize + 40;
+        this.playSfx('explosion.mp3', 0.7);
+        const boom = document.createElement('div');
+        boom.style.cssText = `position:absolute; left:${cx - 170}px; top:${cy - 170}px; width:340px; height:340px; border-radius:50%; background:radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,150,40,0.85) 35%, rgba(255,0,0,0.6) 62%, rgba(255,0,0,0) 75%); z-index:600; pointer-events:none;`;
+        this.world1.appendChild(boom);
+        setTimeout(() => boom.remove(), 600);
+        // 爆炸伤害：3×3 外圈（不含中心格）——切比雪夫距离 1 的环
+        const CHERRY_DMG = 1500;
+        for (const zb of hostiles) {
+            const zc = Math.floor(zb.x / this.gridSize), zr = Math.floor(zb.y / this.gridSize);
+            const md = Math.max(Math.abs(zc - px), Math.abs(zr - py));
+            if (md === 1) {
+                const owner = pl.owner;
+                const dealt = Math.min(zb.hp, CHERRY_DMG);
+                zb.hp -= dealt;
+                if (owner && owner.roleDef) owner.dmgDealt = (owner.dmgDealt || 0) + dealt;
+                this._flyText(zb.x, zb.y - 20, `-${dealt} 💥`, '#ff5252');
+                if (zb.hpBg) { zb.hpBg.style.display = 'block'; zb.hpFg.style.width = Math.max(0, zb.hp / zb.maxHp * 100) + '%'; }
+                if (zb.hp <= 0) this._killZombie(zb, owner);
+            }
+        }
+        // 范围增益：外圈（md===1）所有己方植物——除坚果墙/高级植物外：射击系攻速×0.8（cd-1/4）、产阳光系 every×0.875（+1/8）
+        const BUFF_T = 30; // 增益持续 30 秒
+        for (const q of this.plants) {
+            const qc = q.c, qr = q.r;
+            const md = Math.max(Math.abs(qc - px), Math.abs(qr - py));
+            if (md !== 1) continue;
+            if (!q.def.shoot && !q.def.produce && !q.def.spore) continue; // 仅对射击/产资源类生效
+            q._cbShootMul = 0.8;   // 攻速：cd 乘 0.8（即 +1/4 速度）
+            q._cbProduceMul = 0.875; // 产速：every 乘 0.875（即 +1/8）
+            q._cbBuffT = BUFF_T;
+            this._flyText(q.c * 80 + 40, q.r * 80, '🍒 樱桃增益!', '#ff8a8a');
+        }
+    }
+
+    // v4.0.53：倭瓜技能——B（P1）/5（P2）键触发，打掉敌对僵尸一半血量；每 2 分钟刷新一次
+    _squashSkill(p) {
+        if (!p || p.dead || this.isZombieFaction || this.playerAngelic || this.playerTraitor) return;
+        const mySquash = this.plants.find(pl => pl.owner === p && pl.def.squashSkill && !pl._gone);
+        if (!mySquash) {
+            this._flyText(p.x, p.y - 30, '🥒 还没有种下倭瓜！', '#ff8a8a');
+            this.playSfx('buzzer.mp3', 0.3);
+            return;
+        }
+        if (mySquash._sqCd > 0) {
+            this._flyText(p.x, p.y - 30, `🥒 倭瓜技能冷却中 (${Math.ceil(mySquash._sqCd)}s)`, '#ff8a8a');
+            this.playSfx('buzzer.mp3', 0.3);
+            return;
+        }
+        const hostiles = this._getHostileTargets().filter(z => !z.dead);
+        if (hostiles.length === 0) {
+            this._flyText(p.x, p.y - 30, '🥒 场上没有僵尸！', '#ff8a8a');
+            this.playSfx('buzzer.mp3', 0.3);
+            return;
+        }
+        mySquash._sqCd = mySquash.def.squashSkill; // 120s
+        this.playSfx('explosion.mp3', 0.6);
+        const px = mySquash.c * 80 + 40, py = mySquash.r * 80 + 40;
+        for (const zb of hostiles) {
+            const dealt = Math.max(1, Math.round(zb.maxHp * 0.5)); // 打掉僵尸一半血
+            zb.hp -= dealt;
+            if (p.roleDef) p.dmgDealt = (p.dmgDealt || 0) + dealt;
+            this._flyText(zb.x, zb.y - 20, `-${dealt} 🥒 半血重击`, '#ff5252');
+            if (zb.hpBg) { zb.hpBg.style.display = 'block'; zb.hpFg.style.width = Math.max(0, zb.hp / zb.maxHp * 100) + '%'; }
+            if (zb.hp <= 0) this._killZombie(zb, p);
+        }
+        this._announce(`🥒 ${p.roleDef ? p.roleDef.name : p.name} 倭瓜技能：全场僵尸半血！`, 'explosion.mp3');
+        mySquash.el1.classList.add('shake');
+        setTimeout(() => { if (mySquash && mySquash.el1) mySquash.el1.classList.remove('shake'); }, 300);
     }
 
     _updateMinimap() {
@@ -3269,11 +3613,11 @@ class HauntedDorm {
     _updateKMenus() {
         // 【优化3】冗余按键映射：为每个操作提供2-3个备用键。如果主键被硬件冲突屏蔽，玩家可以下意识用备用键
         // v4.0.23：倒下的玩家不能打开建造菜单；僵尸阵营玩家禁止打开植物建造菜单
-        if (!this.player.dead && !this.isZombieFaction && !this.playerAngelic && !this.playerTraitor) this._handleKMenu(1, this.player, ['f', 'j'], ['altright', 'g', 'k'], ['w'], ['s'], this.p1Kmenu, this.p1Cursor); // v4.0.44：天使/内鬼不可开建造菜单
+        if (!this.player.dead && !this.isZombieFaction && !this.playerAngelic && !this.playerTraitor) this._handleKMenu(1, this.player, ['f', 'j'], ['altright', 'g', 'k'], ['w'], ['s'], ['a'], ['d'], this.p1Kmenu, this.p1Cursor); // v4.0.44：天使/内鬼不可开建造菜单
         if (this.gameMode === '2p' && this.player2 && !this.player2.dead) {
             // v4.0.16：P2 主键改数字位 1确认/2取消（0浇水/3技能）——原主键 Delete 在 Mac 上是退格(Backspace)根本不触发，
             // 用户实际一直用的是备用键 1；Enter 保留为取消备用
-            this._handleKMenu(2, this.player2, ['1', 'shiftright', 'delete'], ['2', 'enter', 'controlright'], ['arrowup'], ['arrowdown'], this.p2Kmenu, this.p2Cursor);
+            this._handleKMenu(2, this.player2, ['1', 'shiftright', 'delete'], ['2', 'enter', 'controlright'], ['arrowup'], ['arrowdown'], ['arrowleft'], ['arrowright'], this.p2Kmenu, this.p2Cursor);
         }
     }
     
@@ -3300,7 +3644,7 @@ class HauntedDorm {
         });
     }
     
-    _handleKMenu(pId, p, keysOk, keysCancel, keysUp, keysDown, uiEl, cursorEl) {
+    _handleKMenu(pId, p, keysOk, keysCancel, keysUp, keysDown, keysTabL, keysTabR, uiEl, cursorEl) {
         if (this.blessing) return; // v4.0.19：祝福选择期间屏蔽建造菜单（共用确认键，防止一手按出一串）
         const menu = this.kmenus[pId];
         
@@ -3312,6 +3656,16 @@ class HauntedDorm {
         }
         
         if (menu.active) {
+            // v4.0.53：三栏分类切换（P1 A/D、P2 ←/→）——只有种植菜单才可切栏，升级/拆除菜单不可切
+            if (menu.planting) {
+                if (this._checkAnyKey(keysTabL) || this._checkAnyKey(keysTabR)) {
+                    const dir = this._checkAnyKey(keysTabL) ? -1 : 1;
+                    const tabs = HauntedDorm.MENU_TABS;
+                    menu.tab = (menu.tab + dir + tabs.length) % tabs.length;
+                    menu.index = 0;
+                    this._renderKMenu(menu, uiEl);
+                }
+            }
             // v4.0.18：循环翻页——到顶再往上直接跳到最底一条，到底再往下回到最顶
             const len = menu.options.length;
             if (len > 0) {
@@ -3344,6 +3698,7 @@ class HauntedDorm {
             
             if (pl) {
                 // 有植物 -> 升级/拆除
+                menu.planting = false;
                 menu.options = [];
                 if (pl.def.up) menu.options.push({ action: 'up', text: `升级 (${pl.def.up.cost ? '☀'+pl.def.up.cost : ''} ${pl.def.up.sporeCost ? '🦠'+pl.def.up.sporeCost : ''})` });
                 const refSunPrev = Math.floor((pl.investSun || 0) * 0.5), refSporePrev = Math.floor((pl.investSpore || 0) * 0.5); // v4.0.47
@@ -3359,12 +3714,15 @@ class HauntedDorm {
                 if (!inRoomGrid && !isDoorTile) isSpikeTile = true;
                 
                 let availableTypes = [];
+                const doorSpike = ['spikeweed', 'firespikeweed', 'spikerock', 'ultimatefirespikeweed', 'potatomine', 'firemine']; // v4.0.53：门口可种地刺+土豆雷
                 if (isDoorTile) {
-                    availableTypes = ['wallnut'];
+                    availableTypes = doorSpike;
                 } else if (isSpikeTile) {
-                    availableTypes = ['spikeweed'];
+                    availableTypes = doorSpike;
                 } else {
-                    availableTypes = HauntedDorm.MENU.filter(t => t !== 'spikeweed' && t !== 'wallnut');
+                    // v4.0.53：房内按当前栏（常用/陷阱/高级），F/1 初次打开即「常用」
+                    menu.tab = (menu.tab === undefined) ? 0 : menu.tab;
+                    availableTypes = HauntedDorm.MENU_TABS[menu.tab].types.slice();
                 }
                 
                 menu.options = availableTypes.map(t => {
@@ -3374,6 +3732,7 @@ class HauntedDorm {
                 });
                 menu.targetCol = col;
                 menu.targetRow = row;
+                menu.planting = true;
                 
                 // v4.0.18：支持第二间房——空房且自己未满两间即可建造（建造时自动认领）
                 if (!this._ownsRoom(p, room) && this._ownedRooms(p).length >= 2) {
@@ -3394,7 +3753,11 @@ class HauntedDorm {
     
     _renderKMenu(menu, uiEl) {
         const p = menu.player || this.player;
-        uiEl.innerHTML = menu.options.map((opt, i) => {
+        let header = '';
+        if (menu.planting && menu.tab !== undefined && HauntedDorm.MENU_TABS[menu.tab]) {
+            header = `<div style="padding:4px 10px; background:#8c6a4d; color:#fff; font-size:12px; text-align:center; border-bottom:1px solid #5a4632;">【${HauntedDorm.MENU_TABS[menu.tab].label}】<span style="opacity:0.8; font-size:11px;">（A/D 或 ←/→ 切栏）</span></div>`;
+        }
+        uiEl.innerHTML = header + menu.options.map((opt, i) => {
             let dimStyle = '';
             if (opt.action === 'buy') {
                 const def = HauntedDorm.DEFS[opt.type];
@@ -3516,7 +3879,7 @@ class HauntedDorm {
                     return;
                 }
                 const spawned = this.spawnPlant(menu.targetCol, menu.targetRow, type, isDoor, p); // v4.0.23：带上种植者与门板属性
-                if (!spawned && type !== 'iceshroom') {
+                if (!spawned && type !== 'iceshroom' && type !== 'cherrybomb') {
                     if (cost > 0) this.addSun(cost, p);
                     if (sporeCost > 0) this.addSpore(sporeCost, p);
                     this._flyText(tx, ty, '建造未生效，已全额退还！', '#ff8a8a');
@@ -4504,6 +4867,11 @@ class HauntedDorm {
         this._updateIceshroom(dt);
         this._updateDoomshroom(dt);
         this._updateMines(dt);
+        this._updatePotatoMines(dt); // v4.0.53：土豆地雷（30s 引信+威慑）
+        this._updatePumpkin(dt); // v4.0.53：南瓜壳每秒回门板血
+        this._updateSquash(dt); // v4.0.53：倭瓜技能冷却刷新
+        this._updateTorch(dt); // v4.0.53：火炬树桩光环（命中产阳光）
+        this._updateTargetMarks(dt); // v4.0.53：僵尸盯上红框印记
         
         // 僵尸阵营玩家啃咬逻辑（v4.0.44：内鬼玩家同享——挠门/咬幸存者/中心回血）
         if ((this.isZombieFaction || this.playerTraitor) && !this.player.dead) {
@@ -4517,20 +4885,44 @@ class HauntedDorm {
                     const px = p.c * 80 + 40, py = p.r * 80 + 40;
                     if (Math.hypot(this.player.x - px, this.player.y - py) < 80) { // 判定范围
                         const biteDmg = Math.round((140 + 75 * (this.player.level - 1)) * (this.player.speedBuffT > 0 ? 1.6 : 1.0));
-                        p.hp -= biteDmg;
-                        this.playSfx('chomp.mp3', 0.25);
-                        this._flyText(px, py - 20, `-${biteDmg}`, '#ff5252');
+                        // v4.0.53：未就绪的土豆地雷被啃——不爆炸，直接被砍掉
+                        if (p.def.potatoMine && (p._pArming === undefined || p._pArming > 0)) {
+                            this.playSfx('chomp.mp3', 0.25);
+                            this._flyText(px, py - 20, '🥔 土豆雷被砍掉了！', '#ff8a8a');
+                            p.el1.remove();
+                            if (p.txtEl) p.txtEl.remove();
+                            this.plants = this.plants.filter(pl => pl !== p);
+                            bitten = true;
+                            break;
+                        }
+                        // v4.0.53：大蒜护甲——金蒜坚果啃 4 口、蒜味高坚果啃 10 口才啃掉
+                        let armorBlocked = false;
+                        if (p.def.biteArmor) {
+                            if (p._armor === undefined) p._armor = p.def.biteArmor;
+                            if (p._armor > 0) {
+                                p._armor--;
+                                armorBlocked = true;
+                                this.playSfx('chomp.mp3', 0.25);
+                                this._flyText(px, py - 20, `🛡 大蒜护甲 (剩${p._armor}口)`, '#ffd54a');
+                            }
+                        }
+                        if (!armorBlocked) {
+                            p.hp -= biteDmg;
+                            this.playSfx('chomp.mp3', 0.25);
+                            this._flyText(px, py - 20, `-${biteDmg}`, '#ff5252');
+                        }
                         if (p.def.isGarlic) {
                             this._say(this.player, "呸！好臭的大蒜！");
                             this._flyText(this.player.x, this.player.y - 20, '🤢 刺鼻驱离！', '#9dff6b');
                             this.player.stunT = 2.0;
+                            if (p.def.iceGarlic) this.player.slowT = 3.0; // v4.0.53：冰蒜卫士——啃后减速
                             const pushDirX = Math.sign(this.player.x - px) || 1;
                             const pushDirY = Math.sign(this.player.y - py) || 1;
                             const nx = this.player.x + pushDirX * 60;
                             const ny = this.player.y + pushDirY * 60;
                             if (!this.checkCollision(nx, this.player.y, 10, true)) this.player.x = nx;
                             if (!this.checkCollision(this.player.x, ny, 10, true)) this.player.y = ny;
-                        } else if (Math.random() < 0.1) {
+                        } else if (!armorBlocked && Math.random() < 0.1) {
                             this._say(this.player, ["太美味了！", "门像纸一样脆！", "我要吃光你们！"][Math.floor(Math.random()*3)]);
                         }
                         bitten = true;
@@ -4919,9 +5311,17 @@ class HauntedDorm {
                         const doorPlant = this.getPlantAt(rm.doorCol * 80, rm.doorRow * 80);
                         if (doorPlant) {
                             // 极大地增加防御设施的权重，确保僵尸主动换线去抓防御薄弱的人
-                            doorHpScore = (doorPlant.hp * 0.2) + (doorPlant.def.tier || 1) * 2500; 
+                            doorHpScore = (doorPlant.hp * 0.2) + (doorPlant.def.tier || 1) * 2500;
                         } else {
                             doorHpScore = -50000; // 门破了！绝对优先干他！
+                        }
+                    }
+                    // v4.0.53：门口（门格或门旁地刺格）有土豆地雷时，僵尸有 50% 几率避开该目标（威慑）
+                    if (rm && doorHpScore > 0) {
+                        const hasMineNear = this.plants.some(gp => gp.def.potatoMine &&
+                            Math.max(Math.abs(gp.c - rm.doorCol), Math.abs(gp.r - rm.doorRow)) <= 1);
+                        if (hasMineNear && Math.random() < 0.5) {
+                            score += 30000; // 大幅拉低优先级，转而寻找其他目标
                         }
                     }
                     score += doorHpScore;
@@ -5059,19 +5459,43 @@ class HauntedDorm {
                     if (zb.biteT >= BITE_CD) {
                         zb.biteT = 0;
                         const curBiteDmg = zb.isBoss ? biteDmg * 3.5 : biteDmg;
-                        atkPlant.hp -= curBiteDmg;
-                        this.playSfx('chomp.mp3', 0.25);
+                        // v4.0.53：未就绪的土豆地雷被啃——不爆炸，直接被砍掉
+                        if (atkPlant.def.potatoMine && (atkPlant._pArming === undefined || atkPlant._pArming > 0)) {
+                            this.playSfx('chomp.mp3', 0.25);
+                            this._flyText(atkPlant.c * 80 + 40, atkPlant.r * 80, '🥔 土豆雷被砍掉了！', '#ff8a8a');
+                            atkPlant.el1.remove();
+                            if (atkPlant.txtEl) atkPlant.txtEl.remove();
+                            this.plants = this.plants.filter(p => p !== atkPlant);
+                            moved = false;
+                            continue;
+                        }
+                        // v4.0.53：大蒜护甲——金蒜坚果啃 4 口、蒜味高坚果啃 10 口才啃掉
+                        let armorBlocked = false;
+                        if (atkPlant.def.biteArmor) {
+                            if (atkPlant._armor === undefined) atkPlant._armor = atkPlant.def.biteArmor;
+                            if (atkPlant._armor > 0) {
+                                atkPlant._armor--;
+                                armorBlocked = true;
+                                this.playSfx('chomp.mp3', 0.25);
+                                this._flyText(atkPlant.c * 80 + 40, atkPlant.r * 80 - 20, `🛡 大蒜护甲 (剩${atkPlant._armor}口)`, '#ffd54a');
+                            }
+                        }
+                        if (!armorBlocked) {
+                            atkPlant.hp -= curBiteDmg;
+                            this.playSfx('chomp.mp3', 0.25);
+                        }
                         if (atkPlant.def.isGarlic) {
                             this._say(zb, "呸！好臭的大蒜！");
                             this._flyText(zb.x, zb.y - 20, '🤢 刺鼻驱离！', '#9dff6b');
                             zb.stunT = 2.0;
+                            if (atkPlant.def.iceGarlic) zb.slowT = 3.0; // v4.0.53：冰蒜卫士——啃后减速
                             zb.lockedTarget = null;
                             zb.path = null;
                             const pushX = zb.x - dx * 70;
                             const pushY = zb.y - dy * 70;
                             if (!this.checkCollision(pushX, zb.y, 15, true)) zb.x = pushX;
                             if (!this.checkCollision(zb.x, pushY, 15, true)) zb.y = pushY;
-                        } else if (Math.random() < 0.05) {
+                        } else if (!armorBlocked && Math.random() < 0.05) {
                             this._say(zb, ["这门真硬！", "看我咬碎它！", "饿饿饿饿饿！", "别以为躲在里面就安全！"][Math.floor(Math.random()*4)]);
                         }
                         const bg = atkPlant.el1.querySelector('.hp-bar-bg');

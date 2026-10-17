@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>植物大战僵尸：守屋大作战（大地图）</title>
-        <link rel="stylesheet" href="css/haunted-dorm.css?v=1792224884">
+        <link rel="stylesheet" href="css/haunted-dorm.css?v=1792228365">
 </head>
 <body class="dorm-page">
 <div id="dorm-screen">
@@ -68,7 +68,7 @@
             <canvas id="minimap" width="320" height="240"></canvas>
             
             <div style="position: absolute; bottom: 20px; left: 20px; display: flex; flex-direction: column; gap: 12px; pointer-events: none;">
-                <button class="back-btn" style="position: static; pointer-events: auto;" onclick="document.getElementById('dorm-help').style.display='flex'">玩法说明</button>
+                <!-- v4.0.53：取消对局内游玩说明（玩法说明统一在主菜单「操作与道具说明」） -->
                 <button class="back-btn" style="position: static; pointer-events: auto;" onclick="location.href='index.html'">返回主菜单</button>
             </div>
 
@@ -82,53 +82,6 @@
                 <div class="pp-btns">
                     <button id="pp-demolish" class="pp-btn">拆除</button>
                     <button id="pp-upgrade" class="pp-btn">升级 🦠0</button>
-                </div>
-            </div>
-
-            <!-- 玩法说明（配方表 + 规则指南，已全面核实纠正） -->
-            <div id="dorm-help" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2900; align-items:center; justify-content:center; pointer-events:auto;">
-                <div style="max-width:680px; width:92vw; max-height:86vh; display:flex; flex-direction:column; background:rgba(30,16,8,0.98); border:3px solid #8c6a4d; border-radius:14px; padding:20px 24px; color:#f5e6c8; font-family:'Kaiti SC',serif; font-size:14.5px; line-height:1.8; box-sizing:border-box;">
-                    <div style="text-align:center; font-size:24px; letter-spacing:4px; margin-bottom:10px; flex:none; color:#ffe14a;">🏠 守屋大作战 · 玩法说明与完整图鉴</div>
-                    <div style="flex:1; overflow-y:auto; padding-right:12px;">
-                        <b style="color:#ffe14a;">🎮 操作控制</b><br>
-                        · <b>P1 控制</b>：<b>[W/A/S/D] 移动</b> | <b>[F 或 J] 呼出菜单/确认购买升级</b> | <b>[空格] 浇水开关</b> | <b>[G 或 右Alt] 关闭菜单</b> | <b>[M键] 角色主动技能</b><br>
-                        &nbsp;&nbsp;<i>* 单人模式下亦可直接用鼠标点击地面呼出种植菜单，或点击植物进行升级/拆除。</i><br>
-                        · <b>P2 控制</b>：<b>[方向键] 移动</b> | <b>[1 或 右Shift] 呼出菜单/确认</b> | <b>[0键] 浇水开关</b> | <b>[2 或 回车] 关闭菜单</b> | <b>[3 或 /键] 角色主动技能</b><br>
-                        · <b>如何建造</b>：控制角色移动到房间空地上按【确认键】，身边弹出建造菜单（支持循环翻页，打开时角色站定防误走）。按【上下键】选择植物，再按【确认键】即可购买！走到已有植物上按确认可升级或拆除（<b>拆除需二次确认防误删</b>）。<br>
-                        · <b>房间归属</b>：每人<b>最多可拥有两间房</b>。在无主房间建造即可自动认领副房；你先进去的房间人机绝不抢注；人机临时避难不占用房间归属。<br>
-                        · <b>倒下规则</b>：双人模式中一人倒地<b>游戏不结束</b>（镜头跟随存活者），<b>全员阵亡才算输</b>！结算时累计伤害最高者荣获 MVP。<br>
-                        · <b>门口小推车</b>：每间房门口配备一台（原版割草机），尸潮逼近时自动冲出造成 800 伤害并强力击退眩晕，每局一次性，可用祝福补回。<br>
-                        · <b>存活祝福</b>：存活每 90 秒弹出<b>三选一祝福</b>（阳光雨/孢子潮/狂怒/硬化/丰收浇水/冷却清零/后备推车），P1 用 W/S+F、P2 用 ↑/↓+1 挑选。<br>
-                        · <b>尸潮波次</b>：每隔约 75 秒遭遇一波<b>小鬼尸潮</b>；每第 5 波由巨型<b>机甲僵王</b>压阵，击破全员奖励阳光！<br>
-                        · <b>昼夜循环（植物作息）</b>：白天 60s / 夜晚 90s。<b>白天向日葵/阳光菇醒来产阳光</b>，夜晚熄灯睡觉（头顶💤）；<b>夜晚小喷菇/路灯花上夜班</b>（白天💤），且僵尸提速 15%。<br>
-                        · <b>内鬼机制</b>：开局秘密潜伏一名内鬼，160 秒后反水暴露！它会像僵尸一样出门挠别人的门，植物可集火击败它，全员奖励 +200🦠。<br>
-                        · <b>经济发育</b>：认领带门房间后，<b>房内植物自动产出</b>（无需人守在旁边）；房外植物需主人靠近才产出。浇水开关（P1空格/P2 0键）催熟身边植物（加速生产/微量回血/浇水进化），阳光孢子独立记账。<br><br>
-
-                        <b style="color:#ffe14a;">🌱 真实植物升级体系（唯一科技树）</b><br>
-                        · <b>阳光系（产阳光）</b>：<span style="color:#9dff6b;">阳光菇(自带) →(☀30)→ 大阳光菇 →(☀90)→ 向日葵 →(☀150)→ 豌豆向日葵(攻产一体) →(☀800 🦠80)→ 双子向日葵 →(☀8000 🦠800)→ 毁灭向日葵 →(☀20000 🦠2000)→ 四头向日葵</span><br>
-                        · <b>常规输出系（单体/穿透/减速）</b>：<span style="color:#9dff6b;">豌豆射手(☀30) →(☀80)→ 卷心菜投手(抛射AOE) →(☀160)→ 玉米投手(黄油眩晕) →(☀250)→ 双向射手(融合前后射) →(☀500)→ 寒冰射手(冰冻减速) →(☀1000 🦠50)→ 双发射手 →(☀2000 🦠150)→ 三线射手 →(☀5000 🦠500)→ 机枪射手(疯狂扫射)</span><br>
-                        · <b>防御肉盾系（大门与掩体）</b>：<span style="color:#9dff6b;">坚果墙(进房门前自带) →(☀80)→ 坚果射手 →(☀160)→ 卷心菜堡垒 →(☀300)→ 地刺坚果 →(☀600)→ 高坚果(24000血) →(☀1200)→ 钢刺高坚果 →(☀2500)→ 大嘴坚果(48000血) →(☀5000)→ 辣椒高坚果</span><br>
-                        · <b>高级孢子系（随时间产出珍贵孢子）</b>：<span style="color:#c79aff;">小喷菇(☀200) →(☀400)→ 胆小菇 →(☀800)→ 大喷菇 →(☀1600)→ 魅惑菇 →(☀3200)→ 孢子地雷 →(☀6400)→ 忧郁菇 →(☀12800)→ 冰忧郁菇(极速产孢+范围寒气减速)</span><br>
-                        · <b>路灯花（只消耗孢子升级，超高阳光收益）</b>：<span style="color:#ffe14a;">路灯花(🦠50) →(🦠100)→ Lv2 →(🦠200)→ Lv3 →(🦠400)→ Lv4 →(🦠800)→ Lv5 →(🦠1600)→ Lv6 →(🦠3200)→ Lv7(每秒爆产巨额阳光)</span><br>
-                        · <b>战术特殊道具</b>：<br>
-                        &nbsp;&nbsp;· <b>地刺系(🦠50起)</b>：贴地尖刺，不被僵尸啃食，可逐步升级为钢地刺与终极火焰地刺。<br>
-                        &nbsp;&nbsp;· <b>寒冰菇(🦠50)</b>：种下即冰封全屏僵尸 5 秒，紧急控场神技。<br>
-                        &nbsp;&nbsp;· <b>毁灭菇(🦠1000)</b>：毁灭大炮，超远全图核爆轰炸。<br>
-                        &nbsp;&nbsp;· <b>大蒜(☀100)</b>：散发刺鼻气味，僵尸啃食后会被熏退并转向。<br>
-                        &nbsp;&nbsp;· <b>植物盲盒(🦠100)</b>：消耗 100 孢子随机开出一株高阶植物！<br><br>
-
-                        <b style="color:#ff8a8a;">👻 僵尸成长法则（10 级完整形态）</b><br>
-                        · 僵尸开局 20 秒出笼，随时间与击杀进阶：<br>
-                        <span style="color:#ff9e9e;">Lv1 普通僵尸 →(30s)→ Lv2 路障 →(90s)→ Lv3 铁桶 →(150s)→ Lv4 橄榄球 → Lv5 铁门 → Lv6 舞王 → Lv7 冰车 → Lv8 小丑 → Lv9 气球 → Lv10 机甲僵王(10万血终极Boss)</span><br>
-                        · <b>打倒僵尸 = 胜利</b>！保护自己的大门，建立坚不可摧的防线吧！<br><br>
-
-                        <b style="color:#9dff6b;">🔧 门板法则（v4.0.48）</b><br>
-                        · <b>大门被咬毁即永久消失</b>——无法重建、不会自动修复，僵尸啃门时不会回血！<br>
-                        · <b>修门技能</b>：P1 按 <b>[N键]</b>、P2 按 <b>[加号键]</b>，给自家门板回复 <b>25% 总血量</b>，CD 60 秒；门板满血或已毁时使用不消耗 CD。<br>
-                    </div>
-                    <div style="text-align:center; margin-top:12px; flex:none;">
-                        <button class="back-btn" style="position:static; padding:8px 34px; font-size:16px; border-radius:8px;" onclick="document.getElementById('dorm-help').style.display='none'">知道了</button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -151,7 +104,7 @@
         </div>
     </div>
 
-    <script src="js/HauntedDorm.js?v=1792224884"></script>
+    <script src="js/HauntedDorm.js?v=1792228365"></script>
 </div>
 </body>
 </html>

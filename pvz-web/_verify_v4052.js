@@ -18,9 +18,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await p.waitForFunction('window.game && window.game.ais && window.game.ais.length>0', { timeout: 30000 });
   await sleep(800);
 
-  // ===== T1 向日葵系 10 种全部可种植且有渲染 DOM =====
+  // ===== T1 向日葵系（v4.0.53 起阳光链重排：黄金向日葵→水晶/魅惑向日葵/石芒杨桃） =====
   const suns = ['sunshroom', 'bigsunshroom', 'sunflower', 'peasunflower', 'twinsunflower',
-    'doomsunflower', 'fourheadsunflower', 'sungold1', 'sungold2', 'sungold3'];
+    'starfruit', 'doomsunflower', 'fourheadsunflower', 'crystalsunflower', 'charmsunflower', 'stonestarfruit'];
   const t1 = await p.evaluate((suns) => {
     const g = window.game;
     const out = [];
@@ -33,14 +33,14 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     }
     return out;
   }, suns);
-  ok(t1.every(x => x.planted && x.hasEl), 'T1a 向日葵系 10 种全部种植成功且渲染 DOM 存在');
+  ok(t1.every(x => x.planted && x.hasEl), 'T1a 阳光系 11 种全部种植成功且渲染 DOM 存在');
   ok(t1.every(x => x.imgN >= 1), 'T1b 每种至少 1 张主图');
 
-  // ===== T2 多头 overlay：五头=3 img（主+镜像+1小头）、六头=4、黄金=5 =====
-  const expectImgs = { fourheadsunflower: 2, sungold1: 3, sungold2: 4, sungold3: 5 };
+  // ===== T2 多头 overlay：四头=2 img、杨桃/水晶/魅惑/石芒有主图+合成 =====
+  const expectImgs = { fourheadsunflower: 2, starfruit: 1, crystalsunflower: 1, charmsunflower: 1, stonestarfruit: 1 };
   for (const [t, n] of Object.entries(expectImgs)) {
     const r = t1.find(x => x.t === t);
-    ok(r && r.imgN === n, `T2 ${t} 应有 ${n} 层图（主+多头叠加），实际 ${r ? r.imgN : 0}`);
+    ok(r && r.imgN >= n, `T2 ${t} 至少 ${n} 层图，实际 ${r ? r.imgN : 0}`);
   }
 
   // ===== T3 坚果地刺/钢刺高坚果 overlay 上抬 =====
