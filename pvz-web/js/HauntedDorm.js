@@ -812,13 +812,13 @@ class HauntedDorm {
         for (const rm of this.rooms) {
             for (let r = 0; r < rm.h; r++) {
                 for (let c = 0; c < rm.w; c++) {
-                    if (rm.tpl.grid[r][c] === 1) {
-                        const tile = document.createElement('div');
-                        tile.className = 'tile room';
-                        tile.style.left = ((rm.x + c) * this.gridSize) + 'px';
-                        tile.style.top = ((rm.y + r) * this.gridSize) + 'px';
-                        this.world1.appendChild(tile);
-                    }
+                    // v4.0.71：整个房间 footprint 全铺木地板——含庭院/L形缺口等洞格（grid=0）。
+                    // 用户实报：木地板只铺在实心格上，房间内洞格仍露一片草地，观感割裂
+                    const tile = document.createElement('div');
+                    tile.className = 'tile room';
+                    tile.style.left = ((rm.x + c) * this.gridSize) + 'px';
+                    tile.style.top = ((rm.y + r) * this.gridSize) + 'px';
+                    this.world1.appendChild(tile);
                 }
             }
         }
