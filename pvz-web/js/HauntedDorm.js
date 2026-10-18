@@ -300,18 +300,20 @@ class HauntedDorm {
         return [
             // v4.0.42：血量与植物攻击力曲线匹配（用户铁律：僵尸血量必须跟得上植物翻倍攻击链）——
             // 豌豆伤害 2^(tier-1) 翻倍，僵尸血量同步 50×2^(L-1)，保证各级「集火数秒」的击杀节奏恒定
-            { name: '普通僵尸',   img: 'Zombies/Zombie/Zombie.gif',                    hp: 50,    speed: 450 },
-            { name: '路障僵尸',   img: 'Zombies/ConeheadZombie/ConeheadZombie.gif',    hp: 100,   speed: 450 },
-            { name: '铁桶僵尸',   img: 'Zombies/BucketheadZombie/BucketheadZombie.gif', hp: 200,  speed: 450 },
-            { name: '橄榄球僵尸', img: 'Zombies/FootballZombie/FootballZombie.gif',    hp: 400,   speed: 450 },
-            { name: '铁门僵尸',   img: 'Zombies/ScreenDoorZombie/ScreenDoorZombie.gif', hp: 800,  speed: 450 },
-            { name: '舞王僵尸',   img: 'Zombies/DancingZombie/0.gif',                  hp: 1600,  speed: 450 },
-            { name: '冰车僵尸',   img: 'Zombies/Zomboni/1.gif',                        hp: 3200,  speed: 450 },
-            { name: '小丑僵尸',   img: 'Zombies/JackinTheBoxZombie/0.gif',             hp: 6400,  speed: 450 },
-            { name: '气球僵尸',   img: 'Zombies/BalloonZombie/0.gif',                  hp: 12800, speed: 450 },
-            // v4.0.61：机甲僵王 25600→51200（用户实报"boss 很弱"：豌豆链单发已到 32768，原 25600 一炮即秒；
-            //   翻倍到 51200 至少吃两炮，保住最终形态的压迫感）
-            { name: '机甲僵王',   img: 'Zombies/LGBOSS/0.gif',                         hp: 51200, speed: 450 }
+            // v4.0.69：正常僵尸血量整体上调（用户实报"正常僵尸血量太少"）——
+            // 常规形态 ×4：玩家成型后火力轻松过万，旧 50/100/200… 几秒融化毫无对抗；
+            // 最终机甲僵王 ×2（51200→102400）：压轴形态至少吃 3-4 炮（终极豌豆 32768），保最终压迫感
+            { name: '普通僵尸',   img: 'Zombies/Zombie/Zombie.gif',                    hp: 200,   speed: 450 },
+            { name: '路障僵尸',   img: 'Zombies/ConeheadZombie/ConeheadZombie.gif',    hp: 400,   speed: 450 },
+            { name: '铁桶僵尸',   img: 'Zombies/BucketheadZombie/BucketheadZombie.gif', hp: 800,   speed: 450 },
+            { name: '橄榄球僵尸', img: 'Zombies/FootballZombie/FootballZombie.gif',    hp: 1600,  speed: 450 },
+            { name: '铁门僵尸',   img: 'Zombies/ScreenDoorZombie/ScreenDoorZombie.gif', hp: 3200,  speed: 450 },
+            { name: '舞王僵尸',   img: 'Zombies/DancingZombie/0.gif',                  hp: 6400,  speed: 450 },
+            { name: '冰车僵尸',   img: 'Zombies/Zomboni/1.gif',                        hp: 12800, speed: 450 },
+            { name: '小丑僵尸',   img: 'Zombies/JackinTheBoxZombie/0.gif',             hp: 25600, speed: 450 },
+            { name: '气球僵尸',   img: 'Zombies/BalloonZombie/0.gif',                  hp: 51200, speed: 450 },
+            // v4.0.69：最终形态 51200→102400（×2）
+            { name: '机甲僵王',   img: 'Zombies/LGBOSS/0.gif',                         hp: 102400, speed: 450 }
         ];
     }
     static get GHOST_MAX_LV() { return HauntedDorm.GHOST_LEVELS.length; }
@@ -4460,7 +4462,7 @@ class HauntedDorm {
         const lv = this.ghostLevel;
         const cfg = isBoss
             ? { name: '僵王机甲', img: 'Zombies/LGBOSS/0.gif', hp: Math.round(3000 * Math.pow(2, Math.min(this.waveN, 6))), speed: 170 } // v4.0.42：随波次翻倍；v4.0.54：基数 800→3000、封顶 25600→192000（玩家豌豆链已到 32768 单发，原 25600 一炮即秒，用户实报 Boss 太弱）
-            : { name: '小鬼僵尸', img: 'Zombies/Imp/0.gif', hp: Math.round(25 * Math.pow(2, lv - 1)), speed: 260 }; // v4.0.42：线性 25+lv×25 改 ×2 翻倍链，与豌豆伤害曲线匹配
+            : { name: '小鬼僵尸', img: 'Zombies/Imp/0.gif', hp: Math.round(100 * Math.pow(2, lv - 1)), speed: 260 }; // v4.0.69：25→100（×4，与主僵尸同步上调；保持"小鬼=主僵尸同级半血"梯度）
         const p = this._ghostSpawnPoint();
         const zb = { x: p.x, y: p.y, hp: cfg.hp, maxHp: cfg.hp, speed: cfg.speed, level: lv, cfg: cfg,
                      side: Math.random() < 0.5 ? 1 : -1, stuck: 0, detourT: 0, stunT: 0, slowT: 0, dead: false,
