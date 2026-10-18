@@ -18,49 +18,41 @@ body.dorm-page { margin: 0; padding: 0; background: #000; overflow: hidden; disp
         .world { position: absolute; top: 0; left: 0; transform-origin: 0 0;
             background-color: #4a7c3a;
             background-image:
-                radial-gradient(rgba(34,54,24,0.28) 1.1px, transparent 1.3px),
-                radial-gradient(rgba(120,158,90,0.35) 1.1px, transparent 1.3px),
-                radial-gradient(rgba(30,48,22,0.18) 3px, transparent 3.5px),
-                radial-gradient(rgba(255,255,255,0.08) 3px, transparent 3.5px),
+                radial-gradient(rgba(30,50,22,0.26) 1.2px, transparent 1.4px),
+                radial-gradient(rgba(255,255,255,0.10) 1.6px, transparent 2px),
                 conic-gradient(#547d3f 0 90deg, #4a6f36 0 180deg, #547d3f 0 270deg, #4a6f36 0);
-            background-size: 9px 9px, 13px 13px, 23px 23px, 31px 31px, 160px 160px;
-            box-shadow: inset 0 0 140px rgba(20,32,12,0.35); }
+            background-size: 12px 12px, 26px 26px, 160px 160px;
+            box-shadow: none; }
 #dorm-screen /* 地图元素 */
         .tile { position: absolute; width: 80px; height: 80px; box-sizing: border-box; }
 #dorm-screen /* v4.0.68：房间内地面 = 木地板（原版 PVZ 房屋室内感；走廊草地、室内木地，现实度↑） */
         .tile.room {
             background-color: #8a6a42;
             background-image:
-                linear-gradient(0deg, rgba(0,0,0,0.16) 0 3px, transparent 3px 14px),
-                linear-gradient(0deg, rgba(60,40,20,0.22) 0 2px, transparent 2px 16px),
-                repeating-linear-gradient(90deg, rgba(255,235,200,0.10) 0 2px, transparent 2px 78px),
+                linear-gradient(0deg, rgba(60,40,20,0.30) 0 2px, transparent 2px 16px),
                 linear-gradient(180deg, #a07a4c 0%, #7c5c36 100%);
-            background-size: 100% 16px, 100% 16px, 80px 100%, 100% 100%;
-            box-shadow: inset 0 0 26px rgba(40,24,8,0.5);
+            background-size: 100% 16px, 100% 100%;
+            box-shadow: none;
             border-radius: 2px; }
 #dorm-screen /* v4.0.68：墙面重绘 = 石砖墙（砖缝线 + 暖灰石渐变 + 风化斑，替代卡通河道蓝；
            原版 PVZ 房屋就是砖木结构，现实度贴近原版） */
         .tile.wall {
             background-color: #6b6257;
             background-image:
-                repeating-linear-gradient(0deg, rgba(0,0,0,0.32) 0 2px, transparent 2px 26px),
-                repeating-linear-gradient(90deg, rgba(0,0,0,0.28) 0 2px, transparent 2px 38px),
-                radial-gradient(rgba(40,34,28,0.30) 2.5px, transparent 3px),
-                radial-gradient(rgba(255,255,255,0.06) 2px, transparent 2.5px),
+                repeating-linear-gradient(0deg, rgba(0,0,0,0.28) 0 2px, transparent 2px 26px),
                 linear-gradient(160deg, #7d7367 0%, #5d554b 100%);
-            background-size: 100% 26px, 38px 100%, 22px 22px, 17px 17px, 100% 100%;
-            border: none;
-            box-shadow: inset 0 0 16px rgba(20,16,10,0.45), inset 0 2px 4px rgba(0,0,0,0.2);
+            background-size: 100% 26px, 100% 100%;
+            border: 1px solid #5d554b; /* v4.0.72：同色描边兜底——墙体不再 scale(1.02)，防子像素露草地 */
+            box-shadow: none;
         }
 #dorm-screen /* v4.0.68：门口木桥——木板更宽、木纹更细，纹理更写实 */
         .tile.bridge {
             background:
-                repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0 2px, transparent 2px 18px),
-                repeating-linear-gradient(0deg, #9a6a35 0 16px, #7a4d22 16px 20px),
-                radial-gradient(rgba(0,0,0,0.16) 1.5px, transparent 2px);
-            background-size: 100% 18px, 100% 20px, 9px 9px;
+                repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 2px, transparent 2px 18px),
+                repeating-linear-gradient(0deg, #9a6a35 0 16px, #7a4d22 16px 20px);
+            background-size: 100% 18px, 100% 20px;
             border: 2px solid #4a3014; border-radius: 6px;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.35);
+            box-shadow: none;
         }
 #dorm-screen /* v4.0.68：僵尸回血台——石台+苔痕绿圈（原白色虚线卡通，现贴近地面石台） */
         .tile.center {
@@ -69,6 +61,15 @@ body.dorm-page { margin: 0; padding: 0; background: #000; overflow: hidden; disp
             border-radius: 50%;
             box-shadow: inset 0 0 30px rgba(20,40,15,0.5), 0 0 18px rgba(160,220,140,0.35);
         }
+#dorm-screen /* v4.0.72：房间跳板——绿色发光圆垫 + 箭头，踩上瞬移到门外空地 */
+        .jump-pad { position: absolute; width: 64px; height: 64px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(130,225,130,0.55) 0%, rgba(30,110,50,0.35) 70%, rgba(20,60,30,0.55) 100%);
+            border: 2px solid rgba(225,255,225,0.65); box-sizing: border-box;
+            display: flex; align-items: center; justify-content: center; z-index: 60; pointer-events: none;
+            box-shadow: 0 0 14px rgba(80,200,100,0.55);
+            color: #fff; font-size: 30px; font-weight: bold; text-shadow: 0 1px 4px #000;
+            animation: padPulse 1.6s ease-in-out infinite; }
+        @keyframes padPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 10px rgba(80,200,100,0.4); } 50% { transform: scale(1.07); box-shadow: 0 0 20px rgba(110,230,130,0.75); } }
 #dorm-screen /* 僵尸等级角标 */
         .lv-badge { position: absolute; top: -26px; left: 50%; transform: translateX(-50%); background: rgba(90,0,0,0.85); color: #ffd54a; font-size: 13px; font-weight: bold; padding: 2px 8px; border-radius: 8px; border: 1px solid #ff5252; white-space: nowrap; z-index: 12; }
         @keyframes zzzFloat { 0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.9; } 50% { transform: translateX(-50%) translateY(-4px); opacity: 0.55; } }

@@ -823,6 +823,28 @@ class HauntedDorm {
             }
         }
 
+        // v4.0.72：房间跳板——每房间放一个快速出门跳板（门被啃毁/僵尸堵门时逃命；内鬼/AI 逃亡也走它）。
+        // 位置：离门最远的实心格（避开床），踩上即传送到房间门外空地
+        for (const rm of this.rooms) {
+            const isBed = (r, c) => rm.tpl.beds.some(b => b.r === r && b.c === c);
+            let best = null, bestD = -1;
+            for (let r = 0; r < rm.h; r++) {
+                for (let c = 0; c < rm.w; c++) {
+                    if (rm.tpl.grid[r][c] !== 1 || isBed(r, c)) continue;
+                    const d = Math.hypot(c - rm.tpl.door.c, r - rm.tpl.door.r);
+                    if (d > bestD) { bestD = d; best = { c: c, r: r }; }
+                }
+            }
+            if (!best) continue;
+            const padEl = document.createElement('div');
+            padEl.className = 'jump-pad';
+            padEl.innerHTML = '⤴';
+            padEl.style.left = ((rm.x + best.c) * this.gridSize + 8) + 'px';
+            padEl.style.top = ((rm.y + best.r) * this.gridSize + 8) + 'px';
+            this.world1.appendChild(padEl);
+            rm.jumpPad = { el: padEl, c: rm.x + best.c, r: rm.y + best.r, cd: 0 };
+        }
+
         // 渲染墙体（v3.88.0：墙=蓝色河道）
         for (const rm of this.rooms) {
             const isInside = (r, c) => r>=0 && r<rm.h && c>=0 && c<rm.w && rm.tpl.grid[r][c] === 1;
@@ -888,9 +910,8 @@ class HauntedDorm {
             wall1.style.left = (c * this.gridSize) + 'px';
             wall1.style.top = (r * this.gridSize) + 'px';
             wall1.style.borderRadius = `${tl}px ${tr}px ${br}px ${bl}px`;
-            
-            // 为了消除子像素间隙，让它们轻微放大
-            wall1.style.transform = 'scale(1.02)';
+            // v4.0.72：删除 transform scale(1.02)——每墙一个独立合成层是走廊卡顿元凶；
+            // 子像素缝隙改由 CSS 同色 border:1px 兜底，墙体回归 world1 单层内绘制
             
             this.world1.appendChild(wall1);
         }
@@ -1351,6 +1372,50 @@ class HauntedDorm {
                     // v4.0.49：大嘴花 CD 30s，其余角色仍 60s——AI 按角色实际 CD 重新计时
                     const cdMs = (ai.roleDef && ai.roleDef.id === 'chomper') ? 30000 : 60000;
                     ai.skillAt = this.gameTime + cdMs + Math.random() * cdMs; // 放成功 → 等 CD 结束后再随机 0~1 个 CD
+                }
+            }
+            // v4.0.72：门危逃亡——自己门板血量 < 1/20 → 走跳板出房，去其他有空床的房间。
+            // 用户需求：门被啃到将破时 AI 不该等死，跳板快速转移（跳板传送在 _updateJumpPads 里统一处理）
+            if (ai.fleeing) {
+                const fromRm = ai.fleeFrom || ai.room;
+                const pad = fromRm && fromRm.jumpPad;
+                if (fromRm && pad) {
+                    const padPx = pad.c * this.gridSize + 40, padPy = pad.r * this.gridSize + 40;
+                    if (!ai.fled) {
+                        // 还困在房内：先走到跳板（到点自动传送）
+                        if (!ai.path || ai.path.length === 0) {
+                            const p0 = this._findPath(ai.x, ai.y, padPx, padPy);
+                            ai.path = p0 || [];
+                        }
+                        if (Math.hypot(ai.x - padPx, ai.y - padPy) < 40) ai.fled = true; // 已到跳板（传送即将触发）
+                    } else if (!this._insideRoom(Math.floor(ai.x / 80), Math.floor(ai.y / 80))) {
+                        // 已出房：释放旧房 → 找新房间认领
+                        const oldRm = ai.fleeFrom || ai.room;
+                        if (oldRm) {
+                            oldRm.owners = (oldRm.owners || []).filter(o => o !== ai);
+                            if (ai.room === oldRm) ai.room = null;
+                        }
+                        if (!ai.newRoom) {
+                            const cands = this.rooms.filter(r => r !== oldRm && (!r.owners || r.owners.length < (r.capacity || 1)));
+                            if (cands.length === 0) { ai.fleeing = false; ai.fled = false; ai.fleeFrom = null; continue; }
+                            ai.newRoom = cands[Math.floor(Math.random() * cands.length)];
+                            const p0 = this._findPath(ai.x, ai.y, ai.newRoom.frontX, ai.newRoom.frontY);
+                            if (p0) p0.push({ x: (ai.newRoom.x + ai.newRoom.tpl.beds[0].c) * 80 + 40, y: (ai.newRoom.y + ai.newRoom.tpl.beds[0].r) * 80 + 40 });
+                            ai.path = p0 || [];
+                        } else if (!ai.path || ai.path.length === 0) {
+                            this._claimRoom(ai, ai.newRoom);
+                            ai.fleeing = false; ai.fled = false; ai.fleeFrom = null; ai.newRoom = null;
+                        }
+                    }
+                }
+                if (ai.fleeing) continue; // 逃亡中不发育
+            }
+            const aiRm0 = ai.room;
+            if (aiRm0 && !ai.fleeing) {
+                const doorPl = this.getPlantAt(aiRm0.doorCol * this.gridSize, aiRm0.doorRow * this.gridSize);
+                if (doorPl && doorPl.isDoor && doorPl.hp < doorPl.maxHp * 0.05) {
+                    ai.fleeing = true; ai.fled = false; ai.fleeFrom = aiRm0; ai.path = null;
+                    continue;
                 }
             }
             if (ai.path && ai.path.length > 0) continue; // 还在赶路，等到了床边再开始发育
@@ -2464,6 +2529,50 @@ class HauntedDorm {
             curr = parent[curr];
         }
         return path;
+    }
+
+    // v4.0.72：跳板传送——植物方实体（玩家/玩家2/AI/内鬼）踩上跳板 → 瞬移到房间门外空地。
+    // 僵尸不触发（否则守屋失去意义）；传送清空 path 防寻路死循环；每跳板 2s 冷却
+    _updateJumpPads(dt) {
+        const ents = [];
+        if (this.player && !this.player.dead) ents.push(this.player);
+        if (this.player2 && !this.player2.dead) ents.push(this.player2);
+        for (const ai of this.ais) if (!ai.dead) ents.push(ai);
+        if (ents.length === 0) return;
+        for (const rm of this.rooms) {
+            const pad = rm.jumpPad;
+            if (!pad) continue;
+            if (pad.cd > 0) { pad.cd -= dt; continue; }
+            const px = pad.c * this.gridSize + 40, py = pad.r * this.gridSize + 40;
+            for (const e of ents) {
+                if (Math.hypot(e.x - px, e.y - py) < 34) {
+                    const t = this._jumpPadTarget(rm);
+                    e.x = t.x; e.y = t.y;
+                    e.path = null; e.pathTimer = 0; e.stuck = 0;
+                    pad.cd = 2;
+                    this._flyText(e.x, e.y - 24, '⤴ 跳板传送！', '#a9ffa9');
+                    this.playSfx('plant.mp3', 0.45);
+                    break;
+                }
+            }
+        }
+    }
+    // 跳板落点：门外方向找第一个非墙、非植物占用的格（最多外延 5 格）
+    _jumpPadTarget(rm) {
+        const dr = rm.tpl.door.r, dc = rm.tpl.door.c;
+        let oc = rm.x + dc, orr = rm.y + dr; // 门的世界格（相对模板坐标 + 房间原点）
+        if (dr >= rm.h) orr = rm.y + dr + 1; else if (dr < 0) orr = rm.y + dr - 1;
+        else if (dc >= rm.w) oc = rm.x + dc + 1; else oc = rm.x + dc - 1;
+        for (let i = 0; i < 5 && this.walls.has(`${oc},${orr}`); i++) {
+            if (dr >= rm.h) orr++; else if (dr < 0) orr--;
+            else if (dc >= rm.w) oc++; else oc--;
+        }
+        let guard = 0;
+        while (this.getPlantAt(oc * this.gridSize, orr * this.gridSize) && guard++ < 5) {
+            if (dr >= rm.h) orr++; else if (dr < 0) orr--;
+            else if (dc >= rm.w) oc++; else oc--;
+        }
+        return { x: oc * this.gridSize + 40, y: orr * this.gridSize + 40 };
     }
 
     checkCollision(x, y, r = 20, isZombie = false) {
@@ -4522,6 +4631,33 @@ class HauntedDorm {
         // ①穿门寻路走出自己的房间（旧 passDoors=false 被自己的门锁死 → BFS 失败走直线撞墙卡死）
         // ②目标在房内且门活着 → 走到门口格「挠门」（前方 25px probe 咬门，同僵尸范式）
         // ③破门后自然穿门进屋贴身咬人
+        // v4.0.72：内鬼先出门——自己房间的门还活着挡路时，先走跳板瞬移出房（省去慢慢挠门），
+        // 跟普通僵尸一样出门去找别人；否则玩家/植物永远打不到缩在房内的内鬼，游戏无法结束
+        if (t.room && !t.fleeing) {
+            const myDoor = this.getPlantAt(t.room.doorCol * this.gridSize, t.room.doorRow * this.gridSize);
+            if (myDoor && myDoor.isDoor && myDoor.hp > 0) {
+                const pad = t.room.jumpPad;
+                if (pad) {
+                    const padPx = pad.c * this.gridSize + 40, padPy = pad.r * this.gridSize + 40;
+                    if (Math.hypot(t.x - padPx, t.y - padPy) > 40) {
+                        t.path = this._findPath(t.x, t.y, padPx, padPy) || [];
+                        if (t.path && t.path.length > 0) t.path.push({ x: padPx, y: padPy });
+                        t.pathTimer = 0;
+                        let dxx = 0, dyy = 0;
+                        if (t.path && t.path.length > 0) { dxx = t.path[0].x - t.x; dyy = t.path[0].y - t.y; }
+                        else { dxx = padPx - t.x; dyy = padPy - t.y; }
+                        const l = Math.hypot(dxx, dyy) || 1;
+                        const sp = 300;
+                        const nx = t.x + dxx / l * sp * dt, ny = t.y + dyy / l * sp * dt;
+                        if (!this.checkCollision(nx, t.y, 14, true)) t.x = nx;
+                        if (!this.checkCollision(t.x, ny, 14, true)) t.y = ny;
+                        t.el1.style.left = t.x + 'px';
+                        t.el1.style.top = t.y + 'px';
+                        return; // 这一帧只走去跳板
+                    }
+                }
+            }
+        }
         let best = null, bd = Infinity;
         for (const p of this.allPlayers) {
             if (p.dead || p === t) continue;
@@ -4708,6 +4844,7 @@ class HauntedDorm {
         this._updateWaves(time);      // v4.0.20：尸潮波次
         this._updateDayNight(time);   // v4.0.20：昼夜循环
         this._updateTraitor(dt);      // v4.0.20：内鬼模式
+        this._updateJumpPads(dt);     // v4.0.72：房间跳板传送
         if (Math.floor(time / 500) !== Math.floor((time - dt * 1000) / 500)) this._updateGhostChip(); // 0.5s 刷一次信息牌
         if (Math.floor(time / 1000) !== Math.floor((time - dt * 1000) / 1000)) this._refreshHud(); // 1s 刷一次 HUD (为了技能倒计时)
 
