@@ -9,7 +9,7 @@
 //   僵尸啃咬改离散慢咬：站定每 2.4s 一口、每口 15+12×(等级-1) 伤害（开局非常慢，升级既涨血量也涨实际战力）
 // v3.89.0 阳光经济重构版：删除包子系统、开局 0 阳光、浇水 1 秒 1 次防手速、喂大 40/80/160、
 //   升级收益预览、门板血量按图鉴 30% 折算随升级成长、坚果链逐级变大。
-// 保留：v4.0.75 起单僵尸两阶成长（小鬼僵尸 → 机甲僵王）、跟踪弹、河道木桥、棋盘草地、小地图、音效、胜负结算。
+// 保留：单僵尸十级成长（普通→路障→铁桶→橄榄球→铁门→舞王→冰车→小丑→气球→僵王，v4.0.79 恢复）、跟踪弹、河道木桥、棋盘草地、小地图、音效、胜负结算。
 class HauntedDorm {
     // ===== 植物图鉴（配方唯一，绝不撞衫）=====
     static get DEFS() {
@@ -295,13 +295,20 @@ class HauntedDorm {
     }
 
     // ===== 僵尸升级链（v4.0.75 精简为 2 阶）=====
-    // 用户要求：僵尸视角重做——不再出现气球僵尸等其它种类，只保留 小鬼僵尸 → 机甲僵王（最终压轴）。
-    // 植物防守视角（另一视角）里看到的 AI 僵尸同样只刷这两种；普通/路障/铁桶/橄榄球/铁门/舞王/冰车/小丑/气球不再出现。
-    // 血量：小鬼 200（沿用原普通僵尸）· 僵王 102400（v4.0.69 最终形态，保最终压迫感）；速度与旧链一致 450。
+    // v4.0.79：用户要求恢复最原始的 10 级升级链——普通僵尸 → 路障 → 铁桶 → 橄榄球 → 铁门 → 舞王 → 冰车 → 小丑 → 气球 → 机甲僵王。
+    // 血量沿用 v4.0.69 校准（常规 ×4、僵王 ×2）；速度统一 450。
     static get GHOST_LEVELS() {
         return [
-            { name: '小鬼僵尸',   img: 'Zombies/Imp/0.gif',                   hp: 200,    speed: 450 },
-            { name: '机甲僵王',   img: 'Zombies/LGBOSS/0.gif',                 hp: 102400, speed: 450 }
+            { name: '普通僵尸',   img: 'Zombies/Zombie/Zombie.gif',                    hp: 200,   speed: 450 },
+            { name: '路障僵尸',   img: 'Zombies/ConeheadZombie/ConeheadZombie.gif',    hp: 400,   speed: 450 },
+            { name: '铁桶僵尸',   img: 'Zombies/BucketheadZombie/BucketheadZombie.gif', hp: 800,   speed: 450 },
+            { name: '橄榄球僵尸', img: 'Zombies/FootballZombie/FootballZombie.gif',    hp: 1600,  speed: 450 },
+            { name: '铁门僵尸',   img: 'Zombies/ScreenDoorZombie/ScreenDoorZombie.gif', hp: 3200,  speed: 450 },
+            { name: '舞王僵尸',   img: 'Zombies/DancingZombie/0.gif',                  hp: 6400,  speed: 450 },
+            { name: '冰车僵尸',   img: 'Zombies/Zomboni/1.gif',                        hp: 12800, speed: 450 },
+            { name: '小丑僵尸',   img: 'Zombies/JackinTheBoxZombie/0.gif',             hp: 25600, speed: 450 },
+            { name: '气球僵尸',   img: 'Zombies/BalloonZombie/0.gif',                  hp: 51200, speed: 450 },
+            { name: '机甲僵王',   img: 'Zombies/LGBOSS/0.gif',                         hp: 102400, speed: 450 }
         ];
     }
     static get GHOST_MAX_LV() { return HauntedDorm.GHOST_LEVELS.length; }
@@ -1549,8 +1556,11 @@ class HauntedDorm {
         // 僵尸等级按时间升级（v4.0.75：僵尸链仅 2 阶——开局小鬼僵尸，5 分钟进化机甲僵王；普通/路障/铁桶/橄榄球/铁门/舞王/冰车/小丑/气球不再出现）
         if (!this.over && this.zombies.length > 0 && !this.zombies[0].dead) {
             const activeSeconds = (time - this.ghostSpawnAt) / 1000;
+            // v4.0.79：恢复旧 10 级时间阶梯（植物视角 AI 主僵尸）——90 秒路障、150 秒铁桶、210 秒橄榄球……
             const timeLevels = [
-                { s: 300, lv: 2 }
+                { s: 30, lv: 1 }, { s: 90, lv: 2 }, { s: 150, lv: 3 },
+                { s: 210, lv: 4 }, { s: 270, lv: 5 }, { s: 330, lv: 6 },
+                { s: 390, lv: 7 }, { s: 450, lv: 8 }, { s: 510, lv: 9 }
             ];
             for (const step of timeLevels) {
                 // v4.0.68：< 而非 ===——空投"僵尸降级"会拉低 ghostLevel，旧 === 判定从此永不匹配，僵尸等级卡死不升级
@@ -2878,8 +2888,8 @@ class HauntedDorm {
                 this.gameOver(true);
                 return;
             }
-            // v4.0.78：旧「玩家死亡后主僵尸快速升级（ghostLevel >= 4）」随 10 级链一并移除——升级统一由 _updateGhostDirector 的 5 分钟时间阶梯（Lv.1 小鬼 → Lv.2 僵王）驱动
-            //（原判断 ghostLevel >= 4 在新两阶链下永不成立，行为不变）
+            // v4.0.79：随 10 级链恢复——玩家（植物）死亡后，AI 主僵尸在 4 级以上时继续快速升级（旧版惩罚/推进机制）
+            if (this.ghostLevel >= 4) this._levelUpGhostDirect();
         }
     }
 
@@ -4835,8 +4845,13 @@ class HauntedDorm {
         }
         this.waveOrderCd = 60;
         const n = 3 + Math.floor(Math.random() * 4); // 3~6 只
-        for (let i = 0; i < n; i++) this._spawnMinion();
-        this._announce(`🧟 尸潮号令：${n} 只小鬼僵尸听令出击！`, 'evillaugh.mp3', true);
+        // v4.0.79：号令尸潮只会出「小鬼僵尸」或「机甲僵王」——僵王低概率（约 15%）压轴助阵，其余为小鬼
+        let bossCount = 0;
+        for (let i = 0; i < n; i++) {
+            if (Math.random() < 0.15) { this._spawnMinion(true); bossCount++; }
+            else this._spawnMinion();
+        }
+        this._announce(`🧟 尸潮号令：${n} 只僵尸听令出击${bossCount ? `（含 ${bossCount} 只机甲僵王！）` : ''}！`, 'evillaugh.mp3', true);
         this._updateGhostChip();
     }
 
@@ -5380,8 +5395,11 @@ class HauntedDorm {
             if (!this.playerTraitor) {
             const activeSeconds = this.gameTime / 1000;
             let targetLevel = 1;
+            // v4.0.79：恢复旧 10 级时间阶梯（僵尸阵营玩家）——30 秒路障、90 秒铁桶、150 秒橄榄球……510 秒僵王
             const timeLevels = [
-                { s: 300, lv: 2 }
+                { s: 30, lv: 2 }, { s: 90, lv: 3 }, { s: 150, lv: 4 },
+                { s: 210, lv: 5 }, { s: 270, lv: 6 }, { s: 330, lv: 7 },
+                { s: 390, lv: 8 }, { s: 450, lv: 9 }, { s: 510, lv: 10 }
             ];
             for (const step of timeLevels) {
                 if (activeSeconds >= step.s) targetLevel = step.lv;
