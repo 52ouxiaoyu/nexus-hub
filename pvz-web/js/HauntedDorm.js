@@ -195,7 +195,7 @@ class HauntedDorm {
             // —— 特殊 ——
             iceshroom:     { name: '寒冰菇', img: 'Plants/IceShroom/0.gif',  card: 'IceShroom.png',  hp: 99999,  cost: 0, sporeCost: 200, instant: true }, // v4.0.53：涨价 50→200
             doomshroom:    { name: '毁灭菇', img: 'Plants/DoomShroom/0.gif', card: 'DoomShroom.png', hp: 2000,  cost: 0, sporeCost: 2000,
-                             nuke: { lob: true, dmg: 2048, cd: 2.0, img: 'Plants/DoomShroom/0.gif' } },
+                             nuke: { lob: true, dmg: 512, cd: 2.0, img: 'Plants/DoomShroom/0.gif' } }, // v4.0.56：攻击力 2048→512 = 正常机枪射手(256)的两倍（用户：毁灭菇强度太高）
             garlic:        { name: '大蒜',   img: 'Plants/Garlic/0.gif',     card: 'Garlic.png',     hp: 1000,  cost: 100, isGarlic: true,
                              up: { cost: 200, to: 'icgarlic' } },
             icgarlic:      { name: '冰蒜卫士', img: 'Plants/Garlic/0.gif',    card: 'Garlic.png',     hp: 1000,  cost: 0, scale: 1.1, // v4.0.53：新——血量不变，僵尸吃后减速
