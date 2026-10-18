@@ -31,6 +31,12 @@ class Zombie extends Entity {
         this.state = 'WALKING';
         this.eatTarget = null;
         this.yOffset = -30;
+        // v4.0.81：防重叠——同排多只僵尸渲染时轻微上下错位，避免步伐同步完全叠成一张
+        this.staggerY = Math.random() * 16 - 8;
+        // v4.0.81：死因（决定死亡图）——''普通倒地 / 'squash'被压扁 / 'boom'被炸毁 / 'burn'被烧毁
+        this.dieType = '';
+        this.squashSrc = 'assets/images/Zombies/ZombieSquashed.png';
+        this.boomSrc = 'assets/images/Zombies/BoomDie.gif';
         
         this.isSlowed = false;
         this.slowTimer = 0;
@@ -264,15 +270,13 @@ class Zombie extends Entity {
             this.hp = 4000; this.maxHp = 4000;
             this.speed = 10; // slow
             this.hasThrownImps = false;
-            this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
-            this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
-            this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
+            // v4.0.81：巨人僵尸换上原版伽刚特尔立绘（assets/images/Zombies/Gargantuar/0.png），
+            // 取消"巨型普通僵尸 scale(2)"的旧效果——现在是健壮、外貌正常的巨人
+            this.element.src = 'assets/images/Zombies/Gargantuar/0.png';
+            this.walkSrc = 'assets/images/Zombies/Gargantuar/0.png';
+            this.attackSrc = 'assets/images/Zombies/Gargantuar/0.png';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
-            this.yOffset = -80;
-            // v3.32.0：体型 2.5 → 2（约两个普通僵尸高）——用户反馈 2.5 倍时实体判定位置太模糊
-            this.element.style.transform = 'scale(2)';
-            this.element.style.transformOrigin = 'bottom center';
-            this.element.style.filter = 'brightness(0.8) contrast(1.2)';
+            this.yOffset = -10;
         } else if (type === 'imp') {
             this.hp = 100; this.maxHp = 100;
             this.speed = 35; // fast
@@ -287,7 +291,7 @@ class Zombie extends Entity {
             this.element.src = 'assets/images/Zombies/Zomboni/1.gif';
             this.walkSrc = 'assets/images/Zombies/Zomboni/1.gif';
             this.attackSrc = 'assets/images/Zombies/Zomboni/1.gif'; // crushes, doesn't attack
-            this.dieSrc = 'assets/images/Zombies/Zomboni/BoomDie.gif';
+            this.dieSrc = 'assets/images/Zombies/Zomboni/0.gif'; // v4.0.81：普通死亡=冰车停下（不再一律显示被烧毁图；被炸死走 BoomDie）
         } else if (type === 'lgboss') {
             // v3.80.0（用户：boss 巨弱爆了没攻击力，血量却跟巨人没区别）——
             // 血量 5000→1000（不再当血牛），刷出移到极后期且低频（WaveManager 900s/2%）
@@ -743,7 +747,7 @@ class Zombie extends Entity {
     
     update(deltaTime) {
         super.update(deltaTime);
-        this.element.style.top = `${this.y + this.yOffset}px`;
+        this.element.style.top = `${this.y + this.yOffset + this.staggerY}px`;
         this.syncPlantHead(); // 植物头跟随身体移动
         // v3.25.0 锤子僵尸：木锤跟随；死亡即收走挂件
         if (this._hammerEl) {
@@ -905,7 +909,11 @@ class Zombie extends Entity {
             }
             if (this._danceOwner) this._danceOwner._onBackupDeath(); // v4.0.27：伴舞阵亡回报主人
             if (this.headEl) this.dropPlantHead(); // 头顶植物随僵尸倒地（纯外观）
-            this.element.src = this.dieSrc;
+            // v4.0.81：死亡图按死因区分——被压扁显示压扁图、被炸毁/烧毁显示爆炸图、其余显示各自倒地动画
+            if (this.burnTimer > 0 && !this.dieType) this.dieType = 'burn';
+            this.element.src = (this.dieType === 'squash') ? this.squashSrc
+                : (this.dieType === 'boom' || this.dieType === 'burn') ? this.boomSrc
+                : this.dieSrc;
             // v3.81.0 双人对战：植物方打死僵尸 → 得该僵尸对应的阳光价
             // （只有僵尸方真实花钱买断入场的僵尸带 _vsPaid；舞王伴舞/盲盒召唤物不算钱）
             if (!this.hypnotized && this.game.vsOnZombieKilled) this.game.vsOnZombieKilled(this);
@@ -1405,6 +1413,10 @@ class Zombie extends Entity {
         // 友方（被魅惑）僵尸免疫我方植物/子弹/爆炸的一切伤害，
         // 只能被敌方僵尸肉搏杀死（FIGHTING 直接扣血）
         if (this.hypnotized) return;
+
+        // v4.0.81：记录死因——压扁(squash)由击杀者显式传入；炸弹/爆炸类统一记 boom；默认普通
+        if (opts && opts.dieType) this.dieType = opts.dieType;
+        else if (opts && opts.bomb) this.dieType = 'boom';
         
         // v3.23.0：寒冰头僵尸免疫一次性植物（包含炸弹与秒杀类如大嘴花、窝瓜）
         if (this.type === 'snowpeahead' && opts && (opts.bomb || opts.oneshot)) return;

@@ -3304,8 +3304,8 @@
   "mode": "dorm",
   "cat": "挑战",
   "icon": "🤖",
-  "name": "击败首只机甲",
-  "desc": "击败机甲僵王 1 次",
+  "name": "击败首只巨人",
+  "desc": "击败巨人僵尸 1 次",
   "stat": "dBoss",
   "target": 1,
   "single": false

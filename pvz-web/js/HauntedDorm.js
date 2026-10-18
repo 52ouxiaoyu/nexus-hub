@@ -9,7 +9,7 @@
 //   僵尸啃咬改离散慢咬：站定每 2.4s 一口、每口 15+12×(等级-1) 伤害（开局非常慢，升级既涨血量也涨实际战力）
 // v3.89.0 阳光经济重构版：删除包子系统、开局 0 阳光、浇水 1 秒 1 次防手速、喂大 40/80/160、
 //   升级收益预览、门板血量按图鉴 30% 折算随升级成长、坚果链逐级变大。
-// 保留：单僵尸十级成长（普通→路障→铁桶→橄榄球→铁门→舞王→冰车→小丑→气球→僵王，v4.0.79 恢复）、跟踪弹、河道木桥、棋盘草地、小地图、音效、胜负结算。
+// 保留：单僵尸十级成长（普通→路障→铁桶→橄榄球→铁门→舞王→冰车→小丑→气球→巨人僵尸，v4.0.81 末级=原版伽刚特尔立绘）、跟踪弹、河道木桥、棋盘草地、小地图、音效、胜负结算。
 class HauntedDorm {
     // ===== 植物图鉴（配方唯一，绝不撞衫）=====
     static get DEFS() {
@@ -295,8 +295,8 @@ class HauntedDorm {
     }
 
     // ===== 僵尸升级链（v4.0.75 精简为 2 阶）=====
-    // v4.0.79：用户要求恢复最原始的 10 级升级链——普通僵尸 → 路障 → 铁桶 → 橄榄球 → 铁门 → 舞王 → 冰车 → 小丑 → 气球 → 机甲僵王。
-    // 血量沿用 v4.0.69 校准（常规 ×4、僵王 ×2）；速度统一 450。
+    // v4.0.81：10 级链末级=巨人僵尸（原版伽刚特尔立绘，正常体型健壮巨人）——普通僵尸 → 路障 → 铁桶 → 橄榄球 → 铁门 → 舞王 → 冰车 → 小丑 → 气球 → 巨人僵尸。
+    // 血量沿用 v4.0.69 校准（常规 ×4、巨人 ×2）；速度统一 450。
     static get GHOST_LEVELS() {
         return [
             { name: '普通僵尸',   img: 'Zombies/Zombie/Zombie.gif',                    hp: 200,   speed: 450 },
@@ -308,7 +308,7 @@ class HauntedDorm {
             { name: '冰车僵尸',   img: 'Zombies/Zomboni/1.gif',                        hp: 12800, speed: 450 },
             { name: '小丑僵尸',   img: 'Zombies/JackinTheBoxZombie/0.gif',             hp: 25600, speed: 450 },
             { name: '气球僵尸',   img: 'Zombies/BalloonZombie/0.gif',                  hp: 51200, speed: 450 },
-            { name: '机甲僵王',   img: 'Zombies/LGBOSS/0.gif',                         hp: 102400, speed: 450 }
+            { name: '巨人僵尸',   img: 'Zombies/Gargantuar/0.png',                    hp: 102400, speed: 450 } // v4.0.81：末级换成原版伽刚特尔立绘（正常体型的健壮巨人），弃用巨型机甲僵王
         ];
     }
     static get GHOST_MAX_LV() { return HauntedDorm.GHOST_LEVELS.length; }
@@ -1553,7 +1553,7 @@ class HauntedDorm {
             }
             return;
         }
-        // 僵尸等级按时间升级（v4.0.75：僵尸链仅 2 阶——开局小鬼僵尸，5 分钟进化机甲僵王；普通/路障/铁桶/橄榄球/铁门/舞王/冰车/小丑/气球不再出现）
+        // 僵尸等级按时间升级（v4.0.81：10 级链——普通→路障→铁桶→橄榄球→铁门→舞王→冰车→小丑→气球→巨人僵尸）
         if (!this.over && this.zombies.length > 0 && !this.zombies[0].dead) {
             const activeSeconds = (time - this.ghostSpawnAt) / 1000;
             // v4.0.79：恢复旧 10 级时间阶梯（植物视角 AI 主僵尸）——90 秒路障、150 秒铁桶、210 秒橄榄球……
@@ -3158,7 +3158,7 @@ class HauntedDorm {
             setTimeout(() => zb.el1.remove(), 480);
             this.playSfx('scream.mp3', 0.35);
             if (zb.isBoss) {
-                this._announce('🏆 僵王机甲被击毁了！它洒落了一地阳光！', 'points.mp3', true);
+                this._announce('🏆 巨人僵尸被击倒了！它洒落了一地阳光！', 'points.mp3', true);
                 // v4.0.73 成就：击败机甲僵王
                 if (window.AchTracker) window.AchTracker.bump('dBoss', 1);
                 for (const p of this.allPlayers) if (!p.dead) this.addSun(100, p);
@@ -4617,7 +4617,7 @@ class HauntedDorm {
         for (let i = 0; i < n; i++) this._spawnMinion();
         if (this.waveN % 5 === 0) {
             this._spawnBoss();
-            this._announce(`🚨 第 ${this.waveN} 波尸潮来袭——僵王机甲驾到！！`, 'scream.mp3', true);
+            this._announce(`🚨 第 ${this.waveN} 波尸潮来袭——巨人僵尸驾到！！`, 'scream.mp3', true);
         } else {
             this._announce(`🧟 第 ${this.waveN} 波尸潮来袭！`, 'evillaugh.mp3', true);
         }
@@ -4627,7 +4627,7 @@ class HauntedDorm {
     _spawnMinion(isBoss = false) {
         const lv = this.ghostLevel;
         const cfg = isBoss
-            ? { name: '僵王机甲', img: 'Zombies/LGBOSS/0.gif', hp: Math.round(3000 * Math.pow(2, Math.min(this.waveN, 6))), speed: 170 } // v4.0.42：随波次翻倍；v4.0.54：基数 800→3000、封顶 25600→192000（玩家豌豆链已到 32768 单发，原 25600 一炮即秒，用户实报 Boss 太弱）
+            ? { name: '巨人僵尸', img: 'Zombies/Gargantuar/0.png', hp: Math.round(3000 * Math.pow(2, Math.min(this.waveN, 6))), speed: 170 } // v4.0.42：随波次翻倍；v4.0.54：基数 800→3000、封顶 25600→192000；v4.0.81：外观=原版伽刚特尔（正常体型）
             : { name: '小鬼僵尸', img: 'Zombies/Imp/0.gif', hp: Math.round(100 * Math.pow(2, lv - 1)), speed: 260 }; // v4.0.69：25→100（×4，与主僵尸同步上调；保持"小鬼=主僵尸同级半血"梯度）
         const p = this._ghostSpawnPoint();
         const zb = { x: p.x, y: p.y, hp: cfg.hp, maxHp: cfg.hp, speed: cfg.speed, level: lv, cfg: cfg,
@@ -4637,11 +4637,11 @@ class HauntedDorm {
 
         const zEl1 = document.createElement('div');
         zEl1.className = 'entity avatar';
-        const size = isBoss ? 'width:220%; height:220%; transform:translate(-42%, -40%);'
+        const size = isBoss ? 'width:130%; height:130%; transform:translate(-42%, -40%);' // v4.0.81：巨人正常体型（原 220% 巨型取消）
                             : 'width:100%; height:100%; transform:translate(-3%, -25%);';
         const barTop = isBoss ? 'top:-42px;' : 'top:-14px;';
         zEl1.innerHTML = `<img src="assets/images/${cfg.img}" style="${size}">` +
-            (isBoss ? `<div class="lv-badge" style="background:#a00000; top:-36px;">僵王</div>` : '') +
+            (isBoss ? `<div class="lv-badge" style="background:#a00000; top:-36px;">巨人</div>` : '') +
             `<div class="hp-bar-bg" style="${barTop} display:none;"><div class="hp-bar-fg" style="width:100%; background:#ff5252;"></div></div>` +
             (this.isZombieFaction && !isBoss ? `<div style="position:absolute; top:-30px; left:50%; transform:translateX(-50%); font-size:15px; color:#ff5252; text-shadow:0 0 5px #000; z-index:60; pointer-events:none;">🧟 尸潮</div>` : ''); // v4.0.77：号令尸潮的小鬼加「尸潮」角标，与玩家本体（无角标）区分，避免"看到一样的僵尸"
         this.world1.appendChild(zEl1);
@@ -4845,13 +4845,13 @@ class HauntedDorm {
         }
         this.waveOrderCd = 60;
         const n = 3 + Math.floor(Math.random() * 4); // 3~6 只
-        // v4.0.79：号令尸潮只会出「小鬼僵尸」或「机甲僵王」——僵王低概率（约 15%）压轴助阵，其余为小鬼
+        // v4.0.81：号令尸潮只会出「小鬼僵尸」或「巨人僵尸」——巨人低概率（约 15%）压轴助阵，其余为小鬼
         let bossCount = 0;
         for (let i = 0; i < n; i++) {
             if (Math.random() < 0.15) { this._spawnMinion(true); bossCount++; }
             else this._spawnMinion();
         }
-        this._announce(`🧟 尸潮号令：${n} 只僵尸听令出击${bossCount ? `（含 ${bossCount} 只机甲僵王！）` : ''}！`, 'evillaugh.mp3', true);
+        this._announce(`🧟 尸潮号令：${n} 只僵尸听令出击${bossCount ? `（含 ${bossCount} 只巨人僵尸！）` : ''}！`, 'evillaugh.mp3', true);
         this._updateGhostChip();
     }
 
@@ -5394,7 +5394,7 @@ class HauntedDorm {
             if (!this.playerTraitor) {
             const activeSeconds = this.gameTime / 1000;
             let targetLevel = 1;
-            // v4.0.79：恢复旧 10 级时间阶梯（僵尸阵营玩家）——30 秒路障、90 秒铁桶、150 秒橄榄球……510 秒僵王
+            // v4.0.81：恢复旧 10 级时间阶梯（僵尸阵营玩家）——30 秒路障、90 秒铁桶、150 秒橄榄球……510 秒巨人僵尸
             const timeLevels = [
                 { s: 30, lv: 2 }, { s: 90, lv: 3 }, { s: 150, lv: 4 },
                 { s: 210, lv: 5 }, { s: 270, lv: 6 }, { s: 330, lv: 7 },
@@ -5557,7 +5557,7 @@ class HauntedDorm {
                         if (zk === 'diamond') {
                             this._spawnMinion(true);
                             pickedByPlayer.hp = Math.min(pickedByPlayer.maxHp, pickedByPlayer.hp + pickedByPlayer.maxHp * 0.4);
-                            this._flyText(a.x, a.y, '💎 钻石霸权：召唤机甲僵王助阵！', '#ffd700');
+                            this._flyText(a.x, a.y, '💎 钻石霸权：召唤巨人僵尸助阵！', '#ffd700');
                         } else if (zk === 'money') {
                             pickedByPlayer.hp = Math.min(pickedByPlayer.maxHp, pickedByPlayer.hp + pickedByPlayer.maxHp * 0.5);
                             this._flyText(a.x, a.y, '💰 钱袋：尸脑盛宴 (+50%生命)', '#ffd54a');
