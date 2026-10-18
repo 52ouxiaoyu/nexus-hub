@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1792288156">
-    <link rel="stylesheet" href="css/haunted-dorm.css?v=1792288156">
+    <link rel="stylesheet" href="css/style.css?v=1792288484">
+    <link rel="stylesheet" href="css/haunted-dorm.css?v=1792288484">
 </head>
 <body>
     <div id="game-container">
@@ -758,7 +758,9 @@
             });
 
             document.getElementById('dorm-faction-back')?.addEventListener('click', () => {
-                if (factionModal) factionModal.style.display = 'none';
+                // v4.0.58：返回主菜单直达首页（用户：不想一层层划回去）
+                if (typeof window.exitDormGame === 'function') window.exitDormGame();
+                else if (factionModal) factionModal.style.display = 'none';
             });
             
             document.getElementById('btn-dorm-1p')?.addEventListener('click', () => {
@@ -778,12 +780,14 @@
             });
             
             document.getElementById('dorm-mode-back')?.addEventListener('click', () => {
-                modeModal.style.display = 'none';
-                if (factionModal) factionModal.style.display = 'flex';
+                // v4.0.58：返回主菜单直达首页（不再退回阵营选择弹窗）
+                if (typeof window.exitDormGame === 'function') window.exitDormGame();
+                else { modeModal.style.display = 'none'; if (factionModal) factionModal.style.display = 'flex'; }
             });
             document.getElementById('dorm-back')?.addEventListener('click', () => {
-                roleModal.style.display = 'none';
-                if (modeModal) modeModal.style.display = 'flex';
+                // v4.0.58：皮肤选择界面的「返回」同样直达首页（用户实报：进选植物界面后退不出来）
+                if (typeof window.exitDormGame === 'function') window.exitDormGame();
+                else { roleModal.style.display = 'none'; if (modeModal) modeModal.style.display = 'flex'; }
             });
             
             const skinBtns = document.querySelectorAll('.dorm-skin-btn');
@@ -851,18 +855,18 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1792288156"></script>
-    <script src="js/Board.js?v=1792288156"></script>
-    <script src="js/entities/Entity.js?v=1792288156"></script>
-    <script src="js/entities/Plant.js?v=1792288156"></script>
-    <script src="js/entities/Zombie.js?v=1792288156"></script>
-    <script src="js/entities/Projectile.js?v=1792288156"></script>
-    <script src="js/entities/Sun.js?v=1792288156"></script>
-    <script src="js/managers/WaveManager.js?v=1792288156"></script>
-    <script src="js/managers/CollisionManager.js?v=1792288156"></script>
-    <script src="js/managers/EventManager.js?v=1792288156"></script>
-    <script src="js/GameLoop.js?v=1792288156"></script>
-    <script src="js/HelpGuide.js?v=1792288156"></script>
-    <script src="js/HauntedDorm.js?v=1792288156"></script>
+    <script src="js/InputManager.js?v=1792288484"></script>
+    <script src="js/Board.js?v=1792288484"></script>
+    <script src="js/entities/Entity.js?v=1792288484"></script>
+    <script src="js/entities/Plant.js?v=1792288484"></script>
+    <script src="js/entities/Zombie.js?v=1792288484"></script>
+    <script src="js/entities/Projectile.js?v=1792288484"></script>
+    <script src="js/entities/Sun.js?v=1792288484"></script>
+    <script src="js/managers/WaveManager.js?v=1792288484"></script>
+    <script src="js/managers/CollisionManager.js?v=1792288484"></script>
+    <script src="js/managers/EventManager.js?v=1792288484"></script>
+    <script src="js/GameLoop.js?v=1792288484"></script>
+    <script src="js/HelpGuide.js?v=1792288484"></script>
+    <script src="js/HauntedDorm.js?v=1792288484"></script>
 </body>
 </html>
