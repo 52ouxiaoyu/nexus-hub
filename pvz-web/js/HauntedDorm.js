@@ -470,6 +470,16 @@ class HauntedDorm {
 
         this.startTime = 0;
         this.lastTime = performance.now();
+        // v4.0.74：玩家出生点（地图中心防墙校正后）+ 绿色虚线出生圈
+        this.spawnPoint = { x: this.player.x, y: this.player.y };
+        if (this.world1) {
+            const spM = document.createElement('div');
+            spM.className = 'spawn-marker';
+            spM.style.left = (this.spawnPoint.x - 120) + 'px';
+            spM.style.top = (this.spawnPoint.y - 120) + 'px';
+            spM.style.width = '240px'; spM.style.height = '240px';
+            this.world1.appendChild(spM);
+        }
         this._animId = requestAnimationFrame(t => this.loop(t));
         // v4.0.73 成就：守屋开局（防重入）
         if (window.AchTracker && !this._achStarted) {
@@ -562,7 +572,7 @@ class HauntedDorm {
             if (p1Ctl) {
                 // v4.0.61：加入指挥键位说明（G 切换猎杀目标 / H 号令尸潮）
                 p1Ctl.innerHTML = '<div>【僵尸 控制】移动: W/A/S/D ｜ 靠近植物自动慢咬 ｜ 技能: M 狂暴冲刺</div>' +
-                                  '<div>【指挥】G: 切换优先猎杀目标 ｜ H: 号令尸潮(60s) ｜ 最上排中心绿圈自动回血 ｜ 啃破大门吃掉幸存者获胜</div>';
+                                  '<div>【指挥】G: 切换优先猎杀目标 ｜ H: 号令尸潮(60s) ｜ 最上排中心红圈自动回血 ｜ 啃破大门吃掉幸存者获胜</div>';
             }
             const p1Stats = document.querySelector('#hud-p1 > div:nth-child(2)');
             if (p1Stats) p1Stats.id = 'zombie-stats-bar';
@@ -655,6 +665,8 @@ class HauntedDorm {
         this.ppFeed = document.getElementById('pp-feed');
         this.ppUp = document.getElementById('pp-upgrade');
         this.ppDemolish = document.getElementById('pp-demolish');
+        // v4.0.74：升级/拆除弹窗去掉「拆除」键——拆除只走种植菜单的 del 选项（且三类不可拆）
+        if (this.ppDemolish) this.ppDemolish.style.display = 'none';
         this.popupPlant = null;
         // v4.0.16：拆除二次确认——第一次点只进入「待确认」状态（按钮变红），2.5 秒内再点才真正拆除（防误删）
         this.ppDemolish.onclick = () => {
@@ -1368,6 +1380,7 @@ class HauntedDorm {
     _updateAIs(dt) {
         for (const ai of this.ais) {
             if (ai.dead) continue;
+            if (ai._jumpFly) continue; // v4.0.74：跳板飞行中 AI 不寻路不行动
             if (ai === this.traitor && this.traitorRevealed) continue; // v4.0.20：内鬼由 _updateTraitor 接管
             // v4.0.46：人机会使用手持技能——CD 好了之后 1 分钟内随机时机释放，随后 CD 重新计时（赶路/干活时不耽误放技能）
             if (ai.skillAt === undefined) ai.skillAt = this.gameTime + 10000 + Math.random() * 50000;
@@ -2550,6 +2563,16 @@ class HauntedDorm {
 
     // v4.0.72：跳板传送——植物方实体（玩家/玩家2/AI/内鬼）踩上跳板 → 瞬移到房间门外空地。
     // 僵尸不触发（否则守屋失去意义）；传送清空 path 防寻路死循环；每跳板 2s 冷却
+    // v4.0.74：拆除规则——路灯花(plantern)、坚果(wallnut/tallnut/nutlv/garlic 大蒜链)、向日葵(sunflower 系)不可拆除
+    _canDemolish(pl) {
+        if (!pl) return false;
+        const t = pl.type || (pl.def && pl.def.type) || '';
+        if (t === 'plantern' || t.indexOf('plantern') === 0) return false;
+        if (t === 'sunflower' || t.indexOf('sunflower') >= 0) return false;
+        if (t === 'nut' || t === 'wallnut' || t === 'tallnut' || t.indexOf('nut') === 0) return false;
+        if (t.indexOf('garlic') >= 0) return false; // 大蒜→冰蒜卫士→金蒜坚果→蒜味高坚果 属坚果防御链
+        return true;
+    }
     _updateJumpPads(dt) {
         const ents = [];
         if (this.player && !this.player.dead) ents.push(this.player);
@@ -2562,36 +2585,33 @@ class HauntedDorm {
             if (pad.cd > 0) { pad.cd -= dt; continue; }
             const px = pad.c * this.gridSize + 40, py = pad.r * this.gridSize + 40;
             for (const e of ents) {
+                if (e.isZombie) continue; // v4.0.72 语义：僵尸（阵营玩家/内鬼）不触发跳板
                 if (Math.hypot(e.x - px, e.y - py) < 34) {
+                    if (e._jumpFly) continue; // 已在飞行中
+                    // v4.0.74：跳板改为飞向玩家出生点（地图中心），抛物线动画在 _tick 插值
                     const t = this._jumpPadTarget(rm);
-                    e.x = t.x; e.y = t.y;
+                    e._jumpFly = { sx: e.x, sy: e.y, tx: t.x, ty: t.y, elapsed: 0, origT: e.el1 ? e.el1.style.transform : '' };
                     e.path = null; e.pathTimer = 0; e.stuck = 0;
                     pad.cd = 2;
                     // v4.0.73 成就：使用跳板累计
                     if (window.AchTracker) window.AchTracker.bump('dJump', 1);
-                    this._flyText(e.x, e.y - 24, '⤴ 跳板传送！', '#a9ffa9');
-                    this.playSfx('plant.mp3', 0.45);
+                    this._flyText(e.x, e.y - 30, '🪂 跳板起飞！', '#a9ffa9');
+                    this.playSfx('plant.mp3', 0.5);
                     break;
                 }
             }
         }
     }
-    // 跳板落点：门外方向找第一个非墙、非植物占用的格（最多外延 5 格）
+    // 跳板落点：v4.0.74 改为玩家出生点（地图中心防墙校正后的坐标）——不再落到门口被僵尸堵抓
     _jumpPadTarget(rm) {
-        const dr = rm.tpl.door.r, dc = rm.tpl.door.c;
-        let oc = rm.x + dc, orr = rm.y + dr; // 门的世界格（相对模板坐标 + 房间原点）
-        if (dr >= rm.h) orr = rm.y + dr + 1; else if (dr < 0) orr = rm.y + dr - 1;
-        else if (dc >= rm.w) oc = rm.x + dc + 1; else oc = rm.x + dc - 1;
-        for (let i = 0; i < 5 && this.walls.has(`${oc},${orr}`); i++) {
-            if (dr >= rm.h) orr++; else if (dr < 0) orr--;
-            else if (dc >= rm.w) oc++; else oc--;
-        }
+        const sp = this.spawnPoint || { x: Math.round(this.worldWidth / 2), y: Math.round(this.worldHeight / 2) };
+        // 兜底：出生点被植物/墙占时向外螺旋找空位（正常不会发生）
+        let tx = sp.x, ty = sp.y;
         let guard = 0;
-        while (this.getPlantAt(oc * this.gridSize, orr * this.gridSize) && guard++ < 5) {
-            if (dr >= rm.h) orr++; else if (dr < 0) orr--;
-            else if (dc >= rm.w) oc++; else oc--;
+        while ((this.getPlantAt(tx, ty) || this.walls.has(Math.floor(tx / 80) + ',' + Math.floor(ty / 80))) && guard++ < 8) {
+            tx += 80; ty += 80;
         }
-        return { x: oc * this.gridSize + 40, y: orr * this.gridSize + 40 };
+        return { x: tx, y: ty };
     }
 
     checkCollision(x, y, r = 20, isZombie = false) {
@@ -3988,7 +4008,10 @@ class HauntedDorm {
                 menu.options = [];
                 if (pl.def.up) menu.options.push({ action: 'up', text: `升级 (${pl.def.up.cost ? '☀'+pl.def.up.cost : ''} ${pl.def.up.sporeCost ? '🦠'+pl.def.up.sporeCost : ''})` });
                 const refSunPrev = Math.floor((pl.investSun || 0) * 0.5), refSporePrev = Math.floor((pl.investSpore || 0) * 0.5); // v4.0.47
-                menu.options.push({ action: 'del', text: '拆除' + ((refSunPrev || refSporePrev) ? `（返${refSunPrev ? '☀' + refSunPrev : ''}${refSporePrev ? '🦠' + refSporePrev : ''}）` : '（无返还）') });
+                // v4.0.74：路灯花/坚果/向日葵不可拆除——菜单不出现拆除选项
+                if (this._canDemolish(pl)) {
+                    menu.options.push({ action: 'del', text: '拆除' + ((refSunPrev || refSporePrev) ? `（返${refSunPrev ? '☀' + refSunPrev : ''}${refSporePrev ? '🦠' + refSporePrev : ''}）` : '（无返还）') });
+                }
                 menu.targetPl = pl;
             } else {
                 // 没植物 -> 种植
@@ -4116,6 +4139,12 @@ class HauntedDorm {
             }
         } else if (opt.action === 'del') {
             const pl = menu.targetPl;
+            // v4.0.74：三类不可拆（兜底守卫，菜单已不显示）
+            if (!this._canDemolish(pl)) {
+                this._flyText(pl.c * 80 + 40, pl.r * 80, '路灯花/坚果/向日葵不可拆除', '#ffb0b0');
+                this.playSfx('buzzer.mp3', 0.3);
+                return;
+            }
             const now = performance.now();
             if (menu.delArm !== pl || now - (menu.delArmAt || 0) > 2500) {
                 menu.delArm = pl;
@@ -4846,6 +4875,28 @@ class HauntedDorm {
     }
 
     _tick(dt, time) {
+        // v4.0.74：跳板抛物线飞行插值（0.9s 空中抛物线，先升后降落到出生点）
+        for (const e of this.allPlayers.concat(this.ais)) {
+            if (!e || !e._jumpFly) continue;
+            const f = e._jumpFly;
+            f.elapsed += dt;
+            const k = Math.min(1, f.elapsed / 0.9);
+            e.x = f.sx + (f.tx - f.sx) * k;
+            e.y = f.sy + (f.ty - f.sy) * k;
+            const h = Math.sin(Math.PI * k) * 200;
+            if (e.el1) {
+                e.el1.style.left = e.x + 'px';
+                e.el1.style.top = e.y + 'px';
+                // 直接覆盖为标准定位 transform + 抛物线抬升（不用 origT 前缀避免 'none ' 无效组合）
+                e.el1.style.transform = 'translate(-50%, -50%) translateY(' + (-h) + 'px)';
+            }
+            if (k >= 1) {
+                if (e.el1) { e.el1.style.left = f.tx + 'px'; e.el1.style.top = f.ty + 'px'; e.el1.style.transform = f.origT || ''; }
+                e.x = f.tx; e.y = f.ty;
+                delete e._jumpFly;
+                this._flyText(e.x, e.y - 30, '🪂 安全着陆！', '#a9ffa9');
+            }
+        }
         // v4.0.19：全局祝福计时递减
         if (this.plantDmgBoostT > 0) this.plantDmgBoostT -= dt;
         if (this.waterBoostT > 0) this.waterBoostT -= dt;
@@ -4913,7 +4964,7 @@ class HauntedDorm {
         // P1 Movement - 【SOC防冲突】
         // v4.0.16：菜单打开（建造菜单/升级拆除弹窗）时 P1 停止移动，防止选菜单时人物走位
         // v4.0.23：P1 倒下后尸体不再接受移动输入
-        const p1MenuBusy = this.kmenus[1].active || (this.popup && this.popup.style.display === 'block') || this.player.dead || !!this.blessing || this._zombieFrozen(); // v4.0.30：观察期禁移动
+        const p1MenuBusy = this.kmenus[1].active || (this.popup && this.popup.style.display === 'block') || this.player.dead || !!this.blessing || this._zombieFrozen() || !!this.player._jumpFly; // v4.0.30：观察期禁移动；v4.0.74：跳板飞行中禁移动
         let vx1 = 0, vy1 = 0;
         const p1L = this.keys['a'] || this.keys['KeyA'], p1R = this.keys['d'] || this.keys['KeyD'], p1U = this.keys['w'] || this.keys['KeyW'], p1D = this.keys['s'] || this.keys['KeyS'];
         if (!p1MenuBusy) {

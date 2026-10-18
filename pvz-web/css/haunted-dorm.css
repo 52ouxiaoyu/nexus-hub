@@ -54,12 +54,22 @@ body.dorm-page { margin: 0; padding: 0; background: #000; overflow: hidden; disp
             border: 2px solid #4a3014; border-radius: 6px;
             box-shadow: none;
         }
-#dorm-screen /* v4.0.68：僵尸回血台——石台+苔痕绿圈（原白色虚线卡通，现贴近地面石台） */
+#dorm-screen /* v4.0.74：僵尸出生/回血台——固定红曲线圈（出生与回血同处，玩家出生点另标绿圈） */
         .tile.center {
-            background: radial-gradient(circle, rgba(120,180,110,0.45) 0%, rgba(70,110,60,0.30) 55%, rgba(40,60,34,0.20) 100%);
-            border: 3px solid rgba(220,235,200,0.55);
+            background: radial-gradient(circle, rgba(200,70,70,0.40) 0%, rgba(120,40,40,0.30) 55%, rgba(60,24,24,0.22) 100%);
+            border: 3px dashed rgba(255,110,110,0.70);
             border-radius: 50%;
-            box-shadow: inset 0 0 30px rgba(20,40,15,0.5), 0 0 18px rgba(160,220,140,0.35);
+            box-shadow: inset 0 0 30px rgba(80,20,20,0.5), 0 0 18px rgba(255,90,90,0.35);
+        }
+#dorm-screen /* v4.0.74：玩家出生点——绿色虚线圈（地图中心） */
+        .spawn-marker {
+            position: absolute;
+            border: 3px dashed rgba(120,255,140,0.70);
+            border-radius: 50%;
+            box-sizing: border-box;
+            pointer-events: none;
+            z-index: 55;
+            box-shadow: inset 0 0 24px rgba(120,255,140,0.15), 0 0 14px rgba(120,255,140,0.30);
         }
 #dorm-screen /* v4.0.72：房间跳板——绿色发光圆垫 + 箭头，踩上瞬移到门外空地 */
         .jump-pad { position: absolute; width: 64px; height: 64px; border-radius: 50%;

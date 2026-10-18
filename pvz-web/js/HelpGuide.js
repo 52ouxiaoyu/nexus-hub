@@ -156,6 +156,28 @@
         { n: '火焰双发', base: PL + 'Repeater/Repeater.gif', ov: PL + 'Repeater/Repeater.gif', oc: 'polygon(0 0, 100% 0, 100% 48%, 60% 48%, 58% 60%, 42% 60%, 40% 48%, 0 48%)', ot: 'translate(0px, -2px) scale(1.04)', of: 'sepia(1) saturate(3) hue-rotate(-22deg) brightness(1.18)', md: 73, t: '双发射手+火炬树桩：原版绿身顶着火头，2 连发火焰豌豆 40×2；大技能【过热爆发】——每第 8 轮改为 6 连发爆炎 60×6（弹体加大发光）' },
         { n: '四头向日葵', base: PL + 'TwinSunflower/TwinSunflower1.gif', bf: 'saturate(1.35) brightness(1.12)', bt: 'scale(1.15)', ov: PL + 'TwinSunflower/TwinSunflower1.gif', ot: 'translate(10px, 6px) scaleX(-1) scale(1.15)', md: 84, t: '双子向日葵+双子向日葵：每轮 4 颗阳光共 100；大技能【阳光雨】——每 120 秒全场天降 3 颗阳光' },
         { n: '辣椒高坚果', base: PL + 'TallNut/TallNut.gif', bf: 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.1)', md: 119, t: '高坚果+火爆辣椒：8000 血肉盾，啃它的僵尸每秒被烫 40' },
+        // v4.0.74：补全守屋可产出植物的图鉴条目（此前游戏里能出现但图鉴查无此物，玩家容易懵）
+        { n: '大阳光菇', base: PL + 'SunShroom/0.gif', md: 112, t: '阳光菇升级：更大更快产阳光，夜晚每轮 8 点' },
+        { n: '水晶向日葵', base: PL + 'TwinSunflower/TwinSunflower1.gif', md: 125, t: '四头向日葵升级：冰蓝水晶质感多头，每轮 256 阳光' },
+        { n: '魅惑向日葵', base: PL + 'TwinSunflower/TwinSunflower1.gif', md: 135, t: '水晶向日葵升级：粉紫魅惑光晕，每轮 512 阳光' },
+        { n: '石芒杨桃', base: PL + 'Starfruit/Starfruit.gif', md: 112, t: '杨桃升级：五向石弹连射，带破甲' },
+        { n: '双向投手', base: PL + 'SplitPea/SplitPea.gif', md: 96, t: '豌豆射手升级：前后双向发射（前方 2 连发，后方 1 发）' },
+        { n: '超级机箱', base: PL + 'GatlingPea/GatlingPea.gif', md: 110, t: '机枪射手合体升级：6 连发速射机枪' },
+        { n: '机箱猫尾草', base: PL + 'Cattail/Cattail.gif', md: 100, t: '超级机箱+猫尾草：全场自动追踪，高速连射' },
+        { n: '巨型坚果', base: PL + 'TenManNut/0.gif', md: 110, t: '高坚果十级：150000 血的巨型壁垒' },
+        { n: '南瓜堡垒', base: PL + 'PumpkinHead/PumpkinHead.gif', md: 140, t: '巨型坚果升级：南瓜护盾巨墙，225000 血' },
+        { n: '永恒高坚果', base: PL + 'TallNut/TallNut.gif', md: 125, t: '南瓜堡垒升级：340000 血永恒壁垒' },
+        { n: '巨型忧郁菇', base: PL + 'GloomShroom/GloomShroom.gif', md: 115, t: '大喷菇升级：穿透群伤，伤害与体型更大' },
+        { n: '暗影忧郁菇', base: PL + 'GloomShroom/GloomShroom.gif', bf: 'grayscale(0.6) brightness(0.9) hue-rotate(260deg) saturate(1.8)', md: 125, t: '巨型忧郁菇升级：暗影系穿透群伤' },
+        { n: '星际忧郁菇', base: PL + 'GloomShroom/GloomShroom.gif', bf: 'saturate(1.8) brightness(1.25) drop-shadow(0 0 10px #c79aff)', md: 135, t: '暗影忧郁菇升级：星光范围群伤' },
+        { n: '宇宙忧郁菇', base: PL + 'GloomShroom/GloomShroom.gif', bf: 'hue-rotate(280deg) saturate(2.2) brightness(1.3) drop-shadow(0 0 14px #9d6bff)', md: 145, t: '星际忧郁菇升级：宇宙暗紫，范围群伤封顶' },
+        { n: '终极火焰地刺', base: PL + 'Spikerock/Spikerock.gif', bf: 'hue-rotate(-50deg) saturate(3) drop-shadow(0 0 10px #f00)', md: 110, t: '火焰地刺终极：99999 血反伤地刺' },
+        { n: '冰蒜卫士', base: PL + 'Garlic/0.gif', md: 110, t: '大蒜升级：血量不变，僵尸吃后减速' },
+        { n: '金蒜坚果', base: PL + 'Garlic/0.gif', md: 120, t: '冰蒜卫士升级：任意僵尸要啃 4 下才能啃掉' },
+        { n: '蒜味高坚果', base: PL + 'Garlic/0.gif', md: 135, t: '金蒜坚果升级：僵尸要啃 10 下才啃掉' },
+        { n: '南瓜壳·愈', base: PL + 'PumpkinHead/PumpkinHead.gif', md: 100, t: '南瓜壳 Lv2：3500 护盾' },
+        { n: '南瓜壳·愈金', base: PL + 'PumpkinHead/PumpkinHead.gif', md: 110, t: '南瓜壳 Lv3：4000 金纹护盾' },
+        { n: '南瓜壳·不朽', base: PL + 'PumpkinHead/PumpkinHead.gif', md: 120, t: '南瓜壳 Lv4：5000 不朽护盾' },
     ];
     // v3.50.0：数据驱动新融合（PVZ_FUSION_EXTRA 同源）自动追加到融合图鉴
     if (window.PVZ_FUSION_EXTRA) {
