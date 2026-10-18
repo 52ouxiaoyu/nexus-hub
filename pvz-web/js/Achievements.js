@@ -192,9 +192,9 @@
   "cat": "种植",
   "icon": "🌱",
   "name": "第一次种植",
-  "desc": "在 经典冒险 中累计种植 60 株植物",
+  "desc": "在 经典冒险 中累计种植 1 株植物",
   "stat": "p_classic",
-  "target": 60,
+  "target": 1,
   "single": false
  },
  {
@@ -742,9 +742,9 @@
   "cat": "种植",
   "icon": "🌱",
   "name": "第一次种植",
-  "desc": "在 融合进化 中累计种植 60 株植物",
+  "desc": "在 融合进化 中累计种植 1 株植物",
   "stat": "p_fusion",
-  "target": 60,
+  "target": 1,
   "single": false
  },
  {
@@ -2392,9 +2392,9 @@
   "cat": "种植",
   "icon": "🌱",
   "name": "第一次种植",
-  "desc": "在双人对战中累计种植 60 株植物",
+  "desc": "在双人对战中累计种植 1 株植物",
   "stat": "p_vs",
-  "target": 60,
+  "target": 1,
   "single": false
  },
  {
@@ -3480,13 +3480,15 @@
                 '<div style="padding:12px 18px 6px; text-align:center; position:relative;">' +
                     '<div style="font-family:"Kaiti SC","STKaiti","KaiTi",serif; font-size:26px; font-weight:900; letter-spacing:6px; color:#4a3414; text-shadow:1px 1px 0 rgba(255,255,255,.7);">🏆 成就</div>' +
                     '<div id="ach-total" style="font-family:monospace; font-size:13px; color:#7a5c22; margin-top:2px;"></div>' +
-                    '<button id="ach-close" style="position:absolute; right:14px; top:12px; font-size:20px; font-weight:900; color:#6b4a22; background:rgba(255,255,255,.4); border:2px solid #6b4a22; border-radius:8px; padding:2px 12px; cursor:pointer;">✕</button>' +
                 '</div>' +
                 '<div id="ach-tabs" style="display:flex; gap:6px; padding:6px 14px 10px; justify-content:center;"></div>' +
                 '<div id="ach-body" style="flex:1; overflow-y:auto; padding:6px 14px 14px;"></div>' +
+                '<div style="padding:10px 14px 14px; text-align:center; border-top:2px solid #caa95f;">' +
+                    '<button id="ach-back" style="font-family:"Kaiti SC","STKaiti","KaiTi",serif; font-size:18px; font-weight:900; letter-spacing:4px; color:#f7e9c0; background:linear-gradient(180deg,#7a5a33 0%,#5d4223 60%,#4a331b 100%); border:3px solid #3a2812; border-radius:12px; padding:8px 34px; box-shadow:inset 0 2px 0 rgba(255,235,180,.25), 0 5px 12px rgba(0,0,0,.45); text-shadow:1px 1px 0 #2a1c0c; cursor:pointer;">返回主菜单</button>' +
+                '</div>' +
             '</div>';
         document.body.appendChild(dim);
-        dim.querySelector('#ach-close').onclick = () => { dim.remove(); panelOpen = false; };
+        dim.querySelector('#ach-back').onclick = () => { dim.remove(); panelOpen = false; };
         dim.addEventListener('click', e => { if (e.target === dim) { dim.remove(); panelOpen = false; } });
         dim.querySelector('#ach-total').textContent = '已解锁 ' + unlocked + ' / ' + total;
 
@@ -3497,10 +3499,14 @@
         function renderTab() {
             const list = ACHIEVEMENTS.filter(a => a.mode === activeMode);
             const un = list.filter(a => state.unlocked[a.id]).length;
+            // v4.0.76：修复 tab 计数 bug——原实现所有 tab 共用 activeMode 的解锁数，
+            // 导致点开「砸罐子」后 6 个 tab 全部显示同一数字（其他模式也显示 3/50）。每个 tab 独立计算自己模式的解锁数。
+            const unByMode = m => ACHIEVEMENTS.filter(a => a.mode === m && state.unlocked[a.id]).length;
+            const lenByMode = m => ACHIEVEMENTS.filter(a => a.mode === m).length;
             tabsWrap.innerHTML = modes.map(m =>
                 '<div data-m="' + m + '" style="cursor:pointer; font-family:"Kaiti SC","STKaiti","KaiTi",serif; font-size:15px; font-weight:700; letter-spacing:2px; padding:5px 14px; border-radius:9px; border:2px solid #a97b2a; ' +
                 (m === activeMode ? 'background:linear-gradient(180deg,#f7cf6b,#e6b24a); color:#4a2f10;' : 'background:rgba(255,255,255,.35); color:#7a5c22;') + '">' + MODE_ICONS[m] + ' ' + MODE_NAMES[m] +
-                ' <span style="font-family:monospace; font-size:12px;">(' + un + '/' + list.length + ')</span></div>'
+                ' <span style="font-family:monospace; font-size:12px;">(' + unByMode(m) + '/' + lenByMode(m) + ')</span></div>'
             ).join('');
             tabsWrap.querySelectorAll('[data-m]').forEach(tb => tb.onclick = () => { activeMode = tb.dataset.m; renderTab(); });
 
