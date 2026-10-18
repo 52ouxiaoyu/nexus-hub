@@ -185,13 +185,14 @@ class HauntedDorm {
                              potatoMine: true, deter: 0.5 },
 
             // —— 路灯花 (v4.0.39：128🦠 种植每 0.4s 产 8☀；升费 1024/2028/4056/4056 🦠，产 32/128/512/1024；v4.0.46：夜班作息——只在夜晚产阳光) ——
-            // v4.0.63：scale 1.8→1.0（用户：路灯花与其他植物大小不一致）——统一为与其它植物一致的尺寸
-            plantern:      { name: '路灯花', img: 'Plants/Plantern/Plantern.gif', card: 'Plantern.png', hp: 2000, cost: 0, sporeCost: 128, scale: 1.0, nightProduce: true,
+            // v4.0.70：scale 1.0→1.3（用户：v4.0.63 降到 1.0 后路灯花"反而更小了"；1.8 过大、1.0 偏小，
+            // 取 1.3 使瘦长路灯造型的视觉占比追上正常植物）
+            plantern:      { name: '路灯花', img: 'Plants/Plantern/Plantern.gif', card: 'Plantern.png', hp: 2000, cost: 0, sporeCost: 128, scale: 1.3, nightProduce: true,
                              produce: { sun: 8, every: 0.4 }, up: { sporeCost: 1024, to: 'plantern2' } },
-            plantern2:     { name: '路灯花 Lv2', img: 'Plants/Plantern/Plantern.gif', hp: 2500, cost: 0, scale: 1.0, nightProduce: true, produce: { sun: 32, every: 0.4 }, tint: 'brightness(1.1)', up: { sporeCost: 2028, to: 'plantern3' } },
-            plantern3:     { name: '路灯花 Lv3', img: 'Plants/Plantern/Plantern.gif', hp: 3000, cost: 0, scale: 1.0, nightProduce: true, produce: { sun: 128, every: 0.4 }, tint: 'brightness(1.4) drop-shadow(0 0 10px #ff0)', up: { sporeCost: 4056, to: 'plantern4' } },
-            plantern4:     { name: '路灯花 Lv4', img: 'Plants/Plantern/Plantern.gif', hp: 4000, cost: 0, scale: 1.0, nightProduce: true, produce: { sun: 512, every: 0.4 }, tint: 'brightness(1.8) drop-shadow(0 0 20px #ff0)', up: { sporeCost: 4056, to: 'plantern5' } },
-            plantern5:     { name: '路灯花 Lv5', img: 'Plants/Plantern/Plantern.gif', hp: 5000, cost: 0, scale: 1.0, nightProduce: true, produce: { sun: 1024, every: 0.4 }, tint: 'brightness(2.2) drop-shadow(0 0 28px #ffd700)' },
+            plantern2:     { name: '路灯花 Lv2', img: 'Plants/Plantern/Plantern.gif', hp: 2500, cost: 0, scale: 1.3, nightProduce: true, produce: { sun: 32, every: 0.4 }, tint: 'brightness(1.1)', up: { sporeCost: 2028, to: 'plantern3' } },
+            plantern3:     { name: '路灯花 Lv3', img: 'Plants/Plantern/Plantern.gif', hp: 3000, cost: 0, scale: 1.3, nightProduce: true, produce: { sun: 128, every: 0.4 }, tint: 'brightness(1.4) drop-shadow(0 0 10px #ff0)', up: { sporeCost: 4056, to: 'plantern4' } },
+            plantern4:     { name: '路灯花 Lv4', img: 'Plants/Plantern/Plantern.gif', hp: 4000, cost: 0, scale: 1.3, nightProduce: true, produce: { sun: 512, every: 0.4 }, tint: 'brightness(1.8) drop-shadow(0 0 20px #ff0)', up: { sporeCost: 4056, to: 'plantern5' } },
+            plantern5:     { name: '路灯花 Lv5', img: 'Plants/Plantern/Plantern.gif', hp: 5000, cost: 0, scale: 1.3, nightProduce: true, produce: { sun: 1024, every: 0.4 }, tint: 'brightness(2.2) drop-shadow(0 0 28px #ffd700)' },
 
             // —— 特殊 ——
             iceshroom:     { name: '寒冰菇', img: 'Plants/IceShroom/0.gif',  card: 'IceShroom.png',  hp: 99999,  cost: 0, sporeCost: 200, instant: true }, // v4.0.53：涨价 50→200
