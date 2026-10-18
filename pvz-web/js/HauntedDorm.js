@@ -2696,6 +2696,18 @@ class HauntedDorm {
         }
     }
 
+    // v4.0.65：植物方存活成员数（人机 AI + 植物形态的 P1/P2；内鬼/僵尸阵营玩家/AI 内鬼不算植物方）
+    _plantSideAlive() {
+        let n = 0;
+        for (const a of this.ais) {
+            if (!a.dead && !a.isTraitor) n++; // AI 内鬼反水后不算幸存者
+        }
+        for (const p of [this.player, this.player2]) {
+            if (p && !p.dead && !p.isZombie) n++; // 僵尸形态（僵尸阵营玩家/玩家内鬼）不算植物方
+        }
+        return n;
+    }
+
     _checkPlayerDown(p) {
         if (!p || p.dead || p.hp > 0) return;
         if (p === this.player) {
@@ -2722,7 +2734,9 @@ class HauntedDorm {
             }
             // v4.0.61：内鬼形态下——全部植物（幸存者）死光（不含内鬼自己）= 内鬼胜利。
             // 旧版这里只判了天使，内鬼把 5 个人机咬死后没有任何结算 → 游戏永远不结束（用户实报）
-            if (this.playerTraitor && this.ais.every(a => a.dead)) {
+            // v4.0.65：改为统一判定"植物方全灭"（含双人 P2 植物形态、AI 内鬼反水排除）——
+            // 用户实报"只要场上都是僵尸和内鬼就直接宣布胜利"，此前人机全灭即判胜、漏判 P2 还在守屋的情况
+            if (this.playerTraitor && this._plantSideAlive() === 0) {
                 this._announce('😈 内鬼屠尽了所有幸存者——邪恶胜利！', 'evillaugh.mp3', true);
                 this.gameOver(true);
                 return;
@@ -2811,6 +2825,11 @@ class HauntedDorm {
         if (statsRow) statsRow.innerHTML = '<span style="color:#ffd700;">😇 天使形态</span><span style="color:#aaaaaa; font-size:13px;">无房 · 不可建造 · 只有一条命</span><span style="color:#7fd8ff; font-size:13px;">功德:0（捕获僵尸成长）</span>';
         this.setHp();
         this._refreshHud();
+        // v4.0.65：变天使瞬间人机已全灭 → 没人可帮，立即失败结算（否则挂起）
+        if (this.ais.every(a => a.dead)) {
+            this.gameOver(false);
+            return;
+        }
         this._announce('😇 你化作天使！【N】捕获定住僵尸、【M】加速逃离追杀——帮人机活到胜利！小心：你只有一条命！', 'points.mp3', true);
     }
 
@@ -2843,6 +2862,13 @@ class HauntedDorm {
         const p1Ctl = document.querySelector('#hud-p1 > div');
         if (p1Ctl) p1Ctl.innerHTML = '<div>【内鬼 控制】移动: W/A/S/D ｜ 靠近门/植物自动慢咬 ｜ 靠近幸存者啃咬</div><div>血量=当前僵尸血量 ｜ 堕落值:0（每拆掉一株植物+1：伤害+25%、血量+10%）｜ 团灭所有幸存者即胜利 ｜ 主僵尸被消灭=失败</div>';
         this.setHp();
+        // v4.0.65：变内鬼瞬间植物方已全灭（人机早在你倒下前被 AI 内鬼/尸潮肃清）→ 立即邪恶胜利，
+        // 否则没有任何 AI 死亡事件会触发结算，游戏永远挂起（v4.0.61 同类问题的残留场景）
+        if (this._plantSideAlive() === 0) {
+            this._announce('😈 内鬼屠尽了所有幸存者——邪恶胜利！', 'evillaugh.mp3', true);
+            this.gameOver(true);
+            return;
+        }
         this._announce('😈 你化身内鬼！去挠开人机的门，咬杀所有幸存者——主僵尸被消灭则计划失败！', 'evillaugh.mp3', true);
     }
 
@@ -2985,7 +3011,7 @@ class HauntedDorm {
                 if (this.traitorRevealed && this.traitor && !this.traitor.dead) aliveThreats.push(this.traitor);
                 if (aliveThreats.length === 0) {
                     if (this._gameOverTimer) clearTimeout(this._gameOverTimer);
-                    this._gameOverTimer = setTimeout(() => this.gameOver(true), 2000);
+                    this._gameOverTimer = setTimeout(() => this.gameOver(!this.playerTraitor && !this.isZombieFaction), 2000); // v4.0.65：玩家内鬼时植物赢=内鬼败
                 }
             }
             return;
@@ -3022,7 +3048,7 @@ class HauntedDorm {
             return;
         }
         if (this._gameOverTimer) clearTimeout(this._gameOverTimer);
-        this._gameOverTimer = setTimeout(() => this.gameOver(true), 3000);
+        this._gameOverTimer = setTimeout(() => this.gameOver(!this.playerTraitor && !this.isZombieFaction), 3000); // v4.0.65：玩家内鬼时植物赢=内鬼败
     }
 
     _updateSuns() {
@@ -4589,6 +4615,12 @@ class HauntedDorm {
                 if (best === this.player || best === this.player2) this.setHp();
                 if (best.hp <= 0 && !best.dead) {
                     this._checkPlayerDown(best);
+                    // v4.0.65：AI 内鬼肃清全部植物方成员 → 邪恶胜利（此前 AI 内鬼咬死人机后无任何结算，
+                    // 玩家已死/变内鬼/变天使时游戏永远挂起；玩家植物形态还活着则不算全灭，游戏继续）
+                    if (this._plantSideAlive() === 0) {
+                        this._announce('😈 内鬼屠尽了所有幸存者——邪恶胜利！', 'evillaugh.mp3', true);
+                        this.gameOver(true);
+                    }
                 }
             }
         }
@@ -4637,7 +4669,7 @@ class HauntedDorm {
             const aliveThreats = this.zombies.filter(z => !z.dead);
             if (aliveThreats.length === 0) {
                 if (this._gameOverTimer) clearTimeout(this._gameOverTimer);
-                this._gameOverTimer = setTimeout(() => this.gameOver(true), 2000);
+                this._gameOverTimer = setTimeout(() => this.gameOver(!this.playerTraitor && !this.isZombieFaction), 2000); // v4.0.65：玩家内鬼时植物赢=内鬼败
             }
         }
     }
@@ -5188,7 +5220,10 @@ class HauntedDorm {
                                 // v4.0.60：内鬼堕落值成长——咬杀一名幸存者
                                 if (this.playerTraitor) this._gainCorrupt();
                                 this._checkPlayerDown(v);
-                                if (victims.every(a => a.dead)) {
+                                // v4.0.65：植物方全灭（人机 + 植物形态 P1/P2）才算僵尸/内鬼胜利——
+                                // 旧判定 victims.every（只含人机+P2、且 P2 无论阵营都算）会漏判/误判；统一走 _plantSideAlive
+                                if (this._plantSideAlive() === 0) {
+                                    this._announce('😈 所有植物方成员已被肃清——邪恶胜利！', 'evillaugh.mp3', true);
                                     this.gameOver(true); // 僵尸赢了
                                 }
                             }
