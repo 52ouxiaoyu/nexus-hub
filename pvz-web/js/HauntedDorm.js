@@ -5092,23 +5092,22 @@ class HauntedDorm {
 
             // 【新增】人机抢盲盒机制
             if (!ai.dead && this.ghostSpawned && this.airdrops && this.airdrops.length > 0) {
-                // 如果在自己房间待命，且僵尸不在附近，才有概率出门抢盲盒
-                let isWellDeveloped = false;
-                if (ai.room) {
-                    const doorPlant = this.getPlantAt(ai.room.doorCol * 80, ai.room.doorRow * 80);
-                    isWellDeveloped = (ai.sun > 1000 || (doorPlant && (!doorPlant.def.up || doorPlant.maxHp > 10000)));
-                }
-                
+                // v4.0.80：AI 竞争抢盲盒——去掉「发育好」门槛，每 6~14 秒评估一次；同时出门抢的 AI 上限 2 人；
+                // 僵尸在附近（zombieNear）才退缩；僵尸在回血/回血途中、或正在啃别人门（忙=顾不上你）时都会出门抢。
                 if (ai.room && (!ai.path || ai.path.length === 0) && Math.random() < 0.001) {
                     this._say(ai, ["好无聊啊，僵尸怎么还不来？", "谁敢跟我比阳光多？", "外面的世界太危险，还是床舒服~", "睡一觉醒来，希望能赢！", "室友别抢我阳光啊！"][Math.floor(Math.random()*5)]);
                 }
-                if (isWellDeveloped && ai.room && (!ai.path || ai.path.length === 0) && !zombieNear && Math.random() < 0.005) {
-                    const safeDrops = this.airdrops.filter(d => !zbTarget || zbTarget.dead || Math.hypot(d.x - zbTarget.x, d.y - zbTarget.y) > 280);
-                    if (safeDrops.length > 0) {
-                        const drop = safeDrops[Math.floor(Math.random() * safeDrops.length)];
-                        ai.targetDrop = drop;
-                        ai.path = this._findPath(ai.x, ai.y, drop.x, drop.y) || ai.path; // v4.0.16：寻路失败不穿墙
-                        if (Math.random() < 0.5) this._say(ai, "发育好了！去抢盲盒！");
+                if (ai.room && (!ai.path || ai.path.length === 0) && !zombieNear &&
+                    (this.gameTime - (ai.lootAt || 0) > 6000 + Math.random() * 8000)) {
+                    ai.lootAt = this.gameTime;
+                    const chasers = this.ais.filter(x => !x.dead && x.targetDrop && x !== ai).length;
+                    if (chasers < 2 && Math.random() < 0.5) {
+                        const drop = this.airdrops[Math.floor(Math.random() * this.airdrops.length)];
+                        if (drop) {
+                            ai.targetDrop = drop;
+                            ai.path = this._findPath(ai.x, ai.y, drop.x, drop.y) || ai.path; // v4.0.16：寻路失败不穿墙
+                            if (Math.random() < 0.6) this._say(ai, ["盲盒是我的！", "抢到就是赚到！", "这颗钻石归我了！", "手快有手慢无！", "谁也别跟我抢盲盒！"][Math.floor(Math.random()*5)]);
+                        }
                     }
                 }
                 // 如果盲盒消失了，或者碰到僵尸靠近，立刻放弃目标回家！
@@ -5483,13 +5482,23 @@ class HauntedDorm {
                     break;
                 }
                 if (rx && ry) {
-                    const box = { x: rx, y: ry, life: 25 };
+                    // v4.0.80：盲盒外观=内容——按权重 roll 奖励类型，图标即内容：
+                    // 💎钻石=最稀有大奖 · 💰钱袋=阳光/孢子 · 🎒背包=防御增益 · 📦箱子=普通补给 · 🏆奖杯=团队奖励 · 🎁礼物盒=随机惊喜
+                    const kRoll = Math.random();
+                    let kind, icon;
+                    if (kRoll < 0.08) { kind = 'diamond'; icon = '💎'; }
+                    else if (kRoll < 0.28) { kind = 'money'; icon = '💰'; }
+                    else if (kRoll < 0.48) { kind = 'bag'; icon = '🎒'; }
+                    else if (kRoll < 0.68) { kind = 'box'; icon = '📦'; }
+                    else if (kRoll < 0.85) { kind = 'trophy'; icon = '🏆'; }
+                    else { kind = 'gift'; icon = '🎁'; }
+                    const kindNames = { diamond: '钻石大奖', money: '钱袋', bag: '背包', box: '补给箱', trophy: '团队奖杯', gift: '惊喜礼盒' };
+                    const box = { x: rx, y: ry, life: 25, kind: kind };
                     const el = document.createElement('div');
                     el.className = 'entity';
-                    const icons = ['🎁', '📦', '💎', '💰', '🎒', '🏆'];
-                    const icon = icons[Math.floor(Math.random() * icons.length)];
                     el.style.cssText = `width:70px; height:70px; z-index:50; left:${rx}px; top:${ry}px;`;
-                    el.innerHTML = `<div style="font-size:60px; transform:translate(-50%, -50%); filter:drop-shadow(0 0 15px #ff00ff);">${icon}</div>`;
+                    el.innerHTML = `<div style="font-size:60px; transform:translate(-50%, -50%); filter:drop-shadow(0 0 15px #ff00ff);">${icon}</div>` +
+                        `<div style="position:absolute; bottom:-6px; left:50%; transform:translateX(-50%); font-size:12px; font-weight:bold; color:#fff; text-shadow:0 0 4px #000, 0 0 4px #000; white-space:nowrap; pointer-events:none;">${kindNames[kind]}</div>`;
                     this.world1.appendChild(el);
                     box.el = el;
                     if (!this.airdrops) this.airdrops = [];
@@ -5543,27 +5552,91 @@ class HauntedDorm {
 
                 if (pickedByPlayer) {
                     if (pickedByPlayer.isZombie) {
-                        // v4.0.77：盲盒补给不再触发「疾走狂暴/狂暴冲刺冷却清零」——这两项让玩家误以为大招自己放了
-                        // （技能只能由 M 键手动释放）。改为纯补给：尸怒啃咬 / 尸毒愈合 / 钢化之躯 / 腐肉盛宴。
-                        const zr = Math.floor(Math.random() * 4);
-                        if (zr === 0) {
-                            pickedByPlayer.dmgMulT = 15; // 啃咬伤害翻倍 15s（不影响技能/移速）
-                            this._flyText(a.x, a.y, '💢 尸怒啃咬 (伤害翻倍15s)', '#ff5252');
-                        } else if (zr === 1) {
+                        // v4.0.80：僵尸拾取按盲盒外观（kind）发奖——💎钻石=召唤僵王助阵 · 💰钱袋=尸脑盛宴 · 🎒背包=钢化之躯 · 📦箱子=腐肉补给 · 🏆奖杯=全员回血 · 🎁礼物盒=随机惊喜
+                        const zk = a.kind || 'gift';
+                        if (zk === 'diamond') {
+                            this._spawnMinion(true);
                             pickedByPlayer.hp = Math.min(pickedByPlayer.maxHp, pickedByPlayer.hp + pickedByPlayer.maxHp * 0.4);
-                            this._flyText(a.x, a.y, '💉 尸毒愈合 (+40%最大生命)', '#0f0');
-                        } else if (zr === 2) {
+                            this._flyText(a.x, a.y, '💎 钻石霸权：召唤机甲僵王助阵！', '#ffd700');
+                        } else if (zk === 'money') {
+                            pickedByPlayer.hp = Math.min(pickedByPlayer.maxHp, pickedByPlayer.hp + pickedByPlayer.maxHp * 0.5);
+                            this._flyText(a.x, a.y, '💰 钱袋：尸脑盛宴 (+50%生命)', '#ffd54a');
+                        } else if (zk === 'bag') {
                             pickedByPlayer.invincibleT = 10;
-                            this._flyText(a.x, a.y, '🛡 钢化之躯 (10s无敌免疫弹幕)', '#fff');
+                            this._flyText(a.x, a.y, '🎒 背包：钢化之躯 (10s无敌)', '#fff');
+                        } else if (zk === 'box') {
+                            pickedByPlayer.hp = Math.min(pickedByPlayer.maxHp, pickedByPlayer.hp + pickedByPlayer.maxHp * 0.3);
+                            this._flyText(a.x, a.y, '📦 补给箱：腐肉 (+30%生命)', '#ff8a8a');
+                        } else if (zk === 'trophy') {
+                            pickedByPlayer.hp = Math.min(pickedByPlayer.maxHp, pickedByPlayer.hp + pickedByPlayer.maxHp * 0.4);
+                            for (const fzb of this.zombies) {
+                                if (!fzb.dead) { fzb.hp = Math.min(fzb.maxHp, fzb.hp + fzb.maxHp * 0.4); if (fzb.hpBg) fzb.hpBg.style.display = 'block'; if (fzb.hpFg) fzb.hpFg.style.width = Math.max(0, (fzb.hp / fzb.maxHp) * 100) + '%'; }
+                            }
+                            this._flyText(a.x, a.y, '🏆 团队奖杯：你与全场僵尸回血40%', '#ffd700');
                         } else {
-                            pickedByPlayer.hp = Math.min(pickedByPlayer.maxHp, pickedByPlayer.hp + pickedByPlayer.maxHp * 0.6);
-                            this._flyText(a.x, a.y, '🍖 腐肉盛宴 (+60%最大生命)', '#ffd54a');
+                            // 🎁 礼物盒：随机惊喜
+                            const zr = Math.floor(Math.random() * 4);
+                            if (zr === 0) {
+                                pickedByPlayer.dmgMulT = 15; // 啃咬伤害翻倍 15s（不影响技能/移速）
+                                this._flyText(a.x, a.y, '💢 尸怒啃咬 (伤害翻倍15s)', '#ff5252');
+                            } else if (zr === 1) {
+                                pickedByPlayer.hp = Math.min(pickedByPlayer.maxHp, pickedByPlayer.hp + pickedByPlayer.maxHp * 0.4);
+                                this._flyText(a.x, a.y, '💉 尸毒愈合 (+40%最大生命)', '#0f0');
+                            } else if (zr === 2) {
+                                pickedByPlayer.invincibleT = 10;
+                                this._flyText(a.x, a.y, '🛡 钢化之躯 (10s无敌免疫弹幕)', '#fff');
+                            } else {
+                                pickedByPlayer.hp = Math.min(pickedByPlayer.maxHp, pickedByPlayer.hp + pickedByPlayer.maxHp * 0.6);
+                                this._flyText(a.x, a.y, '🍖 腐肉盛宴 (+60%最大生命)', '#ffd54a');
+                            }
                         }
                         this.playSfx('evillaugh.mp3', 0.5);
                         a.el.remove();
                         this.airdrops.splice(i, 1);
                         continue;
                     }
+                    // v4.0.80：植物拾取按盲盒外观（kind）发奖——💎钻石=大满贯 · 💰钱袋=阳光/孢子 · 🎒背包=防御增益 · 📦箱子=普通补给 · 🏆奖杯=全员回血 · 🎁礼物盒=随机惊喜
+                    const pk = a.kind || 'gift';
+                    if (pk === 'diamond') {
+                        this.addSun(1000, pickedByPlayer);
+                        this.addSpore(100, pickedByPlayer);
+                        pickedByPlayer.invincibleT = 10;
+                        const targets = this._getHostileTargets().filter(z => !z.dead);
+                        for (const z of targets) {
+                            const dmg = Math.max(1, Math.round(z.maxHp * 0.15));
+                            z.hp -= dmg;
+                            if (z.hpBg) z.hpBg.style.display = 'block';
+                            if (z.hp <= 0) this._killZombie(z, pickedByPlayer);
+                        }
+                        this._flyText(a.x, a.y, '💎 钻石大满贯！☀️+1000 🦠+100 全屏核爆15% 无敌10s', '#ffd700');
+                    } else if (pk === 'money') {
+                        this.addSun(150, pickedByPlayer);
+                        this.addSpore(80, pickedByPlayer);
+                        this._flyText(a.x, a.y, '💰 钱袋：阳光+150 孢子+80', '#ffd54a');
+                    } else if (pk === 'bag') {
+                        if (Math.random() < 0.5) {
+                            pickedByPlayer.invincibleT = 15;
+                            this._flyText(a.x, a.y, '🎒 背包：无敌护盾 (15s)', '#fff');
+                        } else {
+                            pickedByPlayer.stealthT = 20;
+                            this._flyText(a.x, a.y, '🎒 背包：隐身斗篷 (20s)', '#aaa');
+                        }
+                    } else if (pk === 'box') {
+                        pickedByPlayer.hp = Math.min((pickedByPlayer.maxHp || 100), pickedByPlayer.hp + 50);
+                        this.setHp();
+                        this.addSun(50, pickedByPlayer);
+                        this._flyText(a.x, a.y, '📦 补给箱：+50血 +50阳光', '#8dff8d');
+                    } else if (pk === 'trophy') {
+                        for (const pl of this.plants) {
+                            if (pl.c >= pickedByPlayer.x / 80 - 10 && pl.c <= pickedByPlayer.x / 80 + 10) {
+                                pl.hp = pl.def.hp || pl.maxHp || pl.hp;
+                            }
+                        }
+                        for (const al of this.ais) {
+                            if (!al.dead) { al.hp = Math.min(al.maxHp || 100, al.hp + 60); if (al.el1 && al.el1.querySelector('.hp-bar-fg')) al.el1.querySelector('.hp-bar-fg').style.width = Math.max(0, (al.hp / (al.maxHp || 100)) * 100) + '%'; }
+                        }
+                        this._flyText(a.x, a.y, '🏆 团队奖杯：全场植物与幸存者回血', '#ffd700');
+                    } else {
                     const r = Math.floor(Math.random() * 15);
                     switch(r) {
                         case 0:
@@ -5702,6 +5775,7 @@ class HauntedDorm {
                             }
                             break;
                         }
+                    }
                     }
                     this.playSfx('sun.mp3', 0.5);
                     a.el.remove();
