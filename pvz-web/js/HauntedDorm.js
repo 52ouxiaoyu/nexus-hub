@@ -4631,7 +4631,8 @@ class HauntedDorm {
         const barTop = isBoss ? 'top:-42px;' : 'top:-14px;';
         zEl1.innerHTML = `<img src="assets/images/${cfg.img}" style="${size}">` +
             (isBoss ? `<div class="lv-badge" style="background:#a00000; top:-36px;">僵王</div>` : '') +
-            `<div class="hp-bar-bg" style="${barTop} display:none;"><div class="hp-bar-fg" style="width:100%; background:#ff5252;"></div></div>`;
+            `<div class="hp-bar-bg" style="${barTop} display:none;"><div class="hp-bar-fg" style="width:100%; background:#ff5252;"></div></div>` +
+            (this.isZombieFaction && !isBoss ? `<div style="position:absolute; top:-30px; left:50%; transform:translateX(-50%); font-size:15px; color:#ff5252; text-shadow:0 0 5px #000; z-index:60; pointer-events:none;">🧟 尸潮</div>` : ''); // v4.0.77：号令尸潮的小鬼加「尸潮」角标，与玩家本体（无角标）区分，避免"看到一样的僵尸"
         this.world1.appendChild(zEl1);
         zb.el1 = zEl1;
         zb.imgEl = zEl1.querySelector('img');
@@ -4919,6 +4920,7 @@ class HauntedDorm {
             if (p.sunBuffT > 0) p.sunBuffT -= dt;
             if (p.atkBuffT > 0) p.atkBuffT -= dt;
             if (p.speedBuffT > 0) p.speedBuffT -= dt;
+            if (p.dmgMulT > 0) p.dmgMulT -= dt; // v4.0.77：盲盒「尸怒啃咬」倒计时
             
             if (p.stealthT > 0) {
                 p.stealthT -= dt;
@@ -5299,7 +5301,8 @@ class HauntedDorm {
                     if (Math.hypot(this.player.x - px, this.player.y - py) < 80) { // 判定范围
                         // v4.0.60：内鬼堕落值——每层伤害 +25%（封顶 6 层 +150%）
                         const corMul = 1 + 0.25 * Math.min(6, this.playerCorrupt || 0);
-                        const biteDmg = Math.round((140 + 75 * (this.player.level - 1)) * (this.player.speedBuffT > 0 ? 1.6 : 1.0) * corMul);
+                        // v4.0.77：盲盒「尸怒啃咬」伤害翻倍（dmgMulT>0 时 ×2）
+                        const biteDmg = Math.round((140 + 75 * (this.player.level - 1)) * (this.player.speedBuffT > 0 ? 1.6 : 1.0) * corMul * (this.player.dmgMulT > 0 ? 2 : 1));
                         // v4.0.53：未就绪的土豆地雷被啃——不爆炸，直接被砍掉
                         if (p.def.potatoMine && (p._pArming === undefined || p._pArming > 0)) {
                             this.playSfx('chomp.mp3', 0.25);
@@ -5452,8 +5455,12 @@ class HauntedDorm {
                     const r = Math.floor(Math.random() * (this.rows - 2)) + 1;
                     if (this.walls.has(`${c},${r}`)) continue;
                     if (this._insideRoom(c, r)) continue;
-                    rx = c * this.gridSize + 40;
-                    ry = r * this.gridSize + 40;
+                    // v4.0.77：盲盒空投必须避开所有存活玩家（≥220px）——否则刷在玩家脚下会被站着不动自动捡到，
+                    // 触发 buff 后玩家误以为"大招自己放了"
+                    const dropX = c * this.gridSize + 40, dropY = r * this.gridSize + 40;
+                    if (this.allPlayers.some(p => !p.dead && Math.hypot(p.x - dropX, p.y - dropY) < 220)) continue;
+                    rx = dropX;
+                    ry = dropY;
                     break;
                 }
                 if (rx && ry) {
@@ -5517,10 +5524,12 @@ class HauntedDorm {
 
                 if (pickedByPlayer) {
                     if (pickedByPlayer.isZombie) {
+                        // v4.0.77：盲盒补给不再触发「疾走狂暴/狂暴冲刺冷却清零」——这两项让玩家误以为大招自己放了
+                        // （技能只能由 M 键手动释放）。改为纯补给：尸怒啃咬 / 尸毒愈合 / 钢化之躯 / 腐肉盛宴。
                         const zr = Math.floor(Math.random() * 4);
                         if (zr === 0) {
-                            pickedByPlayer.speedBuffT = 15;
-                            this._flyText(a.x, a.y, '🚀 疾走狂暴 (移速翻倍15s)', '#0ff');
+                            pickedByPlayer.dmgMulT = 15; // 啃咬伤害翻倍 15s（不影响技能/移速）
+                            this._flyText(a.x, a.y, '💢 尸怒啃咬 (伤害翻倍15s)', '#ff5252');
                         } else if (zr === 1) {
                             pickedByPlayer.hp = Math.min(pickedByPlayer.maxHp, pickedByPlayer.hp + pickedByPlayer.maxHp * 0.4);
                             this._flyText(a.x, a.y, '💉 尸毒愈合 (+40%最大生命)', '#0f0');
@@ -5528,8 +5537,8 @@ class HauntedDorm {
                             pickedByPlayer.invincibleT = 10;
                             this._flyText(a.x, a.y, '🛡 钢化之躯 (10s无敌免疫弹幕)', '#fff');
                         } else {
-                            pickedByPlayer.skillCd = 0;
-                            this._flyText(a.x, a.y, '⚡ 狂暴冲刺冷却清零', '#ffd54a');
+                            pickedByPlayer.hp = Math.min(pickedByPlayer.maxHp, pickedByPlayer.hp + pickedByPlayer.maxHp * 0.6);
+                            this._flyText(a.x, a.y, '🍖 腐肉盛宴 (+60%最大生命)', '#ffd54a');
                         }
                         this.playSfx('evillaugh.mp3', 0.5);
                         a.el.remove();
