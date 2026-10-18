@@ -38,6 +38,7 @@ class InputManager {
                 if (!this.game.zombieMode) return;
                 // 再点同一张卡 = 取消选中
                 this.game.pendingZombie = (this.game.pendingZombie === card.dataset.type) ? null : card.dataset.type;
+                this.game._clearZTargetRow(); // v4.0.61 换卡/取消时清掉目标行高亮
                 this.game._refreshZombieBank();
                 this.game.audioManager.play('btn');
                 this.dragGhost.style.display = 'none';
@@ -49,6 +50,11 @@ class InputManager {
                 const card = e.target.closest('.zcard');
                 if (!card || card.classList.contains('disabled')) return;
                 if (!this.game.vsMode) return;
+                // v4.0.61 人机对战：僵尸方由 AI 托管，底栏仅供观看，禁人类点击召唤
+                if (this.game.vsAiMode) {
+                    this.game.showAnnouncement('人机模式下僵尸方由 AI 托管', '#8fa8ff');
+                    return;
+                }
                 // v3.82.0：点击僵尸卡 = 直接召唤到"亮起行"（行由 ↑↓ 方向键选择），不再两段式点草坪
                 this.game.deployZombie(card.dataset.type, this.game.vsSpawnRow);
                 this.dragGhost.style.display = 'none';
@@ -172,7 +178,17 @@ class InputManager {
                     (e.clientX - rect.left) / scale, (e.clientY - rect.top) / scale
                 );
                 if (this.game.pendingZombie && gridPos) {
-                    this.game.deployZombie(this.game.pendingZombie, gridPos.row);
+                    // v4.0.61 目标行高亮 + 点击确认：第一次点行 = 高亮目标；再点同一行 = 确认释放
+                    if (this.game.zTargetRow === gridPos.row) {
+                        this.game.deployZombie(this.game.pendingZombie, gridPos.row);
+                        this.game._clearZTargetRow();
+                    } else {
+                        this.game.zTargetRow = gridPos.row;
+                        this.game._showZRowHighlight(gridPos.row);
+                        this.game.showAnnouncement('目标行已高亮——再点同一行确认召唤；点其它行切换目标', '#ffd54a');
+                    }
+                } else if (gridPos) {
+                    this.game._clearZTargetRow();
                 }
                 // 点卡片本身/其它非草坪区域：不取消选中（取消 = 再点一次同一张僵尸卡）
                 this.dragGhost.style.display = 'none';
@@ -232,9 +248,14 @@ class InputManager {
                     }
 
                     // 砸罐子模式：点击未砸罐子 → smashVase（不消耗阳光也不引爆炸弹）
+                    // v4.0.61：重掷模式激活时，点击罐子 = 重掷其内容（消耗 1 次骰子）
                     if (this.game.vaseMode && this.game.vases && this.game.vases.length) {
                         const v = this.game.vases.find(x => !x.smashed && x.row === gridPos.row && x.col === gridPos.col);
                         if (v) {
+                            if (this.game.vaseRerollActive) {
+                                this.game.rerollVase(v);
+                                return;
+                            }
                             this.game.smashVase(gridPos.row, gridPos.col);
                             this.game._vaseHammerSwingFX(gridPos.row, gridPos.col); // v3.63.0 挥锤动画
                             return;
@@ -329,7 +350,7 @@ class InputManager {
             // v3.26.0 植物盲盒：拖拽图改回"盲盒图案"（红丝带礼盒）——用户明确盲盒≠问号罐
             // v3.35.0：礼盒重画为宽幅构图，拖拽幽灵同步改宽尺寸
             if (type === 'plantbox') {
-                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1792303740')";
+                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1792306938')";
                 this.dragGhost.style.width = '68px';
                 this.dragGhost.style.height = '50px';
                 this.dragGhost.style.backgroundSize = 'contain';
@@ -341,8 +362,8 @@ class InputManager {
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1792303740`
-                : `assets/images/Plants/${imgName}.gif?v=1792303740`;
+                ? `assets/images/Plants/${imgName}.png?v=1792306938`
+                : `assets/images/Plants/${imgName}.gif?v=1792306938`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
 
             // v3.20.0：倭瓜立绘画布 100×226（身体只占底部 68×82），60×60 contain 后

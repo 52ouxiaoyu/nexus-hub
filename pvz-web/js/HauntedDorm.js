@@ -301,7 +301,9 @@ class HauntedDorm {
             { name: '冰车僵尸',   img: 'Zombies/Zomboni/1.gif',                        hp: 3200,  speed: 450 },
             { name: '小丑僵尸',   img: 'Zombies/JackinTheBoxZombie/0.gif',             hp: 6400,  speed: 450 },
             { name: '气球僵尸',   img: 'Zombies/BalloonZombie/0.gif',                  hp: 12800, speed: 450 },
-            { name: '机甲僵王',   img: 'Zombies/LGBOSS/0.gif',                         hp: 25600, speed: 450 }
+            // v4.0.61：机甲僵王 25600→51200（用户实报"boss 很弱"：豌豆链单发已到 32768，原 25600 一炮即秒；
+            //   翻倍到 51200 至少吃两炮，保住最终形态的压迫感）
+            { name: '机甲僵王',   img: 'Zombies/LGBOSS/0.gif',                         hp: 51200, speed: 450 }
         ];
     }
     static get GHOST_MAX_LV() { return HauntedDorm.GHOST_LEVELS.length; }
@@ -346,6 +348,9 @@ class HauntedDorm {
         // v4.0.30：小推车最终形态=存活奖励（祝福发放），不再地图散落；僵尸玩家开局 10 秒禁行动给 AI 布防窗口
         this.mowers = [];
         this.zombieFreezeT = this.isZombieFaction ? 10 : 0;
+        // v4.0.61：僵尸阵营指挥——G 键循环切换优先猎杀目标；H 键号令尸潮（60s CD）
+        this.commandTarget = null;
+        this.waveOrderCd = 0;
         this.blessingAt = 90000;      // 存活 90 秒后首次送出祝福
         this.aiBlessAt = 90000;       // 僵尸方模式下 AI 植物的存活奖励计时
         this.blessing = null;         // 当前打开的三选一 { options, idx, deadline }
@@ -539,8 +544,9 @@ class HauntedDorm {
             // 僵尸阵营的 HUD 控制行与状态栏适配（隐藏无意义的植物键位与经济）
             const p1Ctl = document.querySelector('#hud-p1 > div');
             if (p1Ctl) {
+                // v4.0.61：加入指挥键位说明（G 切换猎杀目标 / H 号令尸潮）
                 p1Ctl.innerHTML = '<div>【僵尸 控制】移动: W/A/S/D ｜ 靠近植物自动慢咬 ｜ 技能: M 狂暴冲刺</div>' +
-                                  '<div>最上排中心绿圈自动回血 ｜ 啃破大门吃掉幸存者获胜</div>';
+                                  '<div>【指挥】G: 切换优先猎杀目标 ｜ H: 号令尸潮(60s) ｜ 最上排中心绿圈自动回血 ｜ 啃破大门吃掉幸存者获胜</div>';
             }
             const p1Stats = document.querySelector('#hud-p1 > div:nth-child(2)');
             if (p1Stats) p1Stats.id = 'zombie-stats-bar';
@@ -1597,10 +1603,17 @@ class HauntedDorm {
                     : `<span style="color:#ffd700;">【M】加速</span> <span style="color:#aaaaaa;">(6秒疾跑)</span>`;
                 skillEl.innerHTML = `😇 ${cap} ｜ ${spd} <span style="color:#ffd54a; font-size:12px;">｜ ⭐功德 ${this.playerMerit || 0}/9 (3:捕获CD20s｜6:定身5s｜9:加速CD20s)</span>`;
             } else if (this.isZombieFaction) {
+                // v4.0.61：指挥键位并入技能栏——尸潮冷却与令旗目标动态显示
+                const cmdTxt = this.commandTarget
+                    ? (this.commandTarget === this.player ? (this.player2 ? 'P2' : '你') : (this.commandTarget.roleDef ? this.commandTarget.roleDef.name : '?'))
+                    : '无';
+                const hordTxt = this.waveOrderCd > 0
+                    ? `<span style="color:#777777;"><s>【H】号令尸潮</s> (CD:${Math.ceil(this.waveOrderCd)}s)</span>`
+                    : `<span style="color:#ff5252;">【H】号令尸潮</span>`;
                 if (this.player.skillCd > 0) {
-                    skillEl.innerHTML = `<span style="color:#aaa;"><s>【M键】狂暴冲刺</s> (CD: ${Math.ceil(this.player.skillCd)}s)</span>`;
+                    skillEl.innerHTML = `<span style="color:#aaa;"><s>【M键】狂暴冲刺</s> (CD: ${Math.ceil(this.player.skillCd)}s)</span> ｜ ${hordTxt} <span style="color:#ffd54a; font-size:12px;">⚑ 目标:${cmdTxt} (G切换)</span>`;
                 } else {
-                    skillEl.innerHTML = `<span style="color:#ff5252;">【M键】狂暴冲刺 (5秒内极速免疫)</span>`;
+                    skillEl.innerHTML = `<span style="color:#ff5252;">【M键】狂暴冲刺 (5秒内极速免疫)</span> ｜ ${hordTxt} <span style="color:#ffd54a; font-size:12px;">⚑ 目标:${cmdTxt} (G切换)</span>`;
                 }
             } else if (this.player.roleDef) {
                 const nut = this.player.nutHealCd > 0
@@ -2270,6 +2283,13 @@ class HauntedDorm {
             if ((key === '0' || e.code === 'Digit0' || e.code === 'Numpad0') && !e.repeat && this.gameMode === '2p' && this.player2 && !this.isZombieFaction) {
                 this.setWatering(this.player2, !this.player2.waterOn);
             }
+            // v4.0.61：僵尸阵营指挥——G 键循环切换优先猎杀目标；H 键号令尸潮（60s CD）
+            if ((key === 'g' || e.code === 'KeyG') && !e.repeat && this.isZombieFaction && this.player && !this.player.dead) {
+                this._cycleCommandTarget();
+            }
+            if ((key === 'h' || e.code === 'KeyH') && !e.repeat && this.isZombieFaction && this.player && !this.player.dead) {
+                this._orderHorde();
+            }
         };
 
         this._onKeyUp = e => {
@@ -2694,6 +2714,13 @@ class HauntedDorm {
             // v4.0.44：天使形态下——人机全灭=没人可帮，直接失败结算
             if (this.playerAngelic && this.ais.every(a => a.dead)) {
                 this.gameOver(false);
+                return;
+            }
+            // v4.0.61：内鬼形态下——全部植物（幸存者）死光（不含内鬼自己）= 内鬼胜利。
+            // 旧版这里只判了天使，内鬼把 5 个人机咬死后没有任何结算 → 游戏永远不结束（用户实报）
+            if (this.playerTraitor && this.ais.every(a => a.dead)) {
+                this._announce('😈 内鬼屠尽了所有幸存者——邪恶胜利！', 'evillaugh.mp3', true);
+                this.gameOver(true);
                 return;
             }
             if (this.ghostLevel >= 4) this._levelUpGhostDirect();
@@ -4363,7 +4390,16 @@ class HauntedDorm {
 
     // ===== v4.0.20：尸潮波次（附加小怪/BOSS，不影响单僵尸胜负体系）=====
     _updateWaves(time) {
-        if (this.isZombieFaction || this.over || !this.ghostSpawned) return;
+        if (this.isZombieFaction) {
+            // v4.0.61：僵尸阵营不自动刷波——尸潮由 H 键号令发动（见 _orderHorde），这里只递减冷却
+            if (this.waveOrderCd > 0) {
+                const dSec = (this._lastWaveT !== undefined) ? (time - this._lastWaveT) / 1000 : 0;
+                this.waveOrderCd = Math.max(0, this.waveOrderCd - dSec);
+            }
+            this._lastWaveT = time;
+            return;
+        }
+        if (this.over || !this.ghostSpawned) return;
         // 开波前 10 秒预警——PVZ 经典台词，绝不搞突然袭击
         if (!this.waveWarned && time >= this.waveAt - 10000) {
             this.waveWarned = true;
@@ -4470,7 +4506,9 @@ class HauntedDorm {
         t.pathTimer = (t.pathTimer || 0) + dt;
         if (t.pathTimer > 1.0 || !t.path) {
             t.pathTimer = 0;
-            t.path = this._findPath(t.x, t.y, tx, ty, true); // v4.0.43：穿门寻路——能出自己的房、破门后能进别人的房
+            // v4.0.61：与普通僵尸完全一致——门板视为障碍（false），BFS 引导到门前而不是穿门格，
+            //   配合下方"碰撞=实体 + probe 啃门"，内鬼能自己挠开任何挡路的门（含自己房间的门）
+            t.path = this._findPath(t.x, t.y, tx, ty, false);
             if (t.path && t.path.length > 0) t.path.push({ x: tx, y: ty }); // 末步精确定位
         }
         let dx, dy;
@@ -4487,42 +4525,50 @@ class HauntedDorm {
         const len = Math.hypot(dx, dy) || 1;
         const spd = 300; // v4.0.22：330→300，走廊上跑得掉
         const nx = t.x + dx / len * spd * dt, ny = t.y + dy / len * spd * dt;
-        if (!this.checkCollision(nx, t.y, 14)) t.x = nx;
-        if (!this.checkCollision(t.x, ny, 14)) t.y = ny;
+        // v4.0.61：碰撞同普通僵尸（isZombie=true，一切植物=绝对实体）+ stuck 卡死强制重寻路
+        let tMoved = false;
+        if (!this.checkCollision(nx, t.y, 14, true)) { t.x = nx; tMoved = true; }
+        if (!this.checkCollision(t.x, ny, 14, true)) { t.y = ny; tMoved = true; }
+        if (!tMoved) {
+            t.stuck = (t.stuck || 0) + dt;
+            if (t.stuck > 0.4) { t.stuck = 0; t.path = null; t.pathTimer = 0; } // 卡死→立刻重寻路
+        } else {
+            t.stuck = 0;
+        }
         t.el1.style.left = t.x + 'px';
         t.el1.style.top = t.y + 'px';
         if (t.trHpFg) t.trHpFg.style.width = Math.max(0, t.hp / t.maxHp * 100) + '%';
 
-        // 挠门：门口 60px 内站定，每 1.8s 一口 50 血（同僵尸啃门范式：血条+抖动+破门移除）
-        if (scratchingDoor) {
-            const dDoor = Math.hypot(t.x - (brm.doorCol * this.gridSize + 40), t.y - (brm.doorRow * this.gridSize + 40));
-            if (dDoor < 60) {
-                t.biteT = (t.biteT || 0) + dt;
-                if (t.biteT >= 1.8) {
-                    t.biteT = 0;
-                    doorPlant.hp -= 50;
-                    this._flyText(doorPlant.c * 80 + 40, doorPlant.r * 80, '-50 😈挠门', '#ff5252');
-                    this.playSfx('chomp.mp3', 0.35);
-                    const bg = doorPlant.el1.querySelector('.hp-bar-bg');
-                    const fg = doorPlant.el1.querySelector('.hp-bar-fg');
-                    if (bg) {
-                        bg.style.display = 'block';
-                        fg.style.width = Math.max(0, (doorPlant.hp / doorPlant.maxHp) * 100) + '%';
-                    }
-                    doorPlant.el1.classList.add('shake');
-                    if (!doorPlant._shakeT) {
-                        doorPlant._shakeT = setTimeout(() => { if (doorPlant && doorPlant.el1) doorPlant.el1.classList.remove('shake'); doorPlant._shakeT = null; }, 100);
-                    }
-                    if (doorPlant.hp <= 0) {
-                        doorPlant.el1.remove();
-                        if (doorPlant.txtEl) doorPlant.txtEl.remove();
-                        this.plants = this.plants.filter(pl => pl !== doorPlant);
-                        this._flyText(doorPlant.c * 80 + 40, doorPlant.r * 80, '😈 门被内鬼拆了！', '#ff5252');
-                        t.path = null; // 立即重寻路进屋
-                    }
+        // v4.0.61：probe 啃门（同普通僵尸范式）——前方 25px 有非贴地植物就站定啃，
+        //   不再只认"目标房间的门"：自己房间的门挡路也能挠开（这就是"内鬼走不出来门"的根治）
+        const probeX = t.x + dx * 25, probeY = t.y + dy * 25;
+        const atkPlant = this.getPlantAt(probeX, probeY);
+        if (atkPlant && !atkPlant.def.ground) {
+            t.biteT = (t.biteT || 0) + dt;
+            if (t.biteT >= 1.8) {
+                t.biteT = 0;
+                atkPlant.hp -= 50;
+                this._flyText(atkPlant.c * 80 + 40, atkPlant.r * 80, '-50 😈挠门', '#ff5252');
+                this.playSfx('chomp.mp3', 0.35);
+                const bg = atkPlant.el1.querySelector('.hp-bar-bg');
+                const fg = atkPlant.el1.querySelector('.hp-bar-fg');
+                if (bg) {
+                    bg.style.display = 'block';
+                    fg.style.width = Math.max(0, (atkPlant.hp / atkPlant.maxHp) * 100) + '%';
+                }
+                atkPlant.el1.classList.add('shake');
+                if (!atkPlant._shakeT) {
+                    atkPlant._shakeT = setTimeout(() => { if (atkPlant && atkPlant.el1) atkPlant.el1.classList.remove('shake'); atkPlant._shakeT = null; }, 100);
+                }
+                if (atkPlant.hp <= 0) {
+                    atkPlant.el1.remove();
+                    if (atkPlant.txtEl) atkPlant.txtEl.remove();
+                    this.plants = this.plants.filter(pl => pl !== atkPlant);
+                    this._flyText(atkPlant.c * 80 + 40, atkPlant.r * 80, '😈 门被内鬼拆了！', '#ff5252');
+                    t.path = null; // 立即重寻路进屋
                 }
             }
-            return; // 挠门期不咬人
+            return; // 啃门期不咬人
         }
 
         // 贴身咬人：v4.0.22 每 1.8 秒一口 12 血（v4.0.43：删 safeBehindDoor——破门后进屋照咬）
@@ -4539,6 +4585,33 @@ class HauntedDorm {
                 }
             }
         }
+    }
+
+    // ===== v4.0.61：僵尸阵营指挥 =====
+    // G 键：在存活幸存者（人机 + P1/P2）中循环切换"优先猎杀目标"，小怪集火该目标
+    _cycleCommandTarget() {
+        const candidates = [...this.ais, ...(this.player2 ? [this.player2] : [])].filter(v => !v.dead);
+        if (this.player && !this.player.dead) candidates.unshift(this.player);
+        if (candidates.length === 0) return;
+        let idx = candidates.indexOf(this.commandTarget);
+        this.commandTarget = candidates[(idx + 1) % candidates.length];
+        const nm = this.commandTarget === this.player ? (this.player2 ? 'P2' : '你(本体)')
+            : (this.commandTarget.roleDef ? this.commandTarget.roleDef.name : '幸存者');
+        this._announce(`⚑ 指挥令旗指向：${nm}——尸潮优先猎杀他！`, 'points.mp3');
+        this._updateGhostChip();
+    }
+    // H 键：号令一波尸潮（3~6 只小鬼僵尸）立即进攻，60s CD
+    _orderHorde() {
+        if (this.waveOrderCd > 0) {
+            this._flyText(this.player.x, this.player.y - 40, `尸潮冷却 ${Math.ceil(this.waveOrderCd)}s`, '#ff8a8a');
+            this.playSfx('buzzer.mp3', 0.3);
+            return;
+        }
+        this.waveOrderCd = 60;
+        const n = 3 + Math.floor(Math.random() * 4); // 3~6 只
+        for (let i = 0; i < n; i++) this._spawnMinion();
+        this._announce(`🧟 尸潮号令：${n} 只小鬼僵尸听令出击！`, 'evillaugh.mp3', true);
+        this._updateGhostChip();
     }
 
     _defeatTraitor(killer) {
@@ -5435,6 +5508,13 @@ class HauntedDorm {
                         this._say(zb, zLines[Math.floor(Math.random() * zLines.length)], 4000);
                     }
                 }
+            }
+            // v4.0.61：僵尸阵营指挥——被指挥的小怪/僵王优先锁定令旗目标（G 键），其余行为不变
+            if (this.isZombieFaction && this.commandTarget && !this.commandTarget.dead && (zb.isMinion || zb.isBoss) &&
+                closestTarget !== this.commandTarget) {
+                zb.lockedTarget = this.commandTarget;
+                closestTarget = this.commandTarget;
+                zb.targetSwitched = true;
             }
             if (!closestTarget) closestTarget = this.player;
 

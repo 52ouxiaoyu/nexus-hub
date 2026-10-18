@@ -30,7 +30,12 @@ class WaveManager {
                 //   波与波之间用间隔下限 10s 拉开，真的"一波一波上、一批一批上"。前期节奏不变软。
                 this.spawnInterval = Math.max(2.5, this.spawnInterval - 1.0);
                 if (this.timeElapsed >= 420) {
-                    const count = 18 + Math.floor(Math.random() * 7); // 18~24 只
+                    // v4.0.61 波次制渐进（用户确认六模式意见③"统一波次制防曲线陡跳"）：
+                    // 旧版 420s 直接从"几只"跳到 18~24 只大波（曲线陡跳）；
+                    // 改为数量随场龄渐进——420s 首波 10~12 只，此后每过 60s 涨 4 只，封顶 24，
+                    // 波间仍 10s 下限，观感是"一波比一波大"，不再突然暴涨
+                    const ageStep = Math.floor((this.timeElapsed - 420) / 60);
+                    const count = Math.min(24, 10 + ageStep * 4 + Math.floor(Math.random() * 3));
                     for (let i = 0; i < count; i++) this.spawnZombie();
                     this._showHugeWaveNote(count);
                     this.waveCount++;
@@ -38,6 +43,17 @@ class WaveManager {
                     return;
                 }
             } else {
+                // v4.0.61 经典冒险后期同款尸潮制（用户确认六模式意见②"群刷+预警"）：
+                // 600s 起"一大波僵尸"12~16 只，波间 10s 间隔——后期不再一只只磨，
+                // 有预警横幅、有波次感，与融合模式的尸潮观感一致
+                if (this.timeElapsed >= 600) {
+                    const count = 12 + Math.floor(Math.random() * 5); // 12~16 只
+                    for (let i = 0; i < count; i++) this.spawnZombie();
+                    this._showHugeWaveNote(count);
+                    this.waveCount++;
+                    this.nextSpawnTime = this.timeElapsed + Math.max(10, this.spawnInterval);
+                    return;
+                }
                 this.spawnInterval = Math.max(5, this.spawnInterval - 0.5); // Gradually speeds up, minimum 5 seconds
             }
             this.spawnZombie();

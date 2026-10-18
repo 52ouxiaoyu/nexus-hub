@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1792303740">
-    <link rel="stylesheet" href="css/haunted-dorm.css?v=1792303740">
+    <link rel="stylesheet" href="css/style.css?v=1792306938">
+    <link rel="stylesheet" href="css/haunted-dorm.css?v=1792306938">
 </head>
 <body>
     <div id="game-container">
@@ -27,6 +27,10 @@
                 
                 <div id="glove-bank" title="融合手套（空格键切换 手/手套）">
                     <div class="tool-emoji">🧤</div>
+                </div>
+                
+                <div id="vase-reroll" title="重掷罐子（🎲 每局限 3 次）" style="display:none;">
+                    <div class="tool-emoji">🎲</div>
                 </div>
                 
                 <div id="recipe-book-btn" title="融合图鉴">
@@ -386,12 +390,17 @@
                     <button id="vs-normal" class="diff-btn diff-easy">
                         <span class="diff-name">普通对战</span>
                         <span class="diff-en">NORMAL</span>
-                        <span class="diff-desc">纯攻防 · 不存在融合<br>植物 ☀150 · 僵尸 🧠400 起步</span>
+                        <span class="diff-desc">纯攻防 · 不存在融合<br>植物 ☀200 · 僵尸 🧠200 起步</span>
                     </button>
                     <button id="vs-fusion" class="diff-btn diff-hard">
                         <span class="diff-name">融合对战</span>
                         <span class="diff-en">FUSION</span>
                         <span class="diff-desc">植物方局内有手套+融合图鉴<br>场上两株相邻植物可合二为一</span>
+                    </button>
+                    <button id="vs-ai" class="diff-btn diff-hell">
+                        <span class="diff-name">人机对战</span>
+                        <span class="diff-en">VS AI</span>
+                        <span class="diff-desc">你当植物 · AI 当僵尸<br>单人练习首选，规则同普通对战</span>
                     </button>
                 </div>
                 <div class="diff-foot">
@@ -642,16 +651,29 @@
                     <div style="max-width:680px; width:92vw; max-height:86vh; display:flex; flex-direction:column; background:rgba(30,16,8,0.98); border:3px solid #8c6a4d; border-radius:14px; padding:20px 24px; color:#f5e6c8; font-family:'Kaiti SC',serif; font-size:14.5px; line-height:1.8; box-sizing:border-box;">
                         <div style="text-align:center; font-size:24px; letter-spacing:4px; margin-bottom:10px; flex:none; color:#ffe14a;">🏠 守屋大作战 · 玩法说明与完整图鉴</div>
                         <div style="flex:1; overflow-y:auto; padding-right:12px;">
+                            <!-- v4.0.61：图文结合——两张局内机制实拍图（阵营选择 / 倒下二选一） -->
+                            <div style="display:flex; gap:14px; justify-content:center; align-items:flex-start; margin:6px 0 12px;">
+                                <div style="flex:1; text-align:center;">
+                                    <img src="assets/help/dorm-faction.png" alt="选择阵营" style="width:100%; max-width:230px; border:2px solid #8c6a4d; border-radius:8px; box-sizing:border-box;">
+                                    <div style="font-size:12.5px; color:#c9b288; margin-top:4px;">① 开局选择阵营：扮演植物守卫 / 扮演僵尸猎杀</div>
+                                </div>
+                                <div style="flex:1; text-align:center;">
+                                    <img src="assets/help/dorm-fate.png" alt="天使与内鬼" style="width:100%; max-width:230px; border:2px solid #8c6a4d; border-radius:8px; box-sizing:border-box;">
+                                    <div style="font-size:12.5px; color:#c9b288; margin-top:4px;">② 倒下后二选一：天使(正义) / 内鬼(邪恶)</div>
+                                </div>
+                            </div>
                             <b style="color:#ffe14a;">🎮 操作控制</b><br>
                             · <b>P1 控制</b>：<b>[W/A/S/D] 移动</b> | <b>[F 或 J] 呼出菜单/确认</b> | <b>[空格] 浇水</b> | <b>[G 或 右Alt] 关闭菜单</b> | <b>[M键] 角色技能</b> | <b>[N键] 修门（回25%，CD60秒）</b> | <b>[B键] 倭瓜技能</b> | <b>[A/D] 菜单切栏</b><br>
                             &nbsp;&nbsp;<i>* 单人模式也可用鼠标点击地面呼出菜单、点击植物升级/拆除。</i><br>
                             · <b>P2 控制</b>：<b>[方向键] 移动</b> | <b>[1 或 右Shift] 呼出菜单/确认</b> | <b>[0键] 浇水</b> | <b>[2 或 回车] 关闭菜单</b> | <b>[3 或 /键] 角色技能</b> | <b>[加号键] 修门</b> | <b>[5键] 倭瓜技能</b> | <b>[←/→] 菜单切栏</b><br>
+                            · <b>僵尸阵营（扮演僵尸时）</b>：<b>[W/A/S/D] 移动</b> | <b>[M键] 狂暴冲刺(5秒极速免疫)</b> | <b>[G键] 切换优先猎杀目标（令旗指向谁、尸潮集火谁）</b> | <b>[H键] 号令尸潮（一次 3~6 只小鬼僵尸，CD 60 秒）</b>。<i>获胜条件：啃破幸存者的大门、吃掉所有植物。</i><br>
                             · <b>如何建造</b>：走到房间空地按【确认键】弹出建造菜单。<b>菜单分三栏：常用（豌豆射手/小喷菇/路灯花）、陷阱（土豆地雷/地刺）、高级（寒冰菇/毁灭菇/大蒜/盲盒/火爆辣椒/南瓜壳/倭瓜/火炬树桩/樱桃炸弹）</b>；P1 用 A/D、P2 用 ←/→ 切栏，上下键选植物，确认键购买；鼠标点击标签也可切栏。走到已有植物上按确认可升级或拆除（拆除需二次确认）。<br>
                             · <b>房间归属</b>：每人<b>最多可拥有两间房</b>。在无主房间建造即自动认领；你先进去的房间人机绝不抢注；人机临时避难不占房间归属。<br>
                             · <b>倒下规则</b>：双人模式一人倒地<b>游戏不结束</b>（镜头跟随存活者），<b>全员阵亡才算输</b>！结算时累计伤害最高者获 MVP。<br>
                             · <b>门口小推车</b>：每间房门口一台（原版割草机），尸潮逼近自动冲出造成 800 伤害并强力击退眩晕，每局一次性，可用祝福补回。<br>
                             · <b>存活祝福</b>：每 90 秒弹出<b>三选一祝福</b>（阳光雨/孢子潮/狂怒/硬化/丰收浇水/冷却清零/后备推车），P1 用 W/S+F、P2 用 ↑/↓+1 挑选。<b>仅存活者享有——死后化身天使/内鬼不再收到祝福</b>。<br>
                             · <b>死后抉择（单人植物方）</b>：倒下后可二选一化身——<b>😇 天使</b>（N 捕获定身 / M 加速，每捕获一只僵尸 +1 功德：3 功德捕获CD 20s、6 功德定身 5s、9 功德加速CD 20s，帮人机活到胜利）；<b>😈 内鬼</b>（挠门咬人，每拆一株植物或咬杀一名幸存者 +1 堕落值：伤害 +25%、血上限 +10%/层，封顶 6 层，团灭幸存者即胜利）。化身只有一条命，再倒下直接结算。<br>
+                            &nbsp;&nbsp;<i>* v4.0.61 终局判定（新增）：😇 天使=正义方——场上所有僵尸（含内鬼）被消灭即胜利；😈 内鬼=邪恶方——所有植物（幸存者）死光、但不包括内鬼自己，即胜利。此前内鬼把 5 个人机全咬死后游戏永不结束的漏洞已修复。</i><br>
                             · <b>尸潮波次</b>：约 75 秒一波<b>小鬼尸潮</b>；每第 5 波由巨型<b>机甲僵王</b>压阵，击破全员奖励阳光！<br>
                             · <b>昼夜循环（植物作息）</b>：白天 60s / 夜晚 90s。<b>白天阳光系（向日葵/阳光菇/杨桃等）醒来产阳光</b>，夜晚熄灯睡觉（头顶💤）；<b>夜晚小喷菇/路灯花上夜班</b>（白天💤），且僵尸提速 15%。<br>
                             · <b>内鬼机制</b>：开局潜伏一名内鬼，160 秒后反水暴露！它进不去有主的房间，植物可集火击败它，全员奖励 +200🦠。<br>
@@ -680,7 +702,7 @@
 
                             <b style="color:#ff8a8a;">👻 僵尸成长法则（10 级完整形态）</b><br>
                             · 僵尸开局 20 秒出笼，随时间与击杀进阶：<br>
-                            <span style="color:#ff9e9e;">Lv1 普通僵尸 →(30s)→ Lv2 路障 →(90s)→ Lv3 铁桶 →(150s)→ Lv4 橄榄球 → Lv5 铁门 → Lv6 舞王 → Lv7 冰车 → Lv8 小丑 → Lv9 气球 → Lv10 机甲僵王(10万血终极Boss)</span><br>
+                            <span style="color:#ff9e9e;">Lv1 普通僵尸 →(30s)→ Lv2 路障 →(90s)→ Lv3 铁桶 →(150s)→ Lv4 橄榄球 → Lv5 铁门 → Lv6 舞王 → Lv7 冰车 → Lv8 小丑 → Lv9 气球 → Lv10 机甲僵王(51200血终极Boss，v4.0.61 校准：此前 25600 会被豌豆链单发秒杀)</span><br>
                             · <b>打倒僵尸 = 胜利</b>！保护自己的大门，建立坚不可摧的防线吧！<br><br>
 
                             <b style="color:#9dff6b;">🔧 门板法则（v4.0.48）</b><br>
@@ -856,18 +878,18 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1792303740"></script>
-    <script src="js/Board.js?v=1792303740"></script>
-    <script src="js/entities/Entity.js?v=1792303740"></script>
-    <script src="js/entities/Plant.js?v=1792303740"></script>
-    <script src="js/entities/Zombie.js?v=1792303740"></script>
-    <script src="js/entities/Projectile.js?v=1792303740"></script>
-    <script src="js/entities/Sun.js?v=1792303740"></script>
-    <script src="js/managers/WaveManager.js?v=1792303740"></script>
-    <script src="js/managers/CollisionManager.js?v=1792303740"></script>
-    <script src="js/managers/EventManager.js?v=1792303740"></script>
-    <script src="js/GameLoop.js?v=1792303740"></script>
-    <script src="js/HelpGuide.js?v=1792303740"></script>
-    <script src="js/HauntedDorm.js?v=1792303740"></script>
+    <script src="js/InputManager.js?v=1792306938"></script>
+    <script src="js/Board.js?v=1792306938"></script>
+    <script src="js/entities/Entity.js?v=1792306938"></script>
+    <script src="js/entities/Plant.js?v=1792306938"></script>
+    <script src="js/entities/Zombie.js?v=1792306938"></script>
+    <script src="js/entities/Projectile.js?v=1792306938"></script>
+    <script src="js/entities/Sun.js?v=1792306938"></script>
+    <script src="js/managers/WaveManager.js?v=1792306938"></script>
+    <script src="js/managers/CollisionManager.js?v=1792306938"></script>
+    <script src="js/managers/EventManager.js?v=1792306938"></script>
+    <script src="js/GameLoop.js?v=1792306938"></script>
+    <script src="js/HelpGuide.js?v=1792306938"></script>
+    <script src="js/HauntedDorm.js?v=1792306938"></script>
 </body>
 </html>
