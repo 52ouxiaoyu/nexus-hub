@@ -294,27 +294,14 @@ class HauntedDorm {
         ];
     }
 
-    // ===== 僵尸升级链（10级）=====
+    // ===== 僵尸升级链（v4.0.75 精简为 2 阶）=====
+    // 用户要求：僵尸视角重做——不再出现气球僵尸等其它种类，只保留 小鬼僵尸 → 机甲僵王（最终压轴）。
+    // 植物防守视角（另一视角）里看到的 AI 僵尸同样只刷这两种；普通/路障/铁桶/橄榄球/铁门/舞王/冰车/小丑/气球不再出现。
+    // 血量：小鬼 200（沿用原普通僵尸）· 僵王 102400（v4.0.69 最终形态，保最终压迫感）；速度与旧链一致 450。
     static get GHOST_LEVELS() {
-        // 用户要求：僵尸速度变成原来的 3 倍（原来150 -> 450），比玩家还快！
-        // 等级顺序：1 普通，2 路障，3 铁桶，4 橄榄球，后续铁门舞王等
         return [
-            // v4.0.42：血量与植物攻击力曲线匹配（用户铁律：僵尸血量必须跟得上植物翻倍攻击链）——
-            // 豌豆伤害 2^(tier-1) 翻倍，僵尸血量同步 50×2^(L-1)，保证各级「集火数秒」的击杀节奏恒定
-            // v4.0.69：正常僵尸血量整体上调（用户实报"正常僵尸血量太少"）——
-            // 常规形态 ×4：玩家成型后火力轻松过万，旧 50/100/200… 几秒融化毫无对抗；
-            // 最终机甲僵王 ×2（51200→102400）：压轴形态至少吃 3-4 炮（终极豌豆 32768），保最终压迫感
-            { name: '普通僵尸',   img: 'Zombies/Zombie/Zombie.gif',                    hp: 200,   speed: 450 },
-            { name: '路障僵尸',   img: 'Zombies/ConeheadZombie/ConeheadZombie.gif',    hp: 400,   speed: 450 },
-            { name: '铁桶僵尸',   img: 'Zombies/BucketheadZombie/BucketheadZombie.gif', hp: 800,   speed: 450 },
-            { name: '橄榄球僵尸', img: 'Zombies/FootballZombie/FootballZombie.gif',    hp: 1600,  speed: 450 },
-            { name: '铁门僵尸',   img: 'Zombies/ScreenDoorZombie/ScreenDoorZombie.gif', hp: 3200,  speed: 450 },
-            { name: '舞王僵尸',   img: 'Zombies/DancingZombie/0.gif',                  hp: 6400,  speed: 450 },
-            { name: '冰车僵尸',   img: 'Zombies/Zomboni/1.gif',                        hp: 12800, speed: 450 },
-            { name: '小丑僵尸',   img: 'Zombies/JackinTheBoxZombie/0.gif',             hp: 25600, speed: 450 },
-            { name: '气球僵尸',   img: 'Zombies/BalloonZombie/0.gif',                  hp: 51200, speed: 450 },
-            // v4.0.69：最终形态 51200→102400（×2）
-            { name: '机甲僵王',   img: 'Zombies/LGBOSS/0.gif',                         hp: 102400, speed: 450 }
+            { name: '小鬼僵尸',   img: 'Zombies/Imp/0.gif',                   hp: 200,    speed: 450 },
+            { name: '机甲僵王',   img: 'Zombies/LGBOSS/0.gif',                 hp: 102400, speed: 450 }
         ];
     }
     static get GHOST_MAX_LV() { return HauntedDorm.GHOST_LEVELS.length; }
@@ -576,9 +563,9 @@ class HauntedDorm {
             }
             const p1Stats = document.querySelector('#hud-p1 > div:nth-child(2)');
             if (p1Stats) p1Stats.id = 'zombie-stats-bar';
-            this.player.el1.innerHTML = `<img src="assets/images/Zombies/Zombie/0.gif" style="width:150%; height:150%; transform:translate(-20%, -30%);">` +
+            this.player.el1.innerHTML = `<img src="assets/images/${HauntedDorm.GHOST_LEVELS[0].img}" style="width:150%; height:150%; transform:translate(-20%, -30%);">` +
                                         `<div class="lv-badge" style="position:absolute; top:-10px; right:-10px; background:red; color:white; border-radius:10px; padding:4px 8px; font-size:18px; z-index:2;">Lv.1</div>` +
-                                        `<div style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); color:#ff5252; font-size:24px; font-weight:bold; text-shadow:1px 1px 2px black, -1px -1px 2px black; white-space:nowrap;">你 (僵尸)</div>`;
+                                        `<div style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); color:#ff5252; font-size:24px; font-weight:bold; text-shadow:1px 1px 2px black, -1px -1px 2px black; white-space:nowrap;">你 (${HauntedDorm.GHOST_LEVELS[0].name})</div>`;
             this.player.el1.style.filter = `drop-shadow(0 0 10px #ff0000)`;
         } else {
             const p1Name = this.gameMode === '2p' ? `P1 (${this.playerRoleDef1.name})` : `你 (${this.playerRoleDef1.name})`;
@@ -1559,13 +1546,11 @@ class HauntedDorm {
             }
             return;
         }
-        // 僵尸等级按时间平滑升级至 Lv.10（30s→Lv2, 90s→Lv3, 150s→Lv4, 210s→Lv5, 270s→Lv6, 330s→Lv7, 390s→Lv8, 450s→Lv9, 510s→Lv10机甲僵王）
+        // 僵尸等级按时间升级（v4.0.75：僵尸链仅 2 阶——开局小鬼僵尸，5 分钟进化机甲僵王；普通/路障/铁桶/橄榄球/铁门/舞王/冰车/小丑/气球不再出现）
         if (!this.over && this.zombies.length > 0 && !this.zombies[0].dead) {
             const activeSeconds = (time - this.ghostSpawnAt) / 1000;
             const timeLevels = [
-                { s: 30, lv: 1 }, { s: 90, lv: 2 }, { s: 150, lv: 3 },
-                { s: 210, lv: 4 }, { s: 270, lv: 5 }, { s: 330, lv: 6 },
-                { s: 390, lv: 7 }, { s: 450, lv: 8 }, { s: 510, lv: 9 }
+                { s: 300, lv: 2 }
             ];
             for (const step of timeLevels) {
                 // v4.0.68：< 而非 ===——空投"僵尸降级"会拉低 ghostLevel，旧 === 判定从此永不匹配，僵尸等级卡死不升级
@@ -5387,20 +5372,18 @@ class HauntedDorm {
                 this.player.el1.style.filter = '';
             }
             
-            // 玩家僵尸时间升级逻辑（全面拉齐至 Lv.10 机甲僵王；v4.0.44：内鬼不升僵尸形态——保持植物外观与转化时血量）
+            // 玩家僵尸时间升级逻辑（v4.0.75：僵尸链仅 2 阶——5 分钟进化机甲僵王；v4.0.44：内鬼不升僵尸形态——保持植物外观与转化时血量）
             if (!this.playerTraitor) {
             const activeSeconds = this.gameTime / 1000;
             let targetLevel = 1;
             const timeLevels = [
-                { s: 30, lv: 2 }, { s: 90, lv: 3 }, { s: 150, lv: 4 },
-                { s: 210, lv: 5 }, { s: 270, lv: 6 }, { s: 330, lv: 7 },
-                { s: 390, lv: 8 }, { s: 450, lv: 9 }, { s: 510, lv: 10 }
+                { s: 300, lv: 2 }
             ];
             for (const step of timeLevels) {
                 if (activeSeconds >= step.s) targetLevel = step.lv;
             }
-            targetLevel = Math.min(10, targetLevel + (this.kills || 0));
-            if (this.player.level < targetLevel && this.player.level < 10) {
+            targetLevel = Math.min(HauntedDorm.GHOST_MAX_LV, targetLevel + (this.kills || 0));
+            if (this.player.level < targetLevel && this.player.level < HauntedDorm.GHOST_MAX_LV) {
                 this.player.level = targetLevel;
                 this.ghostLevel = this.player.level; // 同步给AI升级判断
                 const cfg = HauntedDorm.GHOST_LEVELS[this.player.level - 1];
