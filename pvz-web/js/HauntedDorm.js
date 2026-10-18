@@ -2536,9 +2536,7 @@ class HauntedDorm {
             if (pl.shootCd > 0) continue;
             const px = pl.c * 80 + 40, py = pl.r * 80 + 40;
             let best = null, bestD = (sh ? sh.range : lob.range);
-            const targets = this.isZombieFaction ? this.allPlayers.filter(p => p.isZombie) : this.zombies.slice();
-            // v4.0.20：内鬼揭露后，植物也会把他当目标
-            if (!this.isZombieFaction && this.traitorRevealed && this.traitor && !this.traitor.dead) targets.push(this.traitor);
+            const targets = this._getHostileTargets();
             for (const zb of targets) {
                 if (zb.dead) continue;
                 const d = Math.hypot(zb.x - px, zb.y - py);
@@ -2627,9 +2625,7 @@ class HauntedDorm {
             const c = Math.floor(pea.x / this.gridSize), r = Math.floor(pea.y / this.gridSize);
             // if (this.walls.has(`${c},${r}`)) pea.life = 0; // 用户要求子弹能穿透墙壁
             // 命中检测（34px）
-            const targets = this.isZombieFaction ? this.allPlayers.filter(p => p.isZombie) : this.zombies.slice();
-            // v4.0.20：内鬼揭露后豌豆也能打中他
-            if (!this.isZombieFaction && this.traitorRevealed && this.traitor && !this.traitor.dead) targets.push(this.traitor);
+            const targets = this._getHostileTargets();
             for (const zb of targets) {
                 if (zb.dead) continue; // 撤退时不再免疫，可以被击杀
                 if (Math.hypot(zb.x - pea.x, zb.y - pea.y) < 34) {
@@ -3115,6 +3111,9 @@ class HauntedDorm {
     _getHostileTargets() {
         const targets = this.isZombieFaction ? this.allPlayers.filter(p => p.isZombie) : this.zombies.slice();
         if (!this.isZombieFaction && this.traitorRevealed && this.traitor && !this.traitor.dead) targets.push(this.traitor);
+        // v4.0.64：玩家内鬼（死后化身）同样被植物方锁定为敌对目标——用户实报"变内鬼后所有豌豆射手都不打我"；
+        // 内鬼等级/血量与当前僵尸一致（_becomeTraitor 按 GHOST_LEVELS[ghostLevel-1] 取），植物理应攻击它
+        if (!this.isZombieFaction && this.playerTraitor && this.player && !this.player.dead) targets.push(this.player);
         return targets;
     }
 
