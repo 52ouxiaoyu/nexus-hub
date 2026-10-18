@@ -1,6 +1,6 @@
 {
-  "version": "v4.0.57-毁灭菇平衡",
+  "version": "v4.0.58-返回主菜单直达首页",
   "build": "2026-10-18",
-  "feature": "v4.0.57：毁灭菇平衡（用户：毁灭菇强度太高）。攻击力从 2048（约机枪射手 8 倍）下调为 512 = 正常机枪射手（gatlingpea dmg=256）的 2 倍，无限射程追踪核爆机制保留——不再是一发秒全屏的核弹，回归大炮定位。图鉴描述同步更新。验证：数值断言通过（512=256×2），v4.0.53 主验证 25/25 + 盲盒专项 13/13 无回归。",
-  "assetVersion": 1792288022
+  "feature": "v4.0.58：返回主菜单直达首页（用户：第二局不想玩了点返回主菜单，要直接回首页而不是一层层划回去）。根因：对局内「返回主菜单」按钮只隐藏了对局层 dorm-screen，而守屋的阵营选择/模式选择/皮肤选择三个弹窗层（z-index 2400）仍显示在首页之上，用户得再点三次返回才能到大厅。修复：①HauntedDorm.js 的 exitDormGame 统一出口新增关闭 dorm-faction-modal / dorm-mode-modal / dorm-role-modal 三个弹窗；②index.html 对局内返回按钮改走 exitDormGame（原只隐藏对局层）；结算界面 ov-home 原本就走 exitDormGame，顺带受益。独立页 haunted-dorm.html 的 location.href 跳转不变。puppeteer 专项 6/6 全绿（启动守屋对局→点返回主菜单→断言对局层隐藏、首页显示、三个弹窗全关、无 JS 错误）。",
+  "assetVersion": 1792288156
 }

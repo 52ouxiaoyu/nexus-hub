@@ -5763,6 +5763,11 @@ window.exitDormGame = function () {
     }
     const dormScreen = document.getElementById('dorm-screen');
     const startMenu = document.getElementById('start-menu') || document.getElementById('start-screen');
+    // v4.0.57：返回首页必须同时关掉守屋的选择弹窗层（阵营/模式/皮肤），否则用户还要一层层点返回
+    ['dorm-faction-modal', 'dorm-mode-modal', 'dorm-role-modal'].forEach(id => {
+        const m = document.getElementById(id);
+        if (m) m.style.display = 'none';
+    });
     if (dormScreen && startMenu) {
         dormScreen.style.display = 'none';
         startMenu.style.display = 'block';
