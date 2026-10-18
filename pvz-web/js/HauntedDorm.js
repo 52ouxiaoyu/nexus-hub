@@ -185,12 +185,13 @@ class HauntedDorm {
                              potatoMine: true, deter: 0.5 },
 
             // —— 路灯花 (v4.0.39：128🦠 种植每 0.4s 产 8☀；升费 1024/2028/4056/4056 🦠，产 32/128/512/1024；v4.0.46：夜班作息——只在夜晚产阳光) ——
-            plantern:      { name: '路灯花', img: 'Plants/Plantern/Plantern.gif', card: 'Plantern.png', hp: 2000, cost: 0, sporeCost: 128, scale: 1.8, nightProduce: true,
+            // v4.0.63：scale 1.8→1.0（用户：路灯花与其他植物大小不一致）——统一为与其它植物一致的尺寸
+            plantern:      { name: '路灯花', img: 'Plants/Plantern/Plantern.gif', card: 'Plantern.png', hp: 2000, cost: 0, sporeCost: 128, scale: 1.0, nightProduce: true,
                              produce: { sun: 8, every: 0.4 }, up: { sporeCost: 1024, to: 'plantern2' } },
-            plantern2:     { name: '路灯花 Lv2', img: 'Plants/Plantern/Plantern.gif', hp: 2500, cost: 0, scale: 1.8, nightProduce: true, produce: { sun: 32, every: 0.4 }, tint: 'brightness(1.1)', up: { sporeCost: 2028, to: 'plantern3' } },
-            plantern3:     { name: '路灯花 Lv3', img: 'Plants/Plantern/Plantern.gif', hp: 3000, cost: 0, scale: 1.8, nightProduce: true, produce: { sun: 128, every: 0.4 }, tint: 'brightness(1.4) drop-shadow(0 0 10px #ff0)', up: { sporeCost: 4056, to: 'plantern4' } },
-            plantern4:     { name: '路灯花 Lv4', img: 'Plants/Plantern/Plantern.gif', hp: 4000, cost: 0, scale: 1.8, nightProduce: true, produce: { sun: 512, every: 0.4 }, tint: 'brightness(1.8) drop-shadow(0 0 20px #ff0)', up: { sporeCost: 4056, to: 'plantern5' } },
-            plantern5:     { name: '路灯花 Lv5', img: 'Plants/Plantern/Plantern.gif', hp: 5000, cost: 0, scale: 1.8, nightProduce: true, produce: { sun: 1024, every: 0.4 }, tint: 'brightness(2.2) drop-shadow(0 0 28px #ffd700)' },
+            plantern2:     { name: '路灯花 Lv2', img: 'Plants/Plantern/Plantern.gif', hp: 2500, cost: 0, scale: 1.0, nightProduce: true, produce: { sun: 32, every: 0.4 }, tint: 'brightness(1.1)', up: { sporeCost: 2028, to: 'plantern3' } },
+            plantern3:     { name: '路灯花 Lv3', img: 'Plants/Plantern/Plantern.gif', hp: 3000, cost: 0, scale: 1.0, nightProduce: true, produce: { sun: 128, every: 0.4 }, tint: 'brightness(1.4) drop-shadow(0 0 10px #ff0)', up: { sporeCost: 4056, to: 'plantern4' } },
+            plantern4:     { name: '路灯花 Lv4', img: 'Plants/Plantern/Plantern.gif', hp: 4000, cost: 0, scale: 1.0, nightProduce: true, produce: { sun: 512, every: 0.4 }, tint: 'brightness(1.8) drop-shadow(0 0 20px #ff0)', up: { sporeCost: 4056, to: 'plantern5' } },
+            plantern5:     { name: '路灯花 Lv5', img: 'Plants/Plantern/Plantern.gif', hp: 5000, cost: 0, scale: 1.0, nightProduce: true, produce: { sun: 1024, every: 0.4 }, tint: 'brightness(2.2) drop-shadow(0 0 28px #ffd700)' },
 
             // —— 特殊 ——
             iceshroom:     { name: '寒冰菇', img: 'Plants/IceShroom/0.gif',  card: 'IceShroom.png',  hp: 99999,  cost: 0, sporeCost: 200, instant: true }, // v4.0.53：涨价 50→200
@@ -212,19 +213,26 @@ class HauntedDorm {
             // —— 高级植物（v4.0.53 新增：火爆辣椒/南瓜壳/倭瓜/火炬树桩/樱桃炸弹，全部 🦠 种植，进「高级」栏） ——
             jalapeno:      { name: '火爆辣椒', img: 'Plants/Jalapeno/Jalapeno.gif', card: 'Jalapeno.png', hp: 2000, cost: 0, sporeCost: 2048,
                              jalapeno: true }, // 距离伤害光环：攻击植物离僵尸越近伤害越高
-            pumpkinshell:  { name: '南瓜壳', img: 'Plants/Plantern/Plantern.gif', card: 'PumpkinHead.png', hp: 3000, cost: 0, sporeCost: 128, scale: 1.8, // 外貌=路灯花不变
-                             tint: 'sepia(1) saturate(1.8) hue-rotate(-20deg) brightness(1.1)',
+            // v4.0.63：南瓜壳外观修复（用户实报：图是路灯花的样子，且 scale 1.8 导致砸罐子套路灯花时路灯花位置下移）——
+            // 改用正常南瓜套立绘 PumpkinHead.gif，scale 统一 1.0，去掉路灯花的 sepia 滤镜
+            pumpkinshell:  { name: '南瓜壳', img: 'Plants/PumpkinHead/PumpkinHead.gif', card: 'PumpkinHead.png', hp: 3000, cost: 0, sporeCost: 128, scale: 1.0,
                              healDoor: 35, up: { sporeCost: 512, to: 'pumpkinshell2' } },
-            pumpkinshell2: { name: '南瓜壳·愈', img: 'Plants/Plantern/Plantern.gif', hp: 3500, cost: 0, sporeCost: 0, scale: 1.8,
-                             tint: 'sepia(1) saturate(2) hue-rotate(-15deg) brightness(1.15)',
+            pumpkinshell2: { name: '南瓜壳·愈', img: 'Plants/PumpkinHead/PumpkinHead.gif', hp: 3500, cost: 0, sporeCost: 0, scale: 1.0,
+                             tint: 'brightness(1.1)',
                              healDoor: 30, up: { sporeCost: 2048, to: 'pumpkinshell3' } },
-            pumpkinshell3: { name: '南瓜壳·愈金', img: 'Plants/Plantern/Plantern.gif', hp: 4000, cost: 0, sporeCost: 0, scale: 1.8,
-                             tint: 'sepia(1) saturate(2.3) hue-rotate(0deg) brightness(1.2) drop-shadow(0 0 6px #ffd54a)',
+            pumpkinshell3: { name: '南瓜壳·愈金', img: 'Plants/PumpkinHead/PumpkinHead.gif', hp: 4000, cost: 0, sporeCost: 0, scale: 1.0,
+                             tint: 'brightness(1.2) drop-shadow(0 0 6px #ffd54a)',
                              healDoor: 20, up: { sporeCost: 8192, to: 'pumpkinshell4' } },
-            pumpkinshell4: { name: '南瓜壳·不朽', img: 'Plants/Plantern/Plantern.gif', hp: 5000, cost: 0, sporeCost: 0, scale: 1.8,
-                             tint: 'sepia(1) saturate(2.5) hue-rotate(10deg) brightness(1.25) drop-shadow(0 0 10px #ffb74d)',
+            pumpkinshell4: { name: '南瓜壳·不朽', img: 'Plants/PumpkinHead/PumpkinHead.gif', hp: 5000, cost: 0, sporeCost: 0, scale: 1.0,
+                             tint: 'brightness(1.3) drop-shadow(0 0 10px #ffb74d)',
                              healDoor: 15 },
-            squash:        { name: '倭瓜',   img: 'Plants/Squash/Squash.gif',    card: 'Squash.png',    hp: 2500, cost: 0, sporeCost: 2048, scale: 1.1,
+            // v4.0.63：倭瓜位置修复（用户实报：躺在向日葵上、身体约等于下一格）——
+            // 素材 Squash.gif 是 100×226 竖条动画帧，主体集中在图片下部 55%~99%，顶部 40% 是空白；
+            // 旧 scale 1.1 在 80×80 格里 contain 后主体被压成 35×50 的小瓜且贴格底 → 视觉错位。
+            // 修复：放大到正常植物尺寸（scale 1.3）+ 底部锚定（imgPos 50% 100%）+
+            // 裁掉顶部 40% 空白（imgClip）→ 主体约 55×75px 与其他植物同规格站进格内。
+            squash:        { name: '倭瓜',   img: 'Plants/Squash/Squash.gif',    card: 'Squash.png',    hp: 2500, cost: 0, sporeCost: 2048, scale: 1.3, raisePx: 4,
+                             imgPos: '50% 100%', imgClip: 'polygon(0 40%, 100% 40%, 100% 100%, 0 100%)',
                              squashSkill: 120 }, // B/5 技能：2分钟CD，打掉僵尸一半血
             torchwood:     { name: '火炬树桩', img: 'Plants/Torchwood/Torchwood.gif', card: 'Torchwood.png', hp: 4000, cost: 0, sporeCost: 2048, scale: 1.1,
                              torch: true }, // 攻击命中产阳光
@@ -1081,7 +1089,7 @@ class HauntedDorm {
         // blend：白底融合素材（Fusions 系列）用 multiply 吃掉白底，避免草地上出现白色方块
         const blend = def.blend ? 'mix-blend-mode:multiply;' : '';
         const baseClip = def.baseClip ? `clip-path:${def.baseClip}; -webkit-clip-path:${def.baseClip};` : '';
-        let inner = `<img src="assets/images/${def.img}" style="width:100%; height:100%; object-fit:contain; transform: scale(${1.2 * scale}) translateY(-10px); ${tint}${doorOpacity}${blend} ${baseClip}">`;
+        let inner = `<img src="assets/images/${def.img}" style="width:100%; height:100%; object-fit:contain; transform: scale(${1.2 * scale}) translateY(${-10 - (def.raisePx || 0)}px); ${tint}${doorOpacity}${blend} ${baseClip} ${def.imgPos ? 'object-position:' + def.imgPos + ';' : ''} ${def.imgClip ? 'clip-path:' + def.imgClip + '; -webkit-clip-path:' + def.imgClip + ';' : ''}">`;
         
         if (def.overlay) {
             const overClip = def.overClip ? `clip-path:${def.overClip}; -webkit-clip-path:${def.overClip};` : '';
