@@ -898,6 +898,11 @@ class Zombie extends Entity {
         
         if (this.hp <= 0 && this.state !== 'DYING') {
             this.state = 'DYING';
+            // v4.0.73 成就：击杀计数（守屋走 dKill、我是僵尸打的是植物不算）
+            if (window.AchTracker) {
+                const _am = window.AchTracker.mode ? window.AchTracker.mode() : null;
+                if (_am && _am !== 'dorm' && _am !== 'iz') window.AchTracker.kill();
+            }
             if (this._danceOwner) this._danceOwner._onBackupDeath(); // v4.0.27：伴舞阵亡回报主人
             if (this.headEl) this.dropPlantHead(); // 头顶植物随僵尸倒地（纯外观）
             this.element.src = this.dieSrc;

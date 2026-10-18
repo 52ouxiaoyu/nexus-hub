@@ -471,6 +471,11 @@ class HauntedDorm {
         this.startTime = 0;
         this.lastTime = performance.now();
         this._animId = requestAnimationFrame(t => this.loop(t));
+        // v4.0.73 成就：守屋开局（防重入）
+        if (window.AchTracker && !this._achStarted) {
+            this._achStarted = true;
+            window.AchTracker.sessionStart('dorm');
+        }
     }
 
 
@@ -1048,6 +1053,8 @@ class HauntedDorm {
             if (!HauntedDorm.DEFS[type] || (HauntedDorm.DEFS[type].instant && type !== 'iceshroom')) type = 'peashooter';
 
             this._flyText(col * 80 + 40, row * 80, '🎁 盲盒开出：' + HauntedDorm.DEFS[type].name + '！', '#ffd54a');
+            // v4.0.73 成就：打开盲盒累计
+            if (window.AchTracker) window.AchTracker.bump('dBlind', 1);
             this.playSfx('plant2.mp3', 0.6);
             if (this.world1) {
                 const fxEl = document.createElement('div');
@@ -1623,6 +1630,8 @@ class HauntedDorm {
         else if (p === this.player) el = document.getElementById('sun1');
         if (el) el.innerText = p.sun;
         this._refreshPopupCurrency();
+        // v4.0.73 成就：守屋阳光累计（仅正向收入）
+        if (n > 0 && window.AchTracker) window.AchTracker.dSun(n);
     }
 
     addSpore(n, p) {
@@ -1633,6 +1642,8 @@ class HauntedDorm {
         else if (p === this.player) el = document.getElementById('spore1');
         if (el) el.innerText = p.spore;
         this._refreshPopupCurrency();
+        // v4.0.73 成就：守屋孢子累计（仅正向收入）
+        if (n > 0 && window.AchTracker) window.AchTracker.dSpore(n);
     }
 
     // v3.90.0：弹窗开着时阳光/孢子变动 → 实时刷新升级按钮的置灰状态（原先只在打开瞬间判断一次）
@@ -1846,6 +1857,8 @@ class HauntedDorm {
     gameOver(win) {
         if (this.over || this._destroyed) return;
         this.over = true;
+        // v4.0.73 成就：守屋胜负
+        if (window.AchTracker) window.AchTracker[win ? 'win' : 'lose']('dorm');
         if (this._gameOverTimer) {
             clearTimeout(this._gameOverTimer);
             this._gameOverTimer = null;
@@ -2196,6 +2209,8 @@ class HauntedDorm {
             const isBoxRoll = (type === 'blindbox');
             spawned.investSun = isBoxRoll ? 0 : cost;
             spawned.investSpore = isBoxRoll ? 0 : sporeCost;
+            // v4.0.73 成就：守屋种植累计（盲盒开出另计 dBlind，不重复计种植）
+            if (window.AchTracker && !isBoxRoll) window.AchTracker.dPlant();
         }
     }
 
@@ -2204,6 +2219,8 @@ class HauntedDorm {
         const p = target || this.player;
         if (p.skillCd > 0) return;
         if (this._zombieFrozen()) return; // v4.0.30：开局 10 秒观察期内不可行动
+        // v4.0.73 成就：释放技能累计（任意阵营）
+        if (window.AchTracker) window.AchTracker.bump('dSkill', 1);
 
         if (this.isZombieFaction) {
             p.skillCd = 60;
@@ -2550,6 +2567,8 @@ class HauntedDorm {
                     e.x = t.x; e.y = t.y;
                     e.path = null; e.pathTimer = 0; e.stuck = 0;
                     pad.cd = 2;
+                    // v4.0.73 成就：使用跳板累计
+                    if (window.AchTracker) window.AchTracker.bump('dJump', 1);
                     this._flyText(e.x, e.y - 24, '⤴ 跳板传送！', '#a9ffa9');
                     this.playSfx('plant.mp3', 0.45);
                     break;
@@ -2913,6 +2932,8 @@ class HauntedDorm {
         this.keys = {}; this.keysJustPressed = {};
         const p = this.player;
         this.playerAngelic = true;
+        // v4.0.73 成就：变身天使累计
+        if (window.AchTracker) window.AchTracker.bump('dAngel', 1);
         // v4.0.60：天使不再是"存活者"——关闭当前祝福并停止 90 秒存活奖励计时
         this.playerMerit = 0; // v4.0.60：功德值（捕获僵尸成长，越救越强）
         if (this.blessing) { this.blessing = null; if (this.blessEl) this.blessEl.style.display = 'none'; }
@@ -2952,6 +2973,8 @@ class HauntedDorm {
         this.keys = {}; this.keysJustPressed = {};
         const p = this.player;
         this.playerTraitor = true;
+        // v4.0.73 成就：变身内鬼累计
+        if (window.AchTracker) window.AchTracker.bump('dTraitor', 1);
         // v4.0.60：内鬼不再是"存活者"——关闭当前祝福并停止 90 秒存活奖励计时
         this.playerCorrupt = 0; // v4.0.60：堕落值（拆门/啃掉植物成长，越拆越凶）
         if (this.blessing) { this.blessing = null; if (this.blessEl) this.blessEl.style.display = 'none'; }
@@ -3092,6 +3115,8 @@ class HauntedDorm {
         this._flyText(door.c * 80 + 40, door.r * 80, `🔧 门板修复 +${door.hp - oldHp} 血`, '#9dff6b');
         this._flyText(p.x, p.y - 30, '🔧 门板修复！', '#9dff6b');
         this.playSfx('plant.mp3', 0.5);
+        // v4.0.73 成就：修门累计
+        if (window.AchTracker) window.AchTracker.bump('dDoors', 1);
         p.nutHealCd = 60;
         this._refreshHud();
     }
@@ -3106,6 +3131,8 @@ class HauntedDorm {
         zb.dead = true;
         this.kills++;
         this.lastKiller = killer; // 记录击杀者
+        // v4.0.73 成就：守屋击杀累计
+        if (window.AchTracker) window.AchTracker.dKill();
 
         // v4.0.20：尸潮小怪 / 巨人 BOSS——只做死亡演出，不触发胜负
         if (zb.isMinion || zb.isBoss) {
@@ -3116,6 +3143,8 @@ class HauntedDorm {
             this.playSfx('scream.mp3', 0.35);
             if (zb.isBoss) {
                 this._announce('🏆 僵王机甲被击毁了！它洒落了一地阳光！', 'points.mp3', true);
+                // v4.0.73 成就：击败机甲僵王
+                if (window.AchTracker) window.AchTracker.bump('dBoss', 1);
                 for (const p of this.allPlayers) if (!p.dead) this.addSun(100, p);
             }
             // 若主僵尸此前已被消灭，检查场上残存威胁是否已全部肃清
@@ -3737,6 +3766,8 @@ class HauntedDorm {
 
         for (let i = 0; i < steps; i++) {
             this.gameTime += dt * 1000;
+            // v4.0.73 成就：守屋时间累计
+            if (window.AchTracker) window.AchTracker.dTime(dt);
             this._tick(dt, this.gameTime);
         }
         
