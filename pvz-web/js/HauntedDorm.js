@@ -967,26 +967,36 @@ class HauntedDorm {
 
     }
 
-    // v4.0.51：盲盒战力下调（用户：盲盒战力值太强）——主池=用户点名的植物（权重10，约占 91%）：
-    // 阳光菇一级二级 / 大蒜 / 寒冰菇 / 路灯花一级二级 / 豌豆射手一级到四级 / 坚果一级 / 小喷菇一级二级；
-    // 其余强力植物（忧郁菇/冰忧郁菇/毁灭菇/机枪射手等）权重 1——开出其他概率很小，但不是没有。
+    // v4.0.56：盲盒奖池再调整（用户：毁灭菇太没可玩性 / 坚果没用还概率高 / 攻击类要更容易出）
+    // —— ①毁灭菇从奖池彻底移除；②坚果权重 10→1、阳光菇权重 10→3（向日葵不在原主池，按"高级植物低概率"入 rare 权重 1）；
+    // ③攻击类大幅加权：豌豆射手 1~5 级（豌豆→卷心菜→玉米→双向→寒冰）全部进主池权重 10，小喷菇系也保持高权重，
+    // 寒冰菇/大蒜/路灯花保留但降为 6；④高级植物（双发/三线/机枪/大喷菇系/高坚果/双子向日葵/向日葵）权重 1——都可能抽到但概率很低。
     _blindBoxType() {
-        const main = [
-            'sunshroom', 'bigsunshroom',                 // 阳光菇 Lv1/Lv2
-            'garlic',                                    // 大蒜
-            'iceshroom',                                 // 寒冰菇（开出即冰全场 5 秒）
-            'plantern', 'plantern2',                     // 路灯花 Lv1/Lv2
-            'peashooter', 'cabbagepult', 'kernelpult', 'dualpea', // 豌豆射手 Lv1–Lv4
-            'wallnut',                                   // 坚果墙 Lv1
-            'puffshroom', 'scaredyshroom'                // 小喷菇 Lv1/Lv2
+        const main10 = [ // 权重 10：攻击类主力——1~5 级豌豆射手 + 小喷菇系（最容易抽到）
+            'peashooter', 'cabbagepult', 'kernelpult', 'dualpea', 'snowpea', // 豌豆射手 Lv1–Lv5
+            'puffshroom', 'scaredyshroom'                                    // 小喷菇 Lv1/Lv2
         ];
-        const rare = [
-            'snowpea', 'repeater', 'threepeater', 'gatlingpea', // 豌豆系 5–8 级
+        const main6 = [ // 权重 6：点名保留但略降
+            'plantern', 'plantern2',  // 路灯花 Lv1/Lv2
+            'iceshroom',              // 寒冰菇（开出即冰全场 5 秒）
+            'garlic'                  // 大蒜
+        ];
+        const main3 = [ // 权重 3：产阳光类调低
+            'sunshroom', 'bigsunshroom' // 阳光菇 Lv1/Lv2
+        ];
+        const main1 = [ // 权重 1：坚果大幅调低（放置价值低，用户点名）
+            'wallnut'
+        ];
+        const rare = [ // 权重 1：高级植物都可能出但概率很低
+            'repeater', 'threepeater', 'gatlingpea', // 豌豆系 6–8 级
             'fumeshroom', 'hypnoshroom', 'sporemine', 'gloompuff', 'icegloom', // 孢子系高阶
-            'tallnut', 'twinsunflower', 'doomshroom'
+            'tallnut', 'twinsunflower', 'sunflower'  // 高坚果 / 双子向日葵 / 向日葵（原主池无向日葵，按低概率入 rare）
         ];
         const weighted = [];
-        for (const t of main) for (let i = 0; i < 10; i++) weighted.push(t);
+        for (const t of main10) for (let i = 0; i < 10; i++) weighted.push(t);
+        for (const t of main6) for (let i = 0; i < 6; i++) weighted.push(t);
+        for (const t of main3) for (let i = 0; i < 3; i++) weighted.push(t);
+        for (const t of main1) weighted.push(t);
         for (const t of rare) weighted.push(t);
         return weighted[Math.floor(Math.random() * weighted.length)];
     }
