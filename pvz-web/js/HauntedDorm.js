@@ -1480,7 +1480,8 @@ class HauntedDorm {
                 { s: 390, lv: 7 }, { s: 450, lv: 8 }, { s: 510, lv: 9 }
             ];
             for (const step of timeLevels) {
-                if (activeSeconds >= step.s && this.ghostLevel === step.lv) {
+                // v4.0.68：< 而非 ===——空投"僵尸降级"会拉低 ghostLevel，旧 === 判定从此永不匹配，僵尸等级卡死不升级
+                if (activeSeconds >= step.s && this.ghostLevel < step.lv) {
                     this._levelUpGhostDirect();
                     break;
                 }
@@ -1522,7 +1523,7 @@ class HauntedDorm {
         if (!this.ghostSpawned) {
             chip.innerText = `👻 僵尸出笼还有 ${Math.max(0, Math.ceil((this.ghostSpawnAt - now) / 1000))}s`;
         } else if (this.ghostRespawnAt > 0) {
-            chip.innerText = `🏆 僵尸已被击杀，游戏胜利！`;
+            chip.innerText = `🏆 主僵尸已被击败！肃清剩余残部即可获胜！`; // v4.0.68：旧文案"游戏胜利"误报——主僵尸死后可能还有波次小怪/内鬼没清
         } else {
             const cfg = HauntedDorm.GHOST_LEVELS[this.ghostLevel - 1];
             const lvTxt = this.ghostLevel >= HauntedDorm.GHOST_MAX_LV
@@ -5019,6 +5020,7 @@ class HauntedDorm {
                                     rm !== playerPhysicalRoom && rm !== p2PhysicalRoom) {
                                     ai.targetRoom = rm;
                                     const p = this._findPath(ai.x, ai.y, rm.frontX, rm.frontY);
+                                    if (!p) continue; // v4.0.68：寻路失败跳过换房（多样化布局下门朝多向，偶发不可达会 null.push 崩溃整帧）
                                     p.push({ x: (rm.x + rm.tpl.beds[0].c) * this.gridSize + 40, y: (rm.y + rm.tpl.beds[0].r) * this.gridSize + 40 });
                                     ai.path = p;
                                     foundNew = true;
@@ -5294,9 +5296,12 @@ class HauntedDorm {
                     // AI 抢到后回家
                     if (pickedByAI.room) {
                         const p = this._findPath(pickedByAI.x, pickedByAI.y, pickedByAI.room.frontX, pickedByAI.room.frontY);
-                        p.push({ x: (pickedByAI.room.x + pickedByAI.room.tpl.beds[0].c) * 80 + 40, y: (pickedByAI.room.y + pickedByAI.room.tpl.beds[0].r) * 80 + 40 });
-                        pickedByAI.path = p;
-                        pickedByAI.targetDrop = null;
+                        if (!p) { pickedByAI.path = null; pickedByAI.targetDrop = null; } // v4.0.68：寻路失败不崩溃，原地等下次重试
+                        else {
+                            p.push({ x: (pickedByAI.room.x + pickedByAI.room.tpl.beds[0].c) * 80 + 40, y: (pickedByAI.room.y + pickedByAI.room.tpl.beds[0].r) * 80 + 40 });
+                            pickedByAI.path = p;
+                            pickedByAI.targetDrop = null;
+                        }
                     }
                     continue;
                 }
