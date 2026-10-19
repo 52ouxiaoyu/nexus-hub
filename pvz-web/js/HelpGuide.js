@@ -196,8 +196,8 @@
     // img=贴图 h=显示高度（按真实体型比例：普通僵尸=70） head=头顶植物 accNote=护甲说明
     const Z_GROUPS = [
         { title: '经典冒险', list: [
-            { n: '巨尸 Boss', img: ZB + 'LGBOSS/1.gif', h: 84, hp: 1000, t: '极后期（15 分钟后）才罕见登场的大型僵尸，血量不厚，当它是个稀客就好' },
-            { n: '巨人僵尸', img: ZB + 'Zombie/Zombie.gif', h: 104, dark: true, hp: 4000, t: '2 倍体型重锤砸扁植物，过半血掷出小鬼' },
+            { n: '巨尸 Boss', img: ZB + 'Gargantuar/0.png', h: 104, hp: 1000, t: '极后期（15 分钟后）才罕见登场，外貌同巨人僵尸；血量不厚，当它是个稀客就好' },
+            { n: '巨人僵尸', img: ZB + 'Gargantuar/0.png', h: 104, hp: 4000, t: '健壮巨人，重锤砸扁植物，过半血掷出小鬼' },
             { n: '冰车僵尸', img: ZB + 'Zomboni/1.gif', h: 90, ice: true, hp: 1300, t: '体型巨大的冰车，碾压植物不留啃痕，驶过之处留下冰道（冰面无法种植，30 秒融化，火爆辣椒可烧毁）；只有地刺能扎爆它' },
             { n: '橄榄球僵尸', img: ZB + 'FootballZombie/FootballZombie.gif', h: 72, hp: 2240, t: '速度 40 的重装骑兵，头盔 1400 护甲；v3.56.0 血量按 4 倍路障上调' },
             { n: '铁桶僵尸', img: ZB + 'BucketheadZombie/BucketheadZombie.gif', h: 70, hp: 1300, t: '铁桶 1100 护甲，桶掉后与普通僵尸无异' },
@@ -214,7 +214,7 @@
         { title: '砸罐子', list: [
             // v3.69.0 整组重写（用户报的 22 种名单）：删掉实际不存在的玩偶盒/铁梯僵尸，
             // 补齐小鬼/伴舞；植物头 7 种+盲盒在"植物头 · 特殊僵尸"组（金罐限定），此处不重复
-            { n: '巨人僵尸', img: ZB + 'Zombie/Zombie.gif', h: 104, dark: true, hp: 4000, t: '金罐限定：2 倍体型重锤砸扁植物，过半血掷出小鬼' },
+            { n: '巨人僵尸', img: ZB + 'Gargantuar/0.png', h: 104, hp: 4000, t: '金罐限定：健壮巨人，重锤砸扁植物，过半血掷出小鬼' },
             { n: '冰车僵尸', img: ZB + 'Zomboni/1.gif', h: 90, ice: true, hp: 1300, t: '金罐限定：碾压植物不留啃痕，驶过之处留下 30 秒冰道；只有地刺能扎爆它' },
             { n: '橄榄球僵尸', img: ZB + 'FootballZombie/FootballZombie.gif', h: 72, hp: 2240, t: '困难/地狱的紫罐与金罐：速度 40 的重装骑兵，头盔 1400 护甲' },
             { n: '舞王僵尸', img: ZB + 'DancingZombie/DancingZombie.gif', h: 72, hp: 500, t: '地狱紫罐限定：每 10 秒召唤一排伴舞' },

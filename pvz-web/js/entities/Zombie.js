@@ -295,13 +295,14 @@ class Zombie extends Entity {
         } else if (type === 'lgboss') {
             // v3.80.0（用户：boss 巨弱爆了没攻击力，血量却跟巨人没区别）——
             // 血量 5000→1000（不再当血牛），刷出移到极后期且低频（WaveManager 900s/2%）
+            // v4.0.82：外貌换成原版伽刚特尔立绘（与巨人僵尸一致），去掉巨型机甲形象
             this.hp = 1000; this.maxHp = 1000;
             this.speed = 10;
-            this.element.src = 'assets/images/Zombies/LGBOSS/1.gif';
-            this.walkSrc = 'assets/images/Zombies/LGBOSS/1.gif';
-            this.attackSrc = 'assets/images/Zombies/LGBOSS/2.gif'; // Assuming 2 is attack
-            this.dieSrc = 'assets/images/Zombies/LGBOSS/BoomDie.gif'; // Or 5.gif? 0.gif is probably idle
-            this.yOffset = -80; // Assuming it's huge
+            this.element.src = 'assets/images/Zombies/Gargantuar/0.png';
+            this.walkSrc = 'assets/images/Zombies/Gargantuar/0.png';
+            this.attackSrc = 'assets/images/Zombies/Gargantuar/0.png';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif'; // v4.0.82：普通死亡倒地（被炸死走 BoomDie）
+            this.yOffset = -10;
         }
 
         // ===== 我是僵尸模式（v3.7.2）：进攻方整体强化 =====
