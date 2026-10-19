@@ -33,9 +33,8 @@ class Zombie extends Entity {
         this.yOffset = -30;
         // v4.0.81：防重叠——同排多只僵尸渲染时轻微上下错位，避免步伐同步完全叠成一张
         this.staggerY = Math.random() * 16 - 8;
-        // v4.0.81：死因（决定死亡图）——''普通倒地 / 'squash'被压扁 / 'boom'被炸毁 / 'burn'被烧毁
+        // v4.0.81：死因（决定死亡图）——''普通倒地 / 'boom'被炸毁 / 'burn'被烧毁（v4.0.83：倭瓜压扁不再单独显示压扁图，统一走普通倒地）
         this.dieType = '';
-        this.squashSrc = 'assets/images/Zombies/ZombieSquashed.png';
         this.boomSrc = 'assets/images/Zombies/BoomDie.gif';
         
         this.isSlowed = false;
@@ -272,11 +271,14 @@ class Zombie extends Entity {
             this.hasThrownImps = false;
             // v4.0.81：巨人僵尸换上原版伽刚特尔立绘（assets/images/Zombies/Gargantuar/0.png），
             // 取消"巨型普通僵尸 scale(2)"的旧效果——现在是健壮、外貌正常的巨人
+            // v4.0.83：图片已重抠（无内部镂空）+留白，战场显示高 200px（普通僵尸 144 的约 1.4 倍），不再过于庞大
             this.element.src = 'assets/images/Zombies/Gargantuar/0.png';
+            this.element.style.height = '200px';
+            this.element.style.width = 'auto';
             this.walkSrc = 'assets/images/Zombies/Gargantuar/0.png';
             this.attackSrc = 'assets/images/Zombies/Gargantuar/0.png';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
-            this.yOffset = -10;
+            this.yOffset = -58; // 与普通僵尸脚底对齐（普通 144 高/yOffset -30 → 底部 +42；巨人 200 高 → -58）
         } else if (type === 'imp') {
             this.hp = 100; this.maxHp = 100;
             this.speed = 35; // fast
@@ -296,13 +298,16 @@ class Zombie extends Entity {
             // v3.80.0（用户：boss 巨弱爆了没攻击力，血量却跟巨人没区别）——
             // 血量 5000→1000（不再当血牛），刷出移到极后期且低频（WaveManager 900s/2%）
             // v4.0.82：外貌换成原版伽刚特尔立绘（与巨人僵尸一致），去掉巨型机甲形象
+            // v4.0.83：战场显示高 200px、脚底与普通僵尸对齐
             this.hp = 1000; this.maxHp = 1000;
             this.speed = 10;
             this.element.src = 'assets/images/Zombies/Gargantuar/0.png';
+            this.element.style.height = '200px';
+            this.element.style.width = 'auto';
             this.walkSrc = 'assets/images/Zombies/Gargantuar/0.png';
             this.attackSrc = 'assets/images/Zombies/Gargantuar/0.png';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif'; // v4.0.82：普通死亡倒地（被炸死走 BoomDie）
-            this.yOffset = -10;
+            this.yOffset = -58;
         }
 
         // ===== 我是僵尸模式（v3.7.2）：进攻方整体强化 =====
@@ -910,11 +915,10 @@ class Zombie extends Entity {
             }
             if (this._danceOwner) this._danceOwner._onBackupDeath(); // v4.0.27：伴舞阵亡回报主人
             if (this.headEl) this.dropPlantHead(); // 头顶植物随僵尸倒地（纯外观）
-            // v4.0.81：死亡图按死因区分——被压扁显示压扁图、被炸毁/烧毁显示爆炸图、其余显示各自倒地动画
+            // v4.0.81：死亡图按死因区分——被炸毁/烧毁显示爆炸图、其余显示各自倒地动画
+            // v4.0.83：倭瓜压扁不再显示压扁图，统一为普通倒地动画
             if (this.burnTimer > 0 && !this.dieType) this.dieType = 'burn';
-            this.element.src = (this.dieType === 'squash') ? this.squashSrc
-                : (this.dieType === 'boom' || this.dieType === 'burn') ? this.boomSrc
-                : this.dieSrc;
+            this.element.src = (this.dieType === 'boom' || this.dieType === 'burn') ? this.boomSrc : this.dieSrc;
             // v3.81.0 双人对战：植物方打死僵尸 → 得该僵尸对应的阳光价
             // （只有僵尸方真实花钱买断入场的僵尸带 _vsPaid；舞王伴舞/盲盒召唤物不算钱）
             if (!this.hypnotized && this.game.vsOnZombieKilled) this.game.vsOnZombieKilled(this);
