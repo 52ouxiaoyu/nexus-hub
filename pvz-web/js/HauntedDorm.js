@@ -4613,8 +4613,9 @@ class HauntedDorm {
         this.waveN++;
         this.waveWarned = false;
         this.waveAt = time + 75000;
-        const n = Math.min(6, 3 + Math.floor(this.waveN / 2));
-        for (let i = 0; i < n; i++) this._spawnMinion();
+        const n = Math.min(4, 2 + Math.floor(this.waveN / 2)); // v4.0.84：3~6 → 2~4（数量减少，战力已翻倍，成群小鬼排成横队不再叠成一坨）
+        const base = this._ghostSpawnPoint(); // v4.0.84：同一波共用同一生成点，小鬼以它为中心排横队
+        for (let i = 0; i < n; i++) this._spawnMinion(false, i, n, base);
         if (this.waveN % 5 === 0) {
             this._spawnBoss();
             this._announce(`🚨 第 ${this.waveN} 波尸潮来袭——巨人僵尸驾到！！`, 'scream.mp3', true);
@@ -4624,13 +4625,24 @@ class HauntedDorm {
         this._updateGhostChip();
     }
 
-    _spawnMinion(isBoss = false) {
+    _spawnMinion(isBoss = false, queueIdx = 0, queueCount = 1, basePoint = null) {
         const lv = this.ghostLevel;
         const cfg = isBoss
             ? { name: '巨人僵尸', img: 'Zombies/Gargantuar/0.png', hp: Math.round(3000 * Math.pow(2, Math.min(this.waveN, 6))), speed: 170 } // v4.0.42：随波次翻倍；v4.0.54：基数 800→3000、封顶 25600→192000；v4.0.81：外观=原版伽刚特尔（正常体型）
-            : { name: '小鬼僵尸', img: 'Zombies/Imp/0.gif', hp: Math.round(100 * Math.pow(2, lv - 1)), speed: 260 }; // v4.0.69：25→100（×4，与主僵尸同步上调；保持"小鬼=主僵尸同级半血"梯度）
-        const p = this._ghostSpawnPoint();
-        const zb = { x: p.x, y: p.y, hp: cfg.hp, maxHp: cfg.hp, speed: cfg.speed, level: lv, cfg: cfg,
+            : { name: '小鬼僵尸', img: 'Zombies/Imp/0.gif', hp: Math.round(200 * Math.pow(2, lv - 1)), speed: 260 }; // v4.0.69：25→100；v4.0.84：100→200（战力翻倍，配合数量减少与排队，成群不再靠堆数量）
+        const p = basePoint || this._ghostSpawnPoint(); // v4.0.84：同一批共用同一生成点，才能排成一条横队
+        // v4.0.84：成群小鬼排成横队——以生成点为中心向两侧错位（约 46px/只），不再全部叠在同一个坐标上
+        let sx = p.x, sy = p.y;
+        if (queueCount > 1) {
+            const off = (queueIdx - (queueCount - 1) / 2) * 46 + (Math.random() * 12 - 6);
+            sx = p.x + off;
+            if (sx < 70 || sx > this.worldWidth - 70 || this.checkCollision(sx, sy, 15, true)) {
+                // 横向撞墙/出界 → 改沿 y 方向用同一偏移错开（竖排），仍保持每只可见不重叠
+                sx = p.x; sy = p.y + off;
+                if (sy < 70 || sy > this.worldHeight - 70 || this.checkCollision(sx, sy, 15, true)) { sx = p.x; sy = p.y; }
+            }
+        }
+        const zb = { x: sx, y: sy, hp: cfg.hp, maxHp: cfg.hp, speed: cfg.speed, level: lv, cfg: cfg,
                      side: Math.random() < 0.5 ? 1 : -1, stuck: 0, detourT: 0, stunT: 0, slowT: 0, dead: false,
                      isMinion: !isBoss, isBoss: isBoss };
         this.zombies.push(zb);
@@ -4844,12 +4856,13 @@ class HauntedDorm {
             return;
         }
         this.waveOrderCd = 60;
-        const n = 3 + Math.floor(Math.random() * 4); // 3~6 只
+        const n = 2 + Math.floor(Math.random() * 3); // v4.0.84：3~6 → 2~4 只（数量减少、战力翻倍、横队排开）
+        const base = this._ghostSpawnPoint(); // v4.0.84：尸潮共用同一生成点排横队
         // v4.0.81：号令尸潮只会出「小鬼僵尸」或「巨人僵尸」——巨人低概率（约 15%）压轴助阵，其余为小鬼
         let bossCount = 0;
         for (let i = 0; i < n; i++) {
-            if (Math.random() < 0.15) { this._spawnMinion(true); bossCount++; }
-            else this._spawnMinion();
+            if (Math.random() < 0.15) { this._spawnMinion(true, i, n, base); bossCount++; }
+            else this._spawnMinion(false, i, n, base);
         }
         this._announce(`🧟 尸潮号令：${n} 只僵尸听令出击${bossCount ? `（含 ${bossCount} 只巨人僵尸！）` : ''}！`, 'evillaugh.mp3', true);
         this._updateGhostChip();
@@ -5817,10 +5830,29 @@ class HauntedDorm {
             // 找综合仇恨值最高的目标（距离、门血量、门等级综合判断）
             zb.targetEvalT = (zb.targetEvalT || 0) + dt;
             let closestTarget = zb.lockedTarget;
-            
-            // 每 8 秒或者当前目标死亡，强制重新评估全场最弱的人
+
+            // v4.0.84：走出房间的玩家优先——任何户外玩家进入近距（220px）立即锁定他，不再等 8 秒重评；
+            // 解决"僵尸锁定目标后不改变，玩家靠得很近也不打"（僵尸一旦咬上某个门就无视身旁的人）
+            const outdoorNow = this.allPlayers.find(pp =>
+                pp.hp > 0 && !pp.dead &&
+                !(this.traitorRevealed && pp === this.traitor) &&
+                !(this.playerTraitor && pp === this.player) &&
+                !(pp === this.player && this.player.stealthT > 0) &&
+                !this._insideRoom(Math.floor(pp.x / this.gridSize), Math.floor(pp.y / this.gridSize)) &&
+                Math.hypot(pp.x - zb.x, pp.y - zb.y) < 220);
+            if (outdoorNow && outdoorNow !== zb.lockedTarget) {
+                zb.lockedTarget = outdoorNow;
+                zb.targetSwitched = true;
+                closestTarget = outdoorNow;
+                if (Math.random() < 0.35) {
+                    const oLines = ["跑出去了？先收拾你！", "有落单的！", "在外面游荡，胆子不小！", "抓住那个出门的！"];
+                    this._say(zb, oLines[Math.floor(Math.random() * oLines.length)], 3500);
+                }
+            }
+
+            // 每 2.5 秒或者当前目标死亡，强制重新评估全场最弱的人（v4.0.84：8 秒→2.5 秒，锁定切换更灵敏）
             if (this.traitorRevealed && zb.lockedTarget === this.traitor) zb.lockedTarget = null; // v4.0.20：僵尸不咬内鬼（自己人）
-            if (!closestTarget || closestTarget.dead || zb.targetEvalT > 8) {
+            if (!closestTarget || closestTarget.dead || zb.targetEvalT > 2.5) {
                 zb.targetEvalT = 0;
                 let minScore = Infinity;
                 let weakestTarget = null;
@@ -5830,6 +5862,8 @@ class HauntedDorm {
                     if (this.playerTraitor && p === this.player) continue; // v4.0.44：玩家内鬼=僵尸方
                     if (p === this.player && this.player.stealthT > 0) continue;
                     let score = Math.hypot(p.x - zb.x, p.y - zb.y);
+                    // v4.0.84：走出房间（户外）的玩家优先级大幅提高——仅次于"门被攻破"（-50000）
+                    if (!this._insideRoom(Math.floor(p.x / this.gridSize), Math.floor(p.y / this.gridSize))) score -= 30000;
                     const rm = p.room || this.rooms.find(r => p.x >= r.x*80 && p.x <= (r.x+r.w)*80 && p.y >= r.y*80 && p.y <= (r.y+r.h)*80);
                     let doorHpScore = 0;
                     if (rm) {
@@ -6057,7 +6091,18 @@ class HauntedDorm {
                     if (by) { zb.y = nzy; moved = true; }
                     if (!moved) {
                         zb.stuck += dt;
-                        if (zb.stuck > 0.4) { zb.detourT = 1; zb.stuck = 0; if (Math.random() < 0.3) zb.side *= -1; }
+                        if (zb.stuck > 0.25) {
+                            // v4.0.84：真正的绕行——不再原地干站：沿前进方向的垂直方向（side 侧）滑动绕开障碍，
+                            // 持续 1.2 秒还绕不开就重置并随机换向；两侧都堵则反向再试
+                            zb.detourT += dt;
+                            if (zb.detourT > 1.2) { zb.detourT = 0; zb.stuck = 0; if (Math.random() < 0.5) zb.side *= -1; }
+                            const perpX = -dy, perpY = dx; // 垂直于前进方向
+                            const px2 = zb.x + perpX * zb.side * spd * 0.75 * dt;
+                            const py2 = zb.y + perpY * zb.side * spd * 0.75 * dt;
+                            if (!this.checkCollision(px2, zb.y, 15, true)) { zb.x = px2; moved = true; }
+                            else if (!this.checkCollision(zb.x, py2, 15, true)) { zb.y = py2; moved = true; }
+                            if (!moved && Math.random() < 0.08) zb.side *= -1; // 两侧都堵 → 换方向
+                        }
                     } else {
                         zb.stuck = 0;
                     }
