@@ -886,9 +886,12 @@ class HauntedDorm {
             }
 
             // 生成床(阳光菇)
-            rm.tpl.beds.forEach(b => {
-                this.spawnPlant(rm.x + b.c, rm.y + b.r, 'sunshroom');
-            });
+            // v4.0.88：每房初始只种 1 株阳光菇（第一张床）——双床房容量保留给「人机/玩家合住」，但不再白送第 2 株初始菇。
+            // 原逻辑每张床都种：随机加床后双人模式抢到双床房的玩家初始阳光产量恰好翻倍（实测 24 vs 48），用户实报 P1/P2 产量不一致
+            if (rm.tpl.beds.length > 0) {
+                const firstBed = rm.tpl.beds[0];
+                this.spawnPlant(rm.x + firstBed.c, rm.y + firstBed.r, 'sunshroom');
+            }
         }
         // 添加地图边界的河道墙，防止玩家走到地图边缘时撞上无形的“空气墙”
         for (let c = 0; c < this.cols; c++) {
@@ -1442,6 +1445,9 @@ class HauntedDorm {
             
             const rm = ai.room;
             if (!rm) continue;
+            // v4.0.88：AI 不在真人玩家（P1/P2）认领的房间里布防（种/升级）——否则 AI 会动到玩家房的初始阳光菇
+            // （开局菇 owner 为 null、回退给房间首个认领者=玩家），随机把玩家产量拉高（实测双人 24 vs 26/48），造成双人资源不均
+            if (rm.owners.some(o => o === this.player || o === this.player2)) continue;
 
                 const myPlants = this.plants.filter(p => (p.c >= rm.x && p.c < rm.x + rm.w && p.r >= rm.y && p.r < rm.y + rm.h) || (p.c === rm.doorCol && p.r === rm.doorRow));
                 const shrooms = myPlants.filter(p => p.def.produce && p.def.produce.sun);
@@ -5256,7 +5262,9 @@ class HauntedDorm {
                         // v4.0.23：玩家的主房/副房/物理所在房间一律不可认领
                         const rmBlockedByPlayer = ai.targetRoom === this.player.room || ai.targetRoom === this.player.room2 ||
                                                   ai.targetRoom === playerPhysicalRoom || ai.targetRoom === p2PhysicalRoom;
-                        if (ai.targetRoom.owners.length < ai.targetRoom.capacity && !rmBlockedByPlayer) {
+                        // v4.0.88：AI 不入住真人玩家（P1/P2）的房间（即使容量有余）——避免同房布防干扰玩家资源
+                        if (ai.targetRoom.owners.length < ai.targetRoom.capacity && !rmBlockedByPlayer &&
+                            !ai.targetRoom.owners.some(o => o === this.player || o === this.player2)) {
                             ai.targetRoom.owners.push(ai);
                             ai.room = ai.targetRoom;
                             ai.speed = 200;
