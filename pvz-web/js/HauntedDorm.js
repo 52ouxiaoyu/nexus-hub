@@ -170,11 +170,11 @@ class HauntedDorm {
             // —— 地刺系 + 土豆雷（v4.0.53：门口可种地刺与土豆雷；火焰地刺改用钢地刺模型+火焰色，图鉴一致） ——
             spikeweed:     { name: '地刺',   img: 'Plants/Spikeweed/Spikeweed.gif',  card: 'Spikeweed.png',  hp: 99999, cost: 0, sporeCost: 50, ground: true,
                              spike: { dps: 4, r: 55 }, up: { sporeCost: 250, to: 'firespikeweed' } },
-            firespikeweed: { name: '火焰地刺',img: 'Plants/Spikerock/Spikerock.gif', hp: 99999, cost: 0, scale: 1.0, tint: 'sepia(1) saturate(3.2) hue-rotate(-22deg) brightness(1.2)', ground: true, // v4.0.53：改用钢地刺模型（火焰钢刺）
+            firespikeweed: { name: '火焰地刺',img: 'Plants/Spikerock/Spikerock.gif', hp: 99999, cost: 0, sporeCost: 250, scale: 1.0, tint: 'sepia(1) saturate(3.2) hue-rotate(-22deg) brightness(1.2)', ground: true, // v4.0.53：改用钢地刺模型（火焰钢刺）；v4.0.87：补 sporeCost——原无价=免费种植
                              spike: { dps: 16, r: 55 }, up: { sporeCost: 1250, to: 'spikerock' } },
-            spikerock:     { name: '钢地刺', img: 'Plants/Spikerock/Spikerock.gif', hp: 99999, cost: 0, scale: 1.0, ground: true,
+            spikerock:     { name: '钢地刺', img: 'Plants/Spikerock/Spikerock.gif', hp: 99999, cost: 0, sporeCost: 6250, scale: 1.0, ground: true, // v4.0.87：补 sporeCost——原无价=免费种植
                              spike: { dps: 64, r: 55 }, up: { sporeCost: 6250, to: 'ultimatefirespikeweed' } },
-            ultimatefirespikeweed: { name: '终极火焰地刺', img: 'Plants/Spikerock/Spikerock.gif', hp: 99999, cost: 0, scale: 1.1, tint: 'hue-rotate(-50deg) saturate(3) drop-shadow(0 0 10px #f00)', ground: true,
+            ultimatefirespikeweed: { name: '终极火焰地刺', img: 'Plants/Spikerock/Spikerock.gif', hp: 99999, cost: 0, sporeCost: 12500, scale: 1.1, tint: 'hue-rotate(-50deg) saturate(3) drop-shadow(0 0 10px #f00)', ground: true, // v4.0.87：补 sporeCost——原无价=免费种植
                              spike: { dps: 256, r: 60 } },
 
             // —— 土豆地雷（v4.0.53 新：门口可种；30 秒引信后伸头待爆；被啃不炸直接消失；威慑僵尸 50% 绕开；升级烈焰地雷） ——
@@ -2003,10 +2003,11 @@ class HauntedDorm {
     }
 
     // v4.0.53：菜单过滤（门格/地刺格/房内）——tab 切换时也会重跑
+    // v4.0.87：门格/地刺格只给地刺+土豆雷——火焰地刺/钢地刺/终极火焰地刺/烈焰地雷不再直接种植（走升级获得；原直接种=免费+秒杀僵尸）
     _applyPlantMenuFilters(isDoorTile, isSpikeTile) {
         const opts = this.plantMenu.querySelectorAll('.plant-option');
-        const doorOk = t => t === 'wallnut' || t === 'spikeweed' || t === 'firespikeweed' || t === 'spikerock' || t === 'ultimatefirespikeweed' || t === 'potatomine' || t === 'firemine';
-        const spikeOk = t => t === 'spikeweed' || t === 'firespikeweed' || t === 'spikerock' || t === 'ultimatefirespikeweed' || t === 'potatomine' || t === 'firemine';
+        const doorOk = t => t === 'wallnut' || t === 'spikeweed' || t === 'potatomine';
+        const spikeOk = t => t === 'spikeweed' || t === 'potatomine';
         opts.forEach(opt => {
             if (isDoorTile) {
                 opt.style.display = doorOk(opt.dataset.t) ? 'block' : 'none';
@@ -4055,7 +4056,8 @@ class HauntedDorm {
     _rebuildKMenuPlantOptions(menu) {
         const p = menu.player || this.player;
         const col = menu.targetCol, row = menu.targetRow;
-        const doorSpike = ['spikeweed', 'firespikeweed', 'spikerock', 'ultimatefirespikeweed', 'potatomine', 'firemine'];
+        // v4.0.87：门格/门邻格只给地刺+土豆雷（火焰地刺/钢地刺/终极火焰地刺/烈焰地雷走升级，不再直接种）
+        const doorSpike = ['spikeweed', 'potatomine'];
         let availableTypes;
         if (col === undefined || row === undefined) {
             availableTypes = HauntedDorm.MENU_TABS[(menu.tab === undefined || menu.tab === null) ? 0 : menu.tab].types.slice();
