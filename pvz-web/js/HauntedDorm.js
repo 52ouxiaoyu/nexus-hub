@@ -5802,9 +5802,9 @@ class HauntedDorm {
         // v3.90.0：啃咬改离散慢咬——站在植物上一口一口啃（2.4s/口），不再逐帧持续扣血（用户：开局啃门要非常慢）；
         //          咬力随等级上涨（升级既涨血量也涨实际战力）
         const lv = this.ghostLevel;
-        const biteDmg = 10 + 8 * (lv - 1);       // 降低伤害（根据用户反馈下调）
+        const biteDmg = 80 + 40 * (lv - 1);       // v4.0.85：攻击力大幅上调（10+8*(lv-1)→80+40*(lv-1)）——原值仅为人机僵尸/内鬼咬伤的 ~1/8~1/14，植物方几乎无压力；现对齐"内鬼(80+40*(lv-1))"档位（玩家僵尸同级为 140+75*(lv-1)，约 1.75 倍）
         const BITE_CD = 2.4;                     // 每口间隔（秒）
-        const touchDps = 12 + 3 * (lv - 1);      // 接触玩家
+        const touchDps = 26 + 6 * (lv - 1);      // 接触玩家（v4.0.85：12+3*(lv-1)→26+6*(lv-1)，翻倍以上）
         let playerHurt = 0;
         for (const zb of [...this.zombies]) {
             if (zb.dead) continue;
