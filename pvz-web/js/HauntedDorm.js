@@ -209,7 +209,7 @@ class HauntedDorm {
             supergarlic:   { name: '蒜味高坚果', img: 'Plants/Garlic/0.gif', card: 'Garlic.png',     hp: 20000, cost: 0, scale: 1.35, // v4.0.53：新——僵尸要啃 10 下才啃掉
                              tint: 'sepia(0.7) saturate(1.6) brightness(0.9) hue-rotate(20deg)',
                              isGarlic: true, biteArmor: 10 },
-            blindbox:      { name: '植物盲盒',img: 'Plants/FlowerPot/0.gif', card: 'PlantBox.png', hp: 100,  cost: 0, sporeCost: 100, isBlindBox: true },
+            blindbox:      { name: '植物盲盒',img: 'Plants/FlowerPot/0.gif', card: 'PlantBox.png', hp: 100,  cost: 0, sporeCost: 200, isBlindBox: true }, // v4.0.86：种植花费 100→200 包子翻倍（开奖质量不变，抑制盲盒过强）
 
             // —— 高级植物（v4.0.53 新增：火爆辣椒/南瓜壳/倭瓜/火炬树桩/樱桃炸弹，全部 🦠 种植，进「高级」栏） ——
             jalapeno:      { name: '火爆辣椒', img: 'Plants/Jalapeno/Jalapeno.gif', card: 'Jalapeno.png', hp: 2000, cost: 0, sporeCost: 2048,
@@ -2558,14 +2558,13 @@ class HauntedDorm {
 
     // v4.0.72：跳板传送——植物方实体（玩家/玩家2/AI/内鬼）踩上跳板 → 瞬移到房间门外空地。
     // 僵尸不触发（否则守屋失去意义）；传送清空 path 防寻路死循环；每跳板 2s 冷却
-    // v4.0.74：拆除规则——路灯花(plantern)、坚果(wallnut/tallnut/nutlv/garlic 大蒜链)、向日葵(sunflower 系)不可拆除
+    // v4.0.74：拆除规则——只有坚果系与向日葵不可拆除，其余（路灯花、大蒜链等）都可拆除
+    // v4.0.86：用户声明"只有坚果和向日葵不可以铲掉，其他都可以"——路灯花(plantern)、大蒜链(garlic…)放开可拆
     _canDemolish(pl) {
         if (!pl) return false;
         const t = pl.type || (pl.def && pl.def.type) || '';
-        if (t === 'plantern' || t.indexOf('plantern') === 0) return false;
         if (t === 'sunflower' || t.indexOf('sunflower') >= 0) return false;
         if (t === 'nut' || t === 'wallnut' || t === 'tallnut' || t.indexOf('nut') === 0) return false;
-        if (t.indexOf('garlic') >= 0) return false; // 大蒜→冰蒜卫士→金蒜坚果→蒜味高坚果 属坚果防御链
         return true;
     }
     _updateJumpPads(dt) {
@@ -2580,8 +2579,11 @@ class HauntedDorm {
             if (pad.cd > 0) { pad.cd -= dt; continue; }
             const px = pad.c * this.gridSize + 40, py = pad.r * this.gridSize + 40;
             for (const e of ents) {
-                if (e.isZombie) continue; // v4.0.72 语义：僵尸（阵营玩家/内鬼）不触发跳板
-                if (Math.hypot(e.x - px, e.y - py) < 34) {
+                // v4.0.86：内鬼（AI isTraitor / 玩家内鬼 playerTraitor）也能踩跳板出门——原 2583 把 isZombie 全排除，
+                // 导致内鬼被自己房间的门锁死只能去钻门（钻门还会卡住）；僵尸阵营的玩家本体（真正的僵尸方）仍不触发跳板
+                if (e.isZombie && !e.isTraitor && !this.playerTraitor) continue;
+                // v4.0.86：触发半径 34→44——AI 内鬼走到跳板旁（40px 停点）即触发传送，不再擦肩而过
+                if (Math.hypot(e.x - px, e.y - py) < 44) {
                     if (e._jumpFly) continue; // 已在飞行中
                     // v4.0.74：跳板改为飞向玩家出生点（地图中心），抛物线动画在 _tick 插值
                     const t = this._jumpPadTarget(rm);
@@ -2831,7 +2833,13 @@ class HauntedDorm {
         this.player.vx = 0; this.player.vy = 0;
         // v4.0.44：单人模式首次阵亡 → 弹出「天使 / 内鬼」抉择框（天使/内鬼形态下再倒下=直接结算）
         // v4.0.48：僵尸阵营不弹抉择（用户实报：当僵尸死了也弹天使/内鬼很抽象）——只有单人植物方才有，僵尸玩家死亡直接结算
+        // v4.0.86：只剩自己存活时不再抉择——人机已全灭=孤家寡人，无人可变天使帮忙/内鬼袭击，直接失败结算
         if (this.gameMode !== '2p' && !this.isZombieFaction && !this.playerAngelic && !this.playerTraitor && !this.over) {
+            if (this._plantSideAlive() === 0) {
+                this._announce('💀 你是最后一位幸存者，也倒下了——全灭！', 'scream.mp3', true);
+                this.gameOver(false);
+                return;
+            }
             this._showFateChoice();
             return;
         }
@@ -3374,7 +3382,10 @@ class HauntedDorm {
 
     _updateDoomshroom(dt) {
         // 毁灭重炮：无限射程重炮，造成真伤
+        // v4.0.86：射程砍半——不再全屏追踪（原 homeR:9999 无论多远都锁定），目标选择与追踪半径都限制在半屏内，
+        //          用户反馈"僵尸都没怎么来我这儿"——全屏重炮让僵尸走不到玩家面前就被轰没，削弱后僵尸有接近机会
         const targets = this._getHostileTargets();
+        const halfRange = Math.max(800, this.worldWidth * 0.5); // 半屏射程（约 1600px，原为无限）
         for (const pl of this.plants) {
             const nk = pl.def.nuke;
             if (!nk || !nk.lob) continue;
@@ -3386,6 +3397,7 @@ class HauntedDorm {
                 for (const zb of targets) {
                     if (zb.dead) continue;
                     const d = Math.hypot(zb.x - pl.c*80, zb.y - pl.r*80);
+                    if (d > halfRange) continue; // v4.0.86：射程外的目标不锁定
                     if (d < bd) { bd = d; best = zb; }
                 }
                 if (!best) continue;
@@ -3410,7 +3422,7 @@ class HauntedDorm {
                     dmg: nk.dmg,
                     pctDmg: nk.pct,
                     homing: true,
-                    homeR: 9999, // 无论多远都追踪
+                    homeR: halfRange, // v4.0.86：半屏追踪（原 9999 全屏无限追踪）
                     speed: 350,
                     owner: nOwner
                 });
@@ -4708,7 +4720,7 @@ class HauntedDorm {
                 const pad = t.room.jumpPad;
                 if (pad) {
                     const padPx = pad.c * this.gridSize + 40, padPy = pad.r * this.gridSize + 40;
-                    if (Math.hypot(t.x - padPx, t.y - padPy) > 40) {
+                    if (Math.hypot(t.x - padPx, t.y - padPy) > 44) { // v4.0.86：44（与跳板触发半径一致）——走到跳板旁即停下等传送，不再反复折返
                         t.path = this._findPath(t.x, t.y, padPx, padPy) || [];
                         if (t.path && t.path.length > 0) t.path.push({ x: padPx, y: padPy });
                         t.pathTimer = 0;
