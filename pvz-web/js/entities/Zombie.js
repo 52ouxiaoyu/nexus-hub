@@ -1324,6 +1324,8 @@ class Zombie extends Entity {
                         if (!this.smashTimer) this.smashTimer = 1.0;
                         this.smashTimer -= deltaTime;
                         if (this.smashTimer <= 0) {
+                            // v4.0.93：巨人压扁植物——锤击秒杀前打标记，植物死亡时保留图像压成扁平 2D 再消失
+                            this.eatTarget._gargSmashed = true;
                             this.eatTarget.hp = 0; // instantly kill
                             this.game.audioManager.play('splat');
                             this.smashTimer = 1.0;
