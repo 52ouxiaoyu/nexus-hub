@@ -364,7 +364,7 @@ class HauntedDorm {
 
         // v4.0.20：尸潮波次 + 昼夜循环 + 内鬼模式
         this.waveN = 0;               // 已到来的尸潮波数
-        this.waveAt = 75000;          // 下一波尸潮时间（ms，游戏时间）
+        this.waveAt = 40000;          // v4.0.91：开局第一波 75000→40000（用户"开局一次僵尸都碰不到"）——后续波仍 75s/波
         this.waveWarned = false;      // 是否已播报「一大波僵尸正在接近」
         this.isNight = false;         // v4.0.46：作息反转后开局即白天——阳光系白天醒着产出（夜晚开局会 90s 零收入死局）；白天 60s
         this.dnNext = 60000;          // 下一次昼夜切换时间（开局白天 60s）
@@ -6073,6 +6073,21 @@ class HauntedDorm {
                         if (!armorBlocked) {
                             atkPlant.hp -= curBiteDmg;
                             this.playSfx('chomp.mp3', 0.25);
+                            // v4.0.91：门残血溅射——门血量 <40% 时，僵尸每口对门格 80px 内的玩家造成 1/4 口溅射伤害
+                            // （门快破=贴门危险，玩家要么补门要么撤离，不再"门在就绝对安全"；正常满门时无溅射）
+                            if (atkPlant.isDoor && atkPlant.hp < atkPlant.maxHp * 0.4) {
+                                const dcx = atkPlant.c * 80 + 40, dcy = atkPlant.r * 80 + 40;
+                                const splash = Math.max(1, Math.round(curBiteDmg * 0.25));
+                                for (const pp of this.allPlayers) {
+                                    if (pp.dead || pp.invincibleT > 0) continue;
+                                    if (this.playerTraitor && pp === this.player) continue;
+                                    if (Math.hypot(pp.x - dcx, pp.y - dcy) < 80) {
+                                        if (pp === this.player) this.player.hp -= splash;
+                                        else { pp.hp -= splash; this.setHp(); if (pp === this.player2) this.flashDamage(); }
+                                        this._flyText(pp.x, pp.y - 24, `-${splash}`, '#ff5252');
+                                    }
+                                }
+                            }
                         }
                         if (atkPlant.def.isGarlic) {
                             this._say(zb, "呸！好臭的大蒜！");
@@ -6138,14 +6153,14 @@ class HauntedDorm {
                 if (p.dead) continue;
                 if (this.traitorRevealed && p === this.traitor) continue; // v4.0.20：僵尸不咬内鬼
                 if (this.playerTraitor && p === this.player) continue; // v4.0.44：僵尸不咬玩家内鬼
-                if (Math.hypot(p.x - zb.x, p.y - zb.y) < 50) {
+                if (Math.hypot(p.x - zb.x, p.y - zb.y) < 80) { // v4.0.91：接触半径 50→80（僵尸更容易蹭到玩家，别开局全程零接触）
                     // 如果中间隔着门（玩家在房间里且门活着，僵尸在外面），则免疫接触伤害
                     const pRm = this._insideRoom(Math.floor(p.x/80), Math.floor(p.y/80));
                     let safeBehindDoor = false;
                     if (pRm) {
                         const doorPlant = this.getPlantAt(pRm.doorCol*80, pRm.doorRow*80);
                         const zRm = this._insideRoom(Math.floor(zb.x/80), Math.floor(zb.y/80));
-                        if (doorPlant && zRm !== pRm) safeBehindDoor = true;
+                        if (doorPlant && zRm !== pRm) safeBehindDoor = true; // 门活着=绝对安全（残门威胁由"门残血溅射"承担）
                     }
                     
                     if (!safeBehindDoor) {
