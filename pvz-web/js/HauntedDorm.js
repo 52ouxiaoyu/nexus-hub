@@ -4648,8 +4648,8 @@ class HauntedDorm {
     _spawnMinion(isBoss = false, queueIdx = 0, queueCount = 1, basePoint = null) {
         const lv = this.ghostLevel;
         const cfg = isBoss
-            ? { name: '巨人僵尸', img: 'Zombies/Gargantuar/0.png', hp: Math.round(3000 * Math.pow(2, Math.min(this.waveN, 6))), speed: 170 } // v4.0.42：随波次翻倍；v4.0.54：基数 800→3000、封顶 25600→192000；v4.0.81：外观=原版伽刚特尔（正常体型）
-            : { name: '小鬼僵尸', img: 'Zombies/Imp/0.gif', hp: Math.round(200 * Math.pow(2, lv - 1)), speed: 260 }; // v4.0.69：25→100；v4.0.84：100→200（战力翻倍，配合数量减少与排队，成群不再靠堆数量）
+            ? { name: '巨人僵尸', img: 'Zombies/Gargantuar/0.png', hp: Math.round(750 * Math.pow(2, Math.min(this.waveN, 6))), speed: 170 } // v4.0.89：血量 ÷4（3000→750），咬合力已 ×2——巨人更疼更脆；v4.0.42：随波次翻倍；v4.0.81：外观=原版伽刚特尔（正常体型）
+            : { name: '小鬼僵尸', img: 'Zombies/Imp/0.gif', hp: Math.round(50 * Math.pow(2, lv - 1)), speed: 260 }; // v4.0.89：血量 ÷4（200→50）——玻璃大炮：咬人疼、但植物几下能清；v4.0.84：100→200（战力翻倍配合数量减少）
         const p = basePoint || this._ghostSpawnPoint(); // v4.0.84：同一批共用同一生成点，才能排成一条横队
         // v4.0.84：成群小鬼排成横队——以生成点为中心向两侧错位（约 46px/只），不再全部叠在同一个坐标上
         let sx = p.x, sy = p.y;
@@ -5823,10 +5823,12 @@ class HauntedDorm {
         // 僵尸AI：追踪玩家，啃食沿途植物，接触玩家掉血；撞墙自动切向绕行
         // v3.90.0：啃咬改离散慢咬——站在植物上一口一口啃（2.4s/口），不再逐帧持续扣血（用户：开局啃门要非常慢）；
         //          咬力随等级上涨（升级既涨血量也涨实际战力）
+        // v4.0.89：咬合力在原版基础上 ×2（用户：僵尸还是太弱）——v4.0.85 已 10+8→80+40，现再翻倍为 160+80，
+        // 1 级一口 160（超过玩家僵尸同级 140），DPS ≈67；接触玩家 52+12*(lv-1)（DPS 翻倍）
         const lv = this.ghostLevel;
-        const biteDmg = 80 + 40 * (lv - 1);       // v4.0.85：攻击力大幅上调（10+8*(lv-1)→80+40*(lv-1)）——原值仅为人机僵尸/内鬼咬伤的 ~1/8~1/14，植物方几乎无压力；现对齐"内鬼(80+40*(lv-1))"档位（玩家僵尸同级为 140+75*(lv-1)，约 1.75 倍）
+        const biteDmg = 160 + 80 * (lv - 1);      // v4.0.89：80+40*(lv-1)→160+80*(lv-1)（×2）
         const BITE_CD = 2.4;                     // 每口间隔（秒）
-        const touchDps = 26 + 6 * (lv - 1);      // 接触玩家（v4.0.85：12+3*(lv-1)→26+6*(lv-1)，翻倍以上）
+        const touchDps = 52 + 12 * (lv - 1);      // 接触玩家（v4.0.89：26+6*(lv-1)→52+12*(lv-1)，×2）
         let playerHurt = 0;
         for (const zb of [...this.zombies]) {
             if (zb.dead) continue;
