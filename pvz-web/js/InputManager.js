@@ -62,6 +62,8 @@ class InputManager {
         }
 
         document.getElementById('seed-bank').addEventListener('mousedown', (e) => {
+            // v4.0.94 人机对战：玩家=僵尸时植物方由 AI 托管，禁用玩家植物操作
+            if (this.game.vsMode && this.game.vsAiMode && this.game.vsPlayerSide === 'zombie') return;
             // 路灯花商店卡：点击=购买（不走拖拽）；阳光不足时给提示
             const shopCard = e.target.closest('.plantern-shop-card');
             if (shopCard) {
@@ -86,6 +88,8 @@ class InputManager {
             const m = /^(Digit|Numpad)([1-8])$/.exec(e.code);
             if (!m) return;
             if (m[1] === 'Digit') {
+                // v4.0.94 人机对战：玩家=僵尸时植物方由 AI 托管，主键盘植物卡禁用
+                if (this.game.vsMode && this.game.vsAiMode && this.game.vsPlayerSide === 'zombie') return;
                 const card = document.querySelectorAll('#seed-bank .seed-card')[Number(m[2]) - 1];
                 if (!card || card.classList.contains('disabled')) return;
                 this.pickSeedCard(card); // 键盘选卡：不出跟随图，鼠标一动 mousemove 自动补上
@@ -101,6 +105,8 @@ class InputManager {
         });
         
         document.getElementById('shovel').addEventListener('mousedown', (e) => {
+            // v4.0.94 人机对战：玩家=僵尸时植物方由 AI 托管，铲子禁用
+            if (this.game.vsMode && this.game.vsAiMode && this.game.vsPlayerSide === 'zombie') return;
             this.isShovelSelected = true;
             this.selectedSeed = null;
             this.game.isGloveActive = false;
@@ -350,7 +356,7 @@ class InputManager {
             // v3.26.0 植物盲盒：拖拽图改回"盲盒图案"（红丝带礼盒）——用户明确盲盒≠问号罐
             // v3.35.0：礼盒重画为宽幅构图，拖拽幽灵同步改宽尺寸
             if (type === 'plantbox') {
-                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1792592238')";
+                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1792592744')";
                 this.dragGhost.style.width = '68px';
                 this.dragGhost.style.height = '50px';
                 this.dragGhost.style.backgroundSize = 'contain';
@@ -362,8 +368,8 @@ class InputManager {
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1792592238`
-                : `assets/images/Plants/${imgName}.gif?v=1792592238`;
+                ? `assets/images/Plants/${imgName}.png?v=1792592744`
+                : `assets/images/Plants/${imgName}.gif?v=1792592744`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
 
             // v3.20.0：倭瓜立绘画布 100×226（身体只占底部 68×82），60×60 contain 后

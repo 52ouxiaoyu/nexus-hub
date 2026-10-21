@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1792592238">
-    <link rel="stylesheet" href="css/haunted-dorm.css?v=1792592238">
+    <link rel="stylesheet" href="css/style.css?v=1792592744">
+    <link rel="stylesheet" href="css/haunted-dorm.css?v=1792592744">
 </head>
 <body>
     <div id="game-container">
@@ -400,11 +400,36 @@
                     <button id="vs-ai" class="diff-btn diff-hell">
                         <span class="diff-name">人机对战</span>
                         <span class="diff-en">VS AI</span>
-                        <span class="diff-desc">你当植物 · AI 当僵尸<br>单人练习首选，规则同普通对战</span>
+                        <span class="diff-desc">开局自选阵营：你当植物或僵尸<br>AI 接管另一边，单人练习首选</span>
                     </button>
                 </div>
                 <div class="diff-foot">
                     <button id="vs-back">返回主菜单</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- v4.0.94 人机对战：阵营选择弹窗 -->
+        <div id="vs-side-modal" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.78); z-index:2400; align-items:center; justify-content:center; flex-direction:column;">
+            <div class="diff-panel" style="width: auto;">
+                <div class="diff-title">人机对战<span>VS AI · 选择你的阵营</span></div>
+                <div class="diff-sub">你想扮演植物防守，还是化身僵尸进攻？</div>
+                <div class="diff-row" style="gap: 20px;">
+                    <button id="btn-vs-side-plant" class="diff-btn diff-easy" style="width:200px;">
+                        <img src="assets/images/Plants/SunFlower/0.gif" style="height:80px; margin-bottom:8px;">
+                        <span class="diff-name" style="font-size:24px;">扮演植物</span>
+                        <span class="diff-en">PLANT</span>
+                        <span class="diff-desc">你种植物防守<br>AI 操控僵尸进攻</span>
+                    </button>
+                    <button id="btn-vs-side-zombie" class="diff-btn diff-hard" style="width:200px;">
+                        <img src="assets/images/Zombies/Zombie/0.gif" style="height:80px; margin-bottom:8px;">
+                        <span class="diff-name" style="font-size:24px;">扮演僵尸</span>
+                        <span class="diff-en">ZOMBIE</span>
+                        <span class="diff-desc">你召唤僵尸进攻<br>AI 操控植物防守</span>
+                    </button>
+                </div>
+                <div class="diff-foot">
+                    <button id="btn-vs-side-back">返回</button>
                 </div>
             </div>
         </div>
@@ -878,19 +903,19 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1792592238"></script>
-    <script src="js/Board.js?v=1792592238"></script>
-    <script src="js/entities/Entity.js?v=1792592238"></script>
-    <script src="js/entities/Plant.js?v=1792592238"></script>
-    <script src="js/entities/Zombie.js?v=1792592238"></script>
-    <script src="js/entities/Projectile.js?v=1792592238"></script>
-    <script src="js/entities/Sun.js?v=1792592238"></script>
-    <script src="js/managers/WaveManager.js?v=1792592238"></script>
-    <script src="js/managers/CollisionManager.js?v=1792592238"></script>
-    <script src="js/managers/EventManager.js?v=1792592238"></script>
-    <script src="js/GameLoop.js?v=1792592238"></script>
-    <script src="js/HelpGuide.js?v=1792592238"></script>
-    <script src="js/Achievements.js?v=1792592238"></script>
-    <script src="js/HauntedDorm.js?v=1792592238"></script>
+    <script src="js/InputManager.js?v=1792592744"></script>
+    <script src="js/Board.js?v=1792592744"></script>
+    <script src="js/entities/Entity.js?v=1792592744"></script>
+    <script src="js/entities/Plant.js?v=1792592744"></script>
+    <script src="js/entities/Zombie.js?v=1792592744"></script>
+    <script src="js/entities/Projectile.js?v=1792592744"></script>
+    <script src="js/entities/Sun.js?v=1792592744"></script>
+    <script src="js/managers/WaveManager.js?v=1792592744"></script>
+    <script src="js/managers/CollisionManager.js?v=1792592744"></script>
+    <script src="js/managers/EventManager.js?v=1792592744"></script>
+    <script src="js/GameLoop.js?v=1792592744"></script>
+    <script src="js/HelpGuide.js?v=1792592744"></script>
+    <script src="js/Achievements.js?v=1792592744"></script>
+    <script src="js/HauntedDorm.js?v=1792592744"></script>
 </body>
 </html>
