@@ -2436,7 +2436,7 @@ function initInput() {
     spinBall.addEventListener('pointercancel', () => { spinDrag = false; });
 
     $('btn-view').addEventListener('click', cycleView);
-    $('btn-restart').addEventListener('click', () => startGame(vsAI, aiLevel));
+    $('btn-restart').addEventListener('click', () => startGame(vsAI, aiLevel, gameMode));   // v2.8.6：补传模式，重开不再掉回八球
 }
 
 function cycleView() {
@@ -2591,7 +2591,7 @@ function animate(now) {
 function startGame(_vsAI, level, mode) {
     vsAI = _vsAI;
     aiLevel = level;
-    gameMode = mode || 'pool8';
+    gameMode = mode || gameMode || 'pool8';   // v2.8.6：未显式指定模式时保持当前模式（防重开/再来一局掉回八球）
     snooker = gameMode === 'snooker' ? { scores: [0, 0], onColour: false } : null;
     rebuildPockets();
     if (snookerDecal) snookerDecal.visible = gameMode === 'snooker';
