@@ -1374,8 +1374,49 @@ class HauntedDorm {
         }, 2200);
     }
 
+    // ===== v4.0.101：2p 挂机托管（用户：双人模式中一人原地不动、屏幕上没行动痕迹 → 自动 AI 托管，实力≈普通人机）=====
+    // 判定：P1/P2 各自键位 10 秒无任何输入 → AI 接管（复用人机移动/认领/建造全链路，实力天然同档）
+    // 归还：该玩家一按自己的键立即拿回控制权；天使/内鬼形态与 1p 模式不托管
+    _updateAfkHost() {
+        if (this.gameMode !== '2p' || this.over) return;
+        const now = performance.now();
+        const AFK_MS = 10000;
+        for (const p of [this.player, this.player2]) {
+            if (!p || p.isAi || p.dead) continue;
+            if (p === this.player && (this.playerAngelic || this.playerTraitor)) continue; // 天使/内鬼玩法不托管
+            if (p._lastInputAt === undefined) { p._lastInputAt = now; continue; } // 首帧基准
+            if (!p._afkHost) {
+                if (now - p._lastInputAt >= AFK_MS) {
+                    p._afkHost = true;
+                    p.actTimer = 1; // 托管后 1 秒内开始第一行动
+                    const who = p === this.player ? 'P1' : 'P2';
+                    this._announce(`🤖 ${who} 超过 10 秒没有行动，AI 开始托管（按任意键拿回控制权）`);
+                    this._flyText(p.x, p.y - 40, '🤖 AI 托管中', '#7fd8ff');
+                    // 关掉挡事的菜单：托管者不再需要键盘菜单（菜单开着会挡真人移动段，AI 寻路不受影响）
+                    if (p === this.player2) { if (this.kmenus[2] && this.kmenus[2].active) { this.kmenus[2].active = false; if (this.p2Kmenu) this.p2Kmenu.style.display = 'none'; } }
+                    else {
+                        if (this.kmenus[1] && this.kmenus[1].active) { this.kmenus[1].active = false; if (this.p1Kmenu) this.p1Kmenu.style.display = 'none'; }
+                        if (this.popup && this.popup.style.display === 'block') this._closePopup();
+                    }
+                }
+            } else if (now - p._lastInputAt < 100) { // 刚收到本方按键 → 立即归还
+                p._afkHost = false;
+                p.path = null; p.fleeing = false; p.fled = false; p.fleeFrom = null; p.newRoom = null; p.speed = 200;
+                this._flyText(p.x, p.y - 40, '🙋 控制权已归还', '#9dff6b');
+                this.playSfx('readysetplant.mp3', 0.35);
+            }
+        }
+    }
+
     _updateAIs(dt) {
-        for (const ai of this.ais) {
+        // v4.0.101：2p 挂机托管——10 秒无操作的真人由 AI 以普通人机实力接管（行为全链路复用人机逻辑）
+        const hostList = this.ais.slice();
+        if (this.gameMode === '2p') {
+            for (const h of [this.player, this.player2]) {
+                if (h && h._afkHost && !h.dead && !h.isAi && h !== this.traitor) hostList.push(h);
+            }
+        }
+        for (const ai of hostList) {
             if (ai.dead) continue;
             if (ai._jumpFly) continue; // v4.0.74：跳板飞行中 AI 不寻路不行动
             if (ai === this.traitor && this.traitorRevealed) continue; // v4.0.20：内鬼由 _updateTraitor 接管
@@ -1447,7 +1488,8 @@ class HauntedDorm {
             if (!rm) continue;
             // v4.0.88：AI 不在真人玩家（P1/P2）认领的房间里布防（种/升级）——否则 AI 会动到玩家房的初始阳光菇
             // （开局菇 owner 为 null、回退给房间首个认领者=玩家），随机把玩家产量拉高（实测双人 24 vs 26/48），造成双人资源不均
-            if (rm.owners.some(o => o === this.player || o === this.player2)) continue;
+            // v4.0.101：托管中的真人（ai 本身）允许发育自己的房——o !== ai 排除自身
+            if (rm.owners.some(o => (o === this.player || o === this.player2) && o !== ai)) continue;
 
                 const myPlants = this.plants.filter(p => (p.c >= rm.x && p.c < rm.x + rm.w && p.r >= rm.y && p.r < rm.y + rm.h) || (p.c === rm.doorCol && p.r === rm.doorRow));
                 const shrooms = myPlants.filter(p => p.def.produce && p.def.produce.sun);
@@ -1775,6 +1817,7 @@ class HauntedDorm {
 
     _say(entity, text, duration = 3000) {
         if (!entity || !entity.el1) return;
+        if (entity._afkHost) return; // v4.0.101：托管中的真人不冒 AI 台词
         if (entity.chatBubble) entity.chatBubble.remove();
         
         const bubble = document.createElement('div');
@@ -2396,6 +2439,17 @@ class HauntedDorm {
             }
             if ((key === 'h' || e.code === 'KeyH') && !e.repeat && this.isZombieFaction && this.player && !this.player.dead) {
                 this._orderHorde();
+            }
+            // v4.0.101：2p 挂机托管——按键位归属记录各方最后输入时间（P1=WASD/F/J/M/N/B/空格/G/K/AltRight，P2=数字小键盘/方向键/回车等）
+            if (this.gameMode === '2p') {
+                const c = e.code || '';
+                const k = key;
+                const p1Key = c.startsWith('Key') || c === 'Space' || c === 'AltRight';
+                const p2Key = c.startsWith('Arrow') || c.startsWith('Numpad') || c.startsWith('Digit') ||
+                              c === 'Enter' || c === 'Delete' || c === 'ControlRight' || c === 'PageDown' || c === 'Slash' || c === 'ShiftRight';
+                const now = performance.now();
+                if (p1Key && !p2Key && this.player) this.player._lastInputAt = now;
+                if (p2Key && !p1Key && this.player2) this.player2._lastInputAt = now;
             }
         };
 
@@ -4974,6 +5028,7 @@ class HauntedDorm {
         }
         for (const zb of this.zombies) { if (zb.hitFlashT > 0) zb.hitFlashT -= dt; }
         this._updateGhostDirector(time);
+        this._updateAfkHost();        // v4.0.101：2p 挂机托管判定（须在 _updateAIs 前更新 _afkHost 标志）
         this._updateAIs(dt);
         this._updateWaves(time);      // v4.0.20：尸潮波次
         this._updateDayNight(time);   // v4.0.20：昼夜循环
@@ -5081,7 +5136,14 @@ class HauntedDorm {
         this.keysJustPressed = {}; // 清空单帧按键缓存
 
         // 人机开局自动寻路（按路点走到床位，避免穿模穿墙）
-        for (const ai of this.ais) {
+        // v4.0.101：托管中的真人（P1/P2 挂机 10s）同样进入本循环，按人机方式寻路/避难/认领房
+        const aiMoveList = this.ais.slice();
+        if (this.gameMode === '2p') {
+            for (const h of [this.player, this.player2]) {
+                if (h && h._afkHost && !h.dead && !h.isAi && h !== this.traitor) aiMoveList.push(h);
+            }
+        }
+        for (const ai of aiMoveList) {
             if (ai.dead) continue;
             
             // 发现僵尸逻辑（v4.0.33：原只检测 zombies[0] 一只——其他僵尸贴脸也发现不了，AI 会撞进僵尸群里）
