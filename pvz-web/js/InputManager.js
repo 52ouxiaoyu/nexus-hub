@@ -56,6 +56,11 @@ class InputManager {
                     return;
                 }
                 // v3.82.0：点击僵尸卡 = 直接召唤到"亮起行"（行由 ↑↓ 方向键选择），不再两段式点草坪
+                // v4.0.102：僵尸方玩家死亡/变身后不再有召唤权
+                if (this.game._vsSideHuman && this.game._vsSideHuman('p2') && this.game.vsFate && this.game.vsFate.p2.state !== 'alive') {
+                    this.game.showAnnouncement('你已阵亡——按 1（天使）/ 2（内鬼）变身，不再有召唤权', '#ff6a6a');
+                    return;
+                }
                 this.game.deployZombie(card.dataset.type, this.game.vsSpawnRow);
                 this.dragGhost.style.display = 'none';
             });
@@ -64,6 +69,11 @@ class InputManager {
         document.getElementById('seed-bank').addEventListener('mousedown', (e) => {
             // v4.0.94 人机对战：玩家=僵尸时植物方由 AI 托管，禁用玩家植物操作
             if (this.game.vsMode && this.game.vsAiMode && this.game.vsPlayerSide === 'zombie') return;
+            // v4.0.102：植物方玩家死亡/变身后不再有种植权（当摆设）
+            if (this.game.vsMode && this.game._vsSideHuman && this.game._vsSideHuman('p1') && this.game.vsFate && this.game.vsFate.p1.state !== 'alive') {
+                this.game.showAnnouncement('你已阵亡——按 N（天使）/ M（内鬼）变身，不再有种植权', '#ff6a6a');
+                return;
+            }
             // 路灯花商店卡：点击=购买（不走拖拽）；阳光不足时给提示
             const shopCard = e.target.closest('.plantern-shop-card');
             if (shopCard) {
@@ -81,6 +91,8 @@ class InputManager {
         document.addEventListener('keydown', (e) => {
             if (e.repeat) return;
             if (!this.game.vsMode || this.game.state !== 'PLAYING' || this.game.paused) return;
+            // v4.0.102：天使/内鬼死亡变身系统优先消费按键（变身选择/形态技能/死者指挥权冻结）
+            if (this.game._vsFateKeydown && this.game._vsFateKeydown(e)) return;
             // v3.82.0：↑↓ 移动亮起行；按 0 = 僵尸方投降（植物方胜）
             if (e.code === 'ArrowUp') { this.game.vsMoveRow(-1); e.preventDefault(); return; }
             if (e.code === 'ArrowDown') { this.game.vsMoveRow(1); e.preventDefault(); return; }
@@ -95,6 +107,8 @@ class InputManager {
                 this.pickSeedCard(card); // 键盘选卡：不出跟随图，鼠标一动 mousemove 自动补上
                 e.preventDefault();
             } else {
+                // v4.0.102：僵尸方玩家死亡/变身后不再有召唤权（当摆设）
+                if (this.game._vsSideHuman && this.game._vsSideHuman('p2') && this.game.vsFate && this.game.vsFate.p2.state !== 'alive') return;
                 const card = document.querySelectorAll('#vs-bottom-bar .zcard')[Number(m[2]) - 1];
                 if (!card || card.classList.contains('disabled')) return;
                 // v3.82.0：小键盘数字 = 直接召唤对应僵尸到亮起行
@@ -217,6 +231,13 @@ class InputManager {
                 return;
             }
             if (this.selectedSeed || this.isShovelSelected) {
+                // v4.0.102：植物方玩家死亡/变身后不再有种植/铲除权（当摆设）
+                if (this.game.vsMode && this.game._vsSideHuman && this.game._vsSideHuman('p1') && this.game.vsFate && this.game.vsFate.p1.state !== 'alive') {
+                    this.selectedSeed = null;
+                    this.isShovelSelected = false;
+                    this.dragGhost.style.display = 'none';
+                    return;
+                }
                 const rect = this.container.getBoundingClientRect();
                 const scale = window.gameScale || 1;
                 const mouseX = (e.clientX - rect.left) / scale;

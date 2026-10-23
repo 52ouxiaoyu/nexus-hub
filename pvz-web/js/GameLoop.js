@@ -1067,6 +1067,7 @@ class Game {
         this.zombieMode = false;
         this.vsMode = true;
         this.vsSpawnRow = 0; // v3.82.0 亮起行复位到第一排
+        this.initVsFate();   // v4.0.102：天使/内鬼死亡变身系统
         
         // 深拷贝种卡数据，以免污染全局植物库
         this.selectedSeeds = this.vsPlantSeeds.map(s => Object.assign({}, s)); 
@@ -1190,7 +1191,8 @@ class Game {
         setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 1500);
     }
 
-    // 胜负检测：僵尸方破产（场上无活僵尸 + 脑子买不起最便宜的僵尸，持续 2.5s）→ 植物方胜
+    // 胜负检测：僵尸方破产（场上无活僵尸 + 脑子买不起最便宜的僵尸，持续 2.5s）
+    // v4.0.102：僵尸方玩家存活时破产 = 「第一次死亡」（变身机会）；已变身/等待中破产 = 植物方胜
     _checkVsEnd(dt) {
         if (this.state !== 'PLAYING') return;
         const hasZombie = this.entities.some(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized);
@@ -1199,10 +1201,20 @@ class Game {
         const minCost = this.vsZombiePicks && this.vsZombiePicks.length > 0
             ? Math.min(...this.vsZombiePicks.map(t => costs[t]))
             : Math.min(...Object.values(costs));
-            
-        if (hasZombie || this.zombieSun >= minCost) { this._vsWinTimer = 0; return; }
+
+        // v4.0.102：僵尸方玩家已死亡/变身（非内鬼在场）后，攒下的脑子不再救场——僵尸阵营彻底无力即植物方胜
+        const p2Human = this._vsSideHuman ? this._vsSideHuman('p2') : true;
+        const f2 = this.vsFate ? this.vsFate.p2 : null;
+        const brainCounts = !(p2Human && f2 && f2.state !== 'alive');
+
+        if (hasZombie || (brainCounts && this.zombieSun >= minCost)) { this._vsWinTimer = 0; return; }
         this._vsWinTimer = (this._vsWinTimer || 0) + dt;
-        if (this._vsWinTimer >= 2.5) this.vsPlantWin();
+        if (this._vsWinTimer >= 2.5) {
+            this._vsWinTimer = 0;
+            if (p2Human && f2 && f2.state === 'alive') this._vsTriggerDeath('p2');
+            // f2.state==='dead'：等待变身中（20s 超时由 _updateVsFate 判负），僵尸全灭不立即结算
+            else if (!(p2Human && f2 && f2.state === 'dead')) this.vsPlantWin();
+        }
     }
 
     _vsEndOverlay(title, sub, color) {
@@ -1317,6 +1329,302 @@ class Game {
         this._vsEndOverlay('🌻 植物方获胜！', '僵尸大军破产覆没', '#2e6b1e');
     }
 
+    // ===== v4.0.102 双人对战：天使/内鬼（死亡变身）=====
+    // 规则（用户定案）：①植物方=僵尸走进房子（防线破）→「第一次死亡」，僵尸方=破产 → 死亡，不直接判负；
+    // ②死亡后按键变身：P1(植物方) N=天使/M=内鬼，P2(僵尸方) 主键盘1=天使/2=内鬼；变身前原指挥权失效（当摆设）；
+    // ③天使=N捕获(100%定身最近僵尸，功德6→定身5s)+M疾跑6s，双 CD 20s；内鬼=M(P1)/1(P2)狂暴（6s 挠植物伤害翻倍+移速×1.5，CD 30s），
+    //   内鬼像僵尸一样挠植物、僵尸不打内鬼（同阵营）；④形态被杀=对方阵营直接获胜；死亡后 20 秒不变身=判负；⑤人机模式 AI 侧不变身照旧判负。
+    initVsFate() {
+        if (this.vsFate) { this._vsFateCleanup(); }
+        this.vsFate = {
+            p1: { state: 'alive', waitT: 0, ent: null },   // p1=植物方玩家（双人为 P1，人机模式 vsPlayerSide='plant' 时为真人）
+            p2: { state: 'alive', waitT: 0, ent: null }    // p2=僵尸方玩家
+        };
+        this._vsKeys = { p1: {}, p2: {} };
+        if (!this._vsKeyupBound) {
+            this._vsKeyupBound = true;
+            window.addEventListener('keyup', (e) => {
+                if (!this.vsFate) return;
+                const c = e.code;
+                const m1 = { KeyW: 'up', KeyA: 'left', KeyS: 'down', KeyD: 'right' };
+                const m2 = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+                if (m1[c]) this._vsKeys.p1[m1[c]] = false;
+                if (m2[c]) this._vsKeys.p2[m2[c]] = false;
+            });
+        }
+        // 形态状态条（血量/CD/等待倒计时）
+        if (!this._vsFateHud) {
+            this._vsFateHud = document.createElement('div');
+            this._vsFateHud.style.cssText = 'position:absolute; top:52px; left:50%; transform:translateX(-50%); z-index:620; display:none; font-size:13px; font-weight:bold; text-shadow:2px 2px 0 #000; pointer-events:none; font-family:"Kaiti SC","STKaiti",serif; white-space:nowrap;';
+            this.container.appendChild(this._vsFateHud);
+        }
+    }
+
+    _vsSideHuman(side) {
+        if (!this.vsAiMode) return true;
+        // side('p1'=植物方/'p2'=僵尸方) 映射到 vsPlayerSide('plant'/'zombie')
+        return (side === 'p1' ? 'plant' : 'zombie') === this.vsPlayerSide;
+    }
+
+    // 变身系统是否消费该键（InputManager 键盘 handler 最先调用；true=吃掉）
+    _vsFateKeydown(e) {
+        if (!this.vsMode || !this.vsFate || this.state !== 'PLAYING' || this.paused) return false;
+        const c = e.code;
+        const m1 = { KeyW: 'up', KeyA: 'left', KeyS: 'down', KeyD: 'right' };
+        const m2 = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+        if (m1[c]) this._vsKeys.p1[m1[c]] = true;
+        if (m2[c]) this._vsKeys.p2[m2[c]] = true;
+        const f1 = this.vsFate.p1, f2 = this.vsFate.p2;
+        const h1 = this._vsSideHuman('p1'), h2 = this._vsSideHuman('p2');
+        let consumed = false;
+        if (h1 && f1.state === 'dead' && !e.repeat) {
+            if (c === 'KeyN') { this._vsBecome('p1', 'angel'); consumed = true; }
+            else if (c === 'KeyM') { this._vsBecome('p1', 'traitor'); consumed = true; }
+        } else if (h1 && f1.state === 'angel' && !e.repeat) {
+            if (c === 'KeyN') { this._vsAngelCapture('p1'); consumed = true; }
+            else if (c === 'KeyM') { this._vsAngelSpeed('p1'); consumed = true; }
+        } else if (h1 && f1.state === 'traitor' && !e.repeat) {
+            if (c === 'KeyM') { this._vsRage('p1'); consumed = true; }
+        }
+        if (!consumed && h2 && f2.state === 'dead' && !e.repeat) {
+            if (c === 'Digit1') { this._vsBecome('p2', 'angel'); consumed = true; }
+            else if (c === 'Digit2') { this._vsBecome('p2', 'traitor'); consumed = true; }
+        } else if (!consumed && h2 && f2.state === 'angel' && !e.repeat) {
+            if (c === 'Digit1') { this._vsAngelCapture('p2'); consumed = true; }
+            else if (c === 'Digit2') { this._vsAngelSpeed('p2'); consumed = true; }
+        } else if (!consumed && h2 && f2.state === 'traitor' && !e.repeat) {
+            if (c === 'Digit1') { this._vsRage('p2'); consumed = true; }
+        }
+        if (consumed) { e.preventDefault(); return true; }
+        // P2 变身/等待中：方向键归形态移动，不再移动亮起行（并阻止页面滚动）
+        if (h2 && f2.state !== 'alive' && m2[c]) { e.preventDefault(); return true; }
+        // P1 变身/等待中：主键盘数字不再选植物卡（已无指挥权）
+        if (h1 && f1.state !== 'alive' && /^Digit[1-8]$/.test(c)) return true;
+        return false;
+    }
+
+    _vsTriggerDeath(side) {
+        const f = this.vsFate[side];
+        if (!f || f.state !== 'alive') return;
+        f.state = 'dead';
+        f.waitT = 20; // 20 秒内不变身 = 判负（防挂机僵局）
+        const who = side === 'p1' ? 'P1（植物方）' : 'P2（僵尸方）';
+        const keys = side === 'p1' ? 'N=😇天使 / M=😈内鬼' : '主键盘 1=😇天使 / 2=😈内鬼';
+        this.showAnnouncement(`💀 ${who}阵亡！按 ${keys} 变身继续战斗（20 秒内选择，超时判负）`, '#ff6a6a');
+        this.audioManager.play('lose');
+    }
+
+    _vsBecome(side, kind) {
+        const f = this.vsFate[side];
+        if (!f || f.state !== 'dead') return;
+        const b = this.board;
+        const isP1 = side === 'p1';
+        const ent = {
+            side, kind,
+            x: kind === 'angel' ? b.offsetX + 36 : b.offsetX + b.cols * b.cellWidth - 60,
+            y: b.offsetY + Math.floor(b.rows / 2) * b.cellHeight + b.cellHeight / 2 - 20,
+            hp: kind === 'angel' ? 800 : 1500,
+            maxHp: kind === 'angel' ? 800 : 1500,
+            capCd: 0, spdCd: 0, rageCd: 0, rageT: 0, merit: 0,
+            invT: 2.5, biteAcc: 0, chompAcc: 0, el: null, barEl: null
+        };
+        // DOM 实体（贴图严格用原版素材：天使=向日葵+金色光环；内鬼=VsTraitor 僵尸实体+😈标签）
+        if (kind === 'traitor') {
+            // 内鬼=僵尸阵营实体（继承 Zombie）：可被植物/子弹攻击、可被捕获冰冻、僵尸不咬自己人
+            const zb = new VsTraitor(this, side);
+            this.entities.push(zb);
+            f.ent = zb;
+            f.state = 'traitor';
+            this.showAnnouncement(`😈 ${isP1 ? 'P1' : 'P2'} 化作内鬼！走近植物把它挠碎（【${isP1 ? 'M' : '1'}】狂暴：6 秒伤害翻倍+加速）——僵尸是你自己人，不会打你；被植物消灭=植物方获胜！`, '#ff6a6a');
+            this.audioManager.play('evillaugh.mp3');
+            return;
+        }
+        const el = document.createElement('div');
+        el.style.cssText = 'position:absolute; width:70px; height:80px; pointer-events:none;';
+        const img = document.createElement('img');
+        img.src = 'assets/images/Plants/SunFlower/SunFlower1.gif?v=1792751289';
+        img.style.cssText = 'width:70px; filter:drop-shadow(0 0 12px #ffd700) drop-shadow(0 0 22px #ffd700);';
+        el.appendChild(img);
+        const barBg = document.createElement('div');
+        barBg.style.cssText = 'position:absolute; left:8px; top:-10px; width:54px; height:6px; background:#333; border:1px solid #000; border-radius:3px;';
+        const bar = document.createElement('div');
+        bar.style.cssText = 'width:100%; height:100%; background:#ffd700; border-radius:2px;';
+        barBg.appendChild(bar);
+        el.appendChild(barBg);
+        const tag = document.createElement('div');
+        tag.style.cssText = 'position:absolute; top:-26px; left:50%; transform:translateX(-50%); font-size:12px; font-weight:bold; white-space:nowrap; text-shadow:1px 1px 0 #000; font-family:"Kaiti SC","STKaiti",serif;';
+        tag.innerText = `😇 天使 ${isP1 ? 'P1' : 'P2'}`;
+        tag.style.color = '#ffd700';
+        el.appendChild(tag);
+        this.entityLayer.appendChild(el);
+        ent.el = el; ent.barEl = bar;
+        f.ent = ent;
+        f.state = 'angel';
+        this.showAnnouncement(`😇 ${isP1 ? 'P1' : 'P2'} 化作天使！【${isP1 ? 'N' : '1'}】捕获定身僵尸、【${isP1 ? 'M' : '2'}】疾跑——只有一条命，被咬死=僵尸方获胜！`, '#ffd700');
+        this.audioManager.play('points.mp3');
+    }
+
+    // 僵尸走进房子（Zombie.js 调用）：P1 首次=死亡变身机会；已变身/出局=僵尸消失不判负
+    _vsZombieReachHouse(zb) {
+        if (!this.vsFate) { this.vsZombieWin(); return; }
+        if (!this._vsSideHuman('p1')) { this.vsZombieWin(); return; } // 人机模式 AI 植物方不变身，照旧判负
+        const f = this.vsFate.p1;
+        if (f.state === 'alive') { this._vsTriggerDeath('p1'); return; }
+        // P1 已变身/等待变身：僵尸进屋=悄然消失（胜负改由形态生死决定）
+        if (zb && !zb.isDead && zb.state !== 'DYING') {
+            zb.state = 'DYING';
+            if (zb.element) zb.element.src = zb.dieSrc || zb.walkSrc;
+            setTimeout(() => { zb.isDead = true; }, 600);
+        }
+    }
+
+    _vsAngelCapture(side) {
+        const f = this.vsFate[side];
+        const ent = f && f.ent;
+        if (!ent || ent.kind !== 'angel' || ent.capCd > 0) return;
+        // 100% 命中：定身最近的僵尸阵营单位（普通僵尸/内鬼），功德 6 → 定身 5s
+        let best = null, bd = Infinity;
+        for (const e of this.entities) {
+            if (!(e instanceof Zombie) || e.isDead || e.state === 'DYING' || e.hypnotized) continue;
+            const d = Math.hypot(e.x - ent.x, (e.y || 0) - ent.y);
+            if (d < bd) { bd = d; best = e; }
+        }
+        if (!best) { this.showAnnouncement('场上没有僵尸可捕获', '#8fa8ff'); return; } // 空放不耗 CD
+        const dur = ent.merit >= 6 ? 5 : 3;
+        best.freezeTimer = Math.max(best.freezeTimer || 0, dur);
+        best.eatTarget = null;
+        ent.capCd = 20;
+        ent.merit++;
+        this.showAnnouncement(`🔒 天使捕获！定身 ${dur} 秒（⭐功德 ${ent.merit}${ent.merit === 6 ? '——定身升至 5 秒！' : ''}）`, '#7fd8ff');
+        this.audioManager.play('frozen.mp3');
+    }
+
+    _vsAngelSpeed(side) {
+        const f = this.vsFate[side];
+        const ent = f && f.ent;
+        if (!ent || ent.kind !== 'angel' || ent.spdCd > 0) return;
+        ent.spdBuffT = 6;
+        ent.spdCd = 20;
+        this.showAnnouncement('💨 天使疾跑！（6 秒）', '#ffd700');
+        this.audioManager.play('readysetplant.mp3');
+    }
+
+    _vsRage(side) {
+        const f = this.vsFate[side];
+        const ent = f && f.ent;
+        if (!ent || !(ent instanceof VsTraitor) || ent.rageCd > 0) return;
+        ent.rageT = 6;
+        ent.rageCd = 30;
+        this.showAnnouncement(`🔥 内鬼狂暴！（6 秒伤害翻倍+加速）`, '#ff5252');
+        this.audioManager.play('evillaugh.mp3');
+    }
+
+    _vsFateHudRefresh() {
+        if (!this.vsFate || !this._vsFateHud) return;
+        const any = this.vsFate.p1.state !== 'alive' || this.vsFate.p2.state !== 'alive';
+        this._vsFateHud.style.display = any ? 'block' : 'none';
+        if (!any) return;
+        const fmt = (side) => {
+            const f = this.vsFate[side];
+            const who = side === 'p1' ? 'P1' : 'P2';
+            if (f.state === 'alive') return `<span style="color:#bbbbbb;">${who} 存活</span>`;
+            if (f.state === 'dead') return `<span style="color:#ff6a6a;">${who} 阵亡！${Math.ceil(f.waitT)}s 内按 ${side === 'p1' ? 'N/M' : '1/2'} 变身</span>`;
+            const e = f.ent;
+            const kindTxt = f.state === 'angel' ? '😇天使' : '😈内鬼';
+            const rage = e.rageT > 0 ? `🔥狂暴${Math.ceil(e.rageT)}s ` : '';
+            const cds = f.state === 'angel'
+                ? `捕${Math.ceil(e.capCd)} 跑${Math.ceil(e.spdCd)}`
+                : `狂${Math.ceil(e.rageCd)}`;
+            return `<span style="color:${f.state === 'angel' ? '#ffd700' : '#ff6a6a'};">${who} ${kindTxt} ❤${Math.max(0, Math.ceil(e.hp))} ${rage}CD:${cds}</span>`;
+        };
+        this._vsFateHud.innerHTML = fmt('p1') + ' ／ ' + fmt('p2');
+    }
+
+    _updateVsFate(dt) {
+        if (!this.vsFate || this.state !== 'PLAYING') return;
+        const b = this.board;
+        const minX = 26, maxX = b.offsetX + b.cols * b.cellWidth + 40;
+        const minY = b.offsetY - 30, maxY = b.offsetY + b.rows * b.cellHeight + 6;
+        for (const side of ['p1', 'p2']) {
+            const f = this.vsFate[side];
+            if (!this._vsSideHuman(side)) continue;
+            // 等待变身倒计时（内鬼实体自治，这里只管等待与天使）
+            if (f.state === 'dead') {
+                f.waitT -= dt;
+                if (f.waitT <= 0) {
+                    this._vsEndOverlay(side === 'p1' ? '🧟 僵尸方获胜！' : '🌻 植物方获胜！',
+                        `${side === 'p1' ? 'P1' : 'P2'} 阵亡后 20 秒内未选择形态`, side === 'p1' ? '#7a2a18' : '#2e6b1e');
+                    return;
+                }
+            }
+            const ent = f.ent;
+            if (!ent || f.state !== 'angel') continue; // 内鬼由 VsTraitor.update 自治
+            // 天使被咬死 → 僵尸方直接获胜（先于一切处理判定，防止 hp<=0 被 continue 跳过）
+            if (ent.hp <= 0) {
+                this._vsEndOverlay('🧟 僵尸方获胜！', `😇 ${side === 'p1' ? 'P1' : 'P2'} 的天使被僵尸咬死了`, '#7a2a18');
+                return;
+            }
+            // 天使移动
+            const keys = this._vsKeys[side];
+            let vx = 0, vy = 0;
+            if (keys.left) vx -= 1; if (keys.right) vx += 1;
+            if (keys.up) vy -= 1; if (keys.down) vy += 1;
+            if (vx || vy) {
+                const len = Math.hypot(vx, vy) || 1;
+                const spd = ent.spdBuffT > 0 ? 600 : 240;
+                ent.x += (vx / len) * spd * dt;
+                ent.y += (vy / len) * spd * dt;
+            }
+            ent.x = Math.max(minX, Math.min(maxX, ent.x));
+            ent.y = Math.max(minY, Math.min(maxY, ent.y));
+            if (ent.invT > 0) ent.invT -= dt;
+            if (ent.capCd > 0) ent.capCd -= dt;
+            if (ent.spdCd > 0) ent.spdCd -= dt;
+            if (ent.spdBuffT > 0) ent.spdBuffT -= dt;
+            // 渲染
+            ent.el.style.left = (ent.x - 35) + 'px';
+            ent.el.style.top = (ent.y - 46) + 'px';
+            ent.el.style.zIndex = String(Math.floor(ent.y) + 2);
+            ent.el.style.opacity = ent.invT > 0 ? '0.55' : '1';
+            ent.barEl.style.width = Math.max(0, ent.hp / ent.maxHp * 100) + '%';
+            // 天使：被僵尸咬（僵尸照常行军，贴身即咬；内鬼是自己人不会咬天使）
+            if (ent.invT <= 0) {
+                for (const z of this.entities) {
+                    if (!(z instanceof Zombie) || z.isDead || z.state === 'DYING' || z.hypnotized) continue;
+                    if (Math.hypot(z.x - ent.x, (z.y || 0) - ent.y) < 48) {
+                        z._vsBiteAcc = (z._vsBiteAcc || 0) + dt;
+                        if (z._vsBiteAcc >= 0.6) {
+                            z._vsBiteAcc = 0;
+                            ent.hp -= 50;
+                            this.audioManager.play('chomp');
+                        }
+                    }
+                }
+            }
+            // 天使被咬死 → 僵尸方直接获胜
+            if (ent.hp <= 0) {
+                this._vsEndOverlay('🧟 僵尸方获胜！', `😇 ${side === 'p1' ? 'P1' : 'P2'} 的天使被僵尸咬死了`, '#7a2a18');
+                return;
+            }
+        }
+        this._vsFateHudRefresh();
+    }
+    _vsFateCleanup() {
+        if (!this.vsFate) return;
+        for (const side of ['p1', 'p2']) {
+            const f = this.vsFate[side];
+            if (f.ent && f.state === 'angel' && f.ent.el && f.ent.el.parentNode) f.ent.el.parentNode.removeChild(f.ent.el);
+        }
+        if (this._vsFateHud && this._vsFateHud.parentNode) this._vsFateHud.style.display = 'none';
+    }
+
+    // 内鬼阵亡回调（VsTraitor 死亡检测触发）：植物方直接获胜
+    _vsOnTraitorDead(traitor) {
+        if (this.state !== 'PLAYING') return;
+        const who = traitor._vsSide === 'p1' ? 'P1' : 'P2';
+        this._vsEndOverlay('🌻 植物方获胜！', `😈 ${who} 的内鬼被植物消灭了`, '#2e6b1e');
+    }
+
     restartVs() {
         this.audioManager.play('btn');
         if (this._vsEndEls) {
@@ -1331,6 +1639,8 @@ class Game {
         }
         this.pendingZombie = null;
         this._vsWinTimer = 0;
+        this._vsFateCleanup(); // v4.0.102：清理天使/内鬼实体与状态条
+        this.vsFate = null;
         const bar = document.getElementById('vs-bottom-bar');
         if (bar) bar.style.display = 'none';
         this._hideVsRowHighlight();
@@ -4093,7 +4403,10 @@ class Game {
         if (this.vaseMode) this.checkVaseVictory();
         // 我是僵尸：每帧胜负检测（僵尸全灭且阳光不足 → 判负；吃脑胜利在 Zombie.js 触发）
         if (this.zombieMode) this._checkZombieEnd(deltaTime);
-        if (this.vsMode) this._checkVsEnd(deltaTime); // v3.81.0 双人对战：僵尸方破产 → 植物方胜
+        if (this.vsMode) {
+            this._checkVsEnd(deltaTime); // v3.81.0 双人对战：僵尸方破产 → 植物方胜
+            this._updateVsFate(deltaTime); // v4.0.102：天使/内鬼死亡变身系统
+        }
         if (this.vsMode && this.vsAiMode) {
             // v4.0.94 人机对战：按阵营托管另一边（玩家=植物→AI僵尸；玩家=僵尸→AI植物）
             if (this.vsPlayerSide === 'zombie') this._vsAiPlantThink(deltaTime);
@@ -5403,6 +5716,117 @@ class Game {
         }
         // 4) 走标准开局：清种子栏 + 阳光归零 + 商店 + 重掷罐子 + 重启主循环(state: GAMEOVER→PLAYING)
         this.startGame();
+    }
+}
+
+
+
+// ===== v4.0.102 双人对战：内鬼形态（僵尸阵营场上实体，继承 Zombie）=====
+// 继承收益：被植物/子弹自动索敌攻击（instanceof Zombie + row/x）、可被天使捕获冻结（freezeTimer）、
+// 僵尸不咬自己人（啃食只找植物格）、破产判定自动把内鬼算作僵尸方战力。
+// 自治：update 完全重写——键盘移动（P2 方向键 / P1 WASD）+ 挠植物 + 狂暴计时 + 死亡判定。
+class VsTraitor extends Zombie {
+    constructor(game, side) {
+        super(game, Math.floor(game.board.rows / 2), 'normal');
+        this._vsSide = side;
+        this._vsKind = 'traitor';
+        this.hp = 1500; this.maxHp = 1500;
+        this.rageT = 0; this.rageCd = 0;
+        this.chompAcc = 0;
+        this.x = game.board.offsetX + game.board.cols * game.board.cellWidth - 60;
+        this.y = game.board.offsetY + this.row * game.board.cellHeight + game.board.cellHeight / 2 - 20;
+        // 😈 标签 + 血条（独立 DOM，随本体同步移动）
+        const who = side === 'p1' ? 'P1' : 'P2';
+        this._tagEl = document.createElement('div');
+        this._tagEl.textContent = '😈 内鬼 ' + who;
+        this._tagEl.style.cssText = 'position:absolute; font-size:12px; font-weight:bold; color:#ff6a6a; white-space:nowrap; text-shadow:1px 1px 0 #000; pointer-events:none; font-family:"Kaiti SC","STKaiti",serif; z-index:6000;';
+        this._barBg = document.createElement('div');
+        this._barBg.style.cssText = 'position:absolute; width:54px; height:6px; background:#333; border:1px solid #000; border-radius:3px; pointer-events:none; z-index:6000;';
+        this._barEl = document.createElement('div');
+        this._barEl.style.cssText = 'width:100%; height:100%; background:#7a2a18; border-radius:2px;';
+        this._barBg.appendChild(this._barEl);
+        game.entityLayer.appendChild(this._tagEl);
+        game.entityLayer.appendChild(this._barBg);
+    }
+
+    update(deltaTime) {
+        const g = this.game;
+        // 死亡判定（照父类核心：倒地 → 回调判胜负）
+        if (this.hp <= 0 && this.state !== 'DYING') {
+            this.state = 'DYING';
+            if (this.element) this.element.src = this.dieSrc || this.walkSrc;
+            if (g._vsOnTraitorDead) g._vsOnTraitorDead(this);
+            setTimeout(() => { this.isDead = true; if (this._tagEl && this._tagEl.parentNode) this._tagEl.remove(); if (this._barBg && this._barBg.parentNode) this._barBg.remove(); }, 1200);
+        }
+        if (this.state === 'DYING') {
+            this._syncDom();
+            return;
+        }
+        // 冻结（天使捕获）/黄油：定身不挠
+        if (this.freezeTimer > 0) {
+            this.freezeTimer = Math.max(0, this.freezeTimer - deltaTime);
+            if (this.element) this.element.style.filter = 'hue-rotate(160deg) saturate(2) brightness(1.2)';
+            this._syncDom();
+            return;
+        }
+        if (this.element) this.element.style.filter = '';
+        if (this.rageCd > 0) this.rageCd -= deltaTime;
+        if (this.rageT > 0) this.rageT -= deltaTime;
+        // 键盘移动（内鬼阵营：原 P2 用方向键；人机僵尸玩家同）
+        const keys = (g.vsFate && g._vsKeys) ? g._vsKeys[this._vsSide] : null;
+        const side = this._vsSide;
+        let vx = 0, vy = 0;
+        if (keys) {
+            const km = side === 'p2'
+                ? { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown' }
+                : { left: 'KeyA', right: 'KeyD', up: 'KeyW', down: 'KeyS' };
+            if (keys.left || keys[km.left]) vx -= 1;
+            if (keys.right || keys[km.right]) vx += 1;
+            if (keys.up || keys[km.up]) vy -= 1;
+            if (keys.down || keys[km.down]) vy += 1;
+        }
+        if (vx || vy) {
+            const len = Math.hypot(vx, vy) || 1;
+            const spd = this.rageT > 0 ? 180 : 120;
+            this.x += (vx / len) * spd * deltaTime;
+            this.y += (vy / len) * spd * deltaTime;
+        }
+        const b = g.board;
+        this.x = Math.max(26, Math.min(b.offsetX + b.cols * b.cellWidth + 40, this.x));
+        this.y = Math.max(b.offsetY - 30, Math.min(b.offsetY + b.rows * b.cellHeight + 6, this.y));
+        // 行归属动态更新（植物/子弹按行索敌）
+        this.row = Math.max(0, Math.min(b.rows - 1, Math.floor((this.y - b.offsetY) / b.cellHeight)));
+        // 挠植物（像僵尸一样啃当前格）
+        const col = Math.floor((this.x - b.offsetX) / b.cellWidth);
+        const pl = (this.row >= 0 && this.row < b.rows && col >= 0 && col < b.cols) ? b.grid[this.row][col] : null;
+        if (pl && !pl.isDead && pl.hp > 0) {
+            this.chompAcc += deltaTime;
+            if (this.chompAcc >= 0.5) {
+                this.chompAcc = 0;
+                pl.hp -= this.rageT > 0 ? 100 : 50;
+                g.audioManager.play('chomp');
+                // 挠死后经济转移由 Plant.update 死亡分支自动走 vsOnPlantDeath
+            }
+        } else this.chompAcc = 0;
+        this._syncDom();
+    }
+
+    _syncDom() {
+        // .entity 的 CSS 基准是中心对齐（translate(-50%,-50%)）——left/top 直接给中心坐标
+        if (this.element) {
+            this.element.style.left = this.x + 'px';
+            this.element.style.top = (this.y + this.yOffset) + 'px';
+            this.element.style.zIndex = String(Math.floor(this.y) + 2);
+        }
+        if (this._tagEl) {
+            this._tagEl.style.left = (this.x - 32) + 'px';
+            this._tagEl.style.top = (this.y - 72) + 'px';
+        }
+        if (this._barBg) {
+            this._barBg.style.left = (this.x - 27) + 'px';
+            this._barBg.style.top = (this.y - 58) + 'px';
+            this._barEl.style.width = Math.max(0, this.hp / this.maxHp * 100) + '%';
+        }
     }
 }
 
