@@ -1695,15 +1695,13 @@ class HauntedDorm {
             if (this.playerAngelic) {
                 // v4.0.44：天使双技能面板（取代角色技能）；v4.0.60：功德成长动态显示
                 const capSec = this.playerMerit >= 6 ? 5 : 3;
-                const capCdMax = this.playerMerit >= 3 ? 20 : 30;
-                const spdCdMax = this.playerMerit >= 9 ? 20 : 30;
                 const cap = this.player.capCd > 0
                     ? `<span style="color:#777777;"><s>【N】捕获</s> (CD:${Math.ceil(this.player.capCd)}s)</span>`
                     : `<span style="color:#7fd8ff;">【N】捕获</span> <span style="color:#aaaaaa;">(定身僵尸${capSec}秒)</span>`;
                 const spd = this.player.spdCd > 0
                     ? `<span style="color:#777777;"><s>【M】加速</s> (CD:${Math.ceil(this.player.spdCd)}s)</span>`
                     : `<span style="color:#ffd700;">【M】加速</span> <span style="color:#aaaaaa;">(6秒疾跑)</span>`;
-                skillEl.innerHTML = `😇 ${cap} ｜ ${spd} <span style="color:#ffd54a; font-size:12px;">｜ ⭐功德 ${this.playerMerit || 0}/9 (3:捕获CD20s｜6:定身5s｜9:加速CD20s)</span>`;
+                skillEl.innerHTML = `😇 ${cap} ｜ ${spd} <span style="color:#ffd54a; font-size:12px;">｜ ⭐功德 ${this.playerMerit || 0}/6 (6:定身5s)</span>`;
             } else if (this.isZombieFaction) {
                 // v4.0.61：指挥键位并入技能栏——尸潮冷却与令旗目标动态显示
                 const cmdTxt = this.commandTarget
@@ -2929,7 +2927,8 @@ class HauntedDorm {
                             · 头顶光环，无房无产出，不可建造升级<br>
                             · <b style="color:#7fd8ff;">【N】捕获</b>：100% 命中，定住僵尸 3 秒（不能挠门、不能回血，站桩挨打）<br>
                             · <b style="color:#ffd700;">【M】加速</b>：6 秒疾跑，甩开僵尸的追杀<br>
-                            · <b style="color:#ffd54a;">⭐ 功德成长</b>：每捕获一只僵尸 +1 功德——功德 3 捕获CD 30s→20s；功德 6 定身 3s→5s；功德 9 加速CD 30s→20s<br>
+                            · 两技能冷却均固定 <b>20 秒</b><br>
+                            · <b style="color:#ffd54a;">⭐ 功德成长</b>：每捕获一只僵尸 +1 功德——功德 6 定身 3s→5s<br>
                             · 已不再是存活者：<b style="color:#ff8a8a;">不再收到每 90 秒的存活祝福</b><br>
                             · <b style="color:#ff8a8a;">僵尸会来追杀你，只有一条命——被抓住直接 Game Over！</b><br>
                             · 帮人机活到僵尸被消灭即胜利！
@@ -3056,7 +3055,7 @@ class HauntedDorm {
         this._applyFrozenFx(best, true);
         this._flyText(best.x, best.y - 30, `🔒 天使捕获！(定身${best.capturedT}秒)`, '#7fd8ff');
         this.playSfx('frozen.mp3', 0.5);
-        p.capCd = this.playerMerit >= 3 ? 20 : 30; // v4.0.60：功德 3 → 捕获 CD 30s→20s
+        p.capCd = 20; // v4.0.99：冷却固定 20s（删功德 3 档位）
         this._gainMerit(); // v4.0.60：每次成功捕获 +1 功德
         this._refreshHud();
     }
@@ -3065,7 +3064,7 @@ class HauntedDorm {
     _angelSpeed() {
         const p = this.player;
         p.speedBuffT = 6; // 复用全局疾跑通道（移速 800）
-        p.spdCd = this.playerMerit >= 9 ? 20 : 30; // v4.0.60：功德 9 → 加速 CD 30s→20s
+        p.spdCd = 20; // v4.0.99：冷却固定 20s（删功德 9 档位）
         this._flyText(p.x, p.y - 30, '💨 天使加速！(6秒)', '#ffd700');
         this.playSfx('readysetplant.mp3', 0.4);
         this._refreshHud();
@@ -3095,17 +3094,17 @@ class HauntedDorm {
     }
 
     // 天使：每成功捕获一只僵尸 +1 功德值
-    // 判定成长：功德 3 → 捕获 CD 30s→20s；功德 6 → 定身 3s→5s；功德 9 → 加速 CD 30s→20s
+    // v4.0.99：捕获/加速冷却固定 20s，功德档位只剩 6 → 定身 3s→5s
     _gainMerit() {
         this.playerMerit = (this.playerMerit || 0) + 1;
         const m = this.playerMerit;
-        const bonus = m >= 9 ? '加速CD减至20s！' : m >= 6 ? '捕获定身升至5秒！' : m >= 3 ? '捕获CD减至20s！' : '';
-        this._flyText(this.player.x, this.player.y - 30, `⭐ 功德 +1（${m}/9）${bonus}`, '#ffd700');
+        const bonus = m >= 6 ? '捕获定身升至5秒！' : '';
+        this._flyText(this.player.x, this.player.y - 30, `⭐ 功德 +1（${m}/6）${bonus}`, '#ffd700');
         this.playSfx('points.mp3', 0.35);
         this._refreshHud();
         const statsRow = document.querySelector('#hud-p1 > div:nth-child(2)');
         if (statsRow && this.playerAngelic) {
-            statsRow.innerHTML = `<span style="color:#ffd700;">😇 天使形态</span><span style="color:#aaaaaa; font-size:13px;">无房 · 不可建造 · 只有一条命</span><span style="color:#7fd8ff; font-size:13px;">功德:${m}/9（捕获僵尸成长）</span>`;
+            statsRow.innerHTML = `<span style="color:#ffd700;">😇 天使形态</span><span style="color:#aaaaaa; font-size:13px;">无房 · 不可建造 · 只有一条命</span><span style="color:#7fd8ff; font-size:13px;">功德:${m}/6（捕获僵尸成长）</span>`;
         }
     }
 
