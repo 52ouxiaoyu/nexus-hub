@@ -4713,7 +4713,7 @@ class HauntedDorm {
             t.el1.appendChild(hb);
             t.trHpBg = hb;
             t.trHpFg = hb.firstChild;
-            this._announce(`😈 内鬼现身：【${t.roleDef.name}】反水了！它会像僵尸一样挠门破房——护好自己的门板！击败有重赏！`, 'scream.mp3', true);
+            this._announce(`😈 【${t.roleDef.name}】变成了内鬼！`, 'scream.mp3', true);
             return;
         }
         // v4.0.43 重做（用户实报：内鬼卡在墙里、不挠门）：跟正常僵尸同一套行为——
@@ -4722,7 +4722,11 @@ class HauntedDorm {
         // ③破门后自然穿门进屋贴身咬人
         // v4.0.72：内鬼先出门——自己房间的门还活着挡路时，先走跳板瞬移出房（省去慢慢挠门），
         // 跟普通僵尸一样出门去找别人；否则玩家/植物永远打不到缩在房内的内鬼，游戏无法结束
-        if (t.room && !t.fleeing) {
+        // v4.0.98 修复（用户实报：内鬼完全不会动）：补「物理在房内」判定——
+        //   旧条件只查 t.room（认领过的房间引用），内鬼被跳板传送出房后仍命中此分支，
+        //   每帧强制寻路走回房内跳板 → 传送出门 → 又走回去……无限跳板乒乓，永远到不了目标门口。
+        //   现在只有内鬼物理站在自己房间内且门还活着时才走跳板出门；已出房则直接进入下方正常寻路挠门。
+        if (t.room && !t.fleeing && this._insideRoom(Math.floor(t.x / this.gridSize), Math.floor(t.y / this.gridSize)) === t.room) {
             const myDoor = this.getPlantAt(t.room.doorCol * this.gridSize, t.room.doorRow * this.gridSize);
             if (myDoor && myDoor.isDoor && myDoor.hp > 0) {
                 const pad = t.room.jumpPad;
@@ -4747,12 +4751,24 @@ class HauntedDorm {
                 }
             }
         }
+        // v4.0.98 目标策略（用户：跟正常僵尸一样的思路）——真人优先、其次最近 AI：
+        //   旧逻辑追「最近实体」，AI 触发 130px 逃亡后与内鬼同速反向跑 → 永远追不上、原地打转；
+        //   正常僵尸是奔着「有人的房间门」去的——目标定了就挠门，不再被逃亡 AI 遛着满图跑
         let best = null, bd = Infinity;
+        let human = null;
         for (const p of this.allPlayers) {
             if (p.dead || p === t) continue;
             if (this.playerTraitor && p === this.player) continue; // v4.0.44：玩家也是内鬼——内鬼不咬内鬼
-            const d = Math.hypot(p.x - t.x, p.y - t.y);
-            if (d < bd) { bd = d; best = p; }
+            if (!p.isAi) { human = p; break; }
+        }
+        if (human) { best = human; bd = Math.hypot(human.x - t.x, human.y - t.y); }
+        else {
+            for (const p of this.allPlayers) {
+                if (p.dead || p === t) continue;
+                if (this.playerTraitor && p === this.player) continue;
+                const d = Math.hypot(p.x - t.x, p.y - t.y);
+                if (d < bd) { bd = d; best = p; }
+            }
         }
         if (!best) return;
         // 目标所在房间与门板状态
@@ -4803,7 +4819,9 @@ class HauntedDorm {
 
         // v4.0.61：probe 啃门（同普通僵尸范式）——前方 25px 有非贴地植物就站定啃，
         //   不再只认"目标房间的门"：自己房间的门挡路也能挠开（这就是"内鬼走不出来门"的根治）
-        const probeX = t.x + dx * 25, probeY = t.y + dy * 25;
+        // v4.0.98 修复：probe 用「单位向量×25」——旧写法 dx*25 未除以 len（dx 是原始差值向量），
+        //   贴门时 |dx|≈5 → probe 甩到 125px 外飞过门格 → getPlantAt 永远命不中门 → 内鬼贴着门干瞪眼不挠
+        const probeX = t.x + dx / len * 25, probeY = t.y + dy / len * 25;
         const atkPlant = this.getPlantAt(probeX, probeY);
         if (atkPlant && !atkPlant.def.ground) {
             t.biteT = (t.biteT || 0) + dt;
