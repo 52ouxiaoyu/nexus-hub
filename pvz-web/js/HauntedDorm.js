@@ -1392,6 +1392,30 @@ class HauntedDorm {
                     const who = p === this.player ? 'P1' : 'P2';
                     this._announce(`🤖 ${who} 超过 10 秒没有行动，AI 开始托管（按任意键拿回控制权）`);
                     this._flyText(p.x, p.y - 40, '🤖 AI 托管中', '#7fd8ff');
+                    // v4.0.103：托管=宅家发育，绝不当流浪汉——激活瞬间就指派目标房：
+                    // 有房但人在外面 → 寻路回自家床边；无房 → 进最近的可认领房（之后的升级床/门、种植全在房内完成）
+                    p.targetDrop = null;
+                    if (!p.room) {
+                        const cand = this.rooms.filter(r => (r.owners || []).length < (r.capacity || 1) &&
+                            !(r.owners || []).some(o => (o === this.player || o === this.player2) && o !== p));
+                        if (cand.length > 0) {
+                            cand.sort((a, b) =>
+                                Math.hypot(a.doorCol * 80 + 40 - p.x, a.doorRow * 80 + 40 - p.y) -
+                                Math.hypot(b.doorCol * 80 + 40 - p.x, b.doorRow * 80 + 40 - p.y));
+                            p.targetRoom = cand[0];
+                            const path = this._findPath(p.x, p.y, p.targetRoom.frontX, p.targetRoom.frontY);
+                            if (path) {
+                                path.push({ x: (p.targetRoom.x + p.targetRoom.tpl.beds[0].c) * 80 + 40, y: (p.targetRoom.y + p.targetRoom.tpl.beds[0].r) * 80 + 40 });
+                                p.path = path;
+                            }
+                        }
+                    } else if (this._insideRoom(Math.floor(p.x / 80), Math.floor(p.y / 80)) !== p.room) {
+                        const path = this._findPath(p.x, p.y, p.room.frontX, p.room.frontY);
+                        if (path) {
+                            path.push({ x: (p.room.x + p.room.tpl.beds[0].c) * 80 + 40, y: (p.room.y + p.room.tpl.beds[0].r) * 80 + 40 });
+                            p.path = path;
+                        }
+                    }
                     // 关掉挡事的菜单：托管者不再需要键盘菜单（菜单开着会挡真人移动段，AI 寻路不受影响）
                     if (p === this.player2) { if (this.kmenus[2] && this.kmenus[2].active) { this.kmenus[2].active = false; if (this.p2Kmenu) this.p2Kmenu.style.display = 'none'; } }
                     else {
@@ -1402,6 +1426,7 @@ class HauntedDorm {
             } else if (now - p._lastInputAt < 100) { // 刚收到本方按键 → 立即归还
                 p._afkHost = false;
                 p.path = null; p.fleeing = false; p.fled = false; p.fleeFrom = null; p.newRoom = null; p.speed = 200;
+                p.targetRoom = null; p.targetDrop = null; // v4.0.103：清掉托管期间的寻路目标，归还即从脚下重新开始
                 this._flyText(p.x, p.y - 40, '🙋 控制权已归还', '#9dff6b');
                 this.playSfx('readysetplant.mp3', 0.35);
             }
@@ -5145,6 +5170,7 @@ class HauntedDorm {
         }
         for (const ai of aiMoveList) {
             if (ai.dead) continue;
+            const isHosted = !ai.isAi && ai._afkHost; // v4.0.103：托管真人——宅家发育，禁一切主动出门行为
             
             // 发现僵尸逻辑（v4.0.33：原只检测 zombies[0] 一只——其他僵尸贴脸也发现不了，AI 会撞进僵尸群里）
             let zombieNear = false;
@@ -5202,8 +5228,8 @@ class HauntedDorm {
                 }
             }
 
-            // 【新增】人机抢盲盒机制
-            if (!ai.dead && this.ghostSpawned && this.airdrops && this.airdrops.length > 0) {
+            // 【新增】人机抢盲盒机制（v4.0.103：托管真人禁抢——出门抢盲盒=送人头，宅家发育）
+            if (!ai.dead && !isHosted && this.ghostSpawned && this.airdrops && this.airdrops.length > 0) {
                 // v4.0.80：AI 竞争抢盲盒——去掉「发育好」门槛，每 6~14 秒评估一次；同时出门抢的 AI 上限 2 人；
                 // 僵尸在附近（zombieNear）才退缩；僵尸在回血/回血途中、或正在啃别人门（忙=顾不上你）时都会出门抢。
                 if (ai.room && (!ai.path || ai.path.length === 0) && Math.random() < 0.001) {
@@ -5285,6 +5311,23 @@ class HauntedDorm {
                 }
             }
 
+            // v4.0.103：托管真人兜底——无房、无路、无目标（激活时指派失败/原房没了）→ 每次评估进最近的可认领房，绝不站走廊发呆
+            if (isHosted && !ai.room && !ai.targetRoom && (!ai.path || ai.path.length === 0)) {
+                const cand = this.rooms.filter(r => (r.owners || []).length < (r.capacity || 1) &&
+                    !(r.owners || []).some(o => (o === this.player || o === this.player2) && o !== ai));
+                if (cand.length > 0) {
+                    cand.sort((a, b) =>
+                        Math.hypot(a.doorCol * 80 + 40 - ai.x, a.doorRow * 80 + 40 - ai.y) -
+                        Math.hypot(b.doorCol * 80 + 40 - ai.x, b.doorRow * 80 + 40 - ai.y));
+                    ai.targetRoom = cand[0];
+                    const p0 = this._findPath(ai.x, ai.y, ai.targetRoom.frontX, ai.targetRoom.frontY);
+                    if (p0) {
+                        p0.push({ x: (ai.targetRoom.x + ai.targetRoom.tpl.beds[0].c) * this.gridSize + 40, y: (ai.targetRoom.y + ai.targetRoom.tpl.beds[0].r) * this.gridSize + 40 });
+                        ai.path = p0;
+                    }
+                }
+            }
+
             if (ai.path && ai.path.length > 0) {
                 // 获取玩家当前物理所在的房间
                 const playerCol = Math.floor(this.player.x / this.gridSize);
@@ -5297,7 +5340,8 @@ class HauntedDorm {
                 // 房间被占用的条件：满员、玩家已认领（主房/副房）、或玩家正站在里面（哪怕还没建造认领）
                 // v4.0.23：原判定漏掉「玩家物理在房间内但尚未建造认领」——AI 会走进玩家先到的房间抢注，
                 // 玩家再建造就弹「别人的地盘！」（用户实报：我第一个进房间，提示却是别人的）
-                const isTaken = (rm) => rm.owners.length >= rm.capacity || rm === this.player.room ||
+                // v4.0.103：满员但自己已是住户 → 不算被占（旧判定把托管真人本人当成「别人」，到家门口了还换房流浪）
+                const isTaken = (rm) => (rm.owners.length >= rm.capacity && !rm.owners.includes(ai)) || rm === this.player.room ||
                                        rm === this.player.room2 || rm === playerPhysicalRoom || rm === p2PhysicalRoom;
 
                 const isFleeing = ai.speed === 300;
@@ -5342,8 +5386,9 @@ class HauntedDorm {
                         const rmBlockedByPlayer = ai.targetRoom === this.player.room || ai.targetRoom === this.player.room2 ||
                                                   ai.targetRoom === playerPhysicalRoom || ai.targetRoom === p2PhysicalRoom;
                         // v4.0.88：AI 不入住真人玩家（P1/P2）的房间（即使容量有余）——避免同房布防干扰玩家资源
+                        // v4.0.103：排除托管真人自身（o !== ai）——否则托管者走到自己已认领的房床边会把自己当「别人」而换房跑路
                         if (ai.targetRoom.owners.length < ai.targetRoom.capacity && !rmBlockedByPlayer &&
-                            !ai.targetRoom.owners.some(o => o === this.player || o === this.player2)) {
+                            !ai.targetRoom.owners.some(o => (o === this.player || o === this.player2) && o !== ai)) {
                             ai.targetRoom.owners.push(ai);
                             ai.room = ai.targetRoom;
                             ai.speed = 200;
