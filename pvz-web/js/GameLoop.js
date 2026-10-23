@@ -709,6 +709,7 @@ class Game {
         //   改法：价目回归「脑子价≈击杀成本」的原版风格档位（≈v4.0.61 打折前 zombiePrice 微调），
         //   植物方阳光同步对称 1000——开局僵尸只够 3 巨人或 5 铁桶，防线可顶，胜负回归运营：
         // v4.0.96（用户实测后：1000 还是不均衡）——僵尸开局 1000→300：巨人 300=开局最多放一只，之后靠 sunhead 滚经济。
+        // v4.0.100（用户实测后：还是不均衡）——植物开局阳光 1000→300，双方对称 300/300，纯拼运营。
         return [
             ['gargantuar', 300],           // 巨人僵尸：4000 血 · 巨锤秒杀植物 · 半血扔小鬼（最强单体，击杀成本最高）
             ['zomboni', 250],              // 冰车僵尸：1300 血 · 碾过植物 · 留冰道（无视防线的战略技能）
@@ -745,7 +746,7 @@ class Game {
 
     // ===== v3.81.0 双人对战（VERSUS）：一人植物 / 一人僵尸，同屏对战 =====
     // 经济双池：植物方阳光 = sunCount（复用全部种卡/阳光收集/冷却逻辑），僵尸方阳光 = zombieSun。
-    // 起手：植物 ☀1000 · 僵尸 🧠300（v4.0.96 用户：僵尸 1000 开局还是太强，压到 300=开局最多一只巨人）。
+    // 起手：植物 ☀300 · 僵尸 🧠300（v4.0.100 用户：还是不均衡，植物 1000→300，双方对称纯拼运营）。
     // 阳光转移：僵尸吃死植物 → 僵尸方得该植物价（一次性植物除外）；植物打死僵尸 → 植物方得该僵尸价。
     // 产阳光：双方各限带 1 个生产者 —— 植物=向日葵（正常落阳光），僵尸=向日葵头僵尸（在场越久单次产量越高）。
     // 胜负：僵尸走进房子 = 僵尸方胜；僵尸方破产（场上无活僵尸且脑子买不起最便宜的僵尸）= 植物方胜。
@@ -2269,9 +2270,9 @@ class Game {
         if (this.vsMode) {
             const zb = document.getElementById('zombie-bank');
             if (zb) zb.style.display = 'none';
-            this.sunCount = 1000;     // 植物方开局阳光（v4.0.95：与脑子对称 1000/1000——旧 200 对 1000 购买力差 5 倍+价目低位=僵尸第一波 8 巨人必胜）
+            this.sunCount = 300;      // 植物方开局阳光（v4.0.100：1000→300 与僵尸对称——用户实测 1000 仍不均衡，300/300 纯拼运营）
             this.zombieSun = 300;     // 僵尸方开局脑子（v4.0.96 用户：1000 太强，压到 300——巨人 300 脑子=开局最多放一只巨人）
-            this.sunCountElement.innerText = '1000';
+            this.sunCountElement.innerText = '300';
             this.pendingZombie = null;
             this._vsWinTimer = 0;
             this.buildVsBottomBar();
@@ -2285,11 +2286,11 @@ class Game {
             if (shovelEl) shovelEl.style.display = (this.vsAiMode && this.vsPlayerSide === 'zombie') ? 'none' : '';
             const vsAnn = this.vsAiMode
                 ? (this.vsPlayerSide === 'zombie'
-                    ? '⚔ 人机对战开始！你当僵尸 🧠300 · AI 当植物 ☀1000（AI 每 2 秒种一株）'
-                    : '⚔ 人机对战开始！你当植物 ☀1000 · AI 当僵尸 🧠300')
+                    ? '⚔ 人机对战开始！你当僵尸 🧠300 · AI 当植物 ☀300（AI 每 2 秒种一株）'
+                    : '⚔ 人机对战开始！你当植物 ☀300 · AI 当僵尸 🧠300')
                 : (this.vsFusion
-                    ? '⚔ 双人对战（融合）开始！植物方 ☀1000 · 僵尸方 🧠300'
-                    : '⚔ 双人对战开始！植物方 ☀1000 · 僵尸方 🧠300');
+                    ? '⚔ 双人对战（融合）开始！植物方 ☀300 · 僵尸方 🧠300'
+                    : '⚔ 双人对战开始！植物方 ☀300 · 僵尸方 🧠300');
             this.showAnnouncement(vsAnn, '#ffd54a');
         } else {
             const vsBarEl = document.getElementById('vs-bottom-bar');
