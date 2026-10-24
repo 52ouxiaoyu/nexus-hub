@@ -142,29 +142,56 @@
             #btn-vs .pkt-tag, #btn-dorm .pkt-tag { font-size: 11px; margin-top: 3px; letter-spacing: 3px; padding: 1px 8px; }
             #btn-vs .pkt-sub, #btn-dorm .pkt-sub { font-size: 12px; margin-top: 5px; line-height: 1.5; }
             /* v3.87.0：猛鬼宿舍不再使用专属配色，文字与其他模式卡完全一致 */
-            /* ===== v4.0.28 守屋卡片「守护大自然」插图：明亮草地上植物守护小队 ===== */
-            #btn-dorm .pkt-art.dorm { gap: 0; }
+            /* ===== v4.0.112 守屋卡片封面重做：远小近大三段景深 + 原版投影/阳光 =====
+               改前：三只植物 flex 横排、尺寸 100/62/62 → 总宽 193px 挤在 158px 画布里，
+               互相遮挡（豌豆的嘴被高坚果压住一半），外加 🌿☀️ emoji 与像素手绘风格打架。
+               改后：绝对定位三段纵深（向日葵 38px 远/左 → 高坚果 84px 近/中 → 豌豆 62px 中/右，
+               互相只压 7px/5px 边缘，脚底 16/6/10px 收敛到同一地平线），
+               脚下各垫一枚原版 plantshadow32 投影，底部一条 16px 草地台阶当地平线，
+               左上暖光 + 四角暗角收边；☀️ 换成原版 interface/Sun.gif 缓慢浮动。
+               实测可见度：向日葵 80% / 豌豆 93%（改前被压掉半张脸）。 */
+            #btn-dorm .pkt-art.dorm {
+                display: block;
+                padding: 0;
+                background:
+                    radial-gradient(70% 60% at 22% 0%, #fdffec 0%, rgba(253,255,236,0) 58%),
+                    radial-gradient(120% 104% at 50% 46%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 46%, rgba(28,58,10,0.16) 100%),
+                    linear-gradient(180deg, #d8f5b5 0%, #b4e58b 54%, #9cd374 100%);
+            }
+            /* 草地台阶：给三只植物一条共同的「地平线」，不再是漂浮的贴纸 */
+            #btn-dorm .pkt-art.dorm::after {
+                content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 16px;
+                background: linear-gradient(180deg, #97d06f 0%, #7eb657 55%, #6aa346 100%);
+                border-top: 1px solid rgba(255,255,255,0.6);
+                box-shadow: inset 0 6px 9px rgba(40,80,20,0.16), inset 0 -4px 6px rgba(30,60,15,0.14);
+                pointer-events: none; z-index: 0;
+            }
+            #btn-dorm .pkt-art.dorm .dorm-hero,
+            #btn-dorm .pkt-art.dorm .dorm-side,
+            #btn-dorm .pkt-art.dorm .dorm-sun { position: absolute; transform: none; }
             #btn-dorm .pkt-art.dorm .dorm-hero {
-                height: 100px; z-index: 2;
-                filter: drop-shadow(0 5px 5px rgba(30, 60, 10, 0.4));
+                height: 84px; left: 34px; bottom: 6px; z-index: 4;
+                filter: drop-shadow(0 4px 5px rgba(30,60,10,0.5));
             }
-            #btn-dorm .pkt-art.dorm .dorm-side { height: 62px; z-index: 1; }
-            #btn-dorm .pkt-art.dorm .dorm-side-l { transform: translate(10px, 10px); }
-            #btn-dorm .pkt-art.dorm .dorm-side-r { transform: translate(-10px, 10px); }
-            #btn-dorm .pkt-art.dorm .dorm-leaf {
-                position: absolute; font-size: 20px; z-index: 3; opacity: 0.9;
-                filter: drop-shadow(1px 2px 2px rgba(20, 50, 10, 0.45));
+            #btn-dorm .pkt-art.dorm .dorm-side-l { height: 38px; left: 4px; bottom: 16px; z-index: 2; }
+            #btn-dorm .pkt-art.dorm .dorm-side-r { height: 62px; right: 2px; bottom: 10px; z-index: 3; }
+            /* 贴地投影（原版 plantshadow32.png，压在草台阶之上、植物之下） */
+            #btn-dorm .pkt-art.dorm .dorm-sh {
+                position: absolute; z-index: 1;
+                background: url('assets/images/interface/plantshadow32.png') center/100% 100% no-repeat;
+                pointer-events: none;
             }
-            #btn-dorm .pkt-art.dorm .dorm-leaf-l { left: 6px; top: 4px; transform: rotate(-24deg); }
-            #btn-dorm .pkt-art.dorm .dorm-leaf-r { right: 6px; top: 4px; transform: rotate(24deg) scaleX(-1); }
+            #btn-dorm .pkt-art.dorm .dorm-sh-l { width: 34px; height: 10px; left: 5px; bottom: 14px; }
+            #btn-dorm .pkt-art.dorm .dorm-sh-c { width: 54px; height: 15px; left: 38px; bottom: 3px; }
+            #btn-dorm .pkt-art.dorm .dorm-sh-r { width: 44px; height: 12px; right: 6px; bottom: 8px; }
             #btn-dorm .pkt-art.dorm .dorm-sun {
-                position: absolute; right: 10px; bottom: 6px; font-size: 17px; z-index: 3; opacity: 0.95;
-                filter: drop-shadow(0 0 5px rgba(255, 220, 80, 0.85));
-                animation: dorm-sun-glow 2.4s ease-in-out infinite;
+                left: 7px; top: 5px; width: 26px; height: 26px; z-index: 5; opacity: .96;
+                filter: drop-shadow(0 0 9px rgba(255,231,110,1));
+                animation: dorm-sun-float 3.4s ease-in-out infinite;
             }
-            @keyframes dorm-sun-glow {
-                0%, 100% { transform: scale(1); opacity: 0.85; }
-                50% { transform: scale(1.14); opacity: 1; }
+            @keyframes dorm-sun-float {
+                0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+                50% { transform: translateY(-6px) rotate(7deg) scale(1.08); }
             }
             /* v3.87.0 猛鬼宿舍阵营弹窗：按钮名文字统一为同一颜色（不再绿/红区分），僵尸阵营按钮也用米黄底 */
             #dorm-role-modal .diff-btn .diff-name { color: #9a4a10 !important; text-shadow: 1px 1px 0 rgba(255,255,255,0.8); }
@@ -352,16 +379,17 @@
                         </div>
                     </button>
 
-                    <!-- v4.0.28 守屋卡片重做：弃用暗色截图封面，改为明亮草地「向日葵+高坚果+豌豆射手」守护组合
-                         （与其他模式卡同款原版手绘素材风，高坚果居中=守护家园，凸显守护大自然主题） -->
+                    <!-- v4.0.112 守屋卡片封面重做：三只植物由「横排互挤」改为「远小近大」三段景深
+                         （向日葵远景小件 / 高坚果近景盾牌 / 豌豆中景射手），去 emoji、补原版投影与草地地平线 -->
                     <button id="btn-dorm" class="mode-card" title="守屋大作战：大地图双人协作，建造植物防线，打倒僵尸即胜利！">
                         <div class="pkt-art dorm">
-                            <span class="dorm-leaf dorm-leaf-l">🌿</span>
                             <img src="assets/images/Plants/SunFlower/0.gif" alt="向日葵" class="dorm-side dorm-side-l">
                             <img src="assets/images/Plants/TallNut/0.gif" alt="高坚果" class="dorm-hero">
                             <img src="assets/images/Plants/Peashooter/0.gif" alt="豌豆射手" class="dorm-side dorm-side-r">
-                            <span class="dorm-leaf dorm-leaf-r">🌿</span>
-                            <span class="dorm-sun">☀️</span>
+                            <span class="dorm-sh dorm-sh-l"></span>
+                            <span class="dorm-sh dorm-sh-c"></span>
+                            <span class="dorm-sh dorm-sh-r"></span>
+                            <img class="dorm-sun" src="assets/images/interface/Sun.gif" alt="阳光">
                         </div>
                         <div class="vs-text">
                             <div class="pkt-name">守屋大作战</div>
