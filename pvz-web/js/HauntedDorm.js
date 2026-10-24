@@ -1437,8 +1437,11 @@ class HauntedDorm {
             return true;
         };
         const used = [];
-        for (const p of this.allPlayers) {
-            if (!p || p.dead) continue;
+        // v4.0.113：只搬真人（P1/P2）——用户说的是「我的出生点」，v4.0.108 却顺着 allPlayers 把 5 个人机
+        // 也一并搬到各自房门外的走道上，于是开局一堆人机在你门口来回晃（用户实报「人机在走路的时间段可以出来」）。
+        // 人机恢复 v3.93 的原设计：全部在地图正中心集合，然后各自走向自己的房间（它们那条路径本来就是从中心算的）。
+        for (const p of [this.player, this.player2]) {
+            if (!p || p.dead || p.isAi) continue;
             let best = null, bestD = Infinity;
             for (const rm of this.rooms) {
                 if (used.includes(rm)) continue;
