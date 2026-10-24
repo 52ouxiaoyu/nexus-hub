@@ -115,7 +115,7 @@
 <body>
 <div id="wrap">
     <canvas id="cv" width="1280" height="720"></canvas>
-    <div class="ver">v4.7.3 · 元素共鸣</div>
+    <div class="ver">v4.7.4 · 元素共鸣</div>
 
     <!-- 主菜单 -->
     <div id="menu" class="overlay">
@@ -157,10 +157,11 @@
                 　　<b style="color:#8fe4ff">冰</b> + <b style="color:#c8a4ff">雷</b> → <b style="color:#a8ccff">超导</b>：冻得更久，全队打它 <b>+45%</b> 伤害（6 秒）<br>
                 　　<b style="color:#ffa03d">火</b> + <b style="color:#c8a4ff">雷</b> → <b style="color:#ffb04a">过载</b>：半径 92 爆炸 + 击退，成片清场<br>
                 　　<b>锐</b> + 任意元素 → <b>破绽</b>：该次伤害 <b>×1.55~2.0</b>，纯物理高攻塔的归宿<br>
-                🎯 反应强度随<b>两边附魔等级之和</b>上涨（双方合计 6 级 ×1.66 → 12 级 ×3.64），所以两个人都要点元素，一个人点没用<br>
+                🎯 反应强度随<b>两边元素强度之和</b>上涨（合计 6 级 ×1.66 → 双方各自满系 18 级 ×4.96），所以两个人都要点元素，一个人点没用<br>
                 ⚡ 另有<b style="color:#ffd76a">合击</b>：两塔 2 秒内打中同一只 → 受创 <b>×2.6</b>；和元素反应可以叠加<br>
                 🎯 箭矢<b style="color:#5ee6ff">微微吸附</b>：方向大致对上了，会自己拐一点点去咬住目标<br>
                 🔒 <b>升级有律</b>：第一次点哪系元素就<b>锁定哪系</b> —— 之后卡坞<b>只弹本系</b>（另一系永远消失），本系每轮保底一张；弹道颜色/形状从一而终，不会再"点了冰弹出来却是火球"<br>
+                🌟 <b>三阶登峰</b>：每系共 <b>9 级</b> —— 附魔升满 <b>4 级</b> 解锁「之心」进阶卡（3 级），进阶满解锁「形态」终阶卡（2 级）；每一级都实打实加强冻结/灼烧/连锁/反应强度<br>
                 💥 击杀累积<b style="color:#ffd76a">连击</b>，连击越高射速越快；双塔伤害共同充能<b>共鸣槽</b>，满了自动放<b style="color:#7df9ff">双子贯穿光束</b> —— 光束<b>实时跟随炮口</b>，A/D 指哪照哪，命中附带各自元素效果<br>
                 🤖 某一边 <b style="color:#45e08a">5 秒无操作</b> → 那一边自动 AI 托管，一动就抢回<br>
                 ⚔️ <b style="color:#ffd76a">处决</b>：<kbd>空格</kbd>（P1）/ <kbd>小键盘 Enter</kbd>（P2），<b>12 秒</b>冷却，炮口前方 <b>90° 扇形</b>内全体 <b>×3 伤害 + 重击退</b>；扇形里没敌人时不扣冷却；选<b style="color:#ffd76a">处决强化</b>卡可升到 <b>×7.5 / 6 秒冷却</b><br>
@@ -200,13 +201,13 @@
 
 <script>
 "use strict";
-/* ================= 向史莱姆开炮 v4.7.3 · 元素共鸣（纯单局 · 升级不暂停） ================= */
+/* ================= 向史莱姆开炮 v4.7.4 · 元素共鸣（纯单局 · 升级不暂停） ================= */
 const W = 1280, H = 720;
 const WALL_TOP = 596;          // 城墙顶面
 const TOWER_X = [206, 1074];   // 两座塔的中心 x
 const TOWER_Y = 646;           // 塔心 y（俯视圆塔）
 const PIVOT_Y = 630;           // 炮口旋转枢轴 y（在塔心偏上）
-const VERSION = 'v4.7.3';
+const VERSION = 'v4.7.4';
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -347,6 +348,14 @@ const SKILLS = [
     { id: 'coin',   name: '赏金猎人', icon: '🪙', max: 3, desc: lv => `金币收益 +18%，额外充能共鸣槽` },
     { id: 'burst',  name: '爆裂箭',   icon: '💣', max: 3, desc: lv => `命中时小幅范围爆炸（Lv.${lv + 1}）` },
     { id: 'exec',   name: '处决强化', icon: '💀', max: 3, desc: lv => { const t = Math.min(lv + 1, 3); return `处决伤害 ×${(3 + t * 1.5).toFixed(1)} · 冷却 ${12 - t * 2}s · 范围 +${t * 80}`; } },
+    /* v4.7.4 元素三阶树：基础(4) → 进阶(3) → 终阶(2)，每系共 9 级。
+       req = 前置（基础满级才见进阶卡）；强度统一走 elemLvOf 总等级 */
+    { id: 'advFire', name: '烈焰之心', icon: '🔥', max: 3, elem: 'fire', req: { id: 'fire', lv: 4 }, desc: lv => `烈焰进阶：元素强度 +1（灼烧更猛）` },
+    { id: 'advIce',  name: '极寒之心', icon: '❄', max: 3, elem: 'ice',  req: { id: 'ice', lv: 4 }, desc: lv => `极寒进阶：元素强度 +1（冻结更狠）` },
+    { id: 'advBolt', name: '雷霆之心', icon: '⚡', max: 3, elem: 'bolt', req: { id: 'light', lv: 4 }, desc: lv => `雷霆进阶：元素强度 +1（连锁更远）` },
+    { id: 'masFire', name: '焚世形态', icon: '🔥', max: 2, elem: 'fire', req: { id: 'advFire', lv: 3 }, desc: lv => `烈焰终阶：元素强度 +1（火力登峰）` },
+    { id: 'masIce',  name: '绝对零度', icon: '❄', max: 2, elem: 'ice',  req: { id: 'advIce', lv: 3 }, desc: lv => `极寒终阶：元素强度 +1（寒气登峰）` },
+    { id: 'masBolt', name: '天罚形态', icon: '⚡', max: 2, elem: 'bolt', req: { id: 'advBolt', lv: 3 }, desc: lv => `雷霆终阶：元素强度 +1（雷网登峰）` },
 ];
 /* 质变降到 2+2：现在一局有 ~35 个卡点，玩家真的能凑出来 */
 const EVOLUTIONS = [
@@ -470,7 +479,7 @@ function makePlayer(i) {
     const t = makeTower(i);
     return {
         idx: i, tower: t, color: P_COLOR[i], color2: P_COLOR2[i],
-        lv: { rate: 0, atk: 0, multi: 0, pierce: 0, crit: 0, fire: 0, ice: 0, light: 0, heavy: 0, wall: 0, coin: 0, burst: 0, exec: 0 },
+        lv: { rate: 0, atk: 0, multi: 0, pierce: 0, crit: 0, fire: 0, ice: 0, light: 0, heavy: 0, wall: 0, coin: 0, burst: 0, exec: 0, advFire: 0, advIce: 0, advBolt: 0, masFire: 0, masIce: 0, masBolt: 0 },
         evos: {},
         idleT: 0, auto: false,   // 5 秒无输入 → AI 托管
         cardsSel: 0, cardsDone: false, aiPickT: 0, aiAng: 0, aiT: 0,
@@ -888,18 +897,26 @@ function rateOf(p) {
 function elemOf(p) {
     let best = null, bv = 0;
     for (const k of ELEM_ORDER) {
-        const v = k === 'fire' ? p.lv.fire : (k === 'ice' ? p.lv.ice : p.lv.light);
+        const v = elemLvOf(p, k);
         if (v > bv) { bv = v; best = k; }
     }
     if (!best) { p._elem = null; return 'steel'; }
-    if (p._elem && p._elem !== best) {
-        const pv = p._elem === 'fire' ? p.lv.fire : (p._elem === 'ice' ? p.lv.ice : p.lv.light);
-        if (pv === bv) best = p._elem;
-    }
+    if (p._elem && p._elem !== best && elemLvOf(p, p._elem) === bv) best = p._elem;
     p._elem = best;
     return best;
 }
-function elemLvOf(p, elem) { return elem === 'fire' ? p.lv.fire : (elem === 'ice' ? p.lv.ice : p.lv.light); }
+/* v4.7.4 元素强度 = 基础附魔 + 进阶 + 终阶 的总等级 —— 升进阶卡每一级都实打实变强 */
+const ELEM_TREE = {
+    fire: ['fire', 'advFire', 'masFire'],
+    ice:  ['ice', 'advIce', 'masIce'],
+    bolt: ['light', 'advBolt', 'masBolt'],
+};
+function elemLvOf(p, elem) {
+    const chain = ELEM_TREE[elem] || [];      // 'steel' 等未知元素 → 强度 0
+    let t = 0;
+    for (const k of chain) t += p.lv[k] || 0;
+    return t;
+}
 /* 反应组合：只有"不同元素"才反应，所以永远是两个人的事 */
 function reactKey(a, b) {
     if (!a || !b || a === b) return null;
@@ -1007,6 +1024,7 @@ function aiPickBest(p, offers) {
         if (s.id === 'rate' || s.id === 'atk') sc += 1.2;
         if (s.id === 'crit' && p.lv.crit === 0) sc += 1.5;
         if (s.id === 'exec') sc += p.lv.exec === 0 ? 2.4 : 1.0;   // 处决是唯一主动技，先立起来
+        if (s.req) sc += 2.2;                                     // 进阶/终阶卡入场就是强度跳变
         // 元素分工：托管也要懂得"和搭档错开"，两个人都点冰等于没有配合
         if (s.elem) {
             const fe = elemOf(G.players[1 - p.idx]);
@@ -1066,7 +1084,7 @@ function shoot(p) {
             dmg, crit: Math.random() < critChance(p), owner: p.idx,
             pierce: p.lv.pierce, hit: [], life: 1.0,
             size: 5.0 + heavy * 2.8, heavy, jl: rand(0.7, 1.35),   // 拖尾长度抖动，避免整齐排列像光栅
-            burst: p.lv.burst, fire: p.lv.fire, ice: p.lv.ice, light: p.lv.light,
+            burst: p.lv.burst, fire: elemLvOf(p, 'fire'), ice: elemLvOf(p, 'ice'), light: elemLvOf(p, 'bolt'),
             elem: elemOf(p),
             evoFire: !!p.evos.evoFire, evoFrost: !!p.evos.evoFrost, evoBolt: !!p.evos.evoBolt,
         });
@@ -1199,8 +1217,8 @@ function hitEnemy(e, dmg, p, opt) {
         } else applyElem(e, elem, p, d);
     }
     if (p) {
-        if (opt.burn) { e.burn = Math.max(e.burn, 2 + p.lv.fire * 2.6); e.burnT = Math.max(e.burnT, 2.4); e.burnBy = p; }
-        if (opt.slow) { e.slow = Math.max(e.slow, Math.min(.32, .24 + p.lv.ice * .05)); e.slowT = 1.6; }
+        if (opt.burn) { e.burn = Math.max(e.burn, 2 + elemLvOf(p, 'fire') * 2.6); e.burnT = Math.max(e.burnT, 2.4); e.burnBy = p; }
+        if (opt.slow) { e.slow = Math.max(e.slow, Math.min(.32, .24 + elemLvOf(p, 'ice') * .05)); e.slowT = 1.6; }
     }
     // 共鸣充能
     G.ult = Math.min(100, G.ult + d * 0.026);
@@ -1232,7 +1250,7 @@ function applyElem(e, elem, p, d) {
 /* ---------- 元素反应：这是本作唯一的"真配合" ---------- */
 function reactPower() {
     let n = 0;
-    for (const p of G.players) n += p.lv.fire + p.lv.ice + p.lv.light;
+    for (const p of G.players) n += elemLvOf(p, 'fire') + elemLvOf(p, 'ice') + elemLvOf(p, 'bolt');
     return 1 + n * 0.22;                          // 双方合计 6 级 ×1.66，12 级 ×3.64（升级在反应上也要看得见）
 }
 function doReact(kind, e, p, d) {
@@ -3780,6 +3798,7 @@ function drawDock(i) {
         let val = '';
         if (s.id === 'atk') val = `×${ATK_STEP[Math.min(nx, ATK_STEP.length - 1)].toFixed(2)}`;
         else if (s.id === 'rate') val = `×${RATE_STEP[Math.min(nx, RATE_STEP.length - 1)].toFixed(2)}`;
+        else if (s.req) val = `强度 ${elemLvOf(p, s.elem) + 1}`;
         else if (s.elem) val = `转${ELEMS[s.elem].name}`;
         else if (s.id === 'multi') val = `${nx + 1} 支`;
         else if (s.id === 'exec') val = `×${(EXEC.dmgMul + nx * 1.5).toFixed(1)} · ${EXEC.cd - nx * 2}s`;
@@ -4053,7 +4072,8 @@ function announce(txt, col) {
 function rollOffers(p) {
     // v4.7.3 主元素锁定：第一次点哪系，之后另外两系的卡就永远不再出现 ——
     // 卡坞从此有律可循，弹道颜色/形状也从一而终（不会再"冰火都点了，弹出来的却是火球"）
-    let avail = SKILLS.filter(s => p.lv[s.id] < s.max);
+    let avail = SKILLS.filter(s => p.lv[s.id] < s.max)
+        .filter(sk => !sk.req || p.lv[sk.req.id] >= sk.req.lv);   // 三阶前置：附魔满 4 级 → 进阶卡入场；进阶满 3 → 终阶入场
     const mine = elemOf(p);
     if (mine !== 'steel') {
         const other = ELEM_ORDER.filter(el => el !== mine);
