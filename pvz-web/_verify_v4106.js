@@ -70,18 +70,24 @@ const ok = (m, c) => { if (c) { pass++; console.log('  PASS ' + m); } else { fai
      t1.paused === true && t1.hasEl && t1.visible && /暂\s*停/.test(t1.text));
 
   // ---------- T2 绝对暂停：3 秒内 gameTime / 阳光 / 僵尸位置 / 植物数 全部不变 ----------
+  // v4.0.107：基线改到「暂停已生效」之后再取——原基线取于按 P 之前，会含按键前最后一帧的推进（17ms / 0.02px）
+  const base = await page.evaluate(() => {
+    const g = window.game;
+    const z = g.zombies.find(z => !z.dead);
+    return { gt: g.gameTime, sun1: g.player.sun, sun2: g.player2.sun, zx: z ? z.x : null, plants: g.plants.length };
+  });
   await sleep(3000);
   const t2 = await page.evaluate(() => {
     const g = window.game;
     const z = g.zombies.find(z => !z.dead);
     return { gt: g.gameTime, sun1: g.player.sun, sun2: g.player2.sun, zx: z ? z.x : null, plants: g.plants.length };
   });
-  ok(`T2a 暂停 3 秒 gameTime 零推进（${snap0.gt.toFixed(0)} → ${t2.gt.toFixed(0)}）`, t2.gt === snap0.gt);
-  ok(`T2b 暂停 3 秒阳光不变（☀P1 ${snap0.sun1}→${t2.sun1}，☀P2 ${snap0.sun2}→${t2.sun2}）`,
-     t2.sun1 === snap0.sun1 && t2.sun2 === snap0.sun2);
-  ok(`T2c 暂停 3 秒僵尸原地不动（x ${snap0.zx === null ? 'NULL' : snap0.zx.toFixed(1)} → ${t2.zx === null ? 'NULL' : t2.zx.toFixed(1)}）`,
-     snap0.zx !== null && t2.zx !== null && Math.abs(t2.zx - snap0.zx) < 0.001);
-  ok(`T2d 暂停期间无新植物/无结算（植物 ${snap0.plants}→${t2.plants}，over=${false}）`, t2.plants === snap0.plants);
+  ok(`T2a 暂停 3 秒 gameTime 零推进（${base.gt.toFixed(0)} → ${t2.gt.toFixed(0)}）`, t2.gt === base.gt);
+  ok(`T2b 暂停 3 秒阳光不变（☀P1 ${base.sun1}→${t2.sun1}，☀P2 ${base.sun2}→${t2.sun2}）`,
+     t2.sun1 === base.sun1 && t2.sun2 === base.sun2);
+  ok(`T2c 暂停 3 秒僵尸原地不动（x ${base.zx === null ? 'NULL' : base.zx.toFixed(1)} → ${t2.zx === null ? 'NULL' : t2.zx.toFixed(1)}）`,
+     base.zx !== null && t2.zx !== null && Math.abs(t2.zx - base.zx) < 0.001);
+  ok(`T2d 暂停期间无新植物/无结算（植物 ${base.plants}→${t2.plants}，over=${false}）`, t2.plants === base.plants);
 
   // ---------- T3 暂停期间按键全部无效（移动/建造菜单/技能） ----------
   await page.keyboard.down('KeyW');
@@ -216,10 +222,11 @@ const ok = (m, c) => { if (c) { pass++; console.log('  PASS ' + m); } else { fai
     const g = window.game;
     const t = window._tp;
     const pl = g.plants.find(p => p.c === t.c && p.r === t.r);
-    return { paused: g.paused, prodT: pl ? pl.prodT : -1 };
+    return { paused: g.paused, prodT: pl ? pl.prodT : -1, sun: g.player.sun };
   });
-  ok(`T9 恢复后植物产出计时继续推进（prodT ${t7b.prodT.toFixed(2)} → ${t9.prodT.toFixed(2)}）`,
-     t9.paused === false && t9.prodT > t7b.prodT);
+  // v4.0.107：prodT 到点产出后会归零，不能断言"更大"——用「计时器变化 或 阳光增长」判定恢复
+  ok(`T9 恢复后植物产出计时继续推进（prodT ${t7b.prodT.toFixed(2)} → ${t9.prodT.toFixed(2)}，☀${t7b.sun}→${t9.sun}）`,
+     t9.paused === false && (Math.abs(t9.prodT - t7b.prodT) > 0.001 || t9.sun > t7b.sun));
 
   // ---------- T10 无 JS 错误 ----------
   ok('T10 全程无 JS 错误' + (errs.length ? ': ' + errs[0] : ''), errs.length === 0);

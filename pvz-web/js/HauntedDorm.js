@@ -403,7 +403,7 @@ class HauntedDorm {
 
         this.player = {
             id: 1,
-            x: this.gameMode === '2p' ? cx - 60 : cx, y: cy, sun: 0, spore: 0, hp: 100, maxHp: 100,
+            x: this.gameMode === '2p' ? cx - 60 : cx, y: cy, sun: this.isZombieFaction ? 0 : 50, spore: 0, hp: 100, maxHp: 100, // v4.0.107：开局 50 阳光（原 0 阳光+不在房内=第一分钟零收入）
             icon: this.playerRoleDef1.icon,
             roleDef: this.playerRoleDef1,
             camX: 0, camY: 0, skillCd: 0, sunBuffT: 0, atkBuffT: 0,
@@ -416,7 +416,7 @@ class HauntedDorm {
         if (this.gameMode === '2p') {
             this.player2 = {
                 id: 2,
-                x: cx + 60, y: cy, sun: 0, spore: 0, hp: 100, maxHp: 100,
+                x: cx + 60, y: cy, sun: this.isZombieFaction ? 0 : 50, spore: 0, hp: 100, maxHp: 100, // v4.0.107：同 P1
                 icon: this.playerRoleDef2.icon,
                 roleDef: this.playerRoleDef2,
                 camX: 0, camY: 0, skillCd: 0, sunBuffT: 0, atkBuffT: 0,
@@ -437,12 +437,19 @@ class HauntedDorm {
         
         if (this.isZombieFaction) {
             const zCfg = HauntedDorm.GHOST_LEVELS[0];
-            this.player.hp = zCfg.hp * HauntedDorm.PLAYER_HP_MUL; // v4.0.36：真人玩家血池 ×3
-            this.player.maxHp = zCfg.hp * HauntedDorm.PLAYER_HP_MUL;
-            this.player.x = this.worldWidth ? this.worldWidth / 2 : cx;
-            this.player.y = this.worldHeight ? this.worldHeight / 2 : cy;
-            this.player.isZombie = true;
-            this.player.cfg = zCfg;
+            // v4.0.107：僵尸阵营 2p——P1/P2 都要初始化僵尸身份。原版只给 this.player 写 isZombie/cfg，
+            // P2 有 HUD、能走动，却打不动植物也不挨打（植物索敌 filter(p=>p.isZombie) 只认出 P1）
+            const zBaseX = this.worldWidth ? this.worldWidth / 2 : cx;
+            const zBaseY = this.worldHeight ? this.worldHeight / 2 : cy;
+            for (const zp of this.allPlayers) {
+                zp.hp = zCfg.hp * HauntedDorm.PLAYER_HP_MUL; // v4.0.36：真人玩家血池 ×3
+                zp.maxHp = zCfg.hp * HauntedDorm.PLAYER_HP_MUL;
+                zp.x = zBaseX + (zp === this.player ? 0 : 70);
+                zp.y = zBaseY;
+                zp.isZombie = true;
+                zp.cfg = zCfg;
+                zp.level = 1;
+            }
             this.ghostSpawned = true;
             this.ghostSpawnAt = 0;
         }
@@ -478,9 +485,24 @@ class HauntedDorm {
         this.initDOM();
         this.generateMap();
         this._ensureSafeSpawn(); // v4.0.16：出生点防墙里（地图生成后校验，此时 walls 才有数据）
+        this._placeHomeSpawn();  // v4.0.107：植物方出生在最近空房门外一格（原出生在地图正中，最近房门 468px）
         this.bindInput();
         this._updateGhostChip();
         this._refreshHud();
+        // v4.0.107：开局引导——不进屋就没有任何阳光，原版没有任何提示
+        if (!this.isZombieFaction) {
+            setTimeout(() => {
+                // 单条 DOM 提示（不用 _flyText：飘字池会被历史实例复用，重开对局时会出现多份同文）
+                if (this.over || this._destroyed) return;
+                if (window.game && window.game !== this) return;
+                const tip = document.createElement('div');
+                tip.id = 'dorm-start-tip';
+                tip.style = "position:absolute; left:50%; top:63%; transform:translate(-50%,-50%); color:#ffd54a; font-size:22px; font-weight:bold; text-shadow:2px 2px 0 #000, 0 0 12px rgba(0,0,0,.8); z-index:9000; pointer-events:none; transition:opacity .6s; white-space:nowrap;";
+                tip.innerText = '🏠 点脚下地板种一株植物 → 开始产阳光';
+                document.body.appendChild(tip);
+                setTimeout(() => { tip.style.opacity = '0'; setTimeout(() => tip.remove(), 700); }, 3400);
+            }, 2600);
+        }
 
         this.startTime = 0;
         this.lastTime = performance.now();
@@ -1363,6 +1385,42 @@ class HauntedDorm {
         for (const p of this.allPlayers) fix(p);
     }
 
+    // v4.0.107：植物方开局落点 = 最近空房门外一格。
+    // 实测（v4.0.106）：出生点在地图正中，最近房门 468px，玩家原地不动 255 秒阳光只有 12——而阳光只能由房内植物产出。
+    _placeHomeSpawn() {
+        if (this.isZombieFaction || !this.rooms || this.rooms.length === 0) return;
+        const used = [];
+        for (const p of this.allPlayers) {
+            if (!p || p.dead) continue;
+            let best = null, bestD = Infinity;
+            for (const rm of this.rooms) {
+                if (used.includes(rm)) continue;
+                if (rm.owners && rm.owners.length >= (rm.capacity || 1)) continue;
+                const d = Math.hypot(rm.frontX - p.x, rm.frontY - p.y);
+                if (d < bestD) { bestD = d; best = rm; }
+            }
+            if (!best) continue;
+            used.push(best);
+            // v4.0.107：落点是「门内第一格」而不是门外走廊——走廊格不能种植（openPlantMenu 会报"只能种房内"），
+            // 落在门内玩家一步都不用走就能点地板种下第一株
+            const dr = best.tpl.door;
+            let cx = best.doorCol, cy = best.doorRow, ox = 0, oy = 0;
+            if (dr.r === -1) oy = 1;
+            else if (dr.r >= best.h) oy = -1;
+            else if (dr.c === -1) ox = 1;
+            else if (dr.c >= best.w) ox = -1;
+            let sx = (cx + ox) * 80 + 40, sy = (cy + oy) * 80 + 40;
+            let guard = 0;
+            while (guard++ < 4 && (this.walls.has(`${cx + ox},${cy + oy}`) || this.checkCollision(sx, sy, 14))) {
+                ox *= 2; oy *= 2;
+                sx = (cx + ox) * 80 + 40; sy = (cy + oy) * 80 + 40;
+            }
+            if (this.checkCollision(sx, sy, 14)) { sx = best.frontX; sy = best.frontY; }
+            p.x = sx; p.y = sy;
+            p._homeRoom = best; // 仅用于开局引导；房间归属仍靠种下第一株植物
+        }
+    }
+
     _announce(text, sfx, priority = false) {
         if (!this.announceQueue) this.announceQueue = [];
         if (priority) {
@@ -1660,8 +1718,8 @@ class HauntedDorm {
             const timeLevels = [
                 { s: 30, lv: 1 }, { s: 90, lv: 2 }, { s: 150, lv: 3 },
                 { s: 210, lv: 4 }, { s: 270, lv: 5 }, { s: 330, lv: 6 },
-                { s: 390, lv: 7 }, { s: 450, lv: 8 }, { s: 510, lv: 9 }
-            ];
+                { s: 390, lv: 7 }, { s: 450, lv: 8 }, { s: 510, lv: 9 }, { s: 570, lv: 10 }
+            ]; // v4.0.107：补 Lv.10 巨人僵尸（原表停在 lv9，植物方永远见不到巨人；玩家僵尸链却能到 10）
             for (const step of timeLevels) {
                 // v4.0.68：< 而非 ===——空投"僵尸降级"会拉低 ghostLevel，旧 === 判定从此永不匹配，僵尸等级卡死不升级
                 if (activeSeconds >= step.s && this.ghostLevel < step.lv) {
@@ -1992,10 +2050,10 @@ class HauntedDorm {
         this.playSfx(win ? 'winmusic.mp3' : 'losemusic.mp3', 0.6);
         this._closePopup();
         const secs = Math.floor((this.gameTime) / 1000);
-        if (this.playerTraitor) {
+        if (this._anyTraitor()) {
             // v4.0.44：内鬼结局
             document.getElementById('ov-title').innerText = win ? '😈 内鬼得逞！幸存者团灭！' : '🏠 植物们守住了家园…';
-        } else if (this.playerAngelic) {
+        } else if (this._anyAngelic()) {
             // v4.0.44：天使结局
             document.getElementById('ov-title').innerText = win ? '😇 天使的胜利！幸存者都活了下来！' : '😇 天使陨落…';
         } else if (this.isZombieFaction) {
@@ -2081,6 +2139,12 @@ class HauntedDorm {
             return;
         }
         if (!inRoomGrid && !isDoorTile) isSpikeTile = true;
+        // v4.0.107：门口正格（门板已无）永久不可重建——原菜单仍给「坚果墙/地刺/土豆地雷」，点了一律被退款并报"大门已被咬毁"
+        if (isDoorTile) {
+            this._flyText(col * this.gridSize + 40, row * this.gridSize, '🚪 大门已被咬毁，永久失效，无法重建！', '#ff8a8a');
+            this.playSfx('buzzer.mp3', 0.3);
+            return;
+        }
         
         // 检查房间归属（v4.0.23：只认真正认领过的 AI——临时避难的 ai.room 不算数，否则会把玩家堵得没法建造）
         if (this.ais.some(ai => ai.room === targetRm && targetRm.owners.includes(ai)) && !this._ownsRoom(this.player, targetRm)) {
@@ -2982,6 +3046,9 @@ class HauntedDorm {
     // v4.0.23：P1 倒下的统一处理——双人模式只要 P2 还活着就继续，不再直接结算
     // 注意：allPlayers 含 5 个人机（他们几乎不会死），结算判定只能看真人玩家
     _humansAll() { return this.player2 ? [this.player, this.player2] : [this.player]; }
+    // v4.0.107：任一真人是否内鬼/天使——原结算与判定全部硬编码 this.playerTraitor（P2 变身时判错）
+    _anyTraitor() { return this._humansAll().some(p => p && p.traitor); }
+    _anyAngelic() { return this._humansAll().some(p => p && p.angelic); }
 
     _checkP1Down() {
         if (this.player.dead || this.player.hp > 0) return;
@@ -3070,7 +3137,7 @@ class HauntedDorm {
             // 旧版这里只判了天使，内鬼把 5 个人机咬死后没有任何结算 → 游戏永远不结束（用户实报）
             // v4.0.65：改为统一判定"植物方全灭"（含双人 P2 植物形态、AI 内鬼反水排除）——
             // 用户实报"只要场上都是僵尸和内鬼就直接宣布胜利"，此前人机全灭即判胜、漏判 P2 还在守屋的情况
-            if (this.playerTraitor && this._plantSideAlive() === 0) {
+            if (this._anyTraitor() && this._plantSideAlive() === 0) {
                 this._announce('😈 内鬼屠尽了所有幸存者——邪恶胜利！', 'evillaugh.mp3', true);
                 this.gameOver(true);
                 return;
@@ -3379,6 +3446,8 @@ class HauntedDorm {
         zb.dead = true;
         this.kills++;
         this.lastKiller = killer; // 记录击杀者
+        // v4.0.107：僵尸死亡掉落阳光袋——this.suns 原本是死代码（只有拾取与渲染，全文件没有一处 push）
+        if (!this.isZombieFaction) this._dropSunBag(zb);
         // v4.0.73 成就：守屋击杀累计
         if (window.AchTracker) window.AchTracker.dKill();
 
@@ -3401,7 +3470,7 @@ class HauntedDorm {
                 if (this.traitorRevealed && this.traitor && !this.traitor.dead) aliveThreats.push(this.traitor);
                 if (aliveThreats.length === 0) {
                     if (this._gameOverTimer) clearTimeout(this._gameOverTimer);
-                    this._gameOverTimer = setTimeout(() => this.gameOver(!this.playerTraitor && !this.isZombieFaction), 2000); // v4.0.65：玩家内鬼时植物赢=内鬼败
+                    this._gameOverTimer = setTimeout(() => this.gameOver(!this._anyTraitor() && !this.isZombieFaction), 2000); // v4.0.65：玩家内鬼时植物赢=内鬼败
                 }
             }
             return;
@@ -3413,15 +3482,24 @@ class HauntedDorm {
         setTimeout(() => zb.el1.remove(), 480);
         this.playSfx('scream.mp3', 0.35);
         
-        if (this.isZombieFaction && zb === this.player) {
-            this._announce('💀 你被植物击败了…', 'scream.mp3', true);
-            if (this._gameOverTimer) clearTimeout(this._gameOverTimer);
-            this._gameOverTimer = setTimeout(() => this.gameOver(false), 3000);
+        // v4.0.107：僵尸阵营 2p——P1/P2 都是可被植物击杀的僵尸；一人倒下另一人继续，全灭才失败
+        if (this.isZombieFaction && (zb === this.player || zb === this.player2)) {
+            zb.vx = 0; zb.vy = 0;
+            const who = zb === this.player ? 'P1' : 'P2';
+            const alive = this._humansAll().filter(h => h && !h.dead);
+            if (alive.length === 0) {
+                this._announce('💀 两位僵尸玩家都被植物击败了…', 'scream.mp3', true);
+                if (this._gameOverTimer) clearTimeout(this._gameOverTimer);
+                this._gameOverTimer = setTimeout(() => this.gameOver(false), 3000);
+            } else {
+                this._announce(`💀 ${who} 被植物击败了… ${who === 'P1' ? 'P2' : 'P1'} 继续战斗！`, 'scream.mp3', true);
+                this._refreshHud();
+            }
             return;
         }
 
         // v4.0.44：内鬼模式下主僵尸被植物消灭 → 植物阵营胜利，内鬼计划失败
-        if (this.playerTraitor && !zb.isMinion && !zb.isBoss) {
+        if (this._anyTraitor() && !zb.isMinion && !zb.isBoss) {
             this._announce('🎉 植物们守住了家园！内鬼计划失败…', 'losemusic.mp3', true);
             if (this._gameOverTimer) clearTimeout(this._gameOverTimer);
             this._gameOverTimer = setTimeout(() => this.gameOver(false), 3000);
@@ -3438,10 +3516,10 @@ class HauntedDorm {
             return;
         }
         if (this._gameOverTimer) clearTimeout(this._gameOverTimer);
-        this._gameOverTimer = setTimeout(() => this.gameOver(!this.playerTraitor && !this.isZombieFaction), 3000); // v4.0.65：玩家内鬼时植物赢=内鬼败
+        this._gameOverTimer = setTimeout(() => this.gameOver(!this._anyTraitor() && !this.isZombieFaction), 3000); // v4.0.65：玩家内鬼时植物赢=内鬼败
     }
 
-    _updateSuns() {
+    _updateSuns(dt = 1/60) {
         this.suns = this.suns.filter(s => {
             let picker = null;
             if (!this.player.dead && Math.hypot(s.x - this.player.x, s.y - this.player.y) < 55) {
@@ -3450,14 +3528,42 @@ class HauntedDorm {
                 picker = this.player2;
             }
             if (picker) {
-                s.el.remove();
-                this.addSun(25, picker);
-                this._flyText(s.x, s.y, '+25 ☀', 'yellow');
+                if (s.el) s.el.remove();
+                const amt = s.amount || 25;
+                this.addSun(amt, picker);
+                this._flyText(s.x, s.y, `+${amt} ☀`, 'yellow');
                 this.playSfx('points.mp3', 0.4);
                 return false;
             }
+            // v4.0.107：阳光袋有寿命，22 秒后消失（原 this.suns 从不 push，这段是死代码）
+            if (s.life !== undefined) {
+                s.life -= dt;
+                if (s.life <= 0) { if (s.el) s.el.remove(); return false; }
+                if (s.el) {
+                    s.el.style.left = s.x + 'px';
+                    s.el.style.top = s.y + 'px';
+                    s.el.style.opacity = Math.min(1, s.life / 3);
+                }
+            }
             return true;
         });
+    }
+
+    // v4.0.107：僵尸死亡掉落阳光袋（补完原设计：僵尸掉阳光，玩家出房捡）
+    _dropSunBag(zb) {
+        if (!this.suns) this.suns = [];
+        while (this.suns.length >= 12) {
+            const old = this.suns.shift();
+            if (old && old.el) old.el.remove();
+        }
+        const amount = zb.isBoss ? 100 : (zb.isMinion ? 15 : 25);
+        const el = document.createElement('div');
+        el.className = 'entity';
+        el.style.cssText = `width:46px;height:46px;z-index:120;pointer-events:none;left:${zb.x}px;top:${zb.y}px;`;
+        el.innerHTML = `<div style="font-size:38px;line-height:46px;text-align:center;filter:drop-shadow(0 0 8px #ffd54a);">☀️</div>`;
+        if (this.world1) this.world1.appendChild(el);
+        this.suns.push({ x: zb.x, y: zb.y, amount, el, life: 22 });
+        this._flyText(zb.x, zb.y - 22, `☀ 阳光袋 +${amount}`, '#ffd54a');
     }
 
     // ===== 植物产出：阳光 / 孢子 =====
@@ -3468,8 +3574,9 @@ class HauntedDorm {
             const rm = this._insideRoom(pl.c, pl.r);
             const owner = pl.owner || ((rm && rm.owners && rm.owners.length > 0) ? rm.owners[0] : null); // v4.0.23：按种植者记账
             if (!owner || owner.dead) continue;
-            if (owner.isAi) continue; // v4.0.45：削人机——人机的产出类植物（向日葵/小喷菇等）不再自动产资源，人机主要靠开局资金+事件奖励行动
-            if (owner === this.player && (this.playerAngelic || this.playerTraitor)) continue; // v4.0.44：天使无产出；内鬼不再享受植物供奉
+            // v4.0.107：人机不再"零产出"（v4.0.45 全砍后，人机经济 100% 押在盲盒随机数上）——恢复 40% 被动产出（无飘字无音效）
+            const aiProdMul = owner.isAi ? 0.4 : 1;
+            if (owner.angelic || owner.traitor) continue; // v4.0.107：任一玩家（P1/P2）变身天使/内鬼都不再享受植物供奉（原只判 P1）
             const def = pl.def;
             const wx = pl.c * 80 + 40, wy = pl.r * 80 + 40;
             // v4.0.46：作息反转——阳光系（nightOnly：阳光菇/向日葵链）白天醒着产出，夜晚熄灯睡觉（僵尸阵营无昼夜，不受限）
@@ -3488,7 +3595,7 @@ class HauntedDorm {
                 pl.prodT += dt;
                 if (pl.prodT >= (def.produce.every * (pl._cbProduceMul || 1))) { // v4.0.53：樱桃炸弹产速增益（+1/8）
                     pl.prodT = 0;
-                    let sAmt = def.produce.sun * boost;
+                    let sAmt = def.produce.sun * boost * aiProdMul;
                     if (owner.sunBuffT > 0) sAmt *= 2; // 向日葵技能生效
                     if (owner === this.player || owner === this.player2) {
                         this.addSun(sAmt, owner);
@@ -3507,7 +3614,7 @@ class HauntedDorm {
                 pl.sporeT += dt;
                 if (pl.sporeT >= (def.spore.every * (pl._cbProduceMul || 1))) { // v4.0.53：樱桃炸弹产速增益（+1/8）
                     pl.sporeT = 0;
-                    const spAmt = def.spore.n * boost;
+                    const spAmt = def.spore.n * boost * aiProdMul;
                     if (owner === this.player || owner === this.player2) {
                         this.addSpore(spAmt, owner);
                         pl._tickS = (pl._tickS || 0) + 1;
@@ -5203,7 +5310,7 @@ class HauntedDorm {
             const aliveThreats = this.zombies.filter(z => !z.dead);
             if (aliveThreats.length === 0) {
                 if (this._gameOverTimer) clearTimeout(this._gameOverTimer);
-                this._gameOverTimer = setTimeout(() => this.gameOver(!this.playerTraitor && !this.isZombieFaction), 2000); // v4.0.65：玩家内鬼时植物赢=内鬼败
+                this._gameOverTimer = setTimeout(() => this.gameOver(!this._anyTraitor() && !this.isZombieFaction), 2000); // v4.0.65：玩家内鬼时植物赢=内鬼败
             }
         }
     }
@@ -5679,7 +5786,7 @@ class HauntedDorm {
 
         this._updateShooting(dt);
         this._updatePeas(dt);
-        this._updateSuns();
+        this._updateSuns(dt);
         this._updateProduce(dt);
         this._updateSpike(dt);
         this._updateIceshroom(dt);
@@ -5696,7 +5803,7 @@ class HauntedDorm {
         for (const zp of [this.player, this.player2]) {
             if (!zp || zp.dead) continue;
             const zpTraitor = !!zp.traitor;
-            if (!zpTraitor && !(this.isZombieFaction && zp === this.player)) continue;
+            if (!zpTraitor && !(this.isZombieFaction && zp.isZombie)) continue; // v4.0.107：僵尸阵营 P1/P2 都能啃（原只放行 this.player）
             const zpCorrupt = zp.corrupt || 0;
             // 每 2.4s 啃食身边的植物（优先啃门）
             zp.biteT = (zp.biteT || 0) + dt;
@@ -5814,7 +5921,7 @@ class HauntedDorm {
             
             // v4.0.31：接触幸存者改为按血量啃咬——AI 有血量能扛（不再一碰到就死），隔门免疫保留
             // 开局前 5 秒无敌保护，防止一出生人机就被吃掉
-            const victims = [...this.ais, this.player, this.player2].filter(v => v && v !== zp);
+            const victims = [...this.ais, this.player, this.player2].filter(v => v && v !== zp && !v.isZombie); // v4.0.107：同为僵尸的玩家不互相啃
             for (const v of victims) {
                 if (!v.dead && this.gameTime > 5000 && Math.hypot(v.x - zp.x, v.y - zp.y) < 50) {
                     // 如果中间隔着门（幸存者在房间里且门活着，僵尸在外面），则免疫接触伤害
@@ -5920,9 +6027,13 @@ class HauntedDorm {
                     }
                 }
                 if (pickedByAI) {
-                    pickedByAI.sun += 1000;
-                    pickedByAI.spore += 100;
-                    this._flyText(a.x, a.y, '🤖 盲盒被AI抢走了！', '#aaa');
+                    // v4.0.107：人机不再"任何盲盒都 +1000☀"（原与玩家 💰钱袋 +150 相差 6.7 倍，抢到一次 = 400 秒产出，
+                    // 一局强弱全看谁先摸到箱子）。现按外观分档、约为玩家同档的 60%；配合 _updateProduce 的 40% 被动产出，经济不再全押随机
+                    const aiSun = a.kind === 'diamond' ? 600 : a.kind === 'money' ? 90 : 150;
+                    const aiSpore = a.kind === 'diamond' ? 60 : 40;
+                    pickedByAI.sun += aiSun;
+                    pickedByAI.spore += aiSpore;
+                    this._flyText(a.x, a.y, `🤖 盲盒被AI抢走了！(+${aiSun}☀ +${aiSpore}🦠)`, '#aaa');
                     this.playSfx('sun.mp3', 0.5);
                     a.el.remove();
                     this.airdrops.splice(i, 1);
@@ -6021,8 +6132,9 @@ class HauntedDorm {
                         this._flyText(a.x, a.y, '📦 补给箱：+50血 +50阳光', '#8dff8d');
                     } else if (pk === 'trophy') {
                         for (const pl of this.plants) {
-                            if (pl.c >= pickedByPlayer.x / 80 - 10 && pl.c <= pickedByPlayer.x / 80 + 10) {
-                                pl.hp = pl.def.hp || pl.maxHp || pl.hp;
+                            // v4.0.107：按距离（5 格）而非"只比列"——原写法站在地图中间，同列上下 21 格植物全部回满
+                            if (Math.hypot(pl.c * 80 + 40 - pickedByPlayer.x, pl.r * 80 + 40 - pickedByPlayer.y) <= 400) {
+                                pl.hp = pl.maxHp || pl.def.hp || pl.hp; // v4.0.107：按 maxHp 回满（门板 maxHp=图鉴 30%，用 def.hp 会回成 3.3 倍血）
                             }
                         }
                         for (const al of this.ais) {
@@ -6114,8 +6226,9 @@ class HauntedDorm {
                             break;
                         case 10:
                             for (const pl of this.plants) {
-                                if (pl.c >= pickedByPlayer.x/80 - 10 && pl.c <= pickedByPlayer.x/80 + 10) {
-                                    pl.hp = pl.def.hp || pl.maxHp || pl.hp;
+                                // v4.0.107：按距离（5 格）而非"只比列"（同上）
+                                if (Math.hypot(pl.c * 80 + 40 - pickedByPlayer.x, pl.r * 80 + 40 - pickedByPlayer.y) <= 400) {
+                                    pl.hp = pl.maxHp || pl.def.hp || pl.hp; // v4.0.107：按 maxHp 回满（同上）
                                 }
                             }
                             this._flyText(a.x, a.y, '🍄 圣光洗礼 (植物全回血)', '#0f0');
@@ -6438,7 +6551,7 @@ class HauntedDorm {
                                 const splash = Math.max(1, Math.round(curBiteDmg * 0.25));
                                 for (const pp of this.allPlayers) {
                                     if (pp.dead || pp.invincibleT > 0) continue;
-                                    if (this.playerTraitor && pp === this.player) continue;
+                                    if (pp.traitor) continue; // v4.0.107：任一人内鬼都免疫自家门板溅射
                                     if (Math.hypot(pp.x - dcx, pp.y - dcy) < 80) {
                                         if (pp === this.player) this.player.hp -= splash;
                                         else { pp.hp -= splash; this.setHp(); if (pp === this.player2) this.flashDamage(); }
@@ -6511,6 +6624,7 @@ class HauntedDorm {
                 if (p.dead) continue;
                 if (this.traitorRevealed && p === this.traitor) continue; // v4.0.20：僵尸不咬内鬼
                 if (p.traitor) continue; // v4.0.44/104：僵尸不咬玩家内鬼（P1/P2 通用）
+                if (p.isZombie) continue; // v4.0.107：僵尸阵营玩家不被己方僵尸/小怪咬
                 if (Math.hypot(p.x - zb.x, p.y - zb.y) < 80) { // v4.0.91：接触半径 50→80（僵尸更容易蹭到玩家，别开局全程零接触）
                     // 如果中间隔着门（玩家在房间里且门活着，僵尸在外面），则免疫接触伤害
                     const pRm = this._insideRoom(Math.floor(p.x/80), Math.floor(p.y/80));
