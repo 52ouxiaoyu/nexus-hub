@@ -50,7 +50,10 @@ class HauntedDorm {
                              produce: { sun: 1024, every: 0.4 } },
 
             // —— 豌豆系 (v4.0.53 重排：豌豆射手→卷心菜投手→玉米投手→双向投手→双向豌豆→寒冰豌豆→双发豌豆→三线豌豆→机枪射手→
-            //      西瓜投手→冰西瓜投手→猫尾草→超级机箱→机箱猫尾草→西瓜猫尾草→冰西瓜猫尾草；伤害 1→32768 翻倍、射程 3→8 格) ——
+            //      西瓜投手→冰西瓜投手→猫尾草→超级机箱→机箱猫尾草→西瓜猫尾草→冰西瓜猫尾草；伤害 1→19300、射程 3→8 格)
+            //      v4.0.111：tier1~9 保持每级 ×2（1→256，开局手感不变），tier10 起放缓为每级 ×1.85
+            //      （480→890→1650→3050→5650→10450→19300），终级单发降 41%、单株杀 Lv.10 巨人 0.6s→1.1s。
+            //      用户反馈「后期豌豆伤害太高」——只放缓后段倍率，不动弹数/射速，前期曲线零改动) ——
             peashooter:    { tier: 1, name: '豌豆射手', img: 'Plants/Peashooter/Peashooter.gif',   card: 'Peashooter.png', hp: 300, cost: 8,
                              shoot: { dmg: 1, cd: 1.5, n: 1, range: 240, img: 'Plants/PB00.gif', homing: true },
                              up: { cost: 16, to: 'cabbagepult' } },
@@ -80,32 +83,32 @@ class HauntedDorm {
                              shoot: { dmg: 256, cd: 1.2, n: 4, range: 520, img: 'Plants/PB00.gif', homing: true },
                              up: { cost: 4096, to: 'melonpult' } },
             melonpult:     { tier: 10, name: '西瓜投手', img: 'Plants/MelonPult/MelonPult.png',   hp: 3200, cost: 0, scale: 1.2, // v4.0.53：新——抛射大西瓜范围溅射
-                             shoot: { dmg: 512, cd: 2.2, n: 1, range: 540, img: 'Plants/MelonPult/Melon.png', homing: true, aoe: 70 },
+                             shoot: { dmg: 480, cd: 2.2, n: 1, range: 540, img: 'Plants/MelonPult/Melon.png', homing: true, aoe: 70 },
                              up: { cost: 8192, to: 'wintermelon' } },
             wintermelon:   { tier: 11, name: '冰西瓜投手', img: 'Plants/WinterMelon/WinterMelon.png', hp: 3800, cost: 0, scale: 1.2, // v4.0.53：新——冰西瓜溅射+减速（v4.0.54 修复：本体图原来是 MelonPult 目录的弹药小图，改回正确投手本体）
-                             shoot: { dmg: 1024, cd: 2.2, n: 1, range: 560, img: 'Plants/MelonPult/WinterMelon_small.png', homing: true, aoe: 80, slow: true },
+                             shoot: { dmg: 890, cd: 2.2, n: 1, range: 560, img: 'Plants/MelonPult/WinterMelon_small.png', homing: true, aoe: 80, slow: true },
                              up: { cost: 16384, to: 'cattail' } },
             cattail:       { tier: 12, name: '猫尾草', img: 'Plants/Cattail/Cattail.gif',       hp: 4200, cost: 0, scale: 1.15, // v4.0.53：新——尖刺针雨自动索敌
-                             shoot: { dmg: 2048, cd: 1.1, n: 3, range: 580, img: 'Plants/Cattail/Cattail.png', homing: true },
+                             shoot: { dmg: 1650, cd: 1.1, n: 3, range: 580, img: 'Plants/Cattail/Cattail.png', homing: true },
                              up: { cost: 32768, to: 'superbox' } },
             superbox:      { tier: 13, name: '超级机箱', img: 'Plants/GatlingPea/GatlingPea.gif', hp: 5000, cost: 0, scale: 1.25, // v4.0.53：新——金色重炮机箱
                              tint: 'sepia(1) saturate(2.4) hue-rotate(-12deg) brightness(1.1) drop-shadow(0 0 6px #ffd54a)',
-                             shoot: { dmg: 4096, cd: 1.0, n: 5, range: 600, img: 'Plants/PB00.gif', homing: true },
+                             shoot: { dmg: 3050, cd: 1.0, n: 5, range: 600, img: 'Plants/PB00.gif', homing: true },
                              up: { cost: 65536, to: 'machinestail' } },
             machinestail:  { tier: 14, name: '机箱猫尾草', img: 'Plants/Cattail/Cattail.gif',   hp: 6000, cost: 0, scale: 1.2, // v4.0.53：新——机枪猫尾草（金属色）
                              tint: 'grayscale(0.3) sepia(0.8) saturate(1.6) brightness(1.05) drop-shadow(0 0 6px #bdbdbd)',
                              overlay: 'Plants/GatlingPea/GatlingPea.gif', overTransform: 'translate(-50%, -50%) translate(0px, -24px) scale(0.55)',
-                             shoot: { dmg: 8192, cd: 0.95, n: 5, range: 620, img: 'Plants/PB00.gif', homing: true },
+                             shoot: { dmg: 5650, cd: 0.95, n: 5, range: 620, img: 'Plants/PB00.gif', homing: true },
                              up: { cost: 131072, to: 'melonstail' } },
             melonstail:    { tier: 15, name: '西瓜猫尾草', img: 'Plants/Cattail/Cattail.gif',   hp: 7000, cost: 0, scale: 1.2, // v4.0.53：新——西瓜猫尾草（绿瓜纹）
                              tint: 'hue-rotate(90deg) saturate(1.5) brightness(1.0)',
                              overlay: 'Plants/MelonPult/Melon.png', overTransform: 'translate(-50%, -50%) translate(0px, -22px) scale(0.6)',
-                             shoot: { dmg: 16384, cd: 1.05, n: 4, range: 640, img: 'Plants/MelonPult/Melon.png', homing: true, aoe: 70 },
+                             shoot: { dmg: 10450, cd: 1.05, n: 4, range: 640, img: 'Plants/MelonPult/Melon.png', homing: true, aoe: 70 },
                              up: { cost: 262144, to: 'icemelonstail' } },
             icemelonstail: { tier: 16, name: '冰西瓜猫尾草', img: 'Plants/Cattail/Cattail.gif', hp: 8000, cost: 0, scale: 1.25, // v4.0.53：新——冰西瓜猫尾草（冰蓝终级）
                              tint: 'hue-rotate(180deg) saturate(1.7) brightness(1.25) drop-shadow(0 0 10px #7fd8ff)',
                              overlay: 'Plants/MelonPult/WinterMelon.png', overTransform: 'translate(-50%, -50%) translate(0px, -22px) scale(0.6)',
-                             shoot: { dmg: 32768, cd: 1.0, n: 5, range: 660, img: 'Plants/MelonPult/WinterMelon_small.png', homing: true, aoe: 85, slow: true } },
+                             shoot: { dmg: 19300, cd: 1.0, n: 5, range: 660, img: 'Plants/MelonPult/WinterMelon_small.png', homing: true, aoe: 85, slow: true } },
 
             // —— 坚果系 (v4.0.41：12 级每级换模型——回归旧链「坚果射手/卷心菜堡垒/地刺坚果/高坚果/钢刺/辣椒」外观，
             //      高阶沿用「操作与说明」里的坚果模型（寒冰坚果/大嘴坚果/十人坚果/南瓜壳）；升费与血量沿用 v4.0.39 不变) ——
