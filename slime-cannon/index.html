@@ -37,7 +37,13 @@
     .btn.big { font-size: 19px; padding: 17px 60px; letter-spacing: 6px; }
     .stat-line { color: #8fa3c8; font-size: 13px; margin: 5px 0; }
     .stat-line b { color: #ffd76a; }
-    .ver { position: absolute; left: 10px; bottom: 6px; color: #46536e; font-size: 11px; z-index: 5; letter-spacing: .5px; }
+    .ver {
+        position: absolute; right: 12px; bottom: 9px; z-index: 6; pointer-events: none;
+        font-size: 12px; font-weight: 800; letter-spacing: .5px; color: #c8ecff;
+        background: rgba(6,14,24,.82); border: 1px solid rgba(94,230,255,.45);
+        border-radius: 9px; padding: 4px 11px;
+        box-shadow: 0 2px 12px rgba(0,0,0,.55), inset 0 0 12px rgba(94,230,255,.12);
+    }
     /* 选卡 */
     #cardOverlay { background: rgba(2,4,9,.93); backdrop-filter: blur(3px); }
     #cardOverlay h2 { font-size: 25px; font-weight: 900; letter-spacing: 4px; color: #ffe28a; text-shadow: 0 0 26px rgba(255,214,90,.6); margin-bottom: 3px; }
@@ -76,14 +82,6 @@
     .card .lvtag { display: inline-block; margin-top: 5px; font-size: 10px; padding: 2px 8px; border-radius: 9px; background: #2a3a5c; color: #9fc3ff; }
     .side.done .cards { opacity: .2; }
     .done-tag { padding: 56px 24px; font-size: 17px; font-weight: 800; color: #45e08a; letter-spacing: 2px; }
-    /* 商店 */
-    .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
-    .shop-item { background: #161f33; border: 1px solid #2c3a55; border-radius: 10px; padding: 10px 12px; text-align: left; }
-    .shop-item .nm { font-size: 13px; color: #fff; font-weight: 700; }
-    .shop-item .ef { font-size: 11px; color: #7fe3a0; margin: 3px 0; }
-    .shop-item .buy { margin-top: 5px; font-size: 12px; padding: 6px 0; width: 100%; border: none; border-radius: 8px; background: #3d8dff; color: #fff; font-weight: 700; cursor: pointer; }
-    .shop-item .buy:disabled { background: #333f55; color: #7787a3; cursor: default; }
-    .bank { font-size: 15px; color: #ffd76a; font-weight: 800; margin-bottom: 4px; }
     #announce {
         position: absolute; top: 15%; left: 0; right: 0; text-align: center; z-index: 8; pointer-events: none;
         font-size: 36px; font-weight: 900; letter-spacing: 6px; color: #ffd76a;
@@ -110,14 +108,14 @@
 <body>
 <div id="wrap">
     <canvas id="cv" width="1280" height="720"></canvas>
-    <div class="ver">Slime Cannon v3.0.0</div>
+    <div class="ver">v3.1.0 · 子弹自动吸附</div>
 
     <!-- 主菜单 -->
     <div id="menu" class="overlay">
         <div class="panel">
             <h1 class="title">向史莱姆开炮</h1>
             <div class="subtitle">SLIME CANNON 3 · 双塔守卫</div>
-            <div class="stat-line">累积金币 <b id="menuBank">0</b> · 最远关卡 <b id="menuBest">1</b></div>
+            <div class="stat-line" style="color:#8fa3c8;">一次一局 · 不存档 · <b style="color:#ffd76a">每盘从零开始</b></div>
             <div class="keyrow">
                 <div class="kbox p1">
                     <div class="kt">🟦 左塔 · P1</div>
@@ -128,11 +126,10 @@
                     <div class="kd"><kbd>←</kbd><kbd>→</kbd> 转动炮口 · <kbd>↑</kbd> 往后推 · <kbd>↓</kbd> 选中</div>
                 </div>
             </div>
-            <div class="tip">只有<b>四键</b>：左右转炮口，升级时上下选卡。<br>哪边<b>5 秒没动</b>，那一边的炮塔自动交给 AI 托管。</div>
+            <div class="tip">只有<b>四键</b>：左右转炮口，升级时上下选卡。箭矢会<b>自动微调</b>咬住目标。<br>哪边<b>5 秒没动</b>，那一边的炮塔自动交给 AI 托管。<br>每盘独立开局，过关即送<b>战地改装</b>。</div>
             <div style="margin:16px 0 4px;">
                 <button class="btn green big" id="btnStart">开始守卫</button>
             </div>
-            <button class="btn" id="btnShop">炮台强化</button>
             <button class="btn gray" id="btnHelp">玩法说明</button>
         </div>
     </div>
@@ -148,6 +145,7 @@
                 🎯 <b style="color:#ffb347">P2 右塔</b>：<kbd>←</kbd><kbd>→</kbd> 转炮口<br>
                 ⬆️ 升级时：<kbd>W</kbd>/<kbd>↑</kbd> <b>往后推</b>（换下一张）· <kbd>S</kbd>/<kbd>↓</kbd> <b>选中</b><br>
                 🤖 某一边 <b style="color:#45e08a">5 秒无操作</b> → 那一边自动 AI 托管，一动就抢回<br>
+                🎯 箭矢<b style="color:#5ee6ff">微微吸附</b>：方向大致对上了，会自己拐一点点去咬住目标<br>
                 💥 击杀累积<b style="color:#ffd76a">连击</b>，满屏爆汁，连击越高射速越快<br>
                 🌀 双塔伤害共同充能<b>共鸣槽</b>，满了<b>自动</b>放「双子贯穿光束」<br>
                 ⚠️ 小心<b style="color:#ff7a7a">突发危机</b>：兽潮 / 史莱姆王 / 酸雨 / 暗夜 / 狂暴 / 重甲突袭<br>
@@ -155,17 +153,6 @@
                 ⏸️ <kbd>P</kbd> 暂停 · <kbd>F</kbd> 全屏
             </div>
             <div style="margin-top:14px;"><button class="btn" id="btnHelpBack">返 回</button></div>
-        </div>
-    </div>
-
-    <!-- 强化商店 -->
-    <div id="shop" class="overlay hidden">
-        <div class="panel">
-            <h1 class="title" style="font-size:24px;">炮台强化</h1>
-            <div class="subtitle">永久生效 · 双塔共享 · 银行金币支付</div>
-            <div class="bank">🏦 银行金币：<span id="shopBank">0</span></div>
-            <div class="shop-grid" id="shopGrid"></div>
-            <button class="btn" id="btnShopBack">返 回</button>
         </div>
     </div>
 
@@ -181,7 +168,7 @@
         <div class="panel">
             <h1 class="title" style="font-size:28px;">✅ 第 <span id="clearStage">1</span> 关达成</h1>
             <div class="subtitle" id="clearInfo"></div>
-            <div class="stat-line">本关奖励 <b id="clearReward">0</b> 金币（已存入银行）</div>
+            <div class="stat-line">下一关开局获得 <b style="color:#ffd76a">战地改装</b>：双塔各选一次强化</div>
             <button class="btn green" id="btnNext">进入下一关</button>
         </div>
     </div>
@@ -192,7 +179,7 @@
             <h1 class="title" style="font-size:28px;">💀 城墙失守</h1>
             <div class="subtitle">THE WALL HAS FALLEN</div>
             <div class="stat-line">坚守到第 <b id="overStage">1</b> 波 · 击杀 <b id="overKills">0</b> 只 · 最高连击 <b id="overCombo">0</b></div>
-            <div class="stat-line">获得 <b id="overCoins">0</b> 金币（已存入银行）</div>
+            <div class="stat-line">本局拾取 <b id="overCoins">0</b> 金币</div>
             <button class="btn green" id="btnRetry">再来一局</button>
             <button class="btn gray" id="btnHome">回到基地</button>
         </div>
@@ -208,13 +195,13 @@
 
 <script>
 "use strict";
-/* ================= 向史莱姆开炮 v3.0.0 · 双塔守卫 ================= */
+/* ================= 向史莱姆开炮 v3.1.0 · 双塔守卫（纯单局 · 无存档） ================= */
 const W = 1280, H = 720;
 const WALL_TOP = 596;          // 城墙顶面
 const TOWER_X = [206, 1074];   // 两座塔的中心 x
 const TOWER_Y = 646;           // 塔心 y（俯视圆塔）
 const PIVOT_Y = 630;           // 炮口旋转枢轴 y（在塔心偏上）
-const VERSION = 'v3.0.0';
+const VERSION = 'v3.1.0';
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -237,28 +224,6 @@ function fit() {
     if (rot) rot.classList.toggle('hidden', !(vw < vh && vw < 820 && state !== 'MENU'));
 }
 window.addEventListener('resize', fit);
-
-/* ---------- 存档 ---------- */
-const SAVE_KEY = 'slimeCannonSave_v3';
-const OLD_KEY = 'slimeCannonSave_v1';
-let save = { bank: 0, best: 1, upgrades: { atk: 0, rate: 0, wall: 0, coin: 0 } };
-try {
-    const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
-    if (s && s.upgrades) save = Object.assign(save, s);
-    else {
-        const o = JSON.parse(localStorage.getItem(OLD_KEY) || 'null');
-        if (o && o.upgrades) save = Object.assign(save, o);  // 老存档继承
-    }
-} catch (e) {}
-function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
-
-const META_SHOP = [
-    { key: 'atk',  name: '箭矢淬火', ef: () => '全塔伤害 +9%/级', max: 10, cost: lv => Math.round(120 * Math.pow(1.55, lv)) },
-    { key: 'rate', name: '速射机簧', ef: () => '射速 +7%/级',     max: 10, cost: lv => Math.round(120 * Math.pow(1.55, lv)) },
-    { key: 'wall', name: '城墙浇筑', ef: () => '城墙血量 +16%/级', max: 10, cost: lv => Math.round(100 * Math.pow(1.5, lv)) },
-    { key: 'coin', name: '战时征收', ef: () => '金币收益 +12%/级',  max: 10, cost: lv => Math.round(100 * Math.pow(1.5, lv)) },
-];
-
 
 /* ---------- WebAudio 音效 ---------- */
 let AC = null, noiseBuf = null, lastShotSfx = 0, lastHitSfx = 0;
@@ -361,7 +326,7 @@ const SKILLS = [
     { id: 'light',  name: '雷霆链',   icon: '🌩️', max: 4, desc: lv => `命中弹射闪电到附近敌人（Lv.${lv + 1}）` },
     { id: 'heavy',  name: '重弩',     icon: '🏹', max: 4, desc: lv => `箭矢巨大化，伤害 +45%、击退（Lv.${lv + 1}）` },
     { id: 'wall',   name: '城墙加固', icon: '🧱', max: 4, desc: lv => `城墙上限 +25% 并立刻修复 30%` },
-    { id: 'coin',   name: '赏金猎人', icon: '🪙', max: 5, desc: lv => `金币收益 +18%，自动吸附范围扩大` },
+    { id: 'coin',   name: '赏金猎人', icon: '🪙', max: 5, desc: lv => `金币收益 +18%，金币额外充能共鸣槽` },
     { id: 'burst',  name: '爆裂箭',   icon: '💣', max: 4, desc: lv => `命中时小幅范围爆炸（Lv.${lv + 1}）` },
 ];
 const EVOLUTIONS = [
@@ -409,8 +374,7 @@ function makePlayer(i) {
     };
 }
 function newGame() {
-    const up = save.upgrades;
-    const wallMax = Math.round(180 * (1 + up.wall * 0.16));
+    const wallMax = 180;
     G = {
         stage: 1, wave: 0, time: 0, kills: 0, coinsRun: 0,
         combo: 0, comboT: 0, bestCombo: 0,
@@ -425,7 +389,7 @@ function newGame() {
         waveState: 'gap', waveT: 0, spawnQueue: [], spawnT: 0, waveTotal: 0, waveKilled: 0,
         paused: false, overT: 0, bannerT: 0, bannerText: '', bannerSub: '',
         wallBonus: 1, bolts: [], toasts: [], picksDone: [false, false],
-        crisisSpawn: null, lastCrisis: null, wallHitT: 0,
+        crisisSpawn: null, lastCrisis: null, wallHitT: 0, freeUpT: 0,
     };
 }
 
@@ -582,9 +546,9 @@ cv.addEventListener('touchstart', e => { e.preventDefault(); onPointerMove(e); }
 cv.addEventListener('touchmove', e => { e.preventDefault(); onPointerMove(e); }, { passive: false });
 
 /* ---------- 数值 ---------- */
-function dmgBase(p) { return 8 * (1 + p.lv.atk * 0.22) * (1 + save.upgrades.atk * 0.09); }
+function dmgBase(p) { return 8 * (1 + p.lv.atk * 0.22); }
 function rateOf(p) {
-    let r = 10.5 * (1 + p.lv.rate * 0.16) * (1 + save.upgrades.rate * 0.07);
+    let r = 10.5 * (1 + p.lv.rate * 0.16);
     if (p.bufT > 0) r *= 1.35;
     if (G.rageT > 0) r *= 1.22;
     if (G.ultT > 0) r *= 1.5;
@@ -593,9 +557,9 @@ function rateOf(p) {
 function critChance(p) { return 0.08 + p.lv.crit * 0.11; }
 function coinMul(p) {
     const m = Math.max(G.players[0].lv.coin, G.players[1].lv.coin);
-    return (1 + save.upgrades.coin * 0.12) * (1 + m * 0.18);
+    return 1 + m * 0.18;
 }
-function wallMaxOf() { return Math.round(180 * (1 + save.upgrades.wall * 0.16) * G.wallBonus); }
+function wallMaxOf() { return Math.round(180 * G.wallBonus); }
 
 /* ---------- AI 托管（射线枚举 —— 比人手瞄得还准） ---------- */
 function scanBestAngle(p) {
@@ -890,17 +854,47 @@ function segCircle(x1, y1, x2, y2, cx, cy, r) {
     const px = x1 + dx * t, py = y1 + dy * t;
     return (px - cx) * (px - cx) + (py - cy) * (py - cy) <= r * r;
 }
+/* 子弹微微吸附：只在方向大致对准（锥内）时轻微转向，休闲向的辅助瞄准，不会拐弯追人 */
+const HOME_ARC = 0.38;      // 锥形范围 ±21.8°
+const HOME_RATE = 1.2;      // 最大转向速率 rad/s（很小 → 只是"微微"拐一下，不追人）
+const HOME_RANGE = 360;     // 吸附判定距离
+function homingSteer(b, dt) {
+    const spd = Math.hypot(b.vx, b.vy);
+    if (spd < 1) return;
+    const cur = Math.atan2(b.vy, b.vx);
+    let best = null, bestScore = 1e9;
+    for (let k = 0; k < G.enemies.length; k++) {
+        const e = G.enemies[k];
+        if (e.dead || e.y < -40) continue;
+        if (b.hit.indexOf(e) >= 0) continue;      // 已经穿过的目标不再重复吸附
+        const dx = e.x - b.x, dy = e.y - b.y;
+        const d = Math.hypot(dx, dy);
+        if (d > HOME_RANGE || d < 2) continue;
+        let da = Math.atan2(dy, dx) - cur;
+        while (da > Math.PI) da -= TAU;
+        while (da < -Math.PI) da += TAU;
+        if (Math.abs(da) > HOME_ARC) continue;    // 偏太多就放弃（保持"直线为主"）
+        const score = d + Math.abs(da) * 240;
+        if (score < bestScore) { bestScore = score; best = da; }
+    }
+    if (best === null) return;
+    const want = cur + clamp(best, -HOME_RATE * dt, HOME_RATE * dt);
+    b.vx = Math.cos(want) * spd;
+    b.vy = Math.sin(want) * spd;
+}
+
 function updateBullets(dt) {
     for (let i = G.bullets.length - 1; i >= 0; i--) {
         const b = G.bullets[i];
         b.px = b.x; b.py = b.y;
+        homingSteer(b, dt);
         b.x += b.vx * dt; b.y += b.vy * dt;
         b.life -= dt;
         let gone = false;
         for (let k = 0; k < G.enemies.length; k++) {
             const e = G.enemies[k];
             if (e.dead || b.hit.indexOf(e) >= 0) continue;
-            if (!segCircle(b.px, b.py, b.x, b.y, e.x, e.y, e.r + b.size)) continue;
+            if (!segCircle(b.px, b.py, b.x, b.y, e.x, e.y, e.r + b.size + 3.5)) continue;
             b.hit.push(e);
             const p = G.players[b.owner];
             hitEnemy(e, b.dmg, p, { crit: b.crit, burn: b.fire > 0, slow: b.ice > 0, noNum: false });
@@ -1040,6 +1034,7 @@ function updateCoins(dt) {
                 c.y += Math.sin(a) * pull * dt;
                 if (Math.hypot(best.x - c.x, best.py - 40 - c.y) < 26) {
                     G.coinsRun += c.v;
+                    G.ult = Math.min(100, G.ult + c.v * 1.5);   // 金币直接充共鸣槽
                     G.coins.splice(i, 1);
                     if (Math.random() < .25) sfx('coin');
                     continue;
@@ -1048,6 +1043,7 @@ function updateCoins(dt) {
         }
         if (c.t <= 0) {
             G.coinsRun += c.v;   // 超时也自动收（不折磨玩家）
+            G.ult = Math.min(100, G.ult + c.v * 1.5);
             G.coins.splice(i, 1);
         }
     }
@@ -1088,6 +1084,7 @@ function openPickup(k) {
     } else if (roll < .6) {
         const c = 90 + G.stage * 30;
         G.coinsRun += c;
+        G.ult = Math.min(100, G.ult + c * 0.6);
         for (let i = 0; i < 10; i++) G.coins.push({ x: k.x, y: k.y, vx: rand(-180, 180), vy: rand(-260, -60), t: 2.2, v: 1 });
         toast(`🪙 补给：金币 +${c}`, '#ffd76a');
     } else if (roll < .82) {
@@ -1256,6 +1253,11 @@ function update(dt) {
     if (G.wallHitT > 0) G.wallHitT -= dt;
     if (G.comboT > 0) { G.comboT -= dt; if (G.comboT <= 0) G.combo = 0; }
     if (G.rageT > 0) G.rageT -= dt;
+    // 过关奖励：战地改装（延迟一点再弹卡，先让玩家看到关卡横幅）
+    if (G.freeUpT > 0) {
+        G.freeUpT -= dt;
+        if (G.freeUpT <= 0) { G.pendingLv++; toast('🔧 战地改装 · 立即强化！', '#ffd76a'); sfx('level'); }
+    }
 
     updateTowers(dt);
     updateBullets(dt);
@@ -2211,7 +2213,7 @@ function render() {
 
 /* --- DOM UI --- */
 const $ = id => document.getElementById(id);
-const overlays = ['menu', 'help', 'shop', 'cardOverlay', 'clearOverlay', 'overOverlay'];
+const overlays = ['menu', 'help', 'cardOverlay', 'clearOverlay', 'overOverlay'];
 function showOnly(id) { overlays.forEach(o => $(o).classList.toggle('hidden', o !== id)); }
 function hideAll() { overlays.forEach(o => $(o).classList.add('hidden')); }
 function announce(txt, col) {
@@ -2352,13 +2354,8 @@ function startGame() {
 function stageClear() {
     if (state !== 'PLAYING') return;
     state = 'CLEAR';
-    const reward = Math.round(40 * G.stage * (1 + save.upgrades.coin * .12));
-    save.bank += reward + G.coinsRun;
-    save.best = Math.max(save.best, G.stage + 1);
-    persist();
     $('clearStage').textContent = G.stage;
     $('clearInfo').textContent = `击杀 ${G.kills} 只 · 最高连击 ${G.bestCombo} · 等级 ${G.xpLv}`;
-    $('clearReward').textContent = reward;
     sfx('level');
     showOnly('clearOverlay');
 }
@@ -2369,6 +2366,7 @@ function nextStage() {
     G.wall.max = wallMaxOf(); G.wall.hp = G.wall.max;
     G.darkT = 0; G.berserkT = 0; G.acidT = 0; G.crisis.cur = null; G.crisis.next = 18;
     hideAll(); state = 'PLAYING'; lastTs = 0;
+    G.freeUpT = 1.2;            // 先看横幅，再弹「战地改装」选卡
     announce(`第 ${G.stage} 关`, '#7df9ff');
 }
 function gameOver() {
@@ -2377,47 +2375,18 @@ function gameOver() {
     G.overT = 0;
     G.shake = 30; G.whiteFlash = .4;
     sfx('big');
-    save.bank += G.coinsRun;
-    save.best = Math.max(save.best, G.stage);
-    persist();
     $('overStage').textContent = G.stage;
     $('overKills').textContent = G.kills;
     $('overCombo').textContent = G.bestCombo;
     $('overCoins').textContent = G.coinsRun;
     setTimeout(() => showOnly('overOverlay'), 1200);
 }
-function refreshMenu() {
-    $('menuBank').textContent = save.bank;
-    $('menuBest').textContent = save.best;
-}
-function refreshShop() {
-    $('shopBank').textContent = save.bank;
-    const grid = $('shopGrid'); grid.innerHTML = '';
-    META_SHOP.forEach(m => {
-        const lv = save.upgrades[m.key];
-        const div = document.createElement('div');
-        div.className = 'shop-item';
-        const maxed = lv >= m.max, cost = m.cost(lv), can = !maxed && save.bank >= cost;
-        div.innerHTML = `<div class="nm">${m.name} <span style="color:#9fc3ff">Lv.${lv}/${m.max}</span></div>
-            <div class="ef">${m.ef(lv)}</div>
-            <button class="buy" ${can ? '' : 'disabled'}>${maxed ? '已满级' : `升级 · ${cost}🪙`}</button>`;
-        div.querySelector('.buy').onclick = () => {
-            if (save.bank >= m.cost(lv) && lv < m.max) {
-                save.bank -= m.cost(lv); save.upgrades[m.key]++; persist(); refreshShop(); sfx('coin');
-            }
-        };
-        grid.appendChild(div);
-    });
-}
-
 $('btnStart').onclick = () => startGame();
-$('btnShop').onclick = () => { refreshShop(); showOnly('shop'); };
 $('btnHelp').onclick = () => showOnly('help');
-$('btnHelpBack').onclick = () => { refreshMenu(); showOnly('menu'); };
-$('btnShopBack').onclick = () => { refreshMenu(); showOnly('menu'); };
+$('btnHelpBack').onclick = () => { showOnly('menu'); };
 $('btnNext').onclick = () => nextStage();
 $('btnRetry').onclick = () => startGame();
-$('btnHome').onclick = () => { state = 'MENU'; newGame(); refreshMenu(); showOnly('menu'); fit(); };
+$('btnHome').onclick = () => { state = 'MENU'; newGame(); showOnly('menu'); fit(); };
 
 /* --- 主循环 --- */
 function loop(ts) {
@@ -2450,13 +2419,12 @@ function updateVisualOnly(dt) {
 window.__slime = {
     get G() { return G; }, get state() { return state; }, get offers() { return cardOffers; },
     startGame, SKILLS, EVOLUTIONS, ETYPES, CRISES, pickCard, scanBestAngle,
-    spawnEnemy, damageWall, startCrisis, rateOf, dmgBase, updateAI, hitEnemy,
+    spawnEnemy, damageWall, startCrisis, rateOf, dmgBase, updateAI, hitEnemy, homingSteer,
     ANG_MAX, TOWER_X, PIVOT_Y, W, H,
     setState(s) { state = s; },
 };
 newGame();
 fit();
-refreshMenu();
 requestAnimationFrame(loop);
 </script>
 </body>

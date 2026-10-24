@@ -478,10 +478,31 @@
                 desc: '竖版弹幕射击：两人同屏（落单座位 5 秒后由 AI 代班、按任意键夺回）、四武器（火神炮/激光/追踪导弹/磁轨炮）、智能敌机（折跃飞碟/激光狙击/追踪导弹/分裂体）、随机大招、擦弹超载、5 关 Boss 战与每日挑战<br>Vertical bullet-hell: 2P local co-op with AI co-pilot, four weapons, smart enemies (warping UFOs / laser snipers / homing missiles / splitters), randomized ultimates &amp; daily challenge'
             },
             {
-                id: 'slime', title: '向史莱姆开炮<br><span style="font-size:12px;color:#888;">Slime Cannon</span>', emoji: '🔫', color: '#3ed37a',
+                id: 'slime', title: '向史莱姆开炮<br><span style="font-size:12px;color:#888;">Slime Cannon</span>', color: '#3ed37a',
+                emoji: `<svg width="46" height="46" viewBox="0 0 46 46" style="display:block">
+                    <defs>
+                        <linearGradient id="scSlimeBody" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0" stop-color="#ccffab"/><stop offset=".5" stop-color="#77e35c"/><stop offset="1" stop-color="#2b8a3e"/>
+                        </linearGradient>
+                        <radialGradient id="scGlow" cx=".5" cy=".45" r=".55">
+                            <stop offset="0" stop-color="#2fa94f" stop-opacity=".4"/><stop offset="1" stop-color="#2fa94f" stop-opacity="0"/>
+                        </radialGradient>
+                    </defs>
+                    <circle cx="23" cy="23" r="22" fill="#04120c" opacity=".66"/>
+                    <circle cx="23" cy="23" r="21" fill="url(#scGlow)"/>
+                    <path d="M23 40.8c-8.6 0-14.5-5.6-14.5-12 0-6.4 6.5-12 14.5-12s14.5 5.6 14.5 12c0 6.4-5.9 12-14.5 12z" fill="url(#scSlimeBody)"/>
+                    <ellipse cx="17.4" cy="30.4" rx="2.8" ry="3.2" fill="#fff"/>
+                    <ellipse cx="28.6" cy="30.4" rx="2.8" ry="3.2" fill="#fff"/>
+                    <circle cx="17.9" cy="31.1" r="1.5" fill="#0f2f1b"/>
+                    <circle cx="28.1" cy="31.1" r="1.5" fill="#0f2f1b"/>
+                    <path d="M20.9 35.4q2.1 1.9 4.2 0" stroke="#1d5c2c" stroke-width="1.25" fill="none" stroke-linecap="round"/>
+                    <ellipse cx="13.2" cy="24.2" rx="4" ry="2.2" fill="#fff" opacity=".45" transform="rotate(-28 13.2 24.2)"/>
+                    <circle cx="23" cy="23" r="20" fill="none" stroke="#5ee6ff" stroke-width="2.4"
+                            stroke-dasharray="8.5 22.9" stroke-dashoffset="113.4" opacity=".95"/>
+                </svg>`,
                 url: 'slime-cannon/index.html',
                 tags: ['双人', '亲子', '肉鸽', '割草', '守塔'],
-                desc: '两座固定炮塔只转炮口，四键上手：左右转炮、上下选卡。自动开火割草，兽潮/史莱姆王/酸雨/暗夜等突发危机，5 秒没人动就交给 AI 托管（射线预判，比人还准）。<br>Two fixed towers, four keys only. Auto-fire horde survival with random crises and 5-second AI takeover.'
+                desc: '两座固定炮塔只转炮口，四键上手：左右转炮、上下选卡，箭矢自动微调咬住目标。兽潮/史莱姆王/酸雨/暗夜等突发危机，5 秒没人动就交给 AI 托管。一次一局、不存档，每盘从零开始冲更高关。<br>Two fixed towers, four keys only, soft-homing arrows. Auto-fire horde survival, random crises, 5-second AI takeover. Single run — no saves, no grinding.'
             }
         ];
 
