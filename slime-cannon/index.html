@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>向史莱姆开炮 - 双塔守卫 · Slime Cannon 3</title>
+<title>向史莱姆开炮 - 无尽守卫 · Slime Cannon 4</title>
 <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #06090f; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; user-select: none; }
@@ -115,25 +115,25 @@
 <body>
 <div id="wrap">
     <canvas id="cv" width="1280" height="720"></canvas>
-    <div class="ver">v3.2.0 · 1~5 倍速 · 全键盘</div>
+    <div class="ver">v4.1.0 · 无尽守卫</div>
 
     <!-- 主菜单 -->
     <div id="menu" class="overlay">
         <div class="panel">
             <h1 class="title">向史莱姆开炮</h1>
             <div class="subtitle">SLIME CANNON 3 · 双塔守卫</div>
-            <div class="stat-line" style="color:#8fa3c8;">一次一局 · 不存档 · <b style="color:#ffd76a">每盘从零开始</b></div>
+            <div class="stat-line" style="color:#8fa3c8;">无尽守卫 · 一次一局 · <b style="color:#ffd76a">没有终点，只有你守到第几分钟</b></div>
             <div class="keyrow">
                 <div class="kbox p1">
                     <div class="kt">🟦 左塔 · P1</div>
-                    <div class="kd"><kbd>A</kbd><kbd>D</kbd> 转动炮口 · <kbd>W</kbd> 往后推 · <kbd>S</kbd> 选中</div>
+                    <div class="kd"><kbd>A</kbd><kbd>D</kbd> 转动炮口 · <kbd>W</kbd> 换卡 · <kbd>S</kbd> 选中</div>
                 </div>
                 <div class="kbox p2">
                     <div class="kt">🟧 右塔 · P2</div>
-                    <div class="kd"><kbd>←</kbd><kbd>→</kbd> 转动炮口 · <kbd>↑</kbd> 往后推 · <kbd>↓</kbd> 选中</div>
+                    <div class="kd"><kbd>←</kbd><kbd>→</kbd> 转动炮口 · <kbd>↑</kbd> 换卡 · <kbd>↓</kbd> 选中</div>
                 </div>
             </div>
-            <div class="tip">只有<b>四键</b>：左右转炮口，升级时上下选卡。箭矢会<b>自动微调</b>咬住目标。<br>哪边<b>5 秒没动</b>，那一边的炮塔自动交给 AI 托管。<br>炮台变强了就按 <b>1~5</b> 提速（最高 <b>×5</b>）· 全程<b>不用鼠标</b>。</div>
+            <div class="tip">升级<b>不再暂停</b>：卡片浮在各自 HUD 下方，<b>4.6 秒</b>后自动帮你选最优的那张。<br>两座塔<b>同时打同一只</b>会触发<b style="color:#ffd76a">合击</b>（该目标受创 ×2.1）—— 这是唯一能超过 5 分钟的办法。<br>前 3 分钟你会强得很快，第 4 分钟开始敌人才真正发力。全程<b>不用鼠标</b>。</div>
             <div style="margin:16px 0 4px;">
                 <button class="btn green big" id="btnStart">开始守卫 <span class="kc">Enter</span></button>
             </div>
@@ -147,41 +147,21 @@
             <h1 class="title" style="font-size:24px;">玩法说明</h1>
             <div class="subtitle">双塔守卫 · 角度即生命</div>
             <div class="keys">
-                🏹 两座固定炮塔，<b style="color:#ffd76a">自动开火</b>，你只控制<b>炮口角度</b><br>
-                🎯 <b style="color:#5ee6ff">P1 左塔</b>：<kbd>A</kbd><kbd>D</kbd> 转炮口 · 鼠标也能瞄准左塔<br>
-                🎯 <b style="color:#ffb347">P2 右塔</b>：<kbd>←</kbd><kbd>→</kbd> 转炮口<br>
-                ⬆️ 升级时：<kbd>W</kbd>/<kbd>↑</kbd> <b>往后推</b>（换下一张）· <kbd>S</kbd>/<kbd>↓</kbd> <b>选中</b><br>
-                🤖 某一边 <b style="color:#45e08a">5 秒无操作</b> → 那一边自动 AI 托管，一动就抢回<br>
+                🏹 两座固定炮塔，<b style="color:#ffd76a">自动开火</b>，你只控制<b>炮口角度</b> —— 没有终点，一直守到墙塌<br>
+                🎯 <b style="color:#5ee6ff">P1 左塔</b>：<kbd>A</kbd><kbd>D</kbd> 转炮口 · <b style="color:#ffb347">P2 右塔</b>：<kbd>←</kbd><kbd>→</kbd> 转炮口<br>
+                ⬆️ 升级<b style="color:#45e08a">不暂停</b>：卡片出现在自己 HUD 下方，<kbd>W</kbd>/<kbd>↑</kbd> 换一张 · <kbd>S</kbd>/<kbd>↓</kbd> 选中<br>
+                ⏳ 不理它也行：<b>4.6 秒</b>后自动替你选当前最优的一张（AI 托管的一侧 1.1 秒）<br>
+                ⚡ <b style="color:#ffd76a">合击</b>：两座塔在 1.15 秒内打中同一只 → 它受到 <b>×2.1</b> 伤害 1.5 秒；合击次数会记在左上角<br>
+                🤝 这就是唯一的「配合」：两个人瞄同一片，收益翻倍。各打各的，第 4 分钟就撑不住<br>
                 🎯 箭矢<b style="color:#5ee6ff">微微吸附</b>：方向大致对上了，会自己拐一点点去咬住目标<br>
-                💥 击杀累积<b style="color:#ffd76a">连击</b>，满屏爆汁，连击越高射速越快<br>
-                🌀 双塔伤害共同充能<b>共鸣槽</b>，满了<b>自动</b>放「双子贯穿光束」<br>
-                ⚠️ 小心<b style="color:#ff7a7a">突发危机</b>：兽潮 / 史莱姆王 / 酸雨 / 暗夜 / 狂暴 / 重甲突袭<br>
-                🧱 共享一道城墙，墙塌即败 · 每关 5 波，第 5 波是硬仗<br>
-                ⏩ <kbd>1</kbd>~<kbd>5</kbd> <b>调速</b>：1~5 倍速，炮台强了就开到 ×5（关内保留）<br>
-                🕹️ 全<b>键盘</b>可玩：<kbd>Enter</kbd> 确认 · <kbd>Esc</kbd> 返回/暂停 · <kbd>H</kbd> 说明<br>
-                🎨 两侧特效不同：<b style="color:#5ee6ff">冰蓝科技</b>（P1）与 <b style="color:#ffb347">熔金火焰</b>（P2），吃到的补给也不一样<br>
-                ⏸️ <kbd>P</kbd>/<kbd>Esc</kbd> 暂停 · <kbd>F</kbd> 全屏
+                💥 击杀累积<b style="color:#ffd76a">连击</b>，连击越高射速越快；双塔伤害共同充能<b>共鸣槽</b>，满了自动放光束<br>
+                🤖 某一边 <b style="color:#45e08a">5 秒无操作</b> → 那一边自动 AI 托管，一动就抢回<br>
+                ⚠️ 突发危机：兽潮 / 史莱姆王 / 酸雨 / 暗夜 / 狂暴 / 重甲突袭，越往后来得越勤<br>
+                👑 每 <b>75 秒</b> 一只史莱姆王，打死它 <b style="color:#45e08a">修墙 18%</b>；补给箱也修墙<br>
+                ⏩ <kbd>1</kbd>~<kbd>5</kbd> <b>调速</b>，炮台强了直接开到 ×5（计时也一起快，但成绩按游戏内时间算）<br>
+                🕹️ 全<b>键盘</b>：<kbd>Enter</kbd> 开始/重开 · <kbd>P</kbd>/<kbd>Esc</kbd> 暂停 · <kbd>F</kbd> 全屏
             </div>
             <div style="margin-top:14px;"><button class="btn" id="btnHelpBack">返 回 <span class="kc">Esc</span></button></div>
-        </div>
-    </div>
-
-    <!-- 升级选卡 -->
-    <div id="cardOverlay" class="overlay hidden">
-        <h2>⬆️ 升级！各自选择强化</h2>
-        <div class="lvinfo" id="cardLvInfo"></div>
-        <div class="picks" id="picksRow"></div>
-        <div class="cardfoot"><b>↑/W 往后推</b>　<b>↓/S 选中</b>（右侧用方向键）　·　两边都选好后<b>自动继续</b></div>
-    </div>
-
-    <!-- 过关 -->
-    <div id="clearOverlay" class="overlay hidden">
-        <div class="panel">
-            <h1 class="title" style="font-size:28px;">✅ 第 <span id="clearStage">1</span> 关达成</h1>
-            <div class="subtitle" id="clearInfo"></div>
-            <div class="stat-line">下一关开局获得 <b style="color:#ffd76a">战地改装</b>：双塔各选一次强化</div>
-            <div class="tip" style="margin-bottom:9px;">按 <b>Enter</b> 直接进入下一关 · 当前<b>速度档位保留</b></div>
-            <button class="btn green" id="btnNext">进入下一关 <span class="kc">Enter</span></button>
         </div>
     </div>
 
@@ -189,9 +169,9 @@
     <div id="overOverlay" class="overlay hidden">
         <div class="panel">
             <h1 class="title" style="font-size:28px;">💀 城墙失守</h1>
-            <div class="subtitle">THE WALL HAS FALLEN</div>
-            <div class="stat-line">坚守到第 <b id="overStage">1</b> 波 · 击杀 <b id="overKills">0</b> 只 · 最高连击 <b id="overCombo">0</b></div>
-            <div class="stat-line">本局拾取 <b id="overCoins">0</b> 金币</div>
+            <div class="subtitle" id="overTime">你守了 00:00</div>
+            <div class="stat-line">击杀 <b id="overKills">0</b> 只 · 最高连击 <b id="overCombo">0</b> · 合击 <b id="overCross">0</b> 次</div>
+            <div class="stat-line">史莱姆王 <b id="overBoss">0</b> 只 · 本局拾取 <b id="overCoins">0</b> 金币</div>
             <div class="tip" style="margin-bottom:9px;">按 <b>Enter</b> 再来一局　·　按 <b>Esc</b> 回到基地</div>
             <button class="btn green" id="btnRetry">再来一局 <span class="kc">Enter</span></button>
             <button class="btn gray" id="btnHome">回到基地 <span class="kc">Esc</span></button>
@@ -208,13 +188,13 @@
 
 <script>
 "use strict";
-/* ================= 向史莱姆开炮 v3.1.0 · 双塔守卫（纯单局 · 无存档） ================= */
+/* ================= 向史莱姆开炮 v4.1.0 · 无尽守卫（纯单局 · 升级不暂停） ================= */
 const W = 1280, H = 720;
 const WALL_TOP = 596;          // 城墙顶面
 const TOWER_X = [206, 1074];   // 两座塔的中心 x
 const TOWER_Y = 646;           // 塔心 y（俯视圆塔）
 const PIVOT_Y = 630;           // 炮口旋转枢轴 y（在塔心偏上）
-const VERSION = 'v3.2.0';
+const VERSION = 'v4.1.0';
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -331,34 +311,35 @@ function sfx(name) {
 
 /* ---------- 技能卡池 ---------- */
 const SKILLS = [
-    { id: 'rate',   name: '速射机簧', icon: '⚡', max: 6, desc: lv => `射速 +16%（当前 Lv.${lv}）` },
-    { id: 'atk',    name: '淬火箭矢', icon: '🔥', max: 6, desc: lv => `每发伤害 +22%（当前 Lv.${lv}）` },
-    { id: 'multi',  name: '分叉射击', icon: '🎯', max: 4, desc: lv => `多射 1 支箭，扇形扩散（${lv + 1} 支）` },
-    { id: 'pierce', name: '破甲穿云', icon: '➤', max: 4, desc: lv => `箭矢可穿透 +1 个敌人（${lv + 1} 层）` },
-    { id: 'crit',   name: '致命瞄准', icon: '💥', max: 5, desc: lv => `暴击率 +11%，暴击 2.3 倍伤害` },
-    { id: 'fire',   name: '烈焰附魔', icon: '☄️', max: 4, desc: lv => `命中点燃，持续灼烧（Lv.${lv + 1}）` },
-    { id: 'ice',    name: '寒霜附魔', icon: '❄️', max: 4, desc: lv => `命中减速 + 冰霜伤害（Lv.${lv + 1}）` },
-    { id: 'light',  name: '雷霆链',   icon: '🌩️', max: 4, desc: lv => `命中弹射闪电到附近敌人（Lv.${lv + 1}）` },
-    { id: 'heavy',  name: '重弩',     icon: '🏹', max: 4, desc: lv => `箭矢巨大化，伤害 +45%、击退（Lv.${lv + 1}）` },
-    { id: 'wall',   name: '城墙加固', icon: '🧱', max: 4, desc: lv => `城墙上限 +25% 并立刻修复 30%` },
-    { id: 'coin',   name: '赏金猎人', icon: '🪙', max: 5, desc: lv => `金币收益 +18%，金币额外充能共鸣槽` },
-    { id: 'burst',  name: '爆裂箭',   icon: '💣', max: 4, desc: lv => `命中时小幅范围爆炸（Lv.${lv + 1}）` },
+    { id: 'rate',   name: '速射机簧', icon: '⚡', max: 4, desc: lv => `射速 +22%（Lv.${lv}）` },
+    { id: 'atk',    name: '淬火箭矢', icon: '🔥', max: 4, desc: lv => `每发伤害 +28%（Lv.${lv}）` },
+    { id: 'multi',  name: '分叉射击', icon: '🎯', max: 3, desc: lv => `多射 1 支箭（共 ${lv + 1} 支）` },
+    { id: 'pierce', name: '破甲穿云', icon: '➤', max: 3, desc: lv => `穿透 +1 个敌人（${lv + 1} 层）` },
+    { id: 'crit',   name: '致命瞄准', icon: '💥', max: 3, desc: lv => `暴击率 +11%，暴击 2.3 倍` },
+    { id: 'fire',   name: '烈焰附魔', icon: '☄️', max: 3, desc: lv => `命中点燃，持续灼烧（Lv.${lv + 1}）` },
+    { id: 'ice',    name: '寒霜附魔', icon: '❄️', max: 3, desc: lv => `命中减速 + 冰霜伤害（Lv.${lv + 1}）` },
+    { id: 'light',  name: '雷霆链',   icon: '🌩️', max: 3, desc: lv => `命中弹射闪电（Lv.${lv + 1}）` },
+    { id: 'heavy',  name: '重弩',     icon: '🏹', max: 3, desc: lv => `箭矢巨大化，伤害 +45%、击退` },
+    { id: 'wall',   name: '城墙加固', icon: '🧱', max: 3, desc: lv => `城墙上限 +25% 并立刻修复 30%` },
+    { id: 'coin',   name: '赏金猎人', icon: '🪙', max: 3, desc: lv => `金币收益 +18%，额外充能共鸣槽` },
+    { id: 'burst',  name: '爆裂箭',   icon: '💣', max: 3, desc: lv => `命中时小幅范围爆炸（Lv.${lv + 1}）` },
 ];
+/* 质变降到 2+2：现在一局有 ~35 个卡点，玩家真的能凑出来 */
 const EVOLUTIONS = [
-    { id: 'evoFire',  name: '烈焰风暴', icon: '🔥', need: { fire: 3, multi: 2 }, desc: '每箭爆出火焰冲击波，燃起大片火海' },
-    { id: 'evoFrost', name: '霜雷共鸣', icon: '❄️', need: { ice: 3, light: 3 }, desc: '闪电冻结目标，被冻住的敌人受创 +35%' },
-    { id: 'evoBolt',  name: '贯穿重炮', icon: '⚡', need: { heavy: 3, pierce: 2 }, desc: '巨型贯穿箭，一箭洞穿整列史莱姆' },
+    { id: 'evoFire',  name: '烈焰风暴', icon: '🔥', need: { fire: 2, multi: 2 }, desc: '每箭爆出火焰冲击波，燃起大片火海' },
+    { id: 'evoFrost', name: '霜雷共鸣', icon: '❄️', need: { ice: 2, light: 2 }, desc: '闪电冻结目标，被冻住的敌人受创 +35%' },
+    { id: 'evoBolt',  name: '贯穿重炮', icon: '⚡', need: { heavy: 2, pierce: 2 }, desc: '巨型贯穿箭，一箭洞穿整列史莱姆' },
 ];
 
 /* ---------- 敌人 ---------- */
 const ETYPES = {
-    small:  { hp: 14,  spd: 62, r: 13, bite: 3,  xp: 1, coin: 1, w: 0.55, col: '#8ce86a', col2: '#4fae35' },
-    basic:  { hp: 38,  spd: 40, r: 20, bite: 7,  xp: 2, coin: 2, w: 1.0,  col: '#7ee36a', col2: '#43993a' },
-    big:    { hp: 150, spd: 24, r: 34, bite: 15, xp: 6, coin: 6, w: 2.0,  col: '#63d0ff', col2: '#2b8fc9', split: 3 },
-    spiky:  { hp: 105, spd: 34, r: 25, bite: 20, xp: 5, coin: 5, w: 1.7,  col: '#ff9a5c', col2: '#c95d2a' },
-    shield: { hp: 130, spd: 26, r: 27, bite: 11, xp: 6, coin: 6, w: 1.8,  col: '#b98cff', col2: '#7a4bd0', shield: 70 },
-    flyer:  { hp: 46,  spd: 88, r: 15, bite: 0,  xp: 3, coin: 3, w: 1.2,  col: '#ff8fd0', col2: '#c44b93', fly: true },
-    king:   { hp: 1900, spd: 17, r: 58, bite: 42, xp: 70, coin: 70, w: 6.5, col: '#ff6a6a', col2: '#c62828', boss: true },
+    small:  { hp: 14,  spd: 82, r: 13, bite: 3,  xp: 1, coin: 1, w: 0.55, col: '#8ce86a', col2: '#4fae35' },
+    basic:  { hp: 38,  spd: 58, r: 20, bite: 7,  xp: 2, coin: 2, w: 1.0,  col: '#7ee36a', col2: '#43993a' },
+    big:    { hp: 150, spd: 44, r: 34, bite: 15, xp: 6, coin: 6, w: 2.0,  col: '#63d0ff', col2: '#2b8fc9', split: 3 },
+    spiky:  { hp: 105, spd: 54, r: 25, bite: 20, xp: 5, coin: 5, w: 1.7,  col: '#ff9a5c', col2: '#c95d2a' },
+    shield: { hp: 130, spd: 42, r: 27, bite: 11, xp: 6, coin: 6, w: 1.8,  col: '#b98cff', col2: '#7a4bd0', shield: 70 },
+    flyer:  { hp: 46,  spd: 106, r: 15, bite: 0, xp: 3, coin: 3, w: 1.2,  col: '#ff8fd0', col2: '#c44b93', fly: true },
+    king:   { hp: 1900, spd: 28, r: 58, bite: 42, xp: 70, coin: 70, w: 6.5, col: '#ff6a6a', col2: '#c62828', boss: true },
 };
 
 /* ---------- 游戏状态 ---------- */
@@ -369,6 +350,35 @@ let speedPref = 1;             // 速度档位 1~5（跨关 / 跨局保留）
 const P_COLOR = ['#5ee6ff', '#ffb347'];
 const P_COLOR2 = ['#1b6f8a', '#8a5a1b'];
 const ANG_MAX = 1.45;   // 炮管最大偏转（≈83°）
+
+/* ---------- 无尽模式调参（改难度只动这里） ---------- */
+const TUNE = {
+    hpA: 1.00,           // 血量倍率 = hpA * (1 + t/hpT) ^ hpE —— 形状直接贴着玩家 DPS 曲线走
+    hpT: 10, hpE: 2.1,   //  30s→20×  60s→89×  90s→189×  120s→328×  180s→727×  240s→1294×
+    hpBell: 2.0,         // 中期额外加厚峰值（让怪群真正压下来，而不是死在出生线上）
+    hpBellT: 110,        // 加厚峰值时间
+    hpBellW: 70,         // 加厚影响宽度（秒）
+    wallBase: 2800,      // 城墙基础血量：够厚才撑得住"成群压下来"的围攻
+    spawnY: 140,         // 出生线：必须落在 HUD 之下，否则整段生命都躲在界面背后
+    spawnYJ: 90,         // 出生线随机纵深
+    popBase: 30,         // 场上人数目标：起始
+    popGrow: 2.2,        // 每多少秒 +1 只
+    popMax: 190,         // 人数硬上限
+    popLate: 190,        // 终末潮起点（秒）
+    popLateK: 0.8,       // 终末潮每秒额外加几只
+    spawnTick: 0.06,     // 出怪判定间隔（秒）
+    spawnBatch: 3,       // 每个判定间隔最多出几只 —— 这是"能不能成群压下来"的总闸门
+    spawnBase: 0.60,     // 初始出怪间隔（秒）
+    spawnDecay: 0.72,    // 每过 25 秒，间隔 ×0.72
+    bossEvery: 75,       // 史莱姆王周期
+    lvFast: 5.0,         // t<90s 升级间隔
+    lvMid: 6.5,          // 90~180s
+    lvSlow: 8.0,         // 180s 之后
+    crossWin: 2.0,       // 两塔命中同一目标的合击判定窗（放宽，否则高伤害下敌人秒死，根本合不上）
+    crossDur: 2.0,       // 合击加成持续
+    crossMul: 2.6,       // 合击伤害倍率（两塔锁同一片时的核心收益）
+    cardWindow: 4.6,     // 选卡停留时间（超时自动选）
+};
 
 function makeTower(i) {
     return {
@@ -389,83 +399,134 @@ function makePlayer(i) {
         bufT: 0,                 // 射速狂暴 buff
         powT: 0,                 // 火力全开 buff
         fx: [], picked: 0,       // 该侧专属特效队列 / 吃到的补给数
+        q: [], cardT: 0,         // 升级坞：待选卡队列 / 倒计时
+        hitMark: -99,            // 最近一次命中同一目标的时间（合击判定）
+        crossN: 0,               // 该侧参与的合击次数
     };
 }
 function newGame() {
-    const wallMax = 180;
+    const wallMax = TUNE.wallBase;
     G = {
-        stage: 1, wave: 0, time: 0, kills: 0, coinsRun: 0,
+        time: 0, kills: 0, coinsRun: 0,
         combo: 0, comboT: 0, bestCombo: 0,
         wall: { hp: wallMax, max: wallMax },
         players: [makePlayer(0), makePlayer(1)],
         enemies: [], bullets: [], parts: [], nums: [], coins: [], pickups: [], beams: [], pools: [], acids: [], shocks: [],
         shake: 0, flash: 0, hitstop: 0, whiteFlash: 0,
-        xp: 0, xpNeed: 16, xpLv: 1, pendingLv: 0,
+        xpLv: 1, lvT: 0, lvNeed: TUNE.lvFast,
         ult: 0, ultT: 0, ultDir: 0,
-        crisis: { next: 16, cur: null, t: 0 },
+        crisis: { next: 24, cur: null, t: 0 },
         darkT: 0, berserkT: 0, acidT: 0, rageT: 0,
-        waveState: 'gap', waveT: 0, spawnQueue: [], spawnT: 0, waveTotal: 0, waveKilled: 0,
+        spawnT: 1.1, nextBoss: TUNE.bossEvery, bossN: 0, threat: 1, pickT: 9,
         paused: false, overT: 0, bannerT: 0, bannerText: '', bannerSub: '',
-        wallBonus: 1, bolts: [], toasts: [], picksDone: [false, false],
-        crisisSpawn: null, lastCrisis: null, wallHitT: 0, freeUpT: 0,
+        wallBonus: 1, bolts: [], toasts: [],
+        crisisSpawn: null, lastCrisis: null, wallHitT: 0,
+        cross: 0, crossT: 0, hitstopCd: 0,
         speed: speedPref,
     };
 }
 
 /* ---------- 生成 ---------- */
-function enemyScale() {
-    // 关卡增长曲线（比 v2 更陡，制造压力）
-    return Math.pow(1.26, G.stage - 1) * (1 + (G.wave - 1) * 0.05);
+function hpMul() {
+    const t = G.time;
+    // 中期加厚：成型那一段火力最猛，不加厚的话史莱姆会在出生线上就被打成渣、整屏空着
+    const bell = 1 + TUNE.hpBell * Math.exp(-Math.pow((t - TUNE.hpBellT) / TUNE.hpBellW, 2));
+    return TUNE.hpA * Math.pow(1 + t / TUNE.hpT, TUNE.hpE) * bell;
 }
+function biteMul() { return 1 + G.time / 240; }                    // 咬墙温和成长
+function spdMul() { return 1 + G.time / 420; }                     // 速度温和成长
 function spawnEnemy(type, opt) {
     opt = opt || {};
     const t = ETYPES[type];
-    const sc = enemyScale() * (opt.hpMul || 1);
+    const sc = hpMul() * (opt.hpMul || 1);
     const sizeMul = opt.sizeMul || rand(0.92, 1.1);
     const x = clamp(opt.x !== undefined ? opt.x : rand(300, W - 300), 120, W - 120);
     const e = {
-        type, x, y: opt.y !== undefined ? opt.y : -60 - rand(0, 220),
+        type, x, y: opt.y !== undefined ? opt.y : TUNE.spawnY + rand(0, TUNE.spawnYJ),
         baseY: 0, r: t.r * sizeMul,
         hp: t.hp * sc, max: t.hp * sc,
         shield: (t.shield || 0) * sc, shieldMax: (t.shield || 0) * sc,
-        spd: t.spd * (1 + (G.stage - 1) * 0.03) * rand(.92, 1.1),
-        bite: t.bite * (1 + (G.stage - 1) * 0.15),
+        spd: t.spd * spdMul() * rand(.92, 1.1),
+        bite: t.bite * biteMul(),
         xp: t.xp, coin: t.coin, w: t.w,
         col: t.col, col2: t.col2,
         wob: rand(0, TAU), hop: rand(0, TAU), hopSpd: rand(5, 8),
-        sq: 1, flash: 0, burn: 0, burnT: 0, slow: 0, slowT: 0, frozen: 0,
-        hurtT: 0, dead: false, chewT: 0, state: 'drop',
+        sq: 1, flash: 0, burn: 0, burnT: 0, slow: 0, slowT: 0, frozen: 0, frzImmune: 0, kbCd: 0,
+        hurtT: 0, dead: false, chewT: 0, state: 'drop', crossT: 0, crossToastT: -9,
         kb: 0, kbv: 0, fly: !!t.fly, boss: !!t.boss, split: t.split || 0,
         dark: 0, markT: 0,
     };
     G.enemies.push(e);
     return e;
 }
-function buildWaveQueue(wave, stage) {
-    // 每波混合大小史莱姆，越往后越杂
-    const q = [];
-    const base = 9 + stage * 2 + wave * 1.4;
-    const n = Math.round(base);
-    for (let i = 0; i < n; i++) {
-        let r = Math.random();
-        if (wave <= 2) {
-            q.push(r < .55 ? 'small' : 'basic');
-            if (stage >= 3 && r > .88) q.push('big');
-        } else if (wave === 3) {
-            q.push(r < .34 ? 'small' : r < .72 ? 'basic' : r < .88 ? 'big' : 'spiky');
-        } else if (wave === 4) {
-            q.push(r < .28 ? 'small' : r < .58 ? 'basic' : r < .74 ? 'big' : r < .86 ? 'spiky' : r < .95 ? 'shield' : 'flyer');
-        } else {
-            // 第 5 波：Boss + 杂兵
-            if (i === 0) q.push('king');
-            else q.push(r < .45 ? 'small' : r < .78 ? 'basic' : r < .92 ? 'big' : 'spiky');
+/* 时间驱动：出怪种类、密度、血量全部随时间走，没有关卡断点 */
+function pickKind(t) {
+    const r = Math.random();
+    if (t < 40) return r < .64 ? 'small' : 'basic';
+    if (t < 80) return r < .46 ? 'small' : r < .84 ? 'basic' : 'big';
+    if (t < 130) return r < .33 ? 'small' : r < .67 ? 'basic' : r < .83 ? 'big' : r < .93 ? 'spiky' : 'shield';
+    if (t < 200) return r < .26 ? 'small' : r < .55 ? 'basic' : r < .72 ? 'big' : r < .85 ? 'spiky' : r < .94 ? 'shield' : 'flyer';
+    return r < .20 ? 'small' : r < .50 ? 'basic' : r < .68 ? 'big' : r < .81 ? 'spiky' : r < .91 ? 'shield' : 'flyer';
+}
+function bossHpFor() {
+    const dps = dpsOf(G.players[0]) + dpsOf(G.players[1]);
+    // 折算 4.5 秒的 DPS；怪越多火力被分得越散，所以按场上人数再打个折
+    const crowd = clamp(G.enemies.length / 60, 1, 2.6);
+    return Math.round(dps * 2.0 / crowd);
+}
+function spawnBoss() {
+    G.bossN++;
+    const k = spawnEnemy('king', { x: rand(W * .32, W * .68), y: -150 });
+    // 血量按"两塔当前 DPS × 秒数"现算：不管玩家 build 成什么样，它都恰好要打 5~9 秒
+    k.hp = k.max = bossHpFor();
+    k.spd *= 1.06;
+    G.bannerT = 1.7;
+    G.bannerText = `👑 第 ${G.bossN} 只史莱姆王`;
+    G.bannerSub = '打死它，城墙立刻修回 18%';
+    G.shake = Math.max(G.shake, 11);
+    sfx('warn');
+}
+function updateSpawner(dt) {
+    // 屏幕人口控制：场面永远是满的（割草手感），真正的难度交给血量
+    G.spawnT -= dt;
+    // 4 分钟起「终末潮」：场上敌人数量持续加码，谁也顶不住 —— 保证 4~5 分钟必败
+    const late = Math.max(0, G.time - TUNE.popLate) * TUNE.popLateK;
+    const target = Math.min(TUNE.popMax, TUNE.popBase + G.time / TUNE.popGrow + late);
+    if (G.spawnT <= 0) {
+        G.spawnT = TUNE.spawnTick;
+        const short = target - G.enemies.length;
+        if (short > 0) {
+            const n = Math.min(TUNE.spawnBatch, Math.ceil(short / 2));
+            for (let k = 0; k < n; k++) spawnEnemy(pickKind(G.time));
         }
     }
-    // 打乱
-    for (let i = q.length - 1; i > 0; i--) { const j = randi(0, i); const t = q[i]; q[i] = q[j]; q[j] = t; }
-    const ki = q.indexOf('king');
-    if (ki >= 0 && ki !== q.length - 1) { q.splice(ki, 1); q.push('king'); }
-    return q;
+    // 兜底：极端情况下敌人堆满战场，多余的直接从城墙前冒出来
+    if (G.enemies.length > 210) {
+        if (!G.breachFlash || G.time - G.breachFlash > 8) {
+            G.breachFlash = G.time;
+            toast('⚠ 防线被淹没 —— 它们在城墙前冒出来！', '#ff7a7a');
+            sfx('warn');
+        }
+        const e = spawnEnemy(pickKind(G.time), { x: rand(200, W - 200), y: WALL_TOP - rand(14, 70) });
+        e.state = 'chew';
+    }
+    // Boss 周期
+    G.nextBoss -= dt;
+    if (G.nextBoss <= 0) { G.nextBoss += TUNE.bossEvery; spawnBoss(); }
+    // 补给箱
+    G.pickT -= dt;
+    if (G.pickT <= 0) { G.pickT = 7.5; spawnPickup(); }
+    // 威胁等级（每 60 秒 +1，只是提示，不暂停）
+    const th = Math.floor(G.time / 60) + 1;
+    if (th > G.threat) {
+        G.threat = th;
+        G.bannerT = 1.5;
+        G.bannerText = `威胁等级 ${th}`;
+        G.bannerSub = th <= 2 ? '敌人开始变厚' : (th <= 4 ? '史莱姆正在变得更强 —— 抓紧合击' : '它们已经超过你了，看还能拖多久');
+        G.shake = Math.max(G.shake, 8);
+        G.flash = Math.max(G.flash, .35);
+        sfx('warn');
+    }
 }
 
 
@@ -535,7 +596,6 @@ window.addEventListener('keydown', e => {
         return;
     }
     if (state === 'HELP') { if ((okKey || escKey) && !e.repeat) backToMenu(); return; }
-    if (state === 'CLEAR') { if (okKey && !e.repeat) nextStage(); return; }
     if (state === 'OVER') {
         if ($('overOverlay').classList.contains('hidden')) return;
         if (okKey && !e.repeat) startGame();
@@ -550,19 +610,15 @@ window.addEventListener('keydown', e => {
     const i = hit.p, p = G.players[i];
     markActive(i);
 
-    if (state === 'LEVELUP') {
-        // ↑/W = 往后推（下一张）；↓/S = 选中
-        if (e.repeat) return;
+    // 升级坞（游戏一直在跑）：W/↑ 换一张，S/↓ 选中
+    if (p.q.length && !e.repeat) {
         if (hit.act === 'up') {
-            if (!G.picksDone[i]) {
-                p.cardsSel = (p.cardsSel + 1) % 4;
-                sfx('move');
-                refreshCardSel(i);
-            }
+            p.cardsSel = (p.cardsSel + 1) % 3;
+            sfx('move');
         } else if (hit.act === 'down') {
             pickCard(i, p.cardsSel);
+            return;
         }
-        return;
     }
     if (state === 'PLAYING') {
         held[i][hit.act] = 1;
@@ -604,9 +660,9 @@ cv.addEventListener('touchstart', e => { e.preventDefault(); onPointerMove(e); }
 cv.addEventListener('touchmove', e => { e.preventDefault(); onPointerMove(e); }, { passive: false });
 
 /* ---------- 数值 ---------- */
-function dmgBase(p) { return 8 * (1 + p.lv.atk * 0.22); }
+function dmgBase(p) { return 7.5 * (1 + p.lv.atk * 0.28); }
 function rateOf(p) {
-    let r = 10.5 * (1 + p.lv.rate * 0.16);
+    let r = 10.5 * (1 + p.lv.rate * 0.22);
     if (p.bufT > 0) r *= 1.35;
     if (G.rageT > 0) r *= 1.22;
     if (G.ultT > 0) r *= 1.5;
@@ -617,7 +673,7 @@ function coinMul(p) {
     const m = Math.max(G.players[0].lv.coin, G.players[1].lv.coin);
     return 1 + m * 0.18;
 }
-function wallMaxOf() { return Math.round(180 * G.wallBonus); }
+function wallMaxOf() { return Math.round(TUNE.wallBase * G.wallBonus); }
 
 /* ---------- AI 托管（射线枚举 —— 比人手瞄得还准） ---------- */
 function scanBestAngle(p) {
@@ -643,6 +699,7 @@ function scanBestAngle(p) {
             const edge = 1 + (1 - perp / R) * 0.75;
             score += e.w * threat * sizeW * near * edge;
             if (e.state === 'chew') score += 6;   // 正在啃墙：最高优先
+            if (e.boss && e.y > 0) score += 14;   // 史莱姆王：进场后优先集火（还没进场就别浪费火力）
         }
         // 打补给箱
         for (let k = 0; k < G.pickups.length; k++) {
@@ -711,6 +768,10 @@ function dmgNum(x, y, v, crit, col) {
     if (G.nums.length > 52) G.nums.shift();
     G.nums.push({ x: x + rand(-9, 9), y, v: Math.max(1, Math.round(v)), crit: !!crit, col: col || '#fff', t: .66, vy: -72 });
 }
+function floatText(x, y, txt, col, size) {
+    if (G.nums.length > 52) G.nums.shift();
+    G.nums.push({ x, y, v: txt, crit: false, col: col || '#fff', t: .9, vy: -64, size: size || 13 });
+}
 function toast(text, col) {
     G.toasts = G.toasts || [];
     G.toasts.push({ text, col: col || '#ffd76a', t: 1.5, y: 268 });
@@ -733,7 +794,7 @@ function shoot(p) {
             x: ox, y: oy, px: ox, py: oy,
             vx: Math.sin(a) * sp, vy: -Math.cos(a) * sp,
             dmg, crit: Math.random() < critChance(p), owner: p.idx,
-            pierce: p.lv.pierce, hit: [], life: 1.4,
+            pierce: p.lv.pierce, hit: [], life: 1.0,
             size: 4.4 + heavy * 2.6, heavy,
             burst: p.lv.burst, fire: p.lv.fire, ice: p.lv.ice, light: p.lv.light,
             evoFire: !!p.evos.evoFire, evoFrost: !!p.evos.evoFrost, evoBolt: !!p.evos.evoBolt,
@@ -816,6 +877,21 @@ function hitEnemy(e, dmg, p, opt) {
     let crit = opt.crit;
     if (crit) d *= 2.3;
     if (e.frozen > 0 && p && p.evos.evoFrost) d *= 1.35;
+    // 合击：两塔 1.15 秒内打中同一只 → 该目标进入「合击」状态，受创 ×2.1
+    if (p) {
+        const other = G.players[1 - p.idx];
+        if (e.crossT <= 0 && (G.time - other.hitMark) <= TUNE.crossWin) {
+            e.crossT = TUNE.crossDur;
+            G.cross++; p.crossN++;
+            if (G.time - e.crossToastT > 1.4) {
+                e.crossToastT = G.time;
+                floatText(e.x, e.y - e.r - 24, '合击 ×2.1', '#ffd76a', 17);
+                sfx('freeze');
+            }
+        }
+        p.hitMark = G.time;
+    }
+    if (e.crossT > 0) d *= TUNE.crossMul;
     // 护盾先吸收
     if (e.shield > 0) {
         const ab = Math.min(e.shield, d);
@@ -830,7 +906,7 @@ function hitEnemy(e, dmg, p, opt) {
     }
     if (p) {
         if (opt.burn) { e.burn = 2 + p.lv.fire * 2.6; e.burnT = 2.4; }
-        if (opt.slow) { e.slow = Math.max(e.slow, .28 + p.lv.ice * .06); e.slowT = 1.7; }
+        if (opt.slow) { e.slow = Math.max(e.slow, Math.min(.32, .24 + p.lv.ice * .05)); e.slowT = 1.6; }
     }
     // 共鸣充能
     G.ult = Math.min(100, G.ult + d * 0.026);
@@ -863,7 +939,10 @@ function killEnemy(e, p) {
     if (e.burnT > 0) burstAt(e.x, e.y, 8, '#ffa53d', 220, 5);
     // 音效 & 顿帧
     if (e.boss) { sfx('big'); G.shake = 26; G.hitstop = .22; G.whiteFlash = .55; }
-    else if (big) { sfx('big'); G.shake = Math.max(G.shake, 9); G.hitstop = Math.max(G.hitstop, .07); }
+    else if (big) {
+        sfx('big'); G.shake = Math.max(G.shake, 9);
+        if ((G.hitstopCd || 0) <= 0) { G.hitstop = Math.max(G.hitstop, .06); G.hitstopCd = .42; }
+    }
     else { sfx('kill'); G.shake = Math.max(G.shake, 1.6); }
     // 金币
     for (let i = 0; i < e.coin; i++) {
@@ -883,7 +962,9 @@ function killEnemy(e, p) {
     if (e.boss) {
         for (let i = 0; i < 26; i++) G.coins.push({ x: e.x, y: e.y, vx: rand(-260, 260), vy: rand(-330, -120), t: 3, taken: false, v: 2 });
         G.ult = Math.min(100, G.ult + 40);
-        toast('👑 史莱姆王被击溃！', '#ffd76a');
+        G.wall.hp = Math.min(G.wall.max, G.wall.hp + G.wall.max * 0.18);
+        G.bossKill = (G.bossKill || 0) + 1;
+        toast('👑 史莱姆王被击溃 · 城墙 +18%', '#ffd76a');
     }
     // 连击里程碑
     if (G.combo > 0 && G.combo % 12 === 0) {
@@ -894,12 +975,19 @@ function killEnemy(e, p) {
     e.remove = true;
 }
 function addXp(n) {
-    G.xp += n;
-    while (G.xp >= G.xpNeed) {
-        G.xp -= G.xpNeed;
+    G.lvT += n * 0.012;      // 击杀加速升级
+    levelCheck();
+}
+function allMaxed(p) { return SKILLS.every(s => p.lv[s.id] >= s.max); }
+function levelCheck() {
+    let guard = 0;
+    while (G.lvT >= G.lvNeed && guard++ < 6) {
+        if (G.players.every(allMaxed)) { G.lvT = 0; return; }
+        G.lvT -= G.lvNeed;
         G.xpLv++;
-        G.xpNeed = Math.round(G.xpNeed * 1.3 + 10);
-        G.pendingLv++;
+        G.lvNeed = G.time < 90 ? TUNE.lvFast : (G.time < 180 ? TUNE.lvMid : TUNE.lvSlow);
+        offerLevels();
+        sfx('level');
     }
 }
 
@@ -958,7 +1046,7 @@ function updateBullets(dt) {
             const p = G.players[b.owner];
             hitEnemy(e, b.dmg, p, { crit: b.crit, burn: b.fire > 0, slow: b.ice > 0, noNum: false });
             // 冰：冻结
-            if (b.evoFrost && !e.dead) e.frozen = Math.max(e.frozen, .7);
+            if (b.evoFrost && !e.dead && e.frzImmune <= 0) { e.frozen = Math.max(e.frozen, .55); e.frzImmune = 2.4; }
             // 火：进化爆燃
             if (b.evoFire) explodeAt(b.x, b.y, 46 + b.fire * 9, b.dmg * .34, p, '#ff8a3d');
             else if (b.burst > 0) explodeAt(b.x, b.y, 34 + b.burst * 8, b.dmg * .3, p, '#ffb04a');
@@ -978,14 +1066,15 @@ function updateBullets(dt) {
                     used.push(best);
                     G.bolts.push({ x1: from.x, y1: from.y, x2: best.x, y2: best.y, t: .18 });
                     hitEnemy(best, b.dmg * .38, p, { noNum: true });
-                    if (b.evoFrost && !best.dead) best.frozen = Math.max(best.frozen, .7);
+                    if (b.evoFrost && !best.dead && best.frzImmune <= 0) { best.frozen = Math.max(best.frozen, .55); best.frzImmune = 2.4; }
                     from = best;
                 }
             }
-            // 重弩击退
-            if (b.heavy > 0 && !e.dead) {
+            // 重弩击退：有冷却的小推力（否则每秒上百次击退会把敌人永远顶在天上）
+            if (b.heavy > 0 && !e.dead && !e.boss && (e.kbCd || 0) <= 0) {
                 const a = Math.atan2(b.vy, b.vx);
-                e.kb = 1; e.kbv = 90 + b.heavy * 55;
+                e.kbCd = 0.65;
+                e.kb = 1; e.kbv = 58 + b.heavy * 20;
                 e.vx = Math.cos(a) * e.kbv; e.vy = Math.sin(a) * e.kbv;
             }
             if (b.pierce > 0) { b.pierce--; }
@@ -1017,6 +1106,8 @@ function updateEnemies(dt) {
         if (e.hurtT > 0) e.hurtT -= dt;
         if (e.slowT > 0) { e.slowT -= dt; if (e.slowT <= 0) e.slow = 0; }
         if (e.frozen > 0) e.frozen -= dt;
+        if (e.frzImmune > 0) e.frzImmune -= dt;
+        if (e.crossT > 0) e.crossT -= dt;
         e.sq = lerp(e.sq, 1, clamp(dt * 9, 0, 1));
         e.hop += dt * e.hopSpd * (e.frozen > 0 ? 0 : 1);
         // 灼烧
@@ -1027,6 +1118,7 @@ function updateEnemies(dt) {
             if (e.hp <= 0) { killEnemy(e, null); G.enemies.splice(i, 1); continue; }
         }
         // 击退位移
+        if (e.kbCd > 0) e.kbCd -= dt;
         if (e.kb > 0) {
             e.kb -= dt * 4.2;
             e.x += (e.vx || 0) * dt * e.kb;
@@ -1043,7 +1135,7 @@ function updateEnemies(dt) {
             e.x += Math.sin(G.time * 2.4 + e.wob) * 46 * dt;
             e.x = clamp(e.x, 80, W - 80);
             if (e.y > WALL_TOP - 26) {
-                damageWall(11 + G.stage * 2);
+                damageWall(8 + G.time * 0.06);
                 burstAt(e.x, e.y, 14, e.col, 240, 5);
                 G.shake = Math.max(G.shake, 5);
                 e.dead = true; e.remove = true;
@@ -1165,7 +1257,7 @@ function openPickup(k, owner) {
         sideFx(owner, 'power', '火力全开 ×1.7');
         toast(`🔥 ${nm} 火力全开 8 秒！`, p.color);
     } else if (roll < .9) {
-        const c = 90 + G.stage * 30;
+        const c = 60 + Math.round(G.time * 2.5);
         G.coinsRun += c;
         G.ult = Math.min(100, G.ult + c * 0.6);
         for (let i = 0; i < 10; i++) G.coins.push({ x: k.x, y: k.y, vx: rand(-180, 180), vy: rand(-260, -60), t: 2.2, v: 1 });
@@ -1179,32 +1271,32 @@ function openPickup(k, owner) {
 /* ---------- 危机事件 ---------- */
 const CRISES = [
     {
-        id: 'swarm', name: '⚠ 兽潮来袭！', sub: '小史莱姆铺天盖地', minStage: 1, dur: 3.2,
-        fn() { G.crisisSpawn = { type: 'small', n: 26, t: 0, gap: .09, hpMul: 1 }; },
+        id: 'swarm', name: '⚠ 兽潮来袭！', sub: '小史莱姆铺天盖地', minT: 0, dur: 3.2,
+        fn() { G.crisisSpawn = { type: 'small', n: 24 + Math.round(G.time / 8), t: 0, gap: .07, hpMul: 1 }; },
     },
     {
-        id: 'armor', name: '⚠ 重甲突袭！', sub: '盾壳 + 尖刺混合编队', minStage: 1, dur: 3.2,
-        fn() { G.crisisSpawn = { type: 'shield', n: 5, t: 0, gap: .28, hpMul: 1, alt: 'spiky' }; },
+        id: 'armor', name: '⚠ 重甲突袭！', sub: '盾壳 + 尖刺混合编队', minT: 0, dur: 3.2,
+        fn() { G.crisisSpawn = { type: 'shield', n: 4 + Math.round(G.time / 45), t: 0, gap: .26, hpMul: 1, alt: 'spiky' }; },
     },
     {
-        id: 'acid', name: '☣ 酸雨倾泻！', sub: '酸液腐蚀城墙 —— 快清场！', minStage: 2, dur: 8,
+        id: 'acid', name: '☣ 酸雨倾泻！', sub: '酸液腐蚀城墙 —— 快清场！', minT: 75, dur: 8,
         fn() { G.acidT = 8; G.acidDrop = 0; },
     },
     {
-        id: 'dark', name: '🌑 暗夜笼罩！', sub: '视野尽失，只能靠炮口照明', minStage: 2, dur: 10,
+        id: 'dark', name: '🌑 暗夜笼罩！', sub: '视野尽失，只能靠炮口照明', minT: 110, dur: 10,
         fn() { G.darkT = 10; },
     },
     {
-        id: 'berserk', name: '🔥 史莱姆狂暴！', sub: '全场敌人速度暴增', minStage: 3, dur: 8,
+        id: 'berserk', name: '🔥 史莱姆狂暴！', sub: '全场敌人速度暴增', minT: 145, dur: 8,
         fn() { G.berserkT = 8; for (const e of G.enemies) { e.sq = 1.4; } },
     },
     {
-        id: 'king', name: '👑 史莱姆王降临！', sub: '它会把城墙砸出窟窿', minStage: 2, dur: 3,
+        id: 'king', name: '👑 史莱姆王降临！', sub: '它会把城墙砸出窟窿', minT: 60, dur: 3,
         fn() { const k = spawnEnemy('king', { x: rand(W * .35, W * .65), y: -120 }); k.spd *= 1.1; },
     },
 ];
 function startCrisis() {
-    const pool = CRISES.filter(c => c.minStage <= G.stage && c.id !== (G.crisis.cur && G.crisis.cur.id) && c.id !== G.lastCrisis);
+    const pool = CRISES.filter(c => c.minT <= G.time && c.id !== (G.crisis.cur && G.crisis.cur.id) && c.id !== G.lastCrisis);
     if (!pool.length) return;
     const c = pick(pool);
     G.crisis.cur = c;
@@ -1219,10 +1311,10 @@ function startCrisis() {
 function updateCrisis(dt) {
     if (G.crisis.cur) {
         G.crisis.t -= dt;
-        if (G.crisis.t <= 0) { G.crisis.cur = null; G.crisis.next = rand(15, 23); }
+        if (G.crisis.t <= 0) { G.crisis.cur = null; G.crisis.next = Math.max(8, rand(13, 19) - G.time / 120); }
     } else {
         G.crisis.next -= dt;
-        if (G.crisis.next <= 0 && G.waveState !== 'gap') startCrisis();
+        if (G.crisis.next <= 0 && G.time > 22) startCrisis();
     }
     // 分批生成
     if (G.crisisSpawn) {
@@ -1250,7 +1342,7 @@ function updateCrisis(dt) {
         const a = G.acids[i];
         a.y += a.vy * dt;
         if (a.y >= WALL_TOP - 4) {
-            damageWall(4 + G.stage * .8);
+            damageWall((0.6 + G.time * 0.008) * (G.wall.max / 200));   // 按城墙上限等比缩放
             burstAt(a.x, WALL_TOP - 8, 6, '#9dff6a', 160, 4);
             G.acids.splice(i, 1);
         } else if (a.y > H) G.acids.splice(i, 1);
@@ -1258,36 +1350,7 @@ function updateCrisis(dt) {
 }
 
 /* ---------- 波次 ---------- */
-function startWave(n) {
-    G.wave = n;
-    G.spawnQueue = buildWaveQueue(n, G.stage);
-    G.waveTotal = G.spawnQueue.length;
-    G.waveState = 'spawning';
-    G.spawnT = 0;
-    if (n === 5) announce(`第 ${G.stage} 关 · 最终波 ⚠`, '#ff8a8a');
-    else announce(`第 ${G.stage} 关 · 第 ${n} 波`, '#7df9ff');
-}
-function updateWave(dt) {
-    if (G.waveState === 'gap') {
-        G.waveT -= dt;
-        if (G.waveT <= 0) startWave(G.wave + 1);
-    } else if (G.waveState === 'spawning') {
-        G.spawnT -= dt;
-        if (G.spawnT <= 0 && G.spawnQueue.length) {
-            G.spawnT = Math.max(.14, .52 - G.stage * .026);
-            spawnEnemy(G.spawnQueue.shift());
-        }
-        if (!G.spawnQueue.length) G.waveState = 'fighting';
-    } else if (G.waveState === 'fighting') {
-        if (G.enemies.length === 0) {
-            if (G.wave >= 5) { stageClear(); return; }
-            G.waveState = 'gap'; G.waveT = 2.6;
-            G.wall.hp = Math.min(G.wall.max, G.wall.hp + G.wall.max * .06);
-            spawnPickup();
-            if (G.stage >= 2 && Math.random() < .6) spawnPickup();
-        }
-    }
-}
+
 
 /* ---------- 终极技：双子贯穿光束 ---------- */
 function startUlt() {
@@ -1325,6 +1388,7 @@ function updateUlt(dt) {
 /* ---------- 主更新 ---------- */
 function update(dt, dtReal) {
     if (dtReal === undefined) dtReal = dt;
+    if (G.hitstopCd > 0) G.hitstopCd -= dtReal;
     if (G.hitstop > 0) { G.hitstop -= dt; dt *= 0.14; }
     G.time += dt;
     G.shake = Math.max(0, G.shake - dt * 46);
@@ -1334,12 +1398,6 @@ function update(dt, dtReal) {
     if (G.wallHitT > 0) G.wallHitT -= dt;
     if (G.comboT > 0) { G.comboT -= dt; if (G.comboT <= 0) G.combo = 0; }
     if (G.rageT > 0) G.rageT -= dt;
-    // 过关奖励：战地改装（延迟一点再弹卡，先让玩家看到关卡横幅）
-    if (G.freeUpT > 0) {
-        G.freeUpT -= dt;
-        if (G.freeUpT <= 0) { G.pendingLv++; toast('🔧 战地改装 · 立即强化！', '#ffd76a'); sfx('level'); }
-    }
-
     updateTowers(dt, dtReal);
     updateBullets(dt);
     updateEnemies(dt);
@@ -1393,10 +1451,12 @@ function update(dt, dtReal) {
     }
     // 共鸣满了自动放
     if (G.ult >= 100 && G.ultT <= 0) startUlt();
-    // 波次
-    if (state === 'PLAYING') updateWave(dt);
-    // 升级打断
-    if (G.pendingLv > 0 && state === 'PLAYING') openLevelUp();
+    // 无尽生成
+    updateSpawner(dt);
+    // 升级：时间为主、击杀为辅 → 2~3 分钟成型
+    G.lvT += dt;
+    levelCheck();
+    updateDocks(dt);
 }
 
 /* ================= 绘制 ================= */
@@ -1977,29 +2037,45 @@ function drawArcher(p) {
 
 /* --- 子弹 --- */
 function drawBullets() {
+    // 弹幕越密，拖尾越短越淡 —— 否则满级时屏幕会被箭雨糊死，看不见史莱姆
+    const N = G.bullets.length;
+    const thin = N > 60 ? clamp(60 / N, 0.28, 1) : 1;
+    const tl = 72 * thin;
     for (const b of G.bullets) {
         const a = Math.atan2(b.vy, b.vx);
         const col = G.players[b.owner] ? G.players[b.owner].color : '#fff';
         ctx.save();
         ctx.translate(b.x, b.y);
         ctx.rotate(a);
+        if (thin < 0.55) {
+            // 高密度弹幕：只画「弹头 + 淡尾点」，不再逐发建渐变，也不再糊满屏
+            ctx.fillStyle = col;
+            ctx.globalAlpha = .34;
+            ctx.beginPath(); ctx.arc(-9, 0, b.size * .85, 0, TAU); ctx.fill();
+            ctx.globalAlpha = .95;
+            ctx.beginPath(); ctx.arc(0, 0, b.size * 1.05, 0, TAU); ctx.fill();
+            ctx.restore();
+            continue;
+        }
         // 渐隐锥形拖尾
-        const tg = ctx.createLinearGradient(-72, 0, 12, 0);
+        const tg = ctx.createLinearGradient(-tl, 0, 12, 0);
         tg.addColorStop(0, 'rgba(255,255,255,0)');
         tg.addColorStop(.5, col);
         tg.addColorStop(1, '#ffffff');
-        ctx.globalAlpha = .5;
+        ctx.globalAlpha = .5 * (0.45 + 0.55 * thin);
         ctx.fillStyle = tg;
         ctx.beginPath();
-        ctx.moveTo(-72, 0);
+        ctx.moveTo(-tl, 0);
         ctx.lineTo(0, -b.size * .85);
         ctx.lineTo(15, 0);
         ctx.lineTo(0, b.size * .85);
         ctx.closePath(); ctx.fill();
-        // 外光
-        ctx.globalAlpha = .26;
-        ctx.fillStyle = col;
-        ctx.beginPath(); ctx.ellipse(0, 0, b.size * 3.6, b.size * 1.5, 0, 0, TAU); ctx.fill();
+        // 外光（密集时收掉，避免叠成一团白光）
+        if (thin > 0.6) {
+            ctx.globalAlpha = .26 * thin;
+            ctx.fillStyle = col;
+            ctx.beginPath(); ctx.ellipse(0, 0, b.size * 3.6, b.size * 1.5, 0, 0, TAU); ctx.fill();
+        }
         // 弹头：两侧不同形态（1P 冰晶箭 / 2P 熔金火弹）
         ctx.globalAlpha = 1;
         if (b.owner === 1) {
@@ -2064,7 +2140,7 @@ function drawParts() {
     for (const n of G.nums) {
         const a = clamp(n.t / .66, 0, 1);
         ctx.globalAlpha = a;
-        const sz = n.crit ? 21 : 14.5;
+        const sz = n.size ? n.size : (n.crit ? 21 : 14.5);
         ctx.font = `bold ${sz}px -apple-system, sans-serif`;
         ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.6)';
         ctx.strokeText(n.v, n.x, n.y);
@@ -2396,6 +2472,61 @@ function drawPlayerPanel(i) {
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
 
+/* ---------- 升级坞（不暂停，浮在 HUD 下方） ---------- */
+const DOCK_H = 88;
+function drawDocks() {
+    if (state === 'MENU' || state === 'HELP') return;
+    drawDock(0); drawDock(1);
+}
+function drawDock(i) {
+    const p = G.players[i];
+    if (!p.q.length) return;
+    const x = i === 0 ? 12 : W - PANEL_W - 12;
+    const y = PANEL_Y + PANEL_H + 7;
+    chipBox(x, y, PANEL_W, DOCK_H, 10, 'rgba(5,11,20,.9)', i === 0 ? 'rgba(94,230,255,.55)' : 'rgba(255,179,71,.55)');
+    const gap = 4, pad = 9;
+    const cw = (PANEL_W - pad * 2 - gap * 2) / 3, ch = DOCK_H - 15;
+    const o = p.q[0];
+    for (let k = 0; k < 3; k++) {
+        const cx = x + pad + k * (cw + gap), cy = y + 6;
+        const sel = k === p.cardsSel;
+        chipBox(cx, cy, cw, ch, 6,
+            sel ? (i === 0 ? 'rgba(94,230,255,.28)' : 'rgba(255,179,71,.28)') : 'rgba(255,255,255,.055)',
+            sel ? p.color : 'rgba(255,255,255,.12)');
+        const s = o[k];
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        if (!s) {
+            ctx.font = '15px -apple-system, sans-serif';
+            ctx.fillStyle = '#fff';
+            ctx.fillText('🛠️', cx + cw / 2, cy + 16);
+            ctx.font = 'bold 10px -apple-system, sans-serif';
+            ctx.fillStyle = 'rgba(210,228,250,.92)';
+            ctx.fillText('紧急维修', cx + cw / 2, cy + 36);
+            ctx.font = 'bold 9px -apple-system, sans-serif';
+            ctx.fillStyle = 'rgba(180,200,230,.7)';
+            ctx.fillText('修墙 30%', cx + cw / 2, cy + 51);
+            continue;
+        }
+        ctx.font = '15px -apple-system, sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.fillText(s.icon, cx + cw / 2, cy + 15);
+        ctx.font = 'bold 10.5px -apple-system, sans-serif';
+        ctx.fillStyle = '#eaf4ff';
+        ctx.fillText(s.name, cx + cw / 2, cy + 34);
+        const nx = p.lv[s.id] + 1;
+        ctx.font = 'bold 9.5px -apple-system, sans-serif';
+        ctx.fillStyle = nx >= s.max ? '#ffd76a' : 'rgba(190,212,242,.8)';
+        ctx.fillText(nx >= s.max ? '满级' : `Lv.${nx}`, cx + cw / 2, cy + 50);
+    }
+    // 倒计时条：还剩多久自动替你选
+    const frac = clamp(p.cardT / (p.auto ? 1.1 : TUNE.cardWindow), 0, 1);
+    ctx.fillStyle = 'rgba(255,255,255,.12)';
+    ctx.fillRect(x + pad, y + DOCK_H - 6, PANEL_W - pad * 2, 2.5);
+    ctx.fillStyle = p.cardT < 1.3 ? '#ff9a5c' : p.color;
+    ctx.fillRect(x + pad, y + DOCK_H - 6, (PANEL_W - pad * 2) * frac, 2.5);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+
 /* ---------- 速度徽标 / 全局键位提示 ---------- */
 function drawSpeedChip() {
     const sp = G.speed || 1;
@@ -2411,7 +2542,7 @@ function drawSpeedChip() {
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
 function drawGlobalHints() {
-    const txt = '1~5 调速　·　Enter 确认　·　P 暂停　·　F 全屏';
+    const txt = '1~5 调速　·　W/↑ 换卡　·　S/↓ 选中　·　P 暂停';
     ctx.font = 'bold 11.5px -apple-system, sans-serif';
     const w = ctx.measureText(txt).width + 26;
     const bx = W / 2 - w / 2, by = H - 26;
@@ -2423,6 +2554,11 @@ function drawGlobalHints() {
 }
 
 /* --- HUD --- */
+function fmtTime(t) {
+    t = Math.max(0, t);
+    const m = Math.floor(t / 60), ss = Math.floor(t % 60);
+    return String(m).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+}
 function drawHud() {
     if (state === 'MENU' || state === 'HELP') return;
     // 顶栏
@@ -2434,21 +2570,28 @@ function drawHud() {
     ctx.fillStyle = g; ctx.fillRect(0, 46, W, 36);
 
     ctx.textBaseline = 'middle';
-    // 左：关卡 / 波次
-    ctx.font = 'bold 17px -apple-system, sans-serif';
-    ctx.fillStyle = '#cfe0ff';
-    ctx.fillText(`第 ${G.stage} 关`, 18, 24);
-    ctx.font = 'bold 13px -apple-system, sans-serif';
-    ctx.fillStyle = '#7f93b8';
-    ctx.fillText(`· 第 ${Math.min(G.wave, 5)}/5 波`, 82, 25);
-    // 波次进度
-    const prog = G.waveState === 'spawning'
-        ? 1 - G.spawnQueue.length / Math.max(1, G.waveTotal)
-        : (G.waveState === 'fighting' ? 1 : 0);
+    // 左：存活时间 / 威胁等级 / 下一只 Boss / 合击次数
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 21px -apple-system, sans-serif';
+    ctx.fillStyle = G.threat >= 6 ? '#ffd0d0' : '#cfe0ff';
+    ctx.fillText(fmtTime(G.time), 18, 23);
+    const hot = G.threat >= 5;
+    ctx.font = 'bold 12.5px -apple-system, sans-serif';
+    ctx.fillStyle = hot ? '#ff8a8a' : '#7f93b8';
+    ctx.fillText(`威胁 Lv.${G.threat}`, 98, 25);
+    ctx.font = 'bold 11.5px -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,196,120,.92)';
+    ctx.fillText(`👑 ${fmtTime(Math.max(0, G.nextBoss))}`, 180, 25);
+    if (G.cross > 0) {
+        ctx.fillStyle = 'rgba(255,220,120,.95)';
+        ctx.fillText(`⚡合击 ${G.cross}`, 262, 25);
+    }
+    // 本分钟进度（越满越危险）
+    const prog = (G.time % 60) / 60;
     ctx.fillStyle = 'rgba(255,255,255,.12)';
-    ctx.fillRect(18, 36, 132, 4);
-    ctx.fillStyle = '#5ee6ff';
-    ctx.fillRect(18, 36, 132 * prog, 4);
+    ctx.fillRect(18, 36, 200, 4);
+    ctx.fillStyle = hot ? '#ff7a7a' : '#5ee6ff';
+    ctx.fillRect(18, 36, 200 * prog, 4);
 
     // 中：连击
     if (G.combo > 1) {
@@ -2460,7 +2603,7 @@ function drawHud() {
         ctx.textAlign = 'center';
         ctx.font = 'bold 27px -apple-system, sans-serif';
         ctx.fillStyle = G.combo > 20 ? '#ffd76a' : '#8ce8ff';
-        ctx.fillText(`${G.combo}`, 0, 0);
+        ctx.fillText(G.combo > 999 ? '999+' : `${G.combo}`, 0, 0);
         ctx.font = 'bold 11px -apple-system, sans-serif';
         ctx.fillStyle = 'rgba(200,225,255,.7)';
         ctx.fillText('连击', 0, 16);
@@ -2594,6 +2737,7 @@ function render() {
     ctx.restore();
     drawHud();
     drawPlayerPanels();
+    drawDocks();
     if (G.whiteFlash > 0) {
         ctx.fillStyle = `rgba(255,255,255,${G.whiteFlash * .45})`;
         ctx.fillRect(0, 0, W, H);
@@ -2614,7 +2758,7 @@ function render() {
 
 /* --- DOM UI --- */
 const $ = id => document.getElementById(id);
-const overlays = ['menu', 'help', 'cardOverlay', 'clearOverlay', 'overOverlay'];
+const overlays = ['menu', 'help', 'overOverlay'];
 function showOnly(id) { overlays.forEach(o => $(o).classList.toggle('hidden', o !== id)); }
 function hideAll() { overlays.forEach(o => $(o).classList.add('hidden')); }
 function announce(txt, col) {
@@ -2627,107 +2771,60 @@ function announce(txt, col) {
     });
 }
 
-/* --- 选卡 --- */
-let cardOffers = [];
+/* --- 升级坞：不暂停，浮在各自 HUD 下方；超时按 AI 判断自动选 --- */
 function rollOffers(p) {
     const avail = SKILLS.filter(s => p.lv[s.id] < s.max);
     const pool = avail.slice(), out = [];
-    while (out.length < 4 && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
-    while (out.length < 4) out.push(null);
+    while (out.length < 3 && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    while (out.length < 3) out.push(null);
     return out;
 }
-function renderCards() {
-    const row = $('picksRow'); row.innerHTML = '';
-    G.players.forEach((p, i) => {
-        const side = document.createElement('div');
-        side.className = 'side ' + (i === 0 ? 'p1' : 'p2');
-        side.dataset.p = i;
-        side.innerHTML = `<div class="sidehdr">${i === 0 ? '🟦 左塔 · 1P' : '🟧 右塔 · 2P'}　选择强化</div>
-            <div class="sidehint"><em>${i === 0 ? 'W' : '↑'}</em> 往后推（换一张）　<em>${i === 0 ? 'S' : '↓'}</em> 选中</div>
-            <div class="cards"></div>`;
-        const box = side.querySelector('.cards');
-        cardOffers[i].forEach((s, ci) => {
-            const div = document.createElement('div');
-            div.className = 'card';
-            if (s) {
-                const lv = p.lv[s.id] + 1;
-                div.innerHTML = `<div class="icon">${s.icon}</div><div class="name">${s.name}</div>
-                    <div class="desc">${s.desc(lv)}</div><div class="lvtag">Lv.${lv}${lv >= s.max ? ' · 满级' : ''}</div>`;
-            } else {
-                div.innerHTML = `<div class="icon">🛠️</div><div class="name">紧急维修</div>
-                    <div class="desc">立刻修复城墙 30% 血量</div><div class="lvtag">补给</div>`;
-            }
-            div.onclick = () => pickCard(i, ci);
-            box.appendChild(div);
-        });
-        row.appendChild(side);
-    });
-    G.players.forEach((p, i) => refreshCardSel(i));
-}
-function refreshCardSel(i) {
-    const side = document.querySelector(`.side[data-p="${i}"]`);
-    if (!side) return;
-    const cards = side.querySelectorAll('.card');
-    cards.forEach((c, k) => c.classList.toggle('sel', k === G.players[i].cardsSel && !G.picksDone[i]));
-}
-function openLevelUp() {
-    if (state === 'LEVELUP') return;
-    state = 'LEVELUP';
-    sfx('level');
-    cardOffers = G.players.map(p => rollOffers(p));
-    G.picksDone = [false, false];
-    G.players.forEach(p => { p.cardsSel = 0; p.aiPickT = 1.0; p.aiPicking = false; });
-    renderCards();
-    $('cardLvInfo').textContent = `全队等级 ${G.xpLv} · 两人各选一张，都选完继续（AI 托管的一侧会自动选）`;
-    showOnly('cardOverlay');
-}
-function updateCardAI(dt) {
-    if (state !== 'LEVELUP') return;
-    G.players.forEach((p, i) => {
-        if (G.picksDone[i] || !p.auto || p.aiPicking) return;
-        p.aiPickT -= dt;
-        if (p.aiPickT <= 0) {
-            const ci = aiPickBest(p, cardOffers[i]);
-            p.cardsSel = ci;
-            refreshCardSel(i);
-            p.aiPicking = true;
-            setTimeout(() => {
-                p.aiPicking = false;
-                if (state === 'LEVELUP' && !G.picksDone[i] && p.auto) pickCard(i, ci);
-            }, 340);
+function offerLevels() {
+    for (const p of G.players) {
+        p.q.push(rollOffers(p));
+        if (p.q.length > 3) p.q.shift();
+        if (p.q.length === 1) {
+            p.cardsSel = 0;
+            p.cardT = p.auto ? 1.1 : TUNE.cardWindow;
         }
-    });
+    }
 }
-function pickCard(i, ci) {
-    if (state !== 'LEVELUP' || G.picksDone[i]) return;
-    const p = G.players[i], s = cardOffers[i][ci];
+function updateDocks(dt) {
+    for (const p of G.players) {
+        if (!p.q.length) continue;
+        p.cardT -= dt;
+        if (p.cardT <= 0) {
+            const ci = aiPickBest(p, p.q[0]);
+            p.cardsSel = ci;
+            pickCard(p.idx, ci, true);
+        }
+    }
+}
+function pickCard(i, ci, silent) {
+    const p = G.players[i];
+    if (!p || !p.q.length) return;
+    const cur = p.q[0];
+    let s = (ci === undefined || ci === null) ? cur[0] : cur[ci];
+    if (!s) s = cur.find(x => x) || null;
+    const who = i === 0 ? '1P' : '2P';
     if (s) {
         p.lv[s.id]++;
         if (s.id === 'wall') {
-            G.wallBonus = (G.wallBonus || 1) * 1.25;
-            G.wall.max = Math.round(G.wall.max * 1.25);
+            G.wallBonus = Math.min(2.2, (G.wallBonus || 1) * 1.25);
+            G.wall.max = wallMaxOf();
             G.wall.hp = Math.min(G.wall.max, G.wall.hp + G.wall.max * .3);
         }
         checkEvos(p);
+        floatText(TOWER_X[i], PIVOT_Y - 96, `${s.icon} ${s.name} Lv.${p.lv[s.id]}`, p.color, 13);
     } else {
         G.wall.hp = Math.min(G.wall.max, G.wall.hp + G.wall.max * .3);
+        floatText(TOWER_X[i], PIVOT_Y - 96, '🛠️ 紧急维修', p.color, 13);
     }
-    G.picksDone[i] = true;
-    const side = document.querySelector(`.side[data-p="${i}"]`);
-    if (side) { side.classList.add('done'); side.querySelector('.cards').innerHTML = `<div class="done-tag">✔ 已选择${p.auto ? '（AI）' : ''}</div>`; }
     sfx('up');
-    if (G.picksDone.every(Boolean)) {
-        G.pendingLv--;
-        if (G.pendingLv > 0) {
-            state = 'PLAYING';
-            setTimeout(() => { if (state === 'PLAYING') openLevelUp(); }, 60);
-        } else {
-            hideAll();
-            state = 'PLAYING';
-            lastTs = 0;
-            G.players.forEach(pp => { pp.cardsSel = 0; });
-        }
-    }
+    p.q.shift();
+    p.cardsSel = 0;
+    p.cardT = p.q.length ? (p.auto ? 1.1 : TUNE.cardWindow * .8) : 0;
+    if (silent && i === 0) toast('自动选卡', 'rgba(180,200,230,.9)');
 }
 function checkEvos(p) {
     for (const evo of EVOLUTIONS) {
@@ -2749,26 +2846,8 @@ function startGame() {
     hideAll();
     fit();
     lastTs = 0;
-    G.waveState = 'gap'; G.waveT = 2.0;
+    G.spawnT = 1.6;
     announce('守住城墙！', '#7df9ff');
-}
-function stageClear() {
-    if (state !== 'PLAYING') return;
-    state = 'CLEAR';
-    $('clearStage').textContent = G.stage;
-    $('clearInfo').textContent = `击杀 ${G.kills} 只 · 最高连击 ${G.bestCombo} · 等级 ${G.xpLv}`;
-    sfx('level');
-    showOnly('clearOverlay');
-}
-function nextStage() {
-    G.stage++; G.wave = 0; G.waveState = 'gap'; G.waveT = 2.2;
-    G.enemies.length = 0; G.bullets.length = 0; G.coins.length = 0;
-    G.pickups.length = 0; G.acids.length = 0; G.parts.length = 0; G.nums.length = 0;
-    G.wall.max = wallMaxOf(); G.wall.hp = G.wall.max;
-    G.darkT = 0; G.berserkT = 0; G.acidT = 0; G.crisis.cur = null; G.crisis.next = 18;
-    hideAll(); state = 'PLAYING'; lastTs = 0;
-    G.freeUpT = 1.2;            // 先看横幅，再弹「战地改装」选卡
-    announce(`第 ${G.stage} 关`, '#7df9ff');
 }
 function gameOver() {
     if (state === 'OVER') return;
@@ -2776,16 +2855,17 @@ function gameOver() {
     G.overT = 0;
     G.shake = 30; G.whiteFlash = .4;
     sfx('big');
-    $('overStage').textContent = G.stage;
+    $('overTime').textContent = `你守了 ${fmtTime(G.time)}`;
     $('overKills').textContent = G.kills;
     $('overCombo').textContent = G.bestCombo;
+    $('overCross').textContent = G.cross;
+    $('overBoss').textContent = G.bossKill || 0;
     $('overCoins').textContent = G.coinsRun;
     setTimeout(() => showOnly('overOverlay'), 1200);
 }
 $('btnStart').onclick = () => startGame();
 $('btnHelp').onclick = () => { state = 'HELP'; showOnly('help'); };
 $('btnHelpBack').onclick = () => backToMenu();
-$('btnNext').onclick = () => nextStage();
 $('btnRetry').onclick = () => startGame();
 $('btnHome').onclick = () => goHome();
 
@@ -2808,7 +2888,6 @@ function loop(ts) {
         }
     }
     else if (state === 'OVER') updateVisualOnly(dt);
-    else if (state === 'LEVELUP') updateCardAI(dt);
     render();
 }
 function updateVisualOnly(dt) {
@@ -2828,11 +2907,13 @@ function updateVisualOnly(dt) {
 }
 
 window.__slime = {
-    get G() { return G; }, get state() { return state; }, get offers() { return cardOffers; },
+    get G() { return G; }, get state() { return state; },
     startGame, SKILLS, EVOLUTIONS, ETYPES, CRISES, pickCard, scanBestAngle,
     spawnEnemy, damageWall, startCrisis, rateOf, dmgBase, updateAI, hitEnemy, homingSteer,
-    ANG_MAX, TOWER_X, PIVOT_Y, W, H, SPEED_KEYS,
-    setSpeed, dpsOf, sideFx, openPickup, nextStage, goHome, startGame,
+    ANG_MAX, TOWER_X, PIVOT_Y, W, H, SPEED_KEYS, TUNE, PANEL_Y, PANEL_H,
+    setSpeed, dpsOf, sideFx, openPickup, goHome, startGame,
+    hpMul, biteMul, spdMul, levelCheck, offerLevels, updateDocks, rollOffers,
+    spawnBoss, pickKind, updateSpawner, fmtTime, update, allMaxed,
     get speed() { return G ? (G.speed || 1) : speedPref; },
     setState(s) { state = s; },
 };
