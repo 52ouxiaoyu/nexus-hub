@@ -115,13 +115,13 @@
 <body>
 <div id="wrap">
     <canvas id="cv" width="1280" height="720"></canvas>
-    <div class="ver">v4.6.0 · 漫画王</div>
+    <div class="ver">v4.7.0 · 元素共鸣</div>
 
     <!-- 主菜单 -->
     <div id="menu" class="overlay">
         <div class="panel">
             <h1 class="title">向史莱姆开炮</h1>
-            <div class="subtitle">SLIME CANNON 3 · 双塔守卫</div>
+            <div class="subtitle">SLIME CANNON 4 · 双塔 · 元素共鸣</div>
             <div class="stat-line" style="color:#8fa3c8;">无尽守卫 · 一次一局 · <b style="color:#ffd76a">没有终点，只有你守到第几分钟</b></div>
             <div class="keyrow">
                 <div class="kbox p1">
@@ -133,7 +133,7 @@
                     <div class="kd"><kbd>←</kbd><kbd>→</kbd> 转动炮口 · <kbd>↑</kbd> 换卡 · <kbd>↓</kbd> 选中<br><kbd>小键盘 Enter</kbd> <b style="color:#ffd76a">处决</b>（90° 扇形 · 12s）</div>
                 </div>
             </div>
-            <div class="tip">升级<b>不再暂停</b>：卡片浮在各自 HUD 下方，<b>4.6 秒</b>后自动帮你选最优的那张。<br>两座塔<b>同时打同一只</b>会触发<b style="color:#ffd76a">合击</b>（该目标受创 ×2.1）—— 这是唯一能超过 5 分钟的办法。<br>前 3 分钟你会强得很快，第 4 分钟开始敌人才真正发力。全程<b>纯键盘</b>，鼠标<b>不能</b>操作炮台。<br>场上会出现<b style="color:#ffcd40">金色描边</b>的词缀精英（分裂/护盾/加速/吸血/死亡爆炸），优先点掉它们。</div>
+            <div class="tip">升级<b>不再暂停</b>：卡片浮在各自 HUD 下方，<b>4.6 秒</b>后自动帮你选最优的那张。<br><b style="color:#8fe4ff">元素才是这局的核心</b>：点了火/冰/雷附魔，那座塔就变成对应元素。<b style="color:#ffd76a">两塔元素不同、交替打中同一只</b> → 触发元素反应（融化 / 超导 / 过载 / 破绽）。<br>所以最好的分工是：<b style="color:#8fe4ff">一个人冰系控住</b>，<b style="color:#ffa03d">一个人火系猛攻</b> —— 冰火交替就是「融化」，成片蒸发。<br>场上会出现<b style="color:#ffcd40">金色描边</b>的词缀精英（分裂/护盾/加速/吸血/死亡爆炸），优先点掉它们。</div>
             <div style="margin:16px 0 4px;">
                 <button class="btn green big" id="btnStart">开始守卫 <span class="kc">Enter</span></button>
             </div>
@@ -151,8 +151,14 @@
                 🎯 <b style="color:#5ee6ff">P1 左塔</b>：<kbd>A</kbd><kbd>D</kbd> 转炮口 · <b style="color:#ffb347">P2 右塔</b>：<kbd>←</kbd><kbd>→</kbd> 转炮口<br>
                 ⬆️ 升级<b style="color:#45e08a">不暂停</b>：卡片出现在自己 HUD 下方，<kbd>W</kbd>/<kbd>↑</kbd> 换一张 · <kbd>S</kbd>/<kbd>↓</kbd> 选中<br>
                 ⏳ 不理它也行：<b>4.6 秒</b>后自动替你选当前最优的一张（AI 托管的一侧 1.1 秒）<br>
-                ⚡ <b style="color:#ffd76a">合击</b>：两座塔在 1.15 秒内打中同一只 → 它受到 <b>×2.1</b> 伤害 1.5 秒；合击次数会记在左上角<br>
-                🤝 这就是唯一的「配合」：两个人瞄同一片，收益翻倍。各打各的，第 4 分钟就撑不住<br>
+                ❄ <b style="color:#8fe4ff">元素</b>：点「烈焰 / 寒霜 / 雷霆附魔」，那座塔就转为 <b style="color:#ffa03d">火</b> / <b style="color:#8fe4ff">冰</b> / <b style="color:#c8a4ff">雷</b>；三个都没点 = <b>锐</b>（暴击 +12%）。炮塔外观、弹体形状、拖尾全都会变<br>
+                🤝 <b style="color:#ffd76a">元素反应（真正的配合）</b>：两塔元素不同、<b>0.85 秒内交替打中同一只</b>就触发 ——<br>
+                　　<b style="color:#8fe4ff">冰</b> + <b style="color:#ffa03d">火</b> → <b style="color:#ffd6a8">融化</b>：白汽爆开，按最大血比例结算，解冻并溅射周围<br>
+                　　<b style="color:#8fe4ff">冰</b> + <b style="color:#c8a4ff">雷</b> → <b style="color:#a8ccff">超导</b>：冻得更久，全队打它 <b>+45%</b> 伤害（6 秒）<br>
+                　　<b style="color:#ffa03d">火</b> + <b style="color:#c8a4ff">雷</b> → <b style="color:#ffb04a">过载</b>：半径 92 爆炸 + 击退，成片清场<br>
+                　　<b>锐</b> + 任意元素 → <b>破绽</b>：该次伤害 <b>×1.55~2.0</b>，纯物理高攻塔的归宿<br>
+                🎯 反应强度随<b>两边附魔等级之和</b>上涨（双方合计 6 级 ×1.66 → 12 级 ×3.64），所以两个人都要点元素，一个人点没用<br>
+                ⚡ 另有<b style="color:#ffd76a">合击</b>：两塔 2 秒内打中同一只 → 受创 <b>×2.6</b>；和元素反应可以叠加<br>
                 🎯 箭矢<b style="color:#5ee6ff">微微吸附</b>：方向大致对上了，会自己拐一点点去咬住目标<br>
                 💥 击杀累积<b style="color:#ffd76a">连击</b>，连击越高射速越快；双塔伤害共同充能<b>共鸣槽</b>，满了自动放光束<br>
                 🤖 某一边 <b style="color:#45e08a">5 秒无操作</b> → 那一边自动 AI 托管，一动就抢回<br>
@@ -175,6 +181,7 @@
             <div class="subtitle" id="overTime">你守了 00:00</div>
             <div class="stat-line">击杀 <b id="overKills">0</b> 只 · 最高连击 <b id="overCombo">0</b> · 合击 <b id="overCross">0</b> 次</div>
             <div class="stat-line">史莱姆王 <b id="overBoss">0</b> 只 · 本局拾取 <b id="overCoins">0</b> 金币</div>
+            <div class="stat-line">元素反应 <b id="overReact">0</b> 次 · 双塔元素 <b id="overElem">—</b></div>
             <div class="stat-line">比分　<b id="overS1">0</b> <span style="opacity:.5">:</span> <b id="overS2">0</b>　·　本局赢家 <b id="overMvp">—</b></div>
             <div class="tip" style="margin-bottom:9px;">按 <b>Enter</b> 再来一局　·　按 <b>Esc</b> 回到基地</div>
             <button class="btn green" id="btnRetry">再来一局 <span class="kc">Enter</span></button>
@@ -192,13 +199,13 @@
 
 <script>
 "use strict";
-/* ================= 向史莱姆开炮 v4.6.0 · 无尽守卫（纯单局 · 升级不暂停） ================= */
+/* ================= 向史莱姆开炮 v4.7.0 · 元素共鸣（纯单局 · 升级不暂停） ================= */
 const W = 1280, H = 720;
 const WALL_TOP = 596;          // 城墙顶面
 const TOWER_X = [206, 1074];   // 两座塔的中心 x
 const TOWER_Y = 646;           // 塔心 y（俯视圆塔）
 const PIVOT_Y = 630;           // 炮口旋转枢轴 y（在塔心偏上）
-const VERSION = 'v4.6.0';
+const VERSION = 'v4.7.0';
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -326,14 +333,14 @@ function sfx(name) {
 
 /* ---------- 技能卡池 ---------- */
 const SKILLS = [
-    { id: 'rate',   name: '速射机簧', icon: '⚡', max: 4, desc: lv => `射速 +22%（Lv.${lv}）` },
-    { id: 'atk',    name: '淬火箭矢', icon: '🔥', max: 4, desc: lv => `每发伤害 +28%（Lv.${lv}）` },
-    { id: 'multi',  name: '分叉射击', icon: '🎯', max: 3, desc: lv => `多射 1 支箭（共 ${lv + 1} 支）` },
+    { id: 'rate',   name: '速射机簧', icon: '⏩', max: 3, desc: lv => `射速阶梯 +20% / +42% / +68%` },
+    { id: 'atk',    name: '淬火箭矢', icon: '🔥', max: 3, desc: lv => `单发伤害阶梯 +50% / +125% / +220%` },
+    { id: 'multi',  name: '分叉射击', icon: '🎯', max: 2, desc: lv => `多射 1 支箭（共 ${lv + 1} 支）` },
     { id: 'pierce', name: '破甲穿云', icon: '➤', max: 3, desc: lv => `穿透 +1 个敌人（${lv + 1} 层）` },
     { id: 'crit',   name: '致命瞄准', icon: '💥', max: 3, desc: lv => `暴击率 +11%，暴击 2.3 倍` },
-    { id: 'fire',   name: '烈焰附魔', icon: '☄️', max: 3, desc: lv => `命中点燃，持续灼烧（Lv.${lv + 1}）` },
-    { id: 'ice',    name: '寒霜附魔', icon: '❄️', max: 3, desc: lv => `命中减速 + 冰霜伤害（Lv.${lv + 1}）` },
-    { id: 'light',  name: '雷霆链',   icon: '🌩️', max: 3, desc: lv => `命中弹射闪电（Lv.${lv + 1}）` },
+    { id: 'fire',   name: '烈焰附魔', icon: '🔥', max: 3, elem: 'fire', desc: lv => `本塔转为【火】：命中点燃，持续灼烧` },
+    { id: 'ice',    name: '寒霜附魔', icon: '❄', max: 3, elem: 'ice',  desc: lv => `本塔转为【冰】：减速 + 概率冻结` },
+    { id: 'light',  name: '雷霆附魔', icon: '⚡', max: 3, elem: 'bolt', desc: lv => `本塔转为【雷】：连锁弹射 + 概率麻痹` },
     { id: 'heavy',  name: '重弩',     icon: '🏹', max: 3, desc: lv => `箭矢巨大化，伤害 +45%、击退` },
     { id: 'wall',   name: '城墙加固', icon: '🧱', max: 3, desc: lv => `城墙上限 +25% 并立刻修复 30%` },
     { id: 'coin',   name: '赏金猎人', icon: '🪙', max: 3, desc: lv => `金币收益 +18%，额外充能共鸣槽` },
@@ -388,9 +395,30 @@ const AFFIX = {
 };
 const AFFIX_KEYS = ['split', 'shield', 'fast', 'vamp', 'boom'];
 
+/* ---------- 元素系统（v4.7.0 核心 · 两人配合的载体） ----------
+   每座塔的主元素由「火/冰/雷」三个附魔技能中等级最高的那个决定（都没点 = 锐）。
+   两座塔元素不同、交替命中同一目标 → 触发元素反应。
+   所以「配合」不再是玄学：一个人点冰、一个人点火，炮口都对同一片，就会不停融化。 */
+const ELEMS = {
+    steel: { name: '锐', icon: '', col: '#e8f2ff', col2: '#9fb6d8', dmgK: 1.12, tag: '暴击 +12%' },
+    ice:   { name: '冰', icon: '\u2744', col: '#8fe4ff', col2: '#3fa9d9', dmgK: 0.86, tag: '减速 / 冻结' },
+    fire:  { name: '火', icon: '\u{1F525}', col: '#ffa03d', col2: '#e0481c', dmgK: 0.94, tag: '持续灼烧' },
+    bolt:  { name: '雷', icon: '\u26A1', col: '#c8a4ff', col2: '#7a4bd8', dmgK: 0.90, tag: '连锁传导' },
+};
+const ELEM_ORDER = ['fire', 'ice', 'bolt'];
+const REACT = {
+    melt:   { name: '融化', icon: '\u{1F4A5}', col: '#ffd6a8', shout: '融 化 ！' },
+    superc: { name: '超导', icon: '\u{1F329}', col: '#a8ccff', shout: '超 导 ！' },
+    over:   { name: '过载', icon: '\u2604', col: '#ffb04a', shout: '过 载 ！' },
+    breach: { name: '破绽', icon: '', col: '#ffffff', shout: '破 绽 ！' },
+};
+/* 阶梯升级：每一级都是跳变，不是线性堆叠 —— 让"升它"这个决定有分量 */
+const ATK_STEP  = [1, 1.50, 2.25, 3.20];
+const RATE_STEP = [1, 1.15, 1.28, 1.42];   // 满级也只有 4.5/s：再多就又糊成光条了
+
 /* ---------- 无尽模式调参（改难度只动这里） ---------- */
 const TUNE = {
-    hpA: 1.66,           // 血量倍率 = hpA * (1 + t/hpT) ^ hpE —— 场上人数砍到四成，单体血 ×2 补回总压力
+    hpA: 4.40,           // 血量倍率 —— 场上人数再砍六成，单体血 ×2.05 把总压力补回来（怪少但硬，才看得清）
     hpT: 10, hpE: 2.1,   //  30s→20×  60s→89×  90s→189×  120s→328×  180s→727×  240s→1294×
     hpBell: 2.0,         // 中期额外加厚峰值（让怪群真正压下来，而不是死在出生线上）
     hpBellT: 110,        // 加厚峰值时间
@@ -398,15 +426,15 @@ const TUNE = {
     wallBase: 2800,      // 城墙基础血量：够厚才撑得住"成群压下来"的围攻
     spawnY: 140,         // 出生线：必须落在 HUD 之下，否则整段生命都躲在界面背后
     spawnYJ: 90,         // 出生线随机纵深
-    popBase: 16,         // 场上人数目标：起始（用户有密集恐惧症，原 30 太满）
-    popGrow: 4.6,        // 每多少秒 +1 只
-    popMax: 74,          // 人数硬上限（原 190 —— 满屏蚂蚁一样，密恐）
+    popBase: 12,         // 场上人数目标：起始（30 → 16 → 12，一屏十几只，每一只都看得清）
+    popGrow: 5.2,        // 每多少秒 +1 只
+    popMax: 30,          // 人数硬上限（74 → 30。再密就是"无脑扫射"，没有判断空间）
     popLate: 190,        // 终末潮起点（秒）
-    popLateK: 0.30,      // 终末潮每秒额外加几只（数量少，靠血量和 Boss 压）
-    spawnTick: 0.09,     // 出怪判定间隔（秒）—— 0.06 时峰值 50 只/秒，整屏会"喷"出来
-    spawnBatch: 2,       // 每个判定间隔最多出几只（峰值 22 只/秒，够压但不再爆发）
-    spawnBase: 0.60,     // 初始出怪间隔（秒）
-    spawnDecay: 0.72,    // 每过 25 秒，间隔 ×0.72
+    popLateK: 0.16,      // 终末潮每秒额外加几只（数量少，靠血量和 Boss 压）
+    spawnTick: 0.22,     // 出怪判定间隔（秒）—— 0.09 变成 0.22：够填满 12 只，又不会一次涌出来
+    spawnBatch: 1,       // 每个判定间隔最多出几只（峰值 3.3 只/秒）
+    spawnBase: 1.05,     // 初始出怪间隔（秒）
+    spawnDecay: 0.80,    // 每过 25 秒，间隔 ×0.80
     bossEvery: 75,       // 史莱姆王周期
     lvFast: 5.0,         // t<90s 升级间隔
     lvMid: 6.5,          // 90~180s
@@ -415,8 +443,12 @@ const TUNE = {
     crossDur: 2.0,       // 合击加成持续
     crossMul: 2.6,       // 合击伤害倍率（两塔锁同一片时的核心收益）
     cardWindow: 4.6,     // 选卡停留时间（超时自动选）
-    bossK: 30,           // 史莱姆王血量 = 同期普通史莱姆 × bossK（hpA 翻倍后折半，仍是成型期 9~14 秒）
+    bossK: 19,           // 史莱姆王血量 = 同期普通史莱姆 × bossK（hpA 2.9 后再折，仍是成型期 9~14 秒）
     bossCrowdCap: 4.5,   // Boss 血量按拥挤度稀释的上限（防止末期一味砍血）
+    reactWin: 0.85,      // 元素标记有效期：另一座塔在这么久内打中才算「交替命中」
+                         // 别调到 0.3 以下：箭飞过半个屏幕要 0.3s，太短会让配合变成玄学
+    reactCd: 0.90,       // 同一目标触发反应的冷却。0.55 时后期每秒能触发 8 次，反应伤害直接盖过箭矢，
+                         // 那就不是配合而是自动打怪了；0.9 秒让每一次反应都值得看一眼
 };
 
 function makeTower(i) {
@@ -444,6 +476,8 @@ function makePlayer(i) {
         dmg: 0, kills: 0,        // 本局累计实际伤害 / 补刀数（算分与对比用）
         execCd: 0, execN: 0,     // 处决：剩余冷却 / 本局用了几次
         aiExecT: 0,              // AI 检查处决的节流计时
+        _elem: null,             // 上一次算出的主元素（同分时保持不抖动）
+        reactN: 0,               // 本局参与的元素反应次数
     };
 }
 function newGame() {
@@ -464,7 +498,7 @@ function newGame() {
         wallBonus: 1, bolts: [], toasts: [],
         crisisSpawn: null, lastCrisis: null, wallHitT: 0,
         cross: 0, crossT: 0, hitstopCd: 0,
-        execFx: [], boomQ: [], eliteN: 0,
+        execFx: [], boomQ: [], eliteN: 0, reacts: [], reactN: {}, reactShowT: 0, crossShowT: 0,
         bossRef: null, bubble: null, manga: null, bossDeath: null,   // 漫画演出状态
         speed: speedPref,
     };
@@ -498,6 +532,7 @@ function spawnEnemy(type, opt) {
         col: t.col, col2: t.col2,
         wob: rand(0, TAU), hop: rand(0, TAU), hopSpd: rand(5, 8),
         sq: 1, flash: 0, burn: 0, burnT: 0, slow: 0, slowT: 0, frozen: 0, frzImmune: 0, kbCd: 0,
+        paraT: 0, vuln: 0, vulnT: 0, mark: null, reactCd: 0,
         hurtT: 0, dead: false, chewT: 0, state: 'drop', crossT: 0, crossToastT: -9,
         kb: 0, kbv: 0, fly: !!t.fly, boss: !!t.boss, split: t.split || 0,
         dark: 0, markT: 0,
@@ -830,18 +865,45 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) relea
 
 /* ---------- 数值 ---------- */
 function dmgBase(p) {
-    // 12.5 × 6.3/s = 7.5 × 10.5/s（v4.5.1 把射速砍到 60%、单发等比提高，
-    // 数学上 DPS 一点没变，但每秒 21 发变成 12.6 发，箭矢不再连成一条直线）
-    return 12.5 * (1 + p.lv.atk * 0.28);
+    // 23 × 3.5/s = 80.5 DPS（v4.6 是 12.5 × 6.3 = 78.75）。
+    // v4.7.0 把射速再砍 44%：每秒 3.5 支，屏幕上一眼看得出"这一支打到哪"。
+    // 伤害走阶梯表（+50% / +125% / +220%），升一级就是一次跳变。
+    return 25 * ATK_STEP[Math.min(p.lv.atk, ATK_STEP.length - 1)] * ELEMS[elemOf(p)].dmgK;
 }
 function rateOf(p) {
-    let r = 6.3 * (1 + p.lv.rate * 0.22);   // 别再调回两位数：10.5/s × 4 支 = 42 发/秒，密到糊成光束
-    if (p.bufT > 0) r *= 1.35;
-    if (G.rageT > 0) r *= 1.22;
-    if (G.ultT > 0) r *= 1.5;
+    let r = 3.2 * RATE_STEP[Math.min(p.lv.rate, RATE_STEP.length - 1)];
+    if (p.bufT > 0) r *= 1.15;
+    if (G.rageT > 0) r *= 1.10;
+    if (G.ultT > 0) r *= 1.35;
     return r;
 }
-function critChance(p) { return 0.08 + p.lv.crit * 0.11; }
+/* 主元素 = 火/冰/雷 中等级最高的那个；同分时沿用上次，避免图标每秒乱跳 */
+function elemOf(p) {
+    let best = null, bv = 0;
+    for (const k of ELEM_ORDER) {
+        const v = k === 'fire' ? p.lv.fire : (k === 'ice' ? p.lv.ice : p.lv.light);
+        if (v > bv) { bv = v; best = k; }
+    }
+    if (!best) { p._elem = null; return 'steel'; }
+    if (p._elem && p._elem !== best) {
+        const pv = p._elem === 'fire' ? p.lv.fire : (p._elem === 'ice' ? p.lv.ice : p.lv.light);
+        if (pv === bv) best = p._elem;
+    }
+    p._elem = best;
+    return best;
+}
+function elemLvOf(p, elem) { return elem === 'fire' ? p.lv.fire : (elem === 'ice' ? p.lv.ice : p.lv.light); }
+/* 反应组合：只有"不同元素"才反应，所以永远是两个人的事 */
+function reactKey(a, b) {
+    if (!a || !b || a === b) return null;
+    if (a === 'steel' || b === 'steel') return 'breach';
+    const s = [a, b].sort().join('+');
+    if (s === 'fire+ice') return 'melt';
+    if (s === 'bolt+ice') return 'superc';   // 注意 sort() 是字典序：bolt 在 ice 前
+    if (s === 'bolt+fire') return 'over';
+    return null;
+}
+function critChance(p) { return (elemOf(p) === 'steel' ? 0.20 : 0.08) + p.lv.crit * 0.11; }
 function coinMul(p) {
     const m = Math.max(G.players[0].lv.coin, G.players[1].lv.coin);
     return 1 + m * 0.18;
@@ -937,6 +999,14 @@ function aiPickBest(p, offers) {
         if (s.id === 'pierce' && p.lv.pierce === 0 && G.enemies.length > 12) sc += 2.2;
         if (s.id === 'rate' || s.id === 'atk') sc += 1.2;
         if (s.id === 'crit' && p.lv.crit === 0) sc += 1.5;
+        // 元素分工：托管也要懂得"和搭档错开"，两个人都点冰等于没有配合
+        if (s.elem) {
+            const fe = elemOf(G.players[1 - p.idx]);
+            const mine = elemOf(p);
+            if (fe !== 'steel' && s.elem === fe) sc -= 4.2;
+            else if (fe !== 'steel' && s.elem !== fe) sc += 3.4;
+            if (mine === 'steel') sc += 2.0;      // 先把自己那一系立起来
+        }
         sc += Math.random() * 0.6;
         if (sc > bestS) { bestS = sc; best = i; }
     }
@@ -974,7 +1044,7 @@ function toast(text, col) {
 function shoot(p) {
     const t = p.tower;
     const n = 1 + p.lv.multi;
-    const spread = n > 1 ? 0.19 : 0;     // 多重箭扇得更开，四支箭各走各的，不并成一条线
+    const spread = n > 1 ? 0.30 : 0;     // 多重箭扇得更开：三支箭走三条弧线，不并成一条线
     const heavy = p.lv.heavy;
     const dmg = dmgBase(p) * (1 + heavy * 0.45) * (G.ultT > 0 ? 1.7 : 1) * (p.powT > 0 ? 1.7 : 1);
     const sp = 1380;
@@ -987,8 +1057,9 @@ function shoot(p) {
             vx: Math.sin(a) * sp, vy: -Math.cos(a) * sp,
             dmg, crit: Math.random() < critChance(p), owner: p.idx,
             pierce: p.lv.pierce, hit: [], life: 1.0,
-            size: 4.4 + heavy * 2.6, heavy, jl: rand(0.7, 1.35),   // 拖尾长度抖动，避免整齐排列像光栅
+            size: 5.0 + heavy * 2.8, heavy, jl: rand(0.7, 1.35),   // 拖尾长度抖动，避免整齐排列像光栅
             burst: p.lv.burst, fire: p.lv.fire, ice: p.lv.ice, light: p.lv.light,
+            elem: elemOf(p),
             evoFire: !!p.evos.evoFire, evoFrost: !!p.evos.evoFrost, evoBolt: !!p.evos.evoBolt,
         });
     }
@@ -1074,15 +1145,29 @@ function hitEnemy(e, dmg, p, opt) {
         if (e.crossT <= 0 && (G.time - other.hitMark) <= TUNE.crossWin) {
             e.crossT = TUNE.crossDur;
             G.cross++; p.crossN++;
-            if (G.time - e.crossToastT > 1.4) {
+            if (G.time - e.crossToastT > 1.4 && (G.crossShowT || 0) <= 0) {
+                // 全局限流：多只怪同时被合击时，满屏「合击 ×2.1」比敌人还晃眼
                 e.crossToastT = G.time;
-                floatText(e.x, e.y - e.r - 24, '合击 ×2.1', '#ffd76a', 17);
+                G.crossShowT = 0.55;
+                floatText(e.x, Math.max(e.y - e.r - 24, 200), '合击 ×2.1', 'rgba(255,215,106,.92)', 12.5);
                 sfx('freeze');
             }
         }
         p.hitMark = G.time;
     }
     if (e.crossT > 0) d *= TUNE.crossMul;
+    if (e.vulnT > 0) d *= (1 + e.vuln);          // 超导留下的「易伤」
+    // ── 元素反应：两座塔元素不同、交替命中同一个目标 ──
+    let elem = null;
+    if (p && !opt.noElem) {
+        elem = elemOf(p);
+        const mk = e.mark;
+        if (mk && mk.elem !== elem && (G.time - mk.t) <= TUNE.reactWin && (e.reactCd || 0) <= 0) {
+            const rk = reactKey(mk.elem, elem);
+            if (rk) { d = doReact(rk, e, p, d); e.reactCd = TUNE.reactCd; }
+        }
+        e.mark = { elem: elem, t: G.time };
+    }
     // 护盾先吸收
     if (e.shield > 0) {
         const ab = Math.min(e.shield, d);
@@ -1098,8 +1183,9 @@ function hitEnemy(e, dmg, p, opt) {
     if (!opt.noNum) {
         dmgNum(e.x, e.y - e.r - 6, d, crit, crit ? '#ffe28a' : (p ? p.color : '#fff'));
     }
+    if (elem && p) applyElem(e, elem, p, d);
     if (p) {
-        if (opt.burn) { e.burn = 2 + p.lv.fire * 2.6; e.burnT = 2.4; e.burnBy = p; }
+        if (opt.burn) { e.burn = Math.max(e.burn, 2 + p.lv.fire * 2.6); e.burnT = Math.max(e.burnT, 2.4); e.burnBy = p; }
         if (opt.slow) { e.slow = Math.max(e.slow, Math.min(.32, .24 + p.lv.ice * .05)); e.slowT = 1.6; }
     }
     // 共鸣充能
@@ -1108,7 +1194,85 @@ function hitEnemy(e, dmg, p, opt) {
     if (Math.random() < .5) part(e.x + rand(-e.r, e.r) * .5, e.y + rand(-e.r, e.r) * .5, rand(-90, 90), rand(-140, -30), e.col, .3, 3, 420);
     if (e.hp <= 0) killEnemy(e, p);
 }
-function explodeAt(x, y, r, dmg, p, col) {
+/* ---------- 元素附魔：命中后挂上的状态（视觉在 drawSlime 里体现） ---------- */
+function applyElem(e, elem, p, d) {
+    const lv = elemLvOf(p, elem);
+    if (elem === 'ice') {
+        e.slow = Math.max(e.slow, clamp(0.34 + lv * 0.07, 0, 0.62));
+        e.slowT = 1.9;
+        const ch = (0.10 + lv * 0.07) * (e.boss ? 0.4 : 1);
+        if (e.frzImmune <= 0 && Math.random() < ch) {
+            e.frozen = Math.max(e.frozen, 0.45 + lv * 0.18);
+            e.frzImmune = 1.7;
+            burstAt(e.x, e.y, 5, '#bfeeff', 130, 3);
+            sfx('freeze');
+        }
+    } else if (elem === 'fire') {
+        const bd = d * (0.15 + lv * 0.05);      // 每秒灼烧 = 该次命中的 15%~30%
+        if (bd > e.burn) { e.burn = bd; e.burnT = 2.6; e.burnBy = p; }
+    } else if (elem === 'bolt') {
+        if (e.paraT <= 0 && Math.random() < 0.11 + lv * 0.05) e.paraT = 0.32;
+    }
+}
+
+/* ---------- 元素反应：这是本作唯一的"真配合" ---------- */
+function reactPower() {
+    let n = 0;
+    for (const p of G.players) n += p.lv.fire + p.lv.ice + p.lv.light;
+    return 1 + n * 0.22;                          // 双方合计 6 级 ×1.66，12 级 ×3.64（升级在反应上也要看得见）
+}
+function doReact(kind, e, p, d) {
+    const R = REACT[kind];
+    const rp = reactPower();
+    G.reactN[kind] = (G.reactN[kind] || 0) + 1;
+    if (p) p.reactN++;
+    // 冲击环和粒子每次都放（便宜、也更"噼啪"），
+    // 但大字/音效/震屏要全局限流 —— 后期每秒能触发十几次，否则满屏都是「融化」两个字
+    G.shocks.push({ x: e.x, y: e.y, r: 8, max: 96, t: .42, dur: .42, col: R.col });
+    burstAt(e.x, e.y, 10, R.col, 260, 5);
+    if ((G.reactShowT || 0) <= 0) {
+        G.reactShowT = 0.42;
+        G.reacts.push({ x: e.x, y: e.y - e.r - 16, kind: kind, t: 1.05, max: 1.05, col: R.col });
+        if (G.reacts.length > 3) G.reacts.shift();
+        G.shake = Math.max(G.shake, 3.0);
+        sfx(kind === 'melt' ? 'freeze' : 'big');
+    }
+    if (kind === 'melt') {
+        // 冰 + 火：白汽爆开，解除冻结，按最大血比例结算（对厚血怪收益最大）
+        e.frozen = 0; e.frzImmune = 1.2;
+        const pctK = e.boss ? 0.018 : 0.055;      // Boss 按 1.8%：否则配合 3 秒就能蒸发王
+        const hit = e.max * pctK * rp + 26 * rp;
+        for (const o of G.enemies) {
+            if (o.dead || o === e) continue;
+            if (Math.hypot(o.x - e.x, o.y - e.y) > 78 + o.r * .6) continue;
+            o.hp -= hit * .45;
+            applyElem(o, 'fire', p, hit * .45);
+            dmgNum(o.x, o.y - o.r - 4, hit * .45, false, '#ffd6a8');
+            if (o.hp <= 0) killEnemy(o, p);
+        }
+        return d + hit;
+    }
+    if (kind === 'superc') {
+        // 冰 + 雷：冻结延长 + 易伤（全队收益，不只是打的人）
+        e.frozen = Math.max(e.frozen, 1.15); e.frzImmune = 2.2;
+        e.vuln = 0.45 * Math.min(1.6, rp); e.vulnT = 6;
+        return d + e.max * 0.022 * rp;
+    }
+    if (kind === 'over') {
+        // 火 + 雷：爆开一圈，顺带击退
+        explodeAt(e.x, e.y, 92, d * 1.4 + e.max * 0.020 * rp, p, '#ffb04a', true);
+        for (const o of G.enemies) {
+            if (o.dead || o === e || o.boss) continue;
+            if (Math.hypot(o.x - e.x, o.y - e.y) > 110) continue;
+            const a = Math.atan2(o.y - e.y, o.x - e.x);
+            o.kb = 1; o.kbv = 210; o.vx = Math.cos(a) * 210; o.vy = Math.sin(a) * 210;
+        }
+        return d;
+    }
+    // 破绽：锐塔打"已被附魔"的目标 —— 高攻塔的专属收益，纯伤害不留状态
+    return d * (1.55 + 0.15 * Math.min(3, rp - 1)) + e.max * 0.014 * rp;
+}
+function explodeAt(x, y, r, dmg, p, col, noElem) {
     G.shocks.push({ x, y, r: 8, max: r, t: .32, dur: .32, col: col || '#ffa53d' });
     for (let i = 0; i < 10; i++) {
         const a = rand(0, TAU), s = rand(60, 260);
@@ -1116,7 +1280,7 @@ function explodeAt(x, y, r, dmg, p, col) {
     }
     for (const e of G.enemies) {
         if (e.dead) continue;
-        if (Math.hypot(e.x - x, e.y - y) < r + e.r * .6) hitEnemy(e, dmg, p, {});
+        if (Math.hypot(e.x - x, e.y - y) < r + e.r * .6) hitEnemy(e, dmg, p, noElem ? { noElem: true } : {});
     }
 }
 /* ---------- 处决：扇形爆发 + 击退，玩家的"我按了一下"高光 ---------- */
@@ -1336,14 +1500,14 @@ function updateBullets(dt) {
             if (!segCircle(b.px, b.py, b.x, b.y, e.x, e.y, e.r + b.size + 3.5)) continue;
             b.hit.push(e);
             const p = G.players[b.owner];
-            hitEnemy(e, b.dmg, p, { crit: b.crit, burn: b.fire > 0, slow: b.ice > 0, noNum: false });
-            // 冰：冻结
-            if (b.evoFrost && !e.dead && e.frzImmune <= 0) { e.frozen = Math.max(e.frozen, .55); e.frzImmune = 2.4; }
+            hitEnemy(e, b.dmg, p, { crit: b.crit, noNum: false });
+            // 冰系质变：命中额外冻一层
+            if (b.evoFrost && !e.dead && e.frzImmune <= 0) { e.frozen = Math.max(e.frozen, 1.0); e.frzImmune = 2.4; }
             // 火：进化爆燃
             if (b.evoFire) explodeAt(b.x, b.y, 46 + b.fire * 9, b.dmg * .34, p, '#ff8a3d');
             else if (b.burst > 0) explodeAt(b.x, b.y, 34 + b.burst * 8, b.dmg * .3, p, '#ffb04a');
-            // 雷霆链
-            if (b.light > 0) {
+            // 雷霆连锁（雷系塔的固有特性）
+            if (b.elem === 'bolt') {
                 let hops = 1 + b.light;
                 const used = [e];
                 let from = e;
@@ -1400,6 +1564,9 @@ function updateEnemies(dt) {
         if (e.frozen > 0) e.frozen -= dt;
         if (e.frzImmune > 0) e.frzImmune -= dt;
         if (e.crossT > 0) e.crossT -= dt;
+        if (e.paraT > 0) e.paraT -= dt;
+        if (e.vulnT > 0) { e.vulnT -= dt; if (e.vulnT <= 0) e.vuln = 0; }
+        if (e.reactCd > 0) e.reactCd -= dt;
         e.sq = lerp(e.sq, 1, clamp(dt * 9, 0, 1));
         e.hop += dt * e.hopSpd * (e.frozen > 0 ? 0 : 1);
         // 灼烧
@@ -1420,8 +1587,9 @@ function updateEnemies(dt) {
             e.x = clamp(e.x, 60, W - 60);
             if (e.kb <= 0) { e.kb = 0; e.vx = 0; e.vy = 0; }
         }
-        // 冰冻暂停移动
+        // 冰冻 / 麻痹暂停移动
         if (e.frozen > 0) continue;
+        if (e.paraT > 0) continue;
         // 起跑延迟：整批怪不再齐步走
         if (e.waitT > 0) { e.waitT -= dt; continue; }
         // Boss 求饶时僵在原地（吓软了）
@@ -1579,7 +1747,7 @@ function openPickup(k, owner) {
 const CRISES = [
     {
         id: 'swarm', name: '⚠ 兽潮来袭！', sub: '小史莱姆铺天盖地', minT: 0, dur: 3.2,
-        fn() { G.crisisSpawn = { type: 'small', n: 24 + Math.round(G.time / 8), t: 0, gap: .07, hpMul: 1 }; },
+        fn() { G.crisisSpawn = { type: 'small', n: 14 + Math.round(G.time / 14), t: 0, gap: .16, hpMul: 1 }; },
     },
     {
         id: 'armor', name: '⚠ 重甲突袭！', sub: '盾壳 + 尖刺混合编队', minT: 0, dur: 3.2,
@@ -1741,6 +1909,13 @@ function update(dt, dtReal) {
     for (let i = G.bolts.length - 1; i >= 0; i--) {
         G.bolts[i].t -= dt;
         if (G.bolts[i].t <= 0) G.bolts.splice(i, 1);
+    }
+    // 元素反应飘字
+    if (G.reactShowT > 0) G.reactShowT -= dt;
+    if (G.crossShowT > 0) G.crossShowT -= dt;
+    for (let i = G.reacts.length - 1; i >= 0; i--) {
+        G.reacts[i].t -= dt;
+        if (G.reacts[i].t <= 0) G.reacts.splice(i, 1);
     }
     // 伤害数字
     for (let i = G.nums.length - 1; i >= 0; i--) {
@@ -2122,12 +2297,13 @@ function drawSlime(e) {
     ctx.beginPath(); ctx.ellipse(x, e.y + ry * .82, rx * .82, ry * .26, 0, 0, TAU); ctx.fill();
 
     // 身体
+    // 受击白闪：按本体色提亮，不再整只刷成纯白（顿帧期间纯白怪会被误认成"新怪"）
     const flash = e.flash > 0;
-    const base = flash ? '#ffffff' : e.col;
+    const base = flash ? shade(e.col, .62) : e.col;
     const bodyG = ctx.createLinearGradient(x, y - ry, x, y + ry * .8);
-    bodyG.addColorStop(0, flash ? '#fff' : shade(base, .32));
+    bodyG.addColorStop(0, flash ? shade(e.col, .82) : shade(base, .32));
     bodyG.addColorStop(.62, base);
-    bodyG.addColorStop(1, flash ? '#fff' : e.col2);
+    bodyG.addColorStop(1, flash ? shade(e.col, .82) : e.col2);
     ctx.fillStyle = bodyG;
     slimePath(x, y, rx, ry);
     ctx.fill();
@@ -2197,18 +2373,59 @@ function drawSlime(e) {
         ctx.fillStyle = `rgba(170,130,255,${0.10 + .12 * sp})`;
         ctx.beginPath(); ctx.arc(x, y, r * 1.34, 0, TAU); ctx.fill();
     }
-    // 冰霜
+    // 冰霜（冻结）：冰壳 + 六道霜纹
     if (isFrozen) {
-        ctx.fillStyle = 'rgba(160,220,255,.28)';
+        ctx.fillStyle = 'rgba(160,220,255,.30)';
         ctx.beginPath(); ctx.arc(x, y, r * 1.12, 0, TAU); ctx.fill();
-        ctx.strokeStyle = 'rgba(220,245,255,.75)'; ctx.lineWidth = 1.4;
-        for (let i = 0; i < 3; i++) {
-            const a = i * 1.1 + e.wob;
+        ctx.strokeStyle = 'rgba(225,248,255,.85)'; ctx.lineWidth = 1.5;
+        for (let i = 0; i < 6; i++) {
+            const a = i * (TAU / 6) + e.wob * .3;
             ctx.beginPath();
-            ctx.moveTo(x + Math.cos(a) * r * .3, y + Math.sin(a) * r * .3);
+            ctx.moveTo(x + Math.cos(a) * r * .26, y + Math.sin(a) * r * .26);
             ctx.lineTo(x + Math.cos(a) * r * 1.02, y + Math.sin(a) * r * 1.02);
             ctx.stroke();
         }
+    }
+    // 灼烧：身体外泛橙 + 三簇游走的小火舌（一眼看得见"这只在烧"，又不至于像长了犄角）
+    if (e.burnT > 0) {
+        ctx.globalAlpha = fogA * (0.13 + 0.08 * Math.sin(G.time * 20 + e.wob));
+        ctx.fillStyle = '#ff6a1c';
+        slimePath(x, y - ry * .05, rx * 1.07, ry * 1.10); ctx.fill();
+        ctx.globalAlpha = fogA * .92;
+        for (let i = 0; i < 4; i++) {
+            // 火舌绕着身体轮廓游走（固定起角 + 缓慢转动），比三点对称更像"在燃烧"
+            const ph = G.time * 2.4 + hash2(e.wob * 7 + i, i * 3.1) * TAU;
+            const fl = Math.sin(ph * 5.1 + i) * .5 + .5;
+            const bx = x + Math.cos(ph) * rx * .88;
+            const by = y + Math.sin(ph) * ry * .80 - fl * ry * .42;
+            ctx.globalAlpha = fogA * (.45 + fl * .45);
+            ctx.fillStyle = i % 2 ? '#ffd76a' : '#ff7a2a';
+            ctx.beginPath();
+            ctx.ellipse(bx, by, r * (.045 + fl * .04), r * (.085 + fl * .06), 0, 0, TAU);
+            ctx.fill();
+        }
+        ctx.globalAlpha = fogA;
+    }
+    // 麻痹：紫白电弧绕身
+    if (e.paraT > 0) {
+        ctx.strokeStyle = 'rgba(208,180,255,.92)'; ctx.lineWidth = 1.7;
+        for (let i = 0; i < 3; i++) {
+            const a0 = G.time * 11 + i * 2.1;
+            ctx.beginPath();
+            for (let k = 0; k < 4; k++) {
+                const aa = a0 + k * .54;
+                const rr = r * (1.16 + (k % 2) * .18);
+                const px2 = x + Math.cos(aa) * rr, py2 = y + Math.sin(aa) * rr * .86;
+                k ? ctx.lineTo(px2, py2) : ctx.moveTo(px2, py2);
+            }
+            ctx.stroke();
+        }
+    }
+    // 超导易伤：外圈紫蓝脉冲环
+    if (e.vulnT > 0) {
+        ctx.strokeStyle = 'rgba(150,190,255,' + (0.34 + 0.26 * Math.sin(G.time * 13 + e.wob)) + ')';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath(); ctx.arc(x, y, r * 1.22, 0, TAU); ctx.stroke();
     }
     // Boss 王冠
     if (e.boss) {
@@ -2820,6 +3037,51 @@ function drawBallista(p) {
     ctx.beginPath(); ctx.arc(0, 0, 2, 0, TAU); ctx.fill();
     ctx.restore();
 
+    // ── 元素附魔：换了元素，炮塔本体也跟着变（升级"看得见"）──
+    const el = elemOf(p);
+    if (el !== 'steel') {
+        const E = ELEMS[el];
+        if (el === 'ice') {
+            ctx.fillStyle = 'rgba(214,246,255,.8)';
+            for (const sg of [-1, 1]) {
+                for (let q = 0; q < 3; q++) {
+                    const yy = -L * (.40 + q * .17) + rec;
+                    ctx.beginPath();
+                    ctx.moveTo(sg * Wd * .80, yy);
+                    ctx.lineTo(sg * (Wd * .80 + 6.5), yy + 5);
+                    ctx.lineTo(sg * Wd * .80, yy + 11.5);
+                    ctx.closePath(); ctx.fill();
+                }
+            }
+        } else if (el === 'fire') {
+            for (let q = 0; q < 4; q++) {
+                const fl = Math.sin(G.time * 20 + q * 1.7 + p.idx) * .5 + .5;
+                ctx.globalAlpha = .48 + fl * .42;
+                ctx.fillStyle = q % 2 ? '#ffd76a' : '#ff7a2a';
+                ctx.beginPath();
+                ctx.ellipse(0, -L * (.30 + q * .18) + rec, Wd * .32, 3.4 + fl * 5.2, 0, 0, TAU);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+        } else {
+            ctx.strokeStyle = 'rgba(200,164,255,.85)'; ctx.lineWidth = 1.6;
+            for (const sg of [-1, 1]) {
+                ctx.beginPath();
+                for (let q = 0; q < 4; q++) {
+                    const yy = -L * (.24 + q * .20) + rec;
+                    const xx = sg * Wd * (.72 + .55 * Math.sin(G.time * 26 + q * 2.1 + p.idx));
+                    q ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy);
+                }
+                ctx.stroke();
+            }
+        }
+        // 弩头元素光核
+        ctx.globalAlpha = .42 + .24 * Math.sin(G.time * 8 + p.idx);
+        ctx.fillStyle = E.col;
+        ctx.beginPath(); ctx.arc(0, armRoot - 2.5, 6.8, 0, TAU); ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+
     // 开火瞬间：弓弦处一圈细光（不再是圆球，避免"炸弹/苹果"感）
     if (t.flash > 0) {
         ctx.globalAlpha = Math.min(1, t.flash * 13);
@@ -2831,76 +3093,168 @@ function drawBallista(p) {
 }
 
 /* --- 子弹 --- */
+/* --- 弹体：元素决定外观。四种弹体形状/拖尾/光晕完全不同，绝不雷同 --- */
 function drawBullets() {
-    // 弹幕越密，拖尾越短越淡 —— 否则满级时屏幕会被箭雨糊死，看不见史莱姆
     const N = G.bullets.length;
-    const thin = N > 42 ? clamp(42 / N, 0.28, 1) : 1;
-    const BASE_TL = 42 * thin;   // 拖尾 72→42：原来长度够跨半个屏，视觉上就是连续光条
+    const thin = N > 26 ? clamp(26 / N, 0.45, 1) : 1;
     for (const b of G.bullets) {
-        const tl = BASE_TL * (b.jl || 1);
-        const a = Math.atan2(b.vy, b.vx);
-        const col = G.players[b.owner] ? G.players[b.owner].color : '#fff';
         ctx.save();
         ctx.translate(b.x, b.y);
-        ctx.rotate(a);
-        if (thin < 0.55) {
-            // 高密度弹幕：只画「弹头 + 淡尾点」，不再逐发建渐变，也不再糊满屏
-            ctx.fillStyle = col;
-            ctx.globalAlpha = .34;
-            ctx.beginPath(); ctx.arc(-9, 0, b.size * .85, 0, TAU); ctx.fill();
-            ctx.globalAlpha = .95;
-            ctx.beginPath(); ctx.arc(0, 0, b.size * 1.05, 0, TAU); ctx.fill();
-            ctx.restore();
-            continue;
-        }
-        // 渐隐锥形拖尾
-        const tg = ctx.createLinearGradient(-tl, 0, 12, 0);
-        tg.addColorStop(0, 'rgba(255,255,255,0)');
-        tg.addColorStop(.5, col);
-        tg.addColorStop(1, '#ffffff');
-        ctx.globalAlpha = .42 * (0.45 + 0.55 * thin);
-        ctx.fillStyle = tg;
-        ctx.beginPath();
-        ctx.moveTo(-tl, 0);
-        ctx.lineTo(0, -b.size * .85);
-        ctx.lineTo(15, 0);
-        ctx.lineTo(0, b.size * .85);
-        ctx.closePath(); ctx.fill();
-        // 外光（密集时收掉，避免叠成一团白光）
-        if (thin > 0.6) {
-            ctx.globalAlpha = .17 * thin;
-            ctx.fillStyle = col;
-            ctx.beginPath(); ctx.ellipse(0, 0, b.size * 2.3, b.size * 1.0, 0, 0, TAU); ctx.fill();
-        }
-        // 弹头：两侧不同形态（1P 冰晶箭 / 2P 熔金火弹）
-        ctx.globalAlpha = 1;
-        if (b.owner === 1) {
-            ctx.fillStyle = '#fff1cf';
-            ctx.beginPath(); ctx.arc(3, 0, b.size * 1.15, 0, TAU); ctx.fill();
-            ctx.globalAlpha = .42;
-            ctx.fillStyle = '#ff9a3d';
-            ctx.beginPath(); ctx.arc(-2, 0, b.size * 1.5, 0, TAU); ctx.fill();
-            ctx.globalAlpha = .26;
-            ctx.strokeStyle = '#ffd76a'; ctx.lineWidth = 1.4;
-            ctx.beginPath(); ctx.ellipse(0, 0, b.size * 2.1, b.size * .8, 0, 0, TAU); ctx.stroke();
-        } else {
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.moveTo(b.size * 3.2, 0);
-            ctx.lineTo(0, -b.size * .95);
-            ctx.lineTo(-b.size * 2.4, 0);
-            ctx.lineTo(0, b.size * .95);
-            ctx.closePath(); ctx.fill();
-            ctx.globalAlpha = .62;
-            ctx.strokeStyle = '#c9fbff'; ctx.lineWidth = 1.4;
-            ctx.beginPath();
-            ctx.moveTo(-b.size * 3.6, -b.size * 1.6); ctx.lineTo(-b.size * .7, 0);
-            ctx.moveTo(-b.size * 3.6, b.size * 1.6); ctx.lineTo(-b.size * .7, 0);
-            ctx.stroke();
-        }
+        ctx.rotate(Math.atan2(b.vy, b.vx));
+        if (b.elem === 'ice') drawBoltIce(b, thin);
+        else if (b.elem === 'fire') drawBoltFire(b, thin);
+        else if (b.elem === 'bolt') drawBoltThunder(b, thin);
+        else drawBoltSteel(b, thin);
         ctx.restore();
     }
     ctx.globalAlpha = 1;
+}
+/* 锐：细长白金箭 —— 唯一有"羽毛"的弹体，显得朴素但锐利 */
+function drawBoltSteel(b, thin) {
+    const s = b.size * 1.08, tl = 40 * (b.jl || 1) * thin;
+    const g = ctx.createLinearGradient(-tl, 0, 8, 0);
+    g.addColorStop(0, 'rgba(200,225,255,0)');
+    g.addColorStop(.55, 'rgba(226,240,255,.42)');
+    g.addColorStop(1, 'rgba(255,250,232,.92)');
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(-tl, -1.6); ctx.lineTo(7, -s * .70); ctx.lineTo(7, s * .70); ctx.lineTo(-tl, 1.6);
+    ctx.closePath(); ctx.fill();
+    // 箭杆（暖白钢丝）
+    ctx.fillStyle = '#eef5ff';
+    ctx.fillRect(-s * 2.8, -1.6, s * 3.4, 3.2);
+    // 箭头：宽刃三棱，唯一的"金属反光"
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(s * 4.2, 0);
+    ctx.lineTo(s * 1.0, -s * 1.18);
+    ctx.lineTo(s * .2, 0);
+    ctx.lineTo(s * 1.0, s * 1.18);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,226,150,.55)';
+    ctx.beginPath();
+    ctx.moveTo(s * 4.0, 0); ctx.lineTo(s * 1.4, -s * .34); ctx.lineTo(s * 1.4, s * .34);
+    ctx.closePath(); ctx.fill();
+    // 尾羽
+    ctx.fillStyle = 'rgba(160,200,255,.95)';
+    for (const sg of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(-s * 2.8, 0);
+        ctx.lineTo(-s * 4.2, sg * s * 1.7);
+        ctx.lineTo(-s * 1.5, sg * s * .78);
+        ctx.closePath(); ctx.fill();
+    }
+}
+/* 冰：菱形冰晶 + 侧霜刺 + 断续霜粒拖尾 */
+function drawBoltIce(b, thin) {
+    const s = b.size * 1.22, tl = 46 * thin;
+    const g = ctx.createLinearGradient(-tl, 0, 8, 0);
+    g.addColorStop(0, 'rgba(110,210,255,0)');
+    g.addColorStop(.7, 'rgba(150,228,255,.35)');
+    g.addColorStop(1, 'rgba(200,245,255,.8)');
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(-tl, 0); ctx.lineTo(2, -s * 1.05); ctx.lineTo(9, 0); ctx.lineTo(2, s * 1.05);
+    ctx.closePath(); ctx.fill();
+    // 霜粒（沿拖尾撒开）
+    for (let i = 0; i < 3; i++) {
+        const k = ((G.time * 3.6 + i * .34 + (b.jl || 0)) % 1);
+        ctx.globalAlpha = .75 * (1 - k);
+        ctx.fillStyle = '#e2f9ff';
+        ctx.beginPath();
+        ctx.arc(-6 - k * 34, Math.sin(k * 9 + i * 2) * 5.5, 1.5 + (1 - k) * 1.5, 0, TAU);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // 冷光晕：让冰在暗草皮上"发光"，不会和锐箭混在一起
+    ctx.globalAlpha = .22;
+    ctx.fillStyle = '#4fd0ff';
+    ctx.beginPath(); ctx.arc(0, 0, s * 2.1, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+    // 冰晶主体：六角梭，棱线分明
+    ctx.fillStyle = '#dff8ff';
+    ctx.beginPath();
+    ctx.moveTo(13, 0); ctx.lineTo(1, -s * 1.12); ctx.lineTo(-9, 0); ctx.lineTo(1, s * 1.12);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#2eb6ec';
+    ctx.beginPath();
+    ctx.moveTo(7.5, 0); ctx.lineTo(1, -s * .60); ctx.lineTo(-5, 0); ctx.lineTo(1, s * .60);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.9)';
+    ctx.beginPath();
+    ctx.moveTo(9, 0); ctx.lineTo(1, -s * .34); ctx.lineTo(-2, 0); ctx.lineTo(1, s * .34);
+    ctx.closePath(); ctx.fill();
+    // 上下霜刺
+    ctx.strokeStyle = 'rgba(190,240,255,.95)'; ctx.lineWidth = 1.7;
+    ctx.beginPath();
+    ctx.moveTo(1, -s * 1.10); ctx.lineTo(-4, -s * 1.85);
+    ctx.moveTo(1, s * 1.10); ctx.lineTo(-4, s * 1.85);
+    ctx.moveTo(-9, 0); ctx.lineTo(-s * 1.5, 0);
+    ctx.stroke();
+}
+/* 火：钝头熔岩弹 + 三条跳动火舌 + 连续火带拖尾 */
+function drawBoltFire(b, thin) {
+    const s = b.size * 1.16, tl = 54 * thin;
+    const g = ctx.createLinearGradient(-tl, 0, 12, 0);
+    g.addColorStop(0, 'rgba(180,40,0,0)');
+    g.addColorStop(.42, 'rgba(255,105,25,.42)');
+    g.addColorStop(1, 'rgba(255,228,155,.95)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(-tl, 0);
+    ctx.quadraticCurveTo(-tl * .42, -s * .55, 2, -s * .70);
+    ctx.lineTo(9, 0);
+    ctx.quadraticCurveTo(-tl * .42, s * .55, -tl, 0);
+    ctx.closePath(); ctx.fill();
+    // 火舌
+    for (let i = 0; i < 3; i++) {
+        const fl = Math.sin(G.time * 26 + i * 2.3 + (b.jl || 0) * 8) * .5 + .5;
+        ctx.globalAlpha = .5 + fl * .45;
+        ctx.fillStyle = i === 1 ? '#ffe9a8' : '#ff7a2a';
+        ctx.beginPath();
+        ctx.ellipse(-5 - i * 7, Math.sin(G.time * 18 + i * 2) * 3.2, 3.2 + fl * 3.4, 2.2 + fl * 2.2, 0, 0, TAU);
+        ctx.fill();
+    }
+    // 弹头：暖白核 + 橙晕
+    ctx.globalAlpha = .34;
+    ctx.fillStyle = '#ff9a3d';
+    ctx.beginPath(); ctx.arc(2, 0, s * 2.05, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#ffc06a';
+    ctx.beginPath(); ctx.arc(4, 0, s * 1.02, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#fff8e6';
+    ctx.beginPath(); ctx.arc(5.6, -s * .18, s * .5, 0, TAU); ctx.fill();
+}
+/* 雷：锯齿闪电梭 + 折线电弧拖尾 */
+function drawBoltThunder(b, thin) {
+    const s = b.size * 1.02;
+    ctx.strokeStyle = 'rgba(200,164,255,.55)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+        const px = -8 - i * 8 * thin;
+        const py = Math.sin(G.time * 42 + i * 2.1 + (b.jl || 0) * 6) * (i * 0.95);
+        i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+    }
+    ctx.stroke();
+    ctx.fillStyle = '#ece0ff';
+    ctx.beginPath();
+    ctx.moveTo(12, 0); ctx.lineTo(0, -s * .86); ctx.lineTo(-7, 0); ctx.lineTo(0, s * .86);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#a97bff';
+    ctx.beginPath();
+    ctx.moveTo(7.5, 0); ctx.lineTo(0, -s * .46); ctx.lineTo(-4, 0); ctx.lineTo(0, s * .46);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(222,204,255,.85)'; ctx.lineWidth = 1.3;
+    for (const sg of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(5, sg * s * .96);
+        ctx.lineTo(1, sg * s * 1.48);
+        ctx.lineTo(4.5, sg * s * 1.86);
+        ctx.stroke();
+    }
 }
 
 /* --- 粒子 / 冲击波 / 闪电 / 伤害数字 --- */
@@ -2931,8 +3285,25 @@ function drawParts() {
         ctx.stroke();
     }
     ctx.globalAlpha = 1;
-    // 伤害数字
+    // 元素反应大字（弹起 → 略降 → 淡出，比伤害数字更有仪式感）
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (const r of G.reacts) {
+        const k = 1 - r.t / r.max;
+        const pop = k < .22 ? (k / .22) : 1;
+        const sz = 15 + pop * 9;
+        ctx.globalAlpha = clamp(r.t / r.max * 1.7, 0, 1);
+        ctx.font = `bold ${sz}px -apple-system, sans-serif`;
+        ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.72)';
+        ctx.strokeText(REACT[r.kind].shout, r.x, r.y - pop * 10);
+        ctx.fillStyle = r.col;
+        ctx.fillText(REACT[r.kind].shout, r.x, r.y - pop * 10);
+        ctx.globalAlpha = clamp(r.t / r.max, 0, 1) * .55;
+        ctx.font = 'bold 9.5px -apple-system, sans-serif';
+        ctx.fillStyle = r.col;
+        ctx.fillText('元素反应', r.x, r.y - pop * 10 + sz * .78);
+    }
+    ctx.globalAlpha = 1;
+    // 伤害数字
     for (const n of G.nums) {
         const a = clamp(n.t / .66, 0, 1);
         ctx.globalAlpha = a;
@@ -3002,18 +3373,19 @@ function drawUlt() {
         ctx.save();
         ctx.translate(t.x, t.py);
         ctx.rotate(ang);
-        const w = 44 + Math.sin(G.time * 30) * 7;
+        // v4.7.0 收窄：原来 88px 宽、72% 白，一道光柱就把半个战场的史莱姆糊没了
+        const w = 26 + Math.sin(G.time * 30) * 4;
         const g = ctx.createLinearGradient(0, 0, 0, -760);
-        g.addColorStop(0, `rgba(255,255,255,${.72 * a})`);
-        g.addColorStop(.35, `rgba(140,232,255,${.46 * a})`);
+        g.addColorStop(0, `rgba(255,255,255,${.40 * a})`);
+        g.addColorStop(.35, `rgba(140,232,255,${.24 * a})`);
         g.addColorStop(1, 'rgba(120,200,255,0)');
         ctx.fillStyle = g;
         ctx.beginPath();
         ctx.moveTo(-w, 0); ctx.lineTo(w, 0);
         ctx.lineTo(w * .5, -760); ctx.lineTo(-w * .5, -760);
         ctx.closePath(); ctx.fill();
-        ctx.fillStyle = `rgba(255,255,255,${.7 * a})`;
-        ctx.fillRect(-w * .13, -760, w * .26, 760);
+        ctx.fillStyle = `rgba(255,255,255,${.34 * a})`;
+        ctx.fillRect(-w * .12, -760, w * .24, 760);
         ctx.restore();
     }
 }
@@ -3232,12 +3604,21 @@ function drawPlayerPanel(i) {
     ctx.fillStyle = 'rgba(200,215,240,.62)';
     ctx.fillText('DPS', x + PANEL_W - 13, y + 18);
 
-    // —— 第二行：火力细项 ——
+    // —— 第二行：火力细项 + 主元素徽章 ——
+    const el = elemOf(p), EL = ELEMS[el];
     ctx.textAlign = 'left';
     ctx.font = '10.5px -apple-system, sans-serif';
     ctx.fillStyle = 'rgba(178,198,228,.92)';
     const dmgOne = Math.round(dmgOneOf(p));
-    ctx.fillText(`伤害 ${dmgOne} × ${1 + p.lv.multi} 支 · 射速 ${rateOf(p).toFixed(1)}/s · 暴击 ${Math.round(critChance(p) * 100)}%`, lx, y + 36);
+    ctx.fillText(`伤害 ${dmgOne} × ${1 + p.lv.multi} · 射速 ${rateOf(p).toFixed(1)}/s`, lx, y + 36);
+    // 主元素：换元素 = 换武器，一眼看出两个人的分工
+    const ebW = 50, ebX = x + PANEL_W - 16 - ebW;
+    chipBox(ebX, y + 27, ebW, 18, 6, hexA(EL.col, .15), hexA(EL.col, .78));
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 10.5px -apple-system, sans-serif';
+    ctx.fillStyle = EL.col;
+    ctx.fillText(EL.icon ? `${EL.icon} ${EL.name}` : EL.name, ebX + ebW / 2, y + 36.5);
+    ctx.textAlign = 'left';
 
     // —— 得分：本侧分数 + 与对手的差距 + 双人占比条 ——
     const s0 = scoreOf(G.players[0]), s1 = scoreOf(G.players[1]);
@@ -3325,7 +3706,7 @@ function drawPlayerPanel(i) {
     ctx.textAlign = 'center';
     ctx.font = 'bold 10px -apple-system, sans-serif';
     ctx.fillStyle = ready ? '#ffffff' : 'rgba(190,206,232,.82)';
-    const execTxt = ready ? (i === 0 ? '⚔ 空格 就绪' : '⚔ 小回车 就绪') : '⚔ ' + p.execCd.toFixed(1) + 's';
+    const execTxt = ready ? (i === 0 ? '空格 · 处决就绪' : '小回车 · 就绪') : '处决 ' + p.execCd.toFixed(1) + 's';
     ctx.fillText(execTxt, exx + ew / 2, eyy + eh / 2 + .5);
 
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
@@ -3372,10 +3753,18 @@ function drawDock(i) {
         ctx.font = 'bold 10.5px -apple-system, sans-serif';
         ctx.fillStyle = '#eaf4ff';
         ctx.fillText(s.name, cx + cw / 2, cy + 34);
+        // 第三行写清"这一级到底换来什么"—— 升级反馈必须具体，否则玩家凭什么点它
         const nx = p.lv[s.id] + 1;
-        ctx.font = 'bold 9.5px -apple-system, sans-serif';
-        ctx.fillStyle = nx >= s.max ? '#ffd76a' : 'rgba(190,212,242,.8)';
-        ctx.fillText(nx >= s.max ? '满级' : `Lv.${nx}`, cx + cw / 2, cy + 50);
+        const full = nx >= s.max;
+        let val = '';
+        if (s.id === 'atk') val = `×${ATK_STEP[Math.min(nx, ATK_STEP.length - 1)].toFixed(2)}`;
+        else if (s.id === 'rate') val = `×${RATE_STEP[Math.min(nx, RATE_STEP.length - 1)].toFixed(2)}`;
+        else if (s.elem) val = `转${ELEMS[s.elem].name}`;
+        else if (s.id === 'multi') val = `${nx + 1} 支`;
+        const tag = (full ? '满级' : `Lv.${nx}`) + (val ? ` · ${val}` : '');
+        ctx.font = 'bold 9px -apple-system, sans-serif';
+        ctx.fillStyle = full ? '#ffd76a' : 'rgba(190,212,242,.85)';
+        ctx.fillText(tag, cx + cw / 2, cy + 50);
     }
     // 倒计时条：还剩多久自动替你选
     const frac = clamp(p.cardT / (p.auto ? 1.1 : TUNE.cardWindow), 0, 1);
@@ -3675,6 +4064,7 @@ function pickCard(i, ci, silent) {
     if (!s) s = cur.find(x => x) || null;
     const who = i === 0 ? '1P' : '2P';
     if (s) {
+        const elemBefore = elemOf(p);
         p.lv[s.id]++;
         if (s.id === 'wall') {
             G.wallBonus = Math.min(2.2, (G.wallBonus || 1) * 1.25);
@@ -3682,7 +4072,27 @@ function pickCard(i, ci, silent) {
             G.wall.hp = Math.min(G.wall.max, G.wall.hp + G.wall.max * .3);
         }
         checkEvos(p);
-        floatText(TOWER_X[i], PIVOT_Y - 96, `${s.icon} ${s.name} Lv.${p.lv[s.id]}`, p.color, 13);
+        // 升级反馈：把"这一级涨了多少"直接写在炮塔上方
+        let tail = '';
+        if (s.id === 'atk') tail = ` · 伤害 ×${ATK_STEP[Math.min(p.lv.atk, ATK_STEP.length - 1)].toFixed(2)}`;
+        else if (s.id === 'rate') tail = ` · 射速 ×${RATE_STEP[Math.min(p.lv.rate, RATE_STEP.length - 1)].toFixed(2)}`;
+        else if (s.id === 'multi') tail = ` · 共 ${1 + p.lv.multi} 支`;
+        floatText(TOWER_X[i], PIVOT_Y - 96, `${s.icon} ${s.name} Lv.${p.lv[s.id]}${tail}`, p.color, 13);
+        // 主元素变了 → 全屏播报（这是"吃不同技能，画面就不一样"的开关）
+        const elemNow = elemOf(p);
+        if (elemNow !== elemBefore) {
+            const NE = ELEMS[elemNow];
+            announce(`${i === 0 ? '左塔' : '右塔'} 转为 ${NE.icon} ${NE.name}`, NE.col);
+            const foeEl = elemOf(G.players[1 - i]);
+            if (foeEl === elemNow) {
+                toast(`⚠ 你和搭档都是【${NE.name}】—— 元素相同无法触发反应，换火/冰/雷中的另一系`, '#ff8a5c');
+            } else if (foeEl === 'steel') {
+                toast(`${NE.icon} 你已转为【${NE.name}】· 搭档还是锐 —— 让他也点一系元素就能配合`, NE.col);
+            } else {
+                toast(`${NE.icon}【${NE.name}】×【${ELEMS[foeEl].name}】→ ${REACT[reactKey(foeEl, elemNow)] ? REACT[reactKey(foeEl, elemNow)].name : '无'}反应，已就绪`, NE.col);
+            }
+            G.flash = Math.max(G.flash, .35);
+        }
     } else {
         G.wall.hp = Math.min(G.wall.max, G.wall.hp + G.wall.max * .3);
         floatText(TOWER_X[i], PIVOT_Y - 96, '🛠️ 紧急维修', p.color, 13);
@@ -3728,6 +4138,12 @@ function gameOver() {
     $('overCross').textContent = G.cross;
     $('overBoss').textContent = G.bossKill || 0;
     $('overCoins').textContent = G.coinsRun;
+    let rn = 0;
+    for (const k in G.reactN) rn += G.reactN[k];
+    $('overReact').textContent = rn;
+    const e0 = ELEMS[elemOf(G.players[0])], e1 = ELEMS[elemOf(G.players[1])];
+    $('overElem').textContent = `${e0.icon}${e0.name} × ${e1.icon}${e1.name}`;
+    $('overElem').style.color = e0 === e1 ? '#8fa3c8' : '#ffd76a';
     // 双人比分：让"这局谁在带"有个明确交代
     const sc0 = scoreOf(G.players[0]), sc1 = scoreOf(G.players[1]);
     $('overS1').textContent = fmtScoreFull(sc0);
