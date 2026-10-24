@@ -1052,8 +1052,8 @@ class HauntedDorm {
             const roleDef = this.playerRoles[i];
             const sx = (this.worldWidth / 2) + (Math.random() * 40 - 20);
             const sy = (this.worldHeight / 2) + (Math.random() * 40 - 20);
-            const p = this._findPath(sx, sy, rm.frontX, rm.frontY);
-            if (p) p.push({ x: (rm.x + bedChoice.bedCoords.c) * this.gridSize + 40, y: (rm.y + bedChoice.bedCoords.r) * this.gridSize + 40 }); // 走到专属床位（v4.0.16：寻路失败为 null，靠 update 里的重试兜底）
+            // v4.0.113：一次 BFS 直达专属床位（旧「到门口 + 直线补床位」那一步会横穿房内墙体）
+            const p = this._pathToBed(sx, sy, rm, bedChoice.bedIdx);
             const isStrong = strongPool.has(i); // v4.0.44：2强3弱
             const ai = {
                 x: sx,
@@ -1480,6 +1480,14 @@ class HauntedDorm {
         }
         // v4.0.108：玩家还没进门之前，这几间房先给玩家留着（AI 45 秒内不认领）
         this._homeReservedUntil = 45000;
+        // v4.0.113：人机也在这轮搬移里被挪到了屋外，但它们手里那份路径还是「从地图正中心出发」算的——
+        // 不重算，人机就会朝地图中心直线狂奔、一路穿墙而出（用户实报「人机走路的时间段可以出来」）。
+        for (const a of this.ais) {
+            if (!a || a.dead) continue;
+            const np = this._pathToBed(a.x, a.y, a.targetRoom);
+            a.path = (np && np.length > 0) ? np : null;
+            a.repathT = 0;
+        }
     }
 
     _announce(text, sfx, priority = false) {
@@ -1546,20 +1554,14 @@ class HauntedDorm {
                                 Math.hypot(a.doorCol * 80 + 40 - p.x, a.doorRow * 80 + 40 - p.y) -
                                 Math.hypot(b.doorCol * 80 + 40 - p.x, b.doorRow * 80 + 40 - p.y));
                             p.targetRoom = cand[0];
-                            const path = this._findPath(p.x, p.y, p.targetRoom.frontX, p.targetRoom.frontY);
-                            if (path) {
-                                path.push({ x: (p.targetRoom.x + p.targetRoom.tpl.beds[0].c) * 80 + 40, y: (p.targetRoom.y + p.targetRoom.tpl.beds[0].r) * 80 + 40 });
-                                p.path = path;
-                            }
+                            const path = this._pathToBed(p.x, p.y, p.targetRoom);
+                            if (path) p.path = path;
                         }
                     } else if (this._insideRoom(Math.floor(p.x / 80), Math.floor(p.y / 80)) === p.room) {
                         this._pinToBed(p, p.room); // v4.0.105：人已在自家房里 → 直接钉到床上发育
                     } else if (this._insideRoom(Math.floor(p.x / 80), Math.floor(p.y / 80)) !== p.room) {
-                        const path = this._findPath(p.x, p.y, p.room.frontX, p.room.frontY);
-                        if (path) {
-                            path.push({ x: (p.room.x + p.room.tpl.beds[0].c) * 80 + 40, y: (p.room.y + p.room.tpl.beds[0].r) * 80 + 40 });
-                            p.path = path;
-                        }
+                        const path = this._pathToBed(p.x, p.y, p.room);
+                        if (path) p.path = path;
                     }
                     // 关掉挡事的菜单：托管者不再需要键盘菜单（菜单开着会挡真人移动段，AI 寻路不受影响）
                     if (p === this.player2) { if (this.kmenus[2] && this.kmenus[2].active) { this.kmenus[2].active = false; if (this.p2Kmenu) this.p2Kmenu.style.display = 'none'; } }
@@ -1591,6 +1593,32 @@ class HauntedDorm {
         for (const ai of hostList) {
             if (ai.dead) continue;
             if (ai._jumpFly) continue; // v4.0.74：跳板飞行中 AI 不寻路不行动
+            // v4.0.113：万一人已经站在墙格里（历史穿墙/被新砌的墙包住）——先把人请到最近的空地，
+            // 否则它会从墙体内部踩着墙走出去，视觉上依然是「穿墙」。
+            {
+                const wc = Math.floor(ai.x / this.gridSize), wr = Math.floor(ai.y / this.gridSize);
+                if (this.walls.has(wc + ',' + wr)) {
+                    let bestSpot = null, bestD = Infinity;
+                    for (let rad = 1; rad <= 6 && !bestSpot; rad++) {
+                        for (let dx = -rad; dx <= rad; dx++) {
+                            for (let dy = -rad; dy <= rad; dy++) {
+                                if (Math.abs(dx) !== rad && Math.abs(dy) !== rad) continue;
+                                const nc = wc + dx, nr = wr + dy;
+                                if (nc < 1 || nr < 1 || nc >= this.cols - 1 || nr >= this.rows - 1) continue;
+                                if (this.walls.has(nc + ',' + nr)) continue;
+                                const px = nc * this.gridSize + 40, py = nr * this.gridSize + 40;
+                                const d = Math.hypot(px - ai.x, py - ai.y);
+                                if (d < bestD) { bestD = d; bestSpot = { x: px, y: py }; }
+                            }
+                        }
+                    }
+                    if (bestSpot) {
+                        ai.x = bestSpot.x; ai.y = bestSpot.y;
+                        const fixP = this._pathToBed(ai.x, ai.y, ai.targetRoom || ai.room);
+                        ai.path = (fixP && fixP.length > 0) ? fixP : null;
+                    }
+                }
+            }
             if (ai === this.traitor && this.traitorRevealed) continue; // v4.0.20：内鬼由 _updateTraitor 接管
             // v4.0.46：人机会使用手持技能——CD 好了之后 1 分钟内随机时机释放，随后 CD 重新计时（赶路/干活时不耽误放技能）
             if (ai.skillAt === undefined) ai.skillAt = this.gameTime + 10000 + Math.random() * 50000;
@@ -1630,8 +1658,7 @@ class HauntedDorm {
                                 !this._roomReservedForHuman(r, ai));
                             if (cands.length === 0) { ai.fleeing = false; ai.fled = false; ai.fleeFrom = null; continue; }
                             ai.newRoom = cands[Math.floor(Math.random() * cands.length)];
-                            const p0 = this._findPath(ai.x, ai.y, ai.newRoom.frontX, ai.newRoom.frontY);
-                            if (p0) p0.push({ x: (ai.newRoom.x + ai.newRoom.tpl.beds[0].c) * 80 + 40, y: (ai.newRoom.y + ai.newRoom.tpl.beds[0].r) * 80 + 40 });
+                            const p0 = this._pathToBed(ai.x, ai.y, ai.newRoom);
                             ai.path = p0 || [];
                         } else if (!ai.path || ai.path.length === 0) {
                             this._claimRoom(ai, ai.newRoom);
@@ -2853,6 +2880,24 @@ class HauntedDorm {
             curr = parent[curr];
         }
         return path;
+    }
+
+    // v4.0.113：一次 BFS 直达床位——旧写法是「先寻路到门口，再 push 一个床位点」，
+    // 门口格与床位格往往隔 4~6 格且中间有房内墙体，最后那一步直线插值就是从墙里穿进去的。
+    // 现在整条路径全程 4 连通（每步 1 格），人机不可能再沿路点穿墙。
+    _pathToBed(x, y, rm, bedIdx = 0) {
+        if (!rm || !rm.tpl || !rm.tpl.beds || rm.tpl.beds.length === 0) return null;
+        const bed = rm.tpl.beds[Math.min(bedIdx, rm.tpl.beds.length - 1)] || rm.tpl.beds[0];
+        const bx = (rm.x + bed.c) * this.gridSize + 40;
+        const by = (rm.y + bed.r) * this.gridSize + 40;
+        const direct = this._findPath(x, y, bx, by);
+        if (direct && direct.length > 0) return direct;
+        // 兜底：床位格被植物/墙围死时，至少走到门口；只有床位与最后一点相邻才补这一步（相邻=不穿墙）
+        const p = this._findPath(x, y, rm.frontX, rm.frontY);
+        if (!p || p.length === 0) return null;
+        const last = p[p.length - 1];
+        if (Math.abs(last.x - bx) + Math.abs(last.y - by) <= this.gridSize + 1) p.push({ x: bx, y: by });
+        return p;
     }
 
     // v4.0.72：跳板传送——植物方实体（玩家/玩家2/AI/内鬼）踩上跳板 → 瞬移到房间门外空地。
@@ -5595,11 +5640,8 @@ class HauntedDorm {
                         }
                         if (refuge) {
                             ai.targetRoom = refuge;
-                            const p2 = this._findPath(ai.x, ai.y, refuge.frontX, refuge.frontY);
-                            if (p2 && p2.length > 0) {
-                                p2.push({ x: (refuge.x + refuge.tpl.beds[0].c) * this.gridSize + 40, y: (refuge.y + refuge.tpl.beds[0].r) * this.gridSize + 40 });
-                                ai.path = p2; ai.speed = 300;
-                            }
+                            const p2 = this._pathToBed(ai.x, ai.y, refuge);
+                            if (p2 && p2.length > 0) { ai.path = p2; ai.speed = 300; }
                         } else {
                             // 无房可逃的兜底：背向僵尸撤到安全点（保留 v4.0.31b 行为）
                             const nx = ai.x + (ai.x - zbTarget.x) / (dToZb || 1) * 400;
@@ -5641,11 +5683,8 @@ class HauntedDorm {
                         if (zombieNear) this._say(ai, "僵尸来了，快撤！放弃盲盒保命！", 2500);
                         ai.targetDrop = null;
                         if (ai.room) {
-                            const p = this._findPath(ai.x, ai.y, ai.room.frontX, ai.room.frontY);
-                            if (p) {
-                                p.push({ x: (ai.room.x + ai.room.tpl.beds[0].c) * 80 + 40, y: (ai.room.y + ai.room.tpl.beds[0].r) * 80 + 40 });
-                                ai.path = p;
-                            }
+                            const p = this._pathToBed(ai.x, ai.y, ai.room);
+                            if (p) ai.path = p;
                             if (zombieNear) ai.speed = 300; // 吓得跑快点
                         }
                     }
@@ -5680,12 +5719,9 @@ class HauntedDorm {
                     }
                     if (candidateRooms.length > 0) {
                         ai.targetRoom = candidateRooms[Math.floor(Math.random() * candidateRooms.length)];
-                        const p = this._findPath(ai.x, ai.y, ai.targetRoom.frontX, ai.targetRoom.frontY);
+                        const p = this._pathToBed(ai.x, ai.y, ai.targetRoom);
                         ai.speed = 300; // 极速逃生
-                        if (p) {
-                            p.push({ x: (ai.targetRoom.x + ai.targetRoom.tpl.beds[0].c) * this.gridSize + 40, y: (ai.targetRoom.y + ai.targetRoom.tpl.beds[0].r) * this.gridSize + 40 });
-                            ai.path = p;
-                        }
+                        if (p) ai.path = p;
                     }
                 }
             }
@@ -5706,11 +5742,8 @@ class HauntedDorm {
                 ai.repathT = (ai.repathT || 0) + dt;
                 if (ai.repathT > 2) {
                     ai.repathT = 0;
-                    const rp = this._findPath(ai.x, ai.y, ai.targetRoom.frontX, ai.targetRoom.frontY);
-                    if (rp) {
-                        rp.push({ x: (ai.targetRoom.x + ai.targetRoom.tpl.beds[0].c) * this.gridSize + 40, y: (ai.targetRoom.y + ai.targetRoom.tpl.beds[0].r) * this.gridSize + 40 });
-                        ai.path = rp;
-                    }
+                    const rp = this._pathToBed(ai.x, ai.y, ai.targetRoom);
+                    if (rp) ai.path = rp;
                 }
             }
 
@@ -5724,15 +5757,24 @@ class HauntedDorm {
                         Math.hypot(a.doorCol * 80 + 40 - ai.x, a.doorRow * 80 + 40 - ai.y) -
                         Math.hypot(b.doorCol * 80 + 40 - ai.x, b.doorRow * 80 + 40 - ai.y));
                     ai.targetRoom = cand[0];
-                    const p0 = this._findPath(ai.x, ai.y, ai.targetRoom.frontX, ai.targetRoom.frontY);
-                    if (p0) {
-                        p0.push({ x: (ai.targetRoom.x + ai.targetRoom.tpl.beds[0].c) * this.gridSize + 40, y: (ai.targetRoom.y + ai.targetRoom.tpl.beds[0].r) * this.gridSize + 40 });
-                        ai.path = p0;
-                    }
+                    const p0 = this._pathToBed(ai.x, ai.y, ai.targetRoom);
+                    if (p0) ai.path = p0;
                 }
             }
 
             if (ai.path && ai.path.length > 0) {
+                // v4.0.113：路径自检——下一个路点必须就在脚边（曼哈顿 ≤1.5 格）。
+                // 超出说明这份路径不是从当前位置算出来的（v4.0.108 把人机出生点搬到屋外、跳板瞬移、换房重算），
+                // 继续沿它直线插值就会「一边赶路一边穿墙」（用户实报：人机走路的时间段能穿墙出来）→ 立刻按当前位置重算。
+                {
+                    const t0 = ai.path[0];
+                    if (t0 && Math.abs(t0.x - ai.x) + Math.abs(t0.y - ai.y) > this.gridSize * 1.5) {
+                        const fixed = this._pathToBed(ai.x, ai.y, ai.targetRoom || ai.room);
+                        if (fixed && fixed.length > 0) ai.path = fixed;
+                        else { ai.path = null; ai.repathT = 999; }
+                    }
+                }
+                if (!ai.path || ai.path.length === 0) continue;
                 // 获取玩家当前物理所在的房间
                 const playerCol = Math.floor(this.player.x / this.gridSize);
                 const playerRow = Math.floor(this.player.y / this.gridSize);
@@ -5759,11 +5801,10 @@ class HauntedDorm {
                     });
                     if (emptyRooms.length > 0) {
                         ai.targetRoom = emptyRooms[Math.floor(Math.random() * emptyRooms.length)];
-                        const p = this._findPath(ai.x, ai.y, ai.targetRoom.frontX, ai.targetRoom.frontY);
+                        const p = this._pathToBed(ai.x, ai.y, ai.targetRoom);
                         // v4.0.49：寻路失败返回 null 时跳过（原代码 null.push 直接抛错中断整帧 AI 更新——
                         // 新多样化布局下门朝向更多，AI 临时换房路径偶发不可达的几率上升，必须有保护）
                         if (!p) continue;
-                        p.push({ x: (ai.targetRoom.x + ai.targetRoom.tpl.beds[0].c) * this.gridSize + 40, y: (ai.targetRoom.y + ai.targetRoom.tpl.beds[0].r) * this.gridSize + 40 });
                         ai.path = p;
                         continue;
                     }
@@ -5780,8 +5821,10 @@ class HauntedDorm {
                     ai.speed = 300;
                 } else if (dist > 5) {
                     const spd = ai.speed || 200; // v4.0.34：速度字段真正生效（原硬编码 200，「极速逃生」从未加速）
-                    ai.x += (dx / dist) * spd * dt;
-                    ai.y += (dy / dist) * spd * dt;
+                    // v4.0.113：单帧位移封顶 0.9 格——掉帧时 dt 变大，原写法一帧能挪 1~2 格，直接从墙角跨过去
+                    const step = Math.min(spd * dt, this.gridSize * 0.9);
+                    ai.x += (dx / dist) * step;
+                    ai.y += (dy / dist) * step;
                 } else {
                     ai.path.shift(); // 抵达当前路点，切下一个
                     // 彻底抵达床位，宣誓主权
@@ -5816,9 +5859,8 @@ class HauntedDorm {
                                 if (rm.owners.length < rm.capacity && rm !== this.player.room && rm !== this.player.room2 &&
                                     rm !== playerPhysicalRoom && rm !== p2PhysicalRoom) {
                                     ai.targetRoom = rm;
-                                    const p = this._findPath(ai.x, ai.y, rm.frontX, rm.frontY);
+                                    const p = this._pathToBed(ai.x, ai.y, rm);
                                     if (!p) continue; // v4.0.68：寻路失败跳过换房（多样化布局下门朝多向，偶发不可达会 null.push 崩溃整帧）
-                                    p.push({ x: (rm.x + rm.tpl.beds[0].c) * this.gridSize + 40, y: (rm.y + rm.tpl.beds[0].r) * this.gridSize + 40 });
                                     ai.path = p;
                                     foundNew = true;
                                     break;
