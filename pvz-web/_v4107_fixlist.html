@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>守屋大作战 v4.0.107 · 修复清单</title>
+<style>
+  :root{--bg:#0e1116;--panel:#161b23;--panel2:#1d242e;--line:#2b3442;--txt:#e8edf4;--dim:#93a1b5;
+        --red:#ff6b6b;--org:#ffa94d;--grn:#51cf66;--blu:#4dabf7;--ylw:#ffd43b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);line-height:1.65;font-size:14.5px;
+       font-family:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1120px;margin:0 auto;padding:40px 24px 72px}
+  h1{font-size:26px;margin:0 0 6px}
+  h1 span{color:var(--dim);font-size:14px;font-weight:400;margin-left:8px}
+  .meta{color:var(--dim);font-size:13px;border-bottom:2px solid var(--line);padding-bottom:18px;margin-bottom:26px}
+  .meta b{color:var(--txt)}
+  h2{font-size:17px;margin:36px 0 12px;padding-left:11px;border-left:4px solid var(--blu)}
+  table{width:100%;border-collapse:collapse;margin:10px 0 4px;font-size:13.2px}
+  th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{color:var(--dim);font-weight:600;font-size:12.4px;background:var(--panel2);position:sticky;top:0}
+  tr:hover td{background:#12171f}
+  td.n{font-family:ui-monospace,Menlo,monospace;color:var(--dim);width:34px;text-align:center}
+  code{background:#000;padding:1px 5px;border-radius:4px;font-size:12.2px;color:#9ecbff;
+       font-family:ui-monospace,Menlo,monospace}
+  .tag{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:20px;border:1px solid currentColor;
+       font-weight:700;white-space:nowrap}
+  .t0{color:#ff4d4d}.t1{color:var(--org)}.t2{color:var(--dim)}.t3{color:var(--grn)}
+  .old{color:#ff9a9a}
+  .new{color:#9dffb0}
+  .ok{color:var(--grn);font-weight:700;white-space:nowrap}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:14px 0}
+  .card.b{border-left:3px solid var(--org)}
+  .card.g{border-left:3px solid var(--grn)}
+  .card h3{margin:0 0 8px;font-size:15px}
+  ul{margin:8px 0 8px 4px;padding-left:20px}
+  li{margin:5px 0}
+  .foot{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--dim);font-size:12.4px}
+  .num{font-family:ui-monospace,Menlo,monospace;color:var(--blu)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>守屋大作战 · v4.0.107 修复清单<span>一次性修完体检报告的 10 项</span></h1>
+<div class="meta">
+  版本 <b>pvz-web v4.0.107-十项修复</b> · 提交 <b>43c4df7</b> · 2026-10-24<br>
+  验证：新增 <b>23 项</b> puppeteer 断言全绿 + v4.0.106 暂停回归 <b>19 项</b> 全绿 + 全程 0 条 JS 异常
+</div>
+
+<h2>一、必修 4 项（P0 功能缺失 / 数值漏洞 / 失衡 / 不一致）</h2>
+<table>
+  <thead><tr><th class="n">#</th><th style="width:210px">问题</th><th>改之前</th><th>改之后</th><th style="width:96px">类型</th></tr></thead>
+  <tbody>
+    <tr>
+      <td class="n">1</td>
+      <td><b>2p 僵尸阵营的 P2 是幽灵</b></td>
+      <td class="old">P2 有 HUD、能走动、外观是向日葵，但 <code>isZombie=false</code>：打不动植物、也不挨打，植物索敌只有 1 个目标</td>
+      <td class="new">P1/P2 都初始化僵尸身份（<code>for (allPlayers)</code>）；啃食链放行 <code>zp.isZombie</code>；<code>_killZombie</code> 玩家分支泛化 → <b>一人倒下另一人继续，全灭才判负</b>；僵尸/小怪不再咬同为僵尸的队友</td>
+      <td><span class="tag t0">P0 功能缺失</span></td>
+    </tr>
+    <tr>
+      <td class="n">2</td>
+      <td><b>门板回血变成 3.3 倍血</b></td>
+      <td class="old"><code>pl.hp = pl.def.hp || pl.maxHp</code>；而门板 <code>maxHp</code> 只有图鉴的 30%（1200/4000）→ 捡一个 🏆 门变 4000 血，血条溢出</td>
+      <td class="new">改用 <code>pl.maxHp</code> 回满：门板永远只回到 1200，两处（团队奖杯 / 圣光洗礼）都修</td>
+      <td><span class="tag t1">数值漏洞</span></td>
+    </tr>
+    <tr>
+      <td class="n">3</td>
+      <td><b>同一个盲盒，人机 1000☀、玩家 150☀</b></td>
+      <td class="old">人机抢任何盲盒都 <code>+1000☀ +100🦠</code>（玩家 💰钱袋是 +150），差 6.7 倍；而人机植物完全不产资源 → 一局强弱全看谁先摸到箱子</td>
+      <td class="new">人机按外观分档：💎600/60、💰90/40、其他 150/40（约为玩家同档 60%）；同时<b>恢复人机植物 40% 被动产出</b>，经济不再全押随机数</td>
+      <td><span class="tag t1">数值失衡</span></td>
+    </tr>
+    <tr>
+      <td class="n">4</td>
+      <td><b>AI 主僵尸永远升不到 Lv.10</b></td>
+      <td class="old">时间表停在 <code>{s:510, lv:9}</code> → 植物方永远见不到巨人僵尸；玩家自己当僵尸却能到 Lv.10</td>
+      <td class="new">补 <code>{s:570, lv:10}</code>，两条链终局一致（实测 600 秒升到 Lv.10）</td>
+      <td><span class="tag t1">数值不一致</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>二、次级 6 项</h2>
+<table>
+  <thead><tr><th class="n">#</th><th style="width:210px">问题</th><th>改之前</th><th>改之后</th><th style="width:96px">类型</th></tr></thead>
+  <tbody>
+    <tr>
+      <td class="n">5</td>
+      <td><b>P2 变天使/内鬼仍产阳光</b></td>
+      <td class="old">免产出判定写的是 <code>owner === this.player && …</code>，只认 P1</td>
+      <td class="new">改成 <code>owner.angelic || owner.traitor</code>，P1/P2 一视同仁（实测 P2 天使 3 秒 ☀0，解除后 3 秒 ☀42）</td>
+      <td><span class="tag t2">判定漏项</span></td>
+    </tr>
+    <tr>
+      <td class="n">6</td>
+      <td><b>阳光袋系统是死代码</b></td>
+      <td class="old"><code>this.suns</code> 全文件只有 filter 与渲染，<b>从未 push</b>——「僵尸掉阳光、走过去捡」这个玩法实际不存在</td>
+      <td class="new">补完原设计：僵尸死亡原地掉 ☀️ 袋（普通 25 / 小怪 15 / BOSS 100），踩上去入账并飘字，22 秒消失，同屏上限 12 个</td>
+      <td><span class="tag t3">补完玩法</span></td>
+    </tr>
+    <tr>
+      <td class="n">7</td>
+      <td><b>回血按列不按距离</b></td>
+      <td class="old">判定只比列（<code>pl.c</code> ±10 格）不比行 → 站在地图中间，同列上下 21 格的植物全部回满</td>
+      <td class="new">改成 <b>5 格半径（400px）</b>圆形判定，只回身边一圈</td>
+      <td><span class="tag t2">判定漏项</span></td>
+    </tr>
+    <tr>
+      <td class="n">8</td>
+      <td><b>门口格菜单给了种不了的选项</b></td>
+      <td class="old">点「门已毁」的门口格会弹菜单（坚果墙/地刺/土豆地雷），选任何一项都被 <code>isDoor</code> 判定拦下并退款报错</td>
+      <td class="new">直接拒绝并提示「大门已被咬毁，永久失效，无法重建」，不再弹注定失败的菜单</td>
+      <td><span class="tag t2">文案与行为不符</span></td>
+    </tr>
+    <tr>
+      <td class="n">9</td>
+      <td><b>玩家内鬼判定硬编码 P1</b></td>
+      <td class="old">结算标题、内鬼胜利/失败判定、门板溅射免疫全部写死 <code>this.playerTraitor</code> → P2 当内鬼时全判错</td>
+      <td class="new">新增 <code>_anyTraitor() / _anyAngelic()</code>，7 处判定 + 2 处结算标题统一改成覆盖 P1/P2</td>
+      <td><span class="tag t2">判定漏项</span></td>
+    </tr>
+    <tr>
+      <td class="n">10</td>
+      <td><b>开局 0 阳光、出生不在房间</b></td>
+      <td class="old">出生在地图正中（离最近房门 468px）、☀0，且游戏没有任何提示 → 实测原地不动 255 秒只有 12 阳光</td>
+      <td class="new">开局 <b>☀50</b>；出生点改到最近空房的<b>门内第一格</b>（一步不用走就能点脚下种植）；2.6 秒后居中提示「点脚下地板种一株植物 → 开始产阳光」</td>
+      <td><span class="tag t3">体验 / 入口</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>三、验收实测（puppeteer 23/23）</h2>
+<div class="card g">
+  <h3>关键数字（改前 → 改后）</h3>
+  <ul>
+    <li>僵尸阵营 P2：<code>isZombie false → true</code>；植物索敌 <span class="num">1 个 → 2 个</span>；P2 啃植物 <span class="num">0 伤害 → 2000→1860</span>；P2 阵亡不判负、P1 继续</li>
+    <li>门板回血：<span class="num">hp 4000（maxHp 1200）→ hp 1200</span>，血条不再溢出</li>
+    <li>人机抢 💰盲盒：<span class="num">+1000☀ → +90☀</span>；人机植物 3 秒被动收入 <span class="num">0 → 7.2☀</span></li>
+    <li>AI 主僵尸：<span class="num">Lv.9 封顶 → Lv.10</span>（600 秒）</li>
+    <li>P2 天使：3 秒阳光 <span class="num">35 → 0</span>，解除后回到 42</li>
+    <li>阳光袋：击杀掉落 <span class="num">0 → 1 个</span>，走过去 <span class="num">+25☀</span> 入账</li>
+    <li>开局：<span class="num">☀0 / 离门 468px → ☀50 / 离门 80px 且在房内</span>，点脚下直接开建造菜单</li>
+  </ul>
+</div>
+
+<h2>四、这次<b>没有</b>动的（需要你点头）</h2>
+<div class="card b">
+  <h3>结构性数值骨架 —— 建议单独一版</h3>
+  <ul>
+    <li><b>产出曲线 ×2 → ×1.6</b>：现在「产出」和「升级费」同为 ×2，每级回本时间恒定 10~20 秒，导致「永远升级」在数学上永远是唯一最优解，玩家的取舍被抹掉了。</li>
+    <li><b>门血量锚定常数</b>：现在门血量跟植物图鉴挂钩，破门时间从开局 18 秒跳到终局 306 秒。建议改成「当前僵尸咬合力 × 13~16 口」= 恒定 30~40 秒。</li>
+    <li>为什么分开：<b>55 个融合配方全部建在「伤害 ×2 链」上</b>，动产出曲线它们要一起复核；属于「先骨架、后内容」的第二步。代价是「升级没那么爽了」，需要你确认要不要走。</li>
+  </ul>
+</div>
+
+<div class="foot">
+  改动文件：<code>pvz-web/js/HauntedDorm.js</code>（+194 / −52）、<code>pvz-web/version.json</code>、
+  <code>_verify_v4107.js</code>（新增 23 项断言）、<code>_patch_v4107.py</code>（33 处精确替换）、
+  <code>_shot_v4107.js</code>、两张验收截图。<br>
+  入口：<code>pvz-web/index.html</code> → 守屋大作战（版本徽标见右上 HUD / 主界面）。诊断脚本：<code>_diag_audit_v4106{,b,c,d}.js</code>。
+</div>
+
+</div>
+</body>
+</html>
