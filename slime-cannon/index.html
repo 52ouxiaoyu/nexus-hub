@@ -115,7 +115,7 @@
 <body>
 <div id="wrap">
     <canvas id="cv" width="1280" height="720"></canvas>
-    <div class="ver">v4.1.0 · 无尽守卫</div>
+    <div class="ver">v4.2.0 · 箭弩塔</div>
 
     <!-- 主菜单 -->
     <div id="menu" class="overlay">
@@ -188,13 +188,13 @@
 
 <script>
 "use strict";
-/* ================= 向史莱姆开炮 v4.1.0 · 无尽守卫（纯单局 · 升级不暂停） ================= */
+/* ================= 向史莱姆开炮 v4.2.0 · 无尽守卫（纯单局 · 升级不暂停） ================= */
 const W = 1280, H = 720;
 const WALL_TOP = 596;          // 城墙顶面
 const TOWER_X = [206, 1074];   // 两座塔的中心 x
 const TOWER_Y = 646;           // 塔心 y（俯视圆塔）
 const PIVOT_Y = 630;           // 炮口旋转枢轴 y（在塔心偏上）
-const VERSION = 'v4.1.0';
+const VERSION = 'v4.2.0';
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -378,6 +378,7 @@ const TUNE = {
     crossDur: 2.0,       // 合击加成持续
     crossMul: 2.6,       // 合击伤害倍率（两塔锁同一片时的核心收益）
     cardWindow: 4.6,     // 选卡停留时间（超时自动选）
+    bossK: 60,           // 史莱姆王血量 = 同期普通史莱姆 × bossK（实测 ≈ 打 9~14 秒）
 };
 
 function makeTower(i) {
@@ -469,14 +470,15 @@ function pickKind(t) {
     return r < .20 ? 'small' : r < .50 ? 'basic' : r < .68 ? 'big' : r < .81 ? 'spiky' : r < .91 ? 'shield' : 'flyer';
 }
 function bossHpFor() {
-    const dps = dpsOf(G.players[0]) + dpsOf(G.players[1]);
-    // 折算 4.5 秒的 DPS；怪越多火力被分得越散，所以按场上人数再打个折
-    const crowd = clamp(G.enemies.length / 60, 1, 2.6);
-    return Math.round(dps * 2.0 / crowd);
+    // 按"同期普通史莱姆的血量"折算，而不是按 dpsOf 折算：
+    // 穿透/多重让真实吞吐是 dpsOf 的二十几倍，用 dpsOf 估出来的 Boss 一枪就没。
+    // 200 倍 ≈ 两塔全力集火 5~8 秒，且随难度曲线自动同步。
+    return Math.round(hpMul() * ETYPES.basic.hp * TUNE.bossK);
 }
 function spawnBoss() {
     G.bossN++;
-    const k = spawnEnemy('king', { x: rand(W * .32, W * .68), y: -150 });
+    // 从画面顶部边缘压进来（不是从 y=-150 慢吞吞走 20 秒才露头）
+    const k = spawnEnemy('king', { x: rand(W * .32, W * .68), y: -30 });
     // 血量按"两塔当前 DPS × 秒数"现算：不管玩家 build 成什么样，它都恰好要打 5~9 秒
     k.hp = k.max = bossHpFor();
     k.spd *= 1.06;
@@ -699,7 +701,7 @@ function scanBestAngle(p) {
             const edge = 1 + (1 - perp / R) * 0.75;
             score += e.w * threat * sizeW * near * edge;
             if (e.state === 'chew') score += 6;   // 正在啃墙：最高优先
-            if (e.boss && e.y > 0) score += 14;   // 史莱姆王：进场后优先集火（还没进场就别浪费火力）
+            if (e.boss && e.y > 0) score += 34;   // 史莱姆王：进场后优先集火（还没进场就别浪费火力）
         }
         // 打补给箱
         for (let k = 0; k < G.pickups.length; k++) {
@@ -1897,16 +1899,21 @@ function drawTowerBase(i) {
 
     // 旗帜（朝外一侧）
     const sgn = i === 0 ? 1 : -1;
-    const px2 = cx + sgn * R * .58, py2 = cy - R * .52;
-    ctx.strokeStyle = '#3d3020'; ctx.lineWidth = 3.4; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(px2, py2 + 18); ctx.lineTo(px2, py2 - 26); ctx.stroke();
-    const wave = Math.sin(G.time * 3.2 + i * 2) * 4;
+    const px2 = cx + sgn * R * .84, py2 = cy - R * .26;
+    ctx.strokeStyle = '#3d3020'; ctx.lineWidth = 2.8; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(px2, py2 + 16); ctx.lineTo(px2, py2 - 20); ctx.stroke();
+    // 旗杆尖
+    ctx.fillStyle = '#9aa6ba';
+    ctx.beginPath();
+    ctx.moveTo(px2, py2 - 26); ctx.lineTo(px2 - 2.4, py2 - 18); ctx.lineTo(px2 + 2.4, py2 - 18);
+    ctx.closePath(); ctx.fill();
+    const wave = Math.sin(G.time * 3.2 + i * 2) * 3.4;
     ctx.fillStyle = p.color;
     ctx.globalAlpha = .92;
     ctx.beginPath();
-    ctx.moveTo(px2, py2 - 26);
-    ctx.quadraticCurveTo(px2 + sgn * 20, py2 - 23 + wave, px2 + sgn * 33, py2 - 15);
-    ctx.quadraticCurveTo(px2 + sgn * 20, py2 - 6 + wave, px2, py2 - 9);
+    ctx.moveTo(px2, py2 - 20);
+    ctx.quadraticCurveTo(px2 + sgn * 14, py2 - 18 + wave, px2 + sgn * 24, py2 - 11);
+    ctx.quadraticCurveTo(px2 + sgn * 14, py2 - 3 + wave, px2, py2 - 6);
     ctx.closePath(); ctx.fill();
     ctx.globalAlpha = 1;
 
@@ -1956,83 +1963,248 @@ function drawTowerBase(i) {
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
 
-/* --- 炮手 + 弩 --- */
-function drawArcher(p) {
+/* --- 箭弩塔（ballista）：随技能等级变粗、变长、变壮 --- */
+function lvSumOf(p) {
+    let n = 0;
+    for (const k in p.lv) n += p.lv[k];
+    return n;
+}
+
+function drawBallista(p) {
     const t = p.tower, x = t.x, y = t.py;
-    const rec = t.recoil * 6;
+    const rec = t.recoil * 7;                     // 后坐位移
+
+    // 成长度：技能点总和 → 0..1。弩身随等级变宽/变长/加护甲，升级能"看得见"
+    const g = clamp(lvSumOf(p) / 28, 0, 1);
+    const L = 82 + g * 24;                        // 主梁长度
+    const Wd = 15 + g * 5.5;                      // 主梁半宽（满级别把弓臂之间塞满）
+    const span = 45 + g * 19;                     // 弓臂半展
+    const armT = 6.4 + g * 3.6;                   // 弓臂粗细
+    const boltN = 1 + Math.min(2, Math.floor(p.lv.multi / 2));   // 待发箭数（多重箭）
 
     // 影子
     ctx.fillStyle = 'rgba(0,0,0,.42)';
-    ctx.beginPath(); ctx.ellipse(x + 2, y + 17, 26, 12, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + 2, y + 15, 27 + g * 7, 12 + g * 3, 0, 0, TAU); ctx.fill();
 
-    // 弩（先画，底部被身体压住）
+    // ── 转台（基座，不随俯仰旋转）──
+    const tbY = y + 5;
+    const tg = ctx.createLinearGradient(x, tbY - 15, x, tbY + 13);
+    tg.addColorStop(0, '#5e6878');
+    tg.addColorStop(.55, '#3a4250');
+    tg.addColorStop(1, '#1e232c');
+    ctx.fillStyle = tg;
+    ctx.beginPath(); ctx.ellipse(x, tbY, 27 + g * 7, 14.5 + g * 3.5, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(180,205,240,.22)'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.ellipse(x, tbY - 1, 27 + g * 7, 14.5 + g * 3.5, 0, Math.PI * 1.06, Math.PI * 1.94); ctx.stroke();
+    // 转台一圈铆钉
+    ctx.fillStyle = '#8d98ad';
+    for (let s2 = 0; s2 < 8; s2++) {
+        const a = s2 / 8 * TAU + .2;
+        ctx.beginPath();
+        ctx.arc(x + Math.cos(a) * (21 + g * 6), tbY + Math.sin(a) * (10 + g * 2.6), 1.9, 0, TAU);
+        ctx.fill();
+    }
+
+    // ── 弩身（绕枢轴旋转；0 = 正上）──
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(t.ang);
-    const bg = ctx.createLinearGradient(-7, 0, 7, 0);
-    bg.addColorStop(0, '#a8845a');
-    bg.addColorStop(.45, '#6d5133');
-    bg.addColorStop(1, '#3a2a1a');
+
+    // 主梁：木制，后宽前窄
+    const bg = ctx.createLinearGradient(-Wd, 0, Wd, 0);
+    bg.addColorStop(0, '#b28d5e');
+    bg.addColorStop(.34, '#8a6a44');
+    bg.addColorStop(.80, '#5c442b');
+    bg.addColorStop(1, '#3a2917');
     ctx.fillStyle = bg;
-    ctx.fillRect(-7.5, -70 + rec, 15, 72);
-    ctx.fillStyle = '#8d6c44';
-    ctx.fillRect(-12, -76 + rec, 24, 14);
-    // 弓臂
-    ctx.strokeStyle = '#dbe8ff'; ctx.lineWidth = 4.4; ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(-38, -64 + rec);
-    ctx.quadraticCurveTo(0, -88 + rec, 38, -64 + rec);
-    ctx.stroke();
-    // 弦
-    ctx.strokeStyle = 'rgba(232,242,255,.5)'; ctx.lineWidth = 1.4;
+    ctx.moveTo(-Wd * .82, 11);
+    ctx.lineTo(Wd * .82, 11);
+    ctx.lineTo(Wd * .62, -L + rec);
+    ctx.lineTo(-Wd * .62, -L + rec);
+    ctx.closePath(); ctx.fill();
+    // 上棱高光
+    ctx.fillStyle = 'rgba(255,236,200,.15)';
+    ctx.fillRect(-Wd * .62, -L * .90 + rec, Wd * .32, L * .88);
+    // 铁箍
+    ctx.fillStyle = '#7f8a9e';
+    for (const k of [.40, .66, .88]) {
+        const yy = -L * k + rec, ww = Wd * (1 - .33 * k);
+        ctx.fillRect(-ww, yy, ww * 2, 2.4 + g * 1.6);
+    }
+    // 尾托铁板（盖住主梁尾端）
+    ctx.fillStyle = '#5c6678';
     ctx.beginPath();
-    ctx.moveTo(-38, -64 + rec); ctx.lineTo(0, -46 + rec); ctx.lineTo(38, -64 + rec);
-    ctx.stroke();
-    // 能量核心
-    const fl = t.flash * 24;
-    ctx.globalAlpha = .3;
-    ctx.fillStyle = p.color;
-    ctx.beginPath(); ctx.arc(0, -38 + rec, 13 + fl, 0, TAU); ctx.fill();
+    ctx.moveTo(-Wd * 1.05, 9);
+    ctx.lineTo(Wd * 1.05, 9);
+    ctx.lineTo(Wd * .82, -2);
+    ctx.lineTo(-Wd * .82, -2);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(210,228,255,.20)';
+    ctx.fillRect(-Wd * .82, -2.4, Wd * 1.64, 2.2);
+    ctx.fillStyle = p.color; ctx.globalAlpha = .85;
+    ctx.fillRect(-Wd * .70, 0.4, Wd * 1.40, 2.4);
     ctx.globalAlpha = 1;
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(0, -38 + rec, 4.6 + fl * .5, 0, TAU); ctx.fill();
+
+    // 木纹（两道细线，避免主梁看起来像一根光棍）
+    ctx.strokeStyle = 'rgba(48,30,14,.34)'; ctx.lineWidth = 1.1;
+    for (const k of [-.52, .5]) {
+        ctx.beginPath();
+        ctx.moveTo(Wd * k, 4);
+        ctx.lineTo(Wd * k * .66, -L * .96 + rec);
+        ctx.stroke();
+    }
+
+    // 中央箭槽（深色凹槽）
+    ctx.fillStyle = 'rgba(9,7,5,.66)';
+    ctx.fillRect(-Wd * .28, -L * .94 + rec, Wd * .56, L * .80);
+
+    // 两台铁护板（等级够高才装，视觉上"更壮"）
+    if (g > .35) {
+        ctx.fillStyle = 'rgba(96,108,128,.92)';
+        for (const sgn of [-1, 1]) {
+            ctx.beginPath();
+            ctx.moveTo(sgn * Wd * .78, -L * .46 + rec);
+            ctx.lineTo(sgn * Wd * 1.38, -L * .56 + rec);
+            ctx.lineTo(sgn * Wd * 1.38, -L * .70 + rec);
+            ctx.lineTo(sgn * Wd * .78, -L * .78 + rec);
+            ctx.closePath(); ctx.fill();
+        }
+        ctx.strokeStyle = 'rgba(210,228,255,.22)'; ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.moveTo(-Wd * .78, -L * .46 + rec); ctx.lineTo(Wd * .78, -L * .78 + rec);
+        ctx.stroke();
+    }
+
+    // 弩头横梁（弓臂安装座）
+    const armRoot = -L * .58 + rec;
+    const beamW = Wd * 1.30;
+    ctx.fillStyle = '#6b7486';
+    ctx.beginPath();
+    ctx.moveTo(-beamW, armRoot + 7);
+    ctx.lineTo(beamW, armRoot + 7);
+    ctx.lineTo(beamW * .84, armRoot - 11);
+    ctx.lineTo(-beamW * .84, armRoot - 11);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(216,234,255,.22)';
+    ctx.fillRect(-beamW * .84, armRoot - 11, beamW * 1.68, 2.8);
+    ctx.fillStyle = '#454d5c';
+    ctx.fillRect(-beamW * .84, armRoot + 4.4, beamW * 1.68, 2.6);
+    // 弩头中央的玩家色徽记
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.moveTo(0, armRoot - 9); ctx.lineTo(4.4, armRoot - 2.5);
+    ctx.lineTo(0, armRoot + 4); ctx.lineTo(-4.4, armRoot - 2.5);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.75)';
+    ctx.beginPath(); ctx.arc(0, armRoot - 2.5, 1.5, 0, TAU); ctx.fill();
+
+    // 双弓臂（前弯，像真正的弩）
+    const armTipY = armRoot - 3;          // 臂端几乎与弩头齐平：横向张开的"弓"，不是下垂的角
+    for (const sgn of [-1, 1]) {
+        const ex = sgn * span, ey = armTipY;
+        const cx1 = sgn * span * .40, cy1 = armRoot - 9 - g * 3.5;
+        // 底部投影
+        ctx.strokeStyle = 'rgba(10,7,4,.5)'; ctx.lineWidth = armT + 3.2; ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(sgn * Wd * .45, armRoot + 2.5);
+        ctx.quadraticCurveTo(cx1, cy1 + 4, ex, ey + 4);
+        ctx.stroke();
+        // 木臂
+        const ag = ctx.createLinearGradient(0, armRoot, ex, ey);
+        ag.addColorStop(0, '#a8834f');
+        ag.addColorStop(.55, '#7b5c3a');
+        ag.addColorStop(1, '#45301c');
+        ctx.strokeStyle = ag; ctx.lineWidth = armT;
+        ctx.beginPath();
+        ctx.moveTo(sgn * Wd * .45, armRoot);
+        ctx.quadraticCurveTo(cx1, cy1, ex, ey);
+        ctx.stroke();
+        // 臂身细高光
+        ctx.strokeStyle = 'rgba(255,232,190,.20)'; ctx.lineWidth = armT * .34;
+        ctx.beginPath();
+        ctx.moveTo(sgn * Wd * .45, armRoot - armT * .22);
+        ctx.quadraticCurveTo(cx1, cy1 - armT * .3, ex * .96, ey - armT * .25);
+        ctx.stroke();
+        // 臂端铁角（滑轮座）
+        ctx.fillStyle = '#6f7b90';
+        ctx.beginPath(); ctx.arc(ex, ey, armT * .56, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#a8b6cc';
+        ctx.beginPath(); ctx.arc(ex, ey - armT * .14, armT * .30, 0, TAU); ctx.fill();
+        // 满强度：臂上加金纹
+        if (g > .62) {
+            ctx.strokeStyle = `rgba(255,214,120,${.30 + g * .40})`;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(sgn * Wd * .45, armRoot);
+            ctx.quadraticCurveTo(cx1, cy1, ex, ey);
+            ctx.stroke();
+        }
+    }
+
+    // 弓弦（拉满状态，弦扣就在箭尾）
+    const nock = -L * .42 + rec;
+    ctx.strokeStyle = 'rgba(236,246,255,.60)'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-span, armTipY);
+    ctx.lineTo(0, nock);
+    ctx.lineTo(span, armTipY);
+    ctx.stroke();
+    // 弦扣金属块
+    ctx.fillStyle = '#8f9bb1';
+    ctx.fillRect(-2, nock - 2.6, 4, 5.4);
+
+    // 待发箭矢（多重箭等级越高，箭越多）
+    for (let k = 0; k < boltN; k++) {
+        const ox = boltN === 1 ? 0 : (k - (boltN - 1) / 2) * Wd * .52;
+        const shaftW = 2.7 + g * 1.3;
+        const tipY = -L - 8 - g * 5;
+        // 箭杆
+        ctx.strokeStyle = '#d8c8a6'; ctx.lineWidth = shaftW; ctx.lineCap = 'butt';
+        ctx.beginPath(); ctx.moveTo(ox, nock + 1); ctx.lineTo(ox, tipY + 6); ctx.stroke();
+        // 箭头
+        ctx.fillStyle = '#f4f9ff';
+        ctx.beginPath();
+        ctx.moveTo(ox, tipY - 8 - g * 5);
+        ctx.lineTo(ox - shaftW * 1.75, tipY + 8);
+        ctx.lineTo(ox + shaftW * 1.75, tipY + 8);
+        ctx.closePath(); ctx.fill();
+        // 箭羽：贴着箭杆向后的小羽片（大片三角会叠成一排尖刺）
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = .40;
+        for (const sgn of [-1, 1]) {
+            ctx.beginPath();
+            ctx.moveTo(ox, nock + 1);
+            ctx.lineTo(ox + sgn * shaftW * 1.35, nock + 7.5);
+            ctx.lineTo(ox + sgn * shaftW * .45, nock + 7);
+            ctx.closePath(); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    // 绞盘（棘轮，开火时加速转）
+    ctx.save();
+    ctx.translate(0, -L * .10);
+    ctx.rotate(-G.time * (t.cd > 0 ? 5 : 1.1) - t.recoil * 2.4);
+    ctx.fillStyle = '#5d6a7e';
+    for (let s2 = 0; s2 < 8; s2++) {
+        ctx.save(); ctx.rotate(s2 / 8 * TAU);
+        ctx.fillRect(-1.5, -6.6 - g * 1.2, 3, 4.4);
+        ctx.restore();
+    }
+    ctx.beginPath(); ctx.arc(0, 0, 4.6 + g * 1.3, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#242a34';
+    ctx.beginPath(); ctx.arc(0, 0, 2, 0, TAU); ctx.fill();
     ctx.restore();
 
-    // 披风
-    ctx.fillStyle = shade(p.color, -.6);
-    ctx.beginPath(); ctx.ellipse(x, y + 10, 29, 22, 0, 0, TAU); ctx.fill();
-    // 身体
-    const bodyG = ctx.createRadialGradient(x - 8, y - 5, 5, x, y + 3, 30);
-    bodyG.addColorStop(0, p.color);
-    bodyG.addColorStop(.5, shade(p.color, -.36));
-    bodyG.addColorStop(1, '#0e1822');
-    ctx.fillStyle = bodyG;
-    ctx.beginPath(); ctx.ellipse(x, y + 5, 25, 19.5, 0, 0, TAU); ctx.fill();
-    // 肩甲
-    ctx.fillStyle = shade(p.color, -.12);
-    ctx.beginPath(); ctx.ellipse(x - 18, y - 3, 11.2, 8.8, -.35, 0, TAU); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(x + 18, y - 3, 11.2, 8.8, .35, 0, TAU); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 1.2;
-    ctx.beginPath(); ctx.ellipse(x - 18, y - 3, 11.2, 8.8, -.35, 0, TAU); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(x + 18, y - 3, 11.2, 8.8, .35, 0, TAU); ctx.stroke();
-    // 头盔
-    ctx.fillStyle = '#eef3ff';
-    ctx.beginPath(); ctx.arc(x, y - 12, 15, 0, TAU); ctx.fill();
-    ctx.fillStyle = shade(p.color, -.22);
-    ctx.beginPath(); ctx.arc(x, y - 12, 15.4, Math.PI * 1.02, Math.PI * 1.98); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.arc(x, y - 12, 15, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
-    // 面甲发光缝
-    ctx.fillStyle = p.color;
-    ctx.fillRect(x - 10, y - 12, 20, 4);
-    ctx.fillStyle = 'rgba(255,255,255,.9)';
-    ctx.fillRect(x - 10, y - 12, 20, 1.4);
-    // 羽饰
-    ctx.strokeStyle = p.color; ctx.lineWidth = 3.2; ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x, y - 26);
-    ctx.quadraticCurveTo(x - 7, y - 41, x - 16, y - 35);
-    ctx.stroke();
+    // 开火瞬间：弓弦处一圈细光（不再是圆球，避免"炸弹/苹果"感）
+    if (t.flash > 0) {
+        ctx.globalAlpha = Math.min(1, t.flash * 13);
+        ctx.strokeStyle = p.color; ctx.lineWidth = 2.2;
+        ctx.beginPath(); ctx.arc(0, nock, 7 + g * 4, 0, TAU); ctx.stroke();
+        ctx.globalAlpha = 1;
+    }
+    ctx.restore();
 }
 
 /* --- 子弹 --- */
@@ -2730,7 +2902,7 @@ function render() {
     for (let i = 0; i < 2; i++) drawTowerBase(i);
     drawLoot();
     drawUlt();
-    for (const p of G.players) drawArcher(p);
+    for (const p of G.players) drawBallista(p);
     drawBullets();
     drawParts();
     for (const p of G.players) drawSideFx(p);
