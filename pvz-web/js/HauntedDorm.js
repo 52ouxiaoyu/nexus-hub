@@ -485,7 +485,7 @@ class HauntedDorm {
         this.initDOM();
         this.generateMap();
         this._ensureSafeSpawn(); // v4.0.16：出生点防墙里（地图生成后校验，此时 walls 才有数据）
-        this._placeHomeSpawn();  // v4.0.107：植物方出生在最近空房门外一格（原出生在地图正中，最近房门 468px）
+        this._placeHomeSpawn();  // v4.0.108：植物方出生在最近空房的【门外空地】（场外），必须自己走进房间
         this.bindInput();
         this._updateGhostChip();
         this._refreshHud();
@@ -498,7 +498,11 @@ class HauntedDorm {
                 const tip = document.createElement('div');
                 tip.id = 'dorm-start-tip';
                 tip.style = "position:absolute; left:50%; top:63%; transform:translate(-50%,-50%); color:#ffd54a; font-size:22px; font-weight:bold; text-shadow:2px 2px 0 #000, 0 0 12px rgba(0,0,0,.8); z-index:9000; pointer-events:none; transition:opacity .6s; white-space:nowrap;";
-                tip.innerText = '🏠 点脚下地板种一株植物 → 开始产阳光';
+                // v4.0.108：按「人此刻在哪」给文案——出生点在屋外，但也可能提示时才刚跑进屋
+                const outside = !this._insideRoom(Math.floor(this.player.x / 80), Math.floor(this.player.y / 80));
+                tip.innerText = outside
+                    ? '🏠 你在屋外 → 走进最近的空房，点地板种植物才有阳光'
+                    : '🏠 点脚下地板种一株植物 → 开始产阳光';
                 document.body.appendChild(tip);
                 setTimeout(() => { tip.style.opacity = '0'; setTimeout(() => tip.remove(), 700); }, 3400);
             }, 2600);
@@ -1385,10 +1389,22 @@ class HauntedDorm {
         for (const p of this.allPlayers) fix(p);
     }
 
-    // v4.0.107：植物方开局落点 = 最近空房门外一格。
-    // 实测（v4.0.106）：出生点在地图正中，最近房门 468px，玩家原地不动 255 秒阳光只有 12——而阳光只能由房内植物产出。
+    // v4.0.108：出生点 = 场外（房门外空地）——用户实报「出生点直接在自己家里」。
+    // 落点规则：最近空房的房门 → 朝门外方向第 3 格（240px）的露天走道；
+    // 硬约束：_insideRoom 必须为 null（绝不会落在任何房间内部）、非墙格、无碰撞、无植物。
     _placeHomeSpawn() {
         if (this.isZombieFaction || !this.rooms || this.rooms.length === 0) return;
+        const OUT_STEPS = 3;   // 门外第 3 格 = 场外：一眼能看到房门，又不算进屋
+        const okSpot = (c, r) => {
+            if (c < 0 || r < 0 || c >= this.cols || r >= this.rows) return false;
+            const x = c * this.gridSize + 40, y = r * this.gridSize + 40;
+            if (x < 60 || y < 60 || x > this.worldWidth - 60 || y > this.worldHeight - 60) return false;
+            if (this.walls.has(c + ',' + r)) return false;
+            if (this._insideRoom(c, r)) return false;   // 铁律：出生点必须在房间外
+            if (this.checkCollision(x, y, 14)) return false;
+            if (this.getPlantAt && this.getPlantAt(x, y)) return false;
+            return true;
+        };
         const used = [];
         for (const p of this.allPlayers) {
             if (!p || p.dead) continue;
@@ -1401,24 +1417,38 @@ class HauntedDorm {
             }
             if (!best) continue;
             used.push(best);
-            // v4.0.107：落点是「门内第一格」而不是门外走廊——走廊格不能种植（openPlantMenu 会报"只能种房内"），
-            // 落在门内玩家一步都不用走就能点地板种下第一株
+            // 房门朝外的方向（门在房间上方 → 向上；下方 → 向下；左右同理）
             const dr = best.tpl.door;
-            let cx = best.doorCol, cy = best.doorRow, ox = 0, oy = 0;
-            if (dr.r === -1) oy = 1;
-            else if (dr.r >= best.h) oy = -1;
-            else if (dr.c === -1) ox = 1;
-            else if (dr.c >= best.w) ox = -1;
-            let sx = (cx + ox) * 80 + 40, sy = (cy + oy) * 80 + 40;
-            let guard = 0;
-            while (guard++ < 4 && (this.walls.has(`${cx + ox},${cy + oy}`) || this.checkCollision(sx, sy, 14))) {
-                ox *= 2; oy *= 2;
-                sx = (cx + ox) * 80 + 40; sy = (cy + oy) * 80 + 40;
+            let ox = 0, oy = 0;
+            if (dr.r === -1) oy = -1;
+            else if (dr.r >= best.h) oy = 1;
+            else if (dr.c === -1) ox = -1;
+            else if (dr.c >= best.w) ox = 1;
+            let spot = null;
+            // 先按理想距离 3 格取，被挡就退到 2/4/1 格
+            for (const step of [OUT_STEPS, 2, 4, 1]) {
+                const c = best.doorCol + ox * step, r = best.doorRow + oy * step;
+                if (okSpot(c, r)) { spot = { x: c * 80 + 40, y: r * 80 + 40 }; break; }
             }
-            if (this.checkCollision(sx, sy, 14)) { sx = best.frontX; sy = best.frontY; }
-            p.x = sx; p.y = sy;
-            p._homeRoom = best; // 仅用于开局引导；房间归属仍靠种下第一株植物
+            // 兜底：以门前格为圆心向四周环形找场外空地（走道被建筑夹死时）
+            if (!spot) {
+                outer:
+                for (let rad = 1; rad <= 6; rad++) {
+                    for (let a = 0; a < 16; a++) {
+                        const ang = a / 16 * Math.PI * 2;
+                        const c = Math.round(best.frontX / 80 + Math.cos(ang) * rad);
+                        const r = Math.round(best.frontY / 80 + Math.sin(ang) * rad);
+                        if (okSpot(c, r)) { spot = { x: c * 80 + 40, y: r * 80 + 40 }; break outer; }
+                    }
+                }
+            }
+            if (!spot) spot = { x: best.frontX + ox * 80, y: best.frontY + oy * 80 }; // 极端兜底：门外一格
+            p.x = spot.x; p.y = spot.y;
+            p._homeRoom = best;                                        // 仅用于开局引导；房间归属仍靠种下第一株植物
+            p._homeDoor = { x: best.frontX, y: best.frontY };           // 房门坐标（引导文案/镜头朝向备用）
         }
+        // v4.0.108：玩家还没进门之前，这几间房先给玩家留着（AI 45 秒内不认领）
+        this._homeReservedUntil = 45000;
     }
 
     _announce(text, sfx, priority = false) {
@@ -1478,6 +1508,7 @@ class HauntedDorm {
                     p.targetDrop = null;
                     if (!p.room) {
                         const cand = this.rooms.filter(r => (r.owners || []).length < (r.capacity || 1) &&
+                            !this._roomReservedForHuman(r, p) &&
                             !(r.owners || []).some(o => (o === this.player || o === this.player2) && o !== p));
                         if (cand.length > 0) {
                             cand.sort((a, b) =>
@@ -1564,7 +1595,8 @@ class HauntedDorm {
                             if (ai.room === oldRm) ai.room = null;
                         }
                         if (!ai.newRoom) {
-                            const cands = this.rooms.filter(r => r !== oldRm && (!r.owners || r.owners.length < (r.capacity || 1)));
+                            const cands = this.rooms.filter(r => r !== oldRm && (!r.owners || r.owners.length < (r.capacity || 1)) &&
+                                !this._roomReservedForHuman(r, ai));
                             if (cands.length === 0) { ai.fleeing = false; ai.fled = false; ai.fleeFrom = null; continue; }
                             ai.newRoom = cands[Math.floor(Math.random() * cands.length)];
                             const p0 = this._findPath(ai.x, ai.y, ai.newRoom.frontX, ai.newRoom.frontY);
@@ -2281,8 +2313,22 @@ class HauntedDorm {
         if (p.vy) p.vy = 0;
     }
 
+    // v4.0.108：开局房屋预约——玩家出生在屋外，落点对应的空房是他要走进的那间。
+    // 开局 45 秒内 AI 不得抢先认领（否则玩家刚走到门口就发现房被别人占了，出生点「场外」直接变成无房可进）。
+    _roomReservedForHuman(rm, self) {
+        if (!rm) return false;
+        if (this.gameTime > (this._homeReservedUntil || 0)) return false;
+        for (const p of this.allPlayers) {
+            if (!p || p.isAi || p.dead || p._afkHost) continue;
+            if (p === self) continue;
+            if (p._homeRoom === rm && !p.room && !p.room2) return true;
+        }
+        return false;
+    }
+
     _claimRoom(p, rm) {
         if (!rm || this._ownsRoom(p, rm)) return true;
+        if ((p.isAi || p._afkHost) && this._roomReservedForHuman(rm, p)) return false;
         if (rm.owners && !rm.owners.includes(p) && rm.owners.length >= (rm.capacity || 1)) return false;
         if (this._ownedRooms(p).length >= 2) return false;
         if (rm.owners && rm.owners.length >= (rm.capacity || 1)) return false;
@@ -2821,7 +2867,7 @@ class HauntedDorm {
             }
         }
     }
-    // 跳板落点：v4.0.74 改为玩家出生点（地图中心防墙校正后的坐标）——不再落到门口被僵尸堵抓
+    // 跳板落点：v4.0.74 改为玩家出生点——v4.0.108 起出生点本身就在屋外空地，跳板即为「逃出房门」
     _jumpPadTarget(rm) {
         const sp = this.spawnPoint || { x: Math.round(this.worldWidth / 2), y: Math.round(this.worldHeight / 2) };
         // 兜底：出生点被植物/墙占时向外螺旋找空位（正常不会发生）
@@ -5640,6 +5686,7 @@ class HauntedDorm {
             // v4.0.103：托管真人兜底——无房、无路、无目标（激活时指派失败/原房没了）→ 每次评估进最近的可认领房，绝不站走廊发呆
             if (isHosted && !ai.room && !ai.targetRoom && (!ai.path || ai.path.length === 0)) {
                 const cand = this.rooms.filter(r => (r.owners || []).length < (r.capacity || 1) &&
+                    !this._roomReservedForHuman(r, ai) &&
                     !(r.owners || []).some(o => (o === this.player || o === this.player2) && o !== ai));
                 if (cand.length > 0) {
                     cand.sort((a, b) =>
@@ -5721,6 +5768,7 @@ class HauntedDorm {
                             ai.speed = 200;
                             this._pinToBed(ai, ai.targetRoom);
                         } else if (ai.targetRoom.owners.length < ai.targetRoom.capacity && !rmBlockedByPlayer &&
+                            !this._roomReservedForHuman(ai.targetRoom, ai) &&
                             !ai.targetRoom.owners.some(o => (o === this.player || o === this.player2) && o !== ai)) {
                             ai.targetRoom.owners.push(ai);
                             ai.room = ai.targetRoom;

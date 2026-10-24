@@ -52,9 +52,11 @@ const ok = (c, m) => { if (c) { pass++; console.log('  PASS ' + m); } else { fai
     return { sun: g.player.sun, d: bestD, inRm, sx: g.player.x, sy: g.player.y };
   });
   ok(t1.sun === 50, `T1a 植物方开局 ☀50（实测 ${t1.sun}）`);
-  ok(t1.d <= 180 && t1.inRm, `T1b 出生点就在房门内（离门 ${t1.d.toFixed(0)}px，在房间内=${t1.inRm}，原出生在地图正中 468px 外）`);
+  // v4.0.108：出生点已从「门内第一格」改为「门外第 3 格空地」——此处按新版断言（旧版断言语义已反转）
+  ok(t1.d >= 160 && t1.d <= 360 && !t1.inRm,
+     `T1b 出生点在房门外空地（离门 ${t1.d.toFixed(0)}px，在房间内=${t1.inRm}）`);
 
-  // ---------- T1c 原地不动就能点脚下地板开建造菜单 ----------
+  // ---------- T1c 场外点脚下不弹菜单（必须先走进房子）----------
   const t1c = await page.evaluate(() => {
     const g = window.game;
     g._closePlantMenu();
@@ -62,14 +64,26 @@ const ok = (c, m) => { if (c) { pass++; console.log('  PASS ' + m); } else { fai
     g.openPlantMenu(g.player.x - g.player.camX + rect.left, g.player.y - g.player.camY + rect.top);
     const open = !!g.menuOpen;
     g._closePlantMenu();
-    return { open };
+    // 走进门内第一格再试
+    const rm = g.player._homeRoom, dr = rm.tpl.door;
+    let ox = 0, oy = 0;
+    if (dr.r === -1) oy = 1; else if (dr.r >= rm.h) oy = -1;
+    else if (dr.c === -1) ox = 1; else if (dr.c >= rm.w) ox = -1;
+    g.player.x = (rm.doorCol + ox) * 80 + 40;
+    g.player.y = (rm.doorRow + oy) * 80 + 40;
+    g.openPlantMenu(g.player.x - g.player.camX + rect.left, g.player.y - g.player.camY + rect.top);
+    const openInside = !!g.menuOpen;
+    g._closePlantMenu();
+    return { open, openInside };
   });
-  ok(t1c.open, 'T1c 站在出生点直接点脚下就能开建造菜单（原站在走廊会提示"只能种房内"）');
+  ok(t1c.open === false && t1c.openInside === true,
+     `T1c 场外点脚下不弹菜单（${t1c.open}），走进门内一格就能种（${t1c.openInside}）`);
 
   // ---------- T2 开局引导飘字（v4.0.107：延后到 2.6 秒，避开开局播报）----------
   await sleep(3200);
   const t2 = await page.evaluate(() => document.body.innerText);
-  ok(/种一株植物/.test(t2), 'T2 开局引导文案出现（"点脚下地板种一株植物 → 开始产阳光"）');
+  // v4.0.108：提示文案按「人此刻在屋外/屋内」动态给；此处前面已把玩家挪进门内，故命中「点脚下」分支
+  ok(/走进|点脚下/.test(t2), `T2 开局引导文案出现（实测："${t2}"）`);
 
   // ---------- T3 阳光袋：击杀掉落 + 拾取入账 ----------
   const t3 = await page.evaluate(async () => {
