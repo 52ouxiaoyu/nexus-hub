@@ -115,7 +115,7 @@
 <body>
 <div id="wrap">
     <canvas id="cv" width="1280" height="720"></canvas>
-    <div class="ver">v4.3.0 · 双人比分</div>
+    <div class="ver">v4.4.0 · 纯键盘</div>
 
     <!-- 主菜单 -->
     <div id="menu" class="overlay">
@@ -133,7 +133,7 @@
                     <div class="kd"><kbd>←</kbd><kbd>→</kbd> 转动炮口 · <kbd>↑</kbd> 换卡 · <kbd>↓</kbd> 选中</div>
                 </div>
             </div>
-            <div class="tip">升级<b>不再暂停</b>：卡片浮在各自 HUD 下方，<b>4.6 秒</b>后自动帮你选最优的那张。<br>两座塔<b>同时打同一只</b>会触发<b style="color:#ffd76a">合击</b>（该目标受创 ×2.1）—— 这是唯一能超过 5 分钟的办法。<br>前 3 分钟你会强得很快，第 4 分钟开始敌人才真正发力。全程<b>不用鼠标</b>。</div>
+            <div class="tip">升级<b>不再暂停</b>：卡片浮在各自 HUD 下方，<b>4.6 秒</b>后自动帮你选最优的那张。<br>两座塔<b>同时打同一只</b>会触发<b style="color:#ffd76a">合击</b>（该目标受创 ×2.1）—— 这是唯一能超过 5 分钟的办法。<br>前 3 分钟你会强得很快，第 4 分钟开始敌人才真正发力。全程<b>纯键盘</b>，鼠标<b>不能</b>操作炮台。</div>
             <div style="margin:16px 0 4px;">
                 <button class="btn green big" id="btnStart">开始守卫 <span class="kc">Enter</span></button>
             </div>
@@ -159,7 +159,8 @@
                 ⚠️ 突发危机：兽潮 / 史莱姆王 / 酸雨 / 暗夜 / 狂暴 / 重甲突袭，越往后来得越勤<br>
                 👑 每 <b>75 秒</b> 一只史莱姆王，打死它 <b style="color:#45e08a">修墙 18%</b>；补给箱也修墙<br>
                 ⏩ <kbd>1</kbd>~<kbd>5</kbd> <b>调速</b>，炮台强了直接开到 ×5（计时也一起快，但成绩按游戏内时间算）<br>
-                🕹️ 全<b>键盘</b>：<kbd>Enter</kbd> 开始/重开 · <kbd>P</kbd>/<kbd>Esc</kbd> 暂停 · <kbd>F</kbd> 全屏
+                🕹️ 全<b>键盘</b>：<kbd>Enter</kbd> 开始/重开 · <kbd>P</kbd>/<kbd>Esc</kbd> 暂停 · <kbd>F</kbd> 全屏<br>
+                🚫 鼠标/触屏<b>不能</b>瞄准，也不会抢回 AI 托管 —— 想接管就按键
             </div>
             <div style="margin-top:14px;"><button class="btn" id="btnHelpBack">返 回 <span class="kc">Esc</span></button></div>
         </div>
@@ -189,13 +190,13 @@
 
 <script>
 "use strict";
-/* ================= 向史莱姆开炮 v4.3.0 · 无尽守卫（纯单局 · 升级不暂停） ================= */
+/* ================= 向史莱姆开炮 v4.4.0 · 无尽守卫（纯单局 · 升级不暂停） ================= */
 const W = 1280, H = 720;
 const WALL_TOP = 596;          // 城墙顶面
 const TOWER_X = [206, 1074];   // 两座塔的中心 x
 const TOWER_Y = 646;           // 塔心 y（俯视圆塔）
 const PIVOT_Y = 630;           // 炮口旋转枢轴 y（在塔心偏上）
-const VERSION = 'v4.3.0';
+const VERSION = 'v4.4.0';
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -643,27 +644,10 @@ function releaseAll() {
 window.addEventListener('blur', releaseAll);
 document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
 
-/* ---------- 鼠标：瞄准左塔 / 点卡 ---------- */
-let mouseAimT = 0;
-function canvasPos(e) {
-    const r = cv.getBoundingClientRect();
-    const cx = (e.touches ? e.touches[0].clientX : e.clientX);
-    const cy = (e.touches ? e.touches[0].clientY : e.clientY);
-    return { x: (cx - r.left) / r.width * W, y: (cy - r.top) / r.height * H };
-}
-function onPointerMove(e) {
-    if (!G || state !== 'PLAYING') return;
-    const c = canvasPos(e);
-    const t = G.players[0].tower;
-    const a = Math.atan2(c.x - t.x, t.py - c.y);   // 0 = 正上
-    t.ang = clamp(a, -ANG_MAX, ANG_MAX);
-    t.targetAng = t.ang;
-    mouseAimT = 0.25;
-    markActive(0);
-}
-cv.addEventListener('mousemove', onPointerMove);
-cv.addEventListener('touchstart', e => { e.preventDefault(); onPointerMove(e); }, { passive: false });
-cv.addEventListener('touchmove', e => { e.preventDefault(); onPointerMove(e); }, { passive: false });
+/* ---------- 纯键盘：画布不接受任何指针输入（鼠标/触摸都不控塔） ----------
+   炮口角度只由键盘（P1 A/D · P2 ←/→）与 AI 托管改变。
+   v4.4.0 起移除 mousemove/touchstart/touchmove 监听：
+   鼠标划过画布不再抢左塔、也不会把 AI 托管拽回手动。 */
 
 /* ---------- 数值 ---------- */
 function dmgBase(p) { return 7.5 * (1 + p.lv.atk * 0.28); }
@@ -872,7 +856,6 @@ function updateTowers(dt, dtReal) {
             }
         }
     }
-    mouseAimT = Math.max(0, mouseAimT - dt);
 }
 
 /* ---------- 命中 / 击杀 ---------- */
