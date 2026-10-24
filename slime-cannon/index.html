@@ -160,6 +160,7 @@
                 🎯 反应强度随<b>两边元素强度之和</b>上涨（合计 6 级 ×1.66 → 双方各自满系 18 级 ×4.96），所以两个人都要点元素，一个人点没用<br>
                 ⚡ 另有<b style="color:#ffd76a">合击</b>：两塔 2 秒内打中同一只 → 受创 <b>×2.6</b>；和元素反应可以叠加<br>
                 🎯 箭矢<b style="color:#5ee6ff">微微吸附</b>：方向大致对上了，会自己拐一点点去咬住目标<br>
+                ♾️ <b>攻速/威力无上限</b>：淬火箭矢与速射机簧是<b>无限级</b>，升到后期也不会只剩修墙——威力每级 ×1.22、射速每级 ×1.08，永不满级<br>
                 🔒 <b>升级有律</b>：第一次点哪系元素就<b>锁定哪系</b> —— 之后卡坞<b>只弹本系</b>（另一系永远消失），本系每轮保底一张；弹道颜色/形状从一而终，不会再"点了冰弹出来却是火球"<br>
                 🌟 <b>三阶登峰</b>：每系共 <b>9 级</b> —— 附魔升满 <b>4 级</b> 解锁「之心」进阶卡（3 级），进阶满解锁「形态」终阶卡（2 级）；每一级都实打实加强冻结/灼烧/连锁/反应强度<br>
                 💥 击杀累积<b style="color:#ffd76a">连击</b>，连击越高射速越快；双塔伤害共同充能<b>共鸣槽</b>，满了自动放<b style="color:#7df9ff">双子贯穿光束</b> —— 光束<b>实时跟随炮口</b>，A/D 指哪照哪，命中附带各自元素效果<br>
@@ -207,7 +208,7 @@ const WALL_TOP = 596;          // 城墙顶面
 const TOWER_X = [206, 1074];   // 两座塔的中心 x
 const TOWER_Y = 646;           // 塔心 y（俯视圆塔）
 const PIVOT_Y = 630;           // 炮口旋转枢轴 y（在塔心偏上）
-const VERSION = 'v4.7.4';
+const VERSION = 'v4.7.5';
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -335,8 +336,8 @@ function sfx(name) {
 
 /* ---------- 技能卡池 ---------- */
 const SKILLS = [
-    { id: 'rate',   name: '速射机簧', icon: '⏩', max: 5, desc: lv => `射速阶梯 +15% / +28% / +42% / +56% / +70%` },
-    { id: 'atk',    name: '淬火箭矢', icon: '🔥', max: 5, desc: lv => `单发伤害阶梯 +50% / +125% / +230% / +380% / +600%` },
+    { id: 'rate',   name: '速射机簧', icon: '⏩', max: Infinity, desc: lv => `射速 ×${rateMulOf(lv + 1).toFixed(2)} · 无限级，每级继续变快` },
+    { id: 'atk',    name: '淬火箭矢', icon: '🔥', max: Infinity, desc: lv => `伤害 ×${atkMulOf(lv + 1).toFixed(2)} · 无限级，每级继续变猛` },
     { id: 'multi',  name: '分叉射击', icon: '🎯', max: 2, desc: lv => `多射 1 支箭（共 ${lv + 1} 支）` },
     { id: 'pierce', name: '破甲穿云', icon: '➤', max: 4, desc: lv => `穿透 +1 个敌人（${lv + 1} 层）` },
     { id: 'crit',   name: '致命瞄准', icon: '💥', max: 3, desc: lv => `暴击率 +11%，暴击 2.3 倍` },
@@ -429,8 +430,12 @@ const REACT = {
     breach: { name: '破绽', icon: '', col: '#ffffff', shout: '破 绽 ！' },
 };
 /* 阶梯升级：每一级都是跳变，不是线性堆叠 —— 让"升它"这个决定有分量 */
-const ATK_STEP  = [1, 1.50, 2.25, 3.30, 4.80, 7.00];   // v4.7.2 满级 5：Lv4/5 是大跳变，升满就是"威力夸张"
-const RATE_STEP = [1, 1.15, 1.28, 1.42, 1.56, 1.70];   // 射速只温和加长（5.4/s 封顶），密度红线不能破
+const ATK_STEP  = [1, 1.50, 2.25, 3.30, 4.80, 7.00];   // v4.7.2 阶梯保留：Lv4/5 是大跳变
+const RATE_STEP = [1, 1.15, 1.28, 1.42, 1.56, 1.70];   // Lv5 后射速每级只 +8% —— 密度红线不能破，威力走 atk 轴
+// v4.7.5 无限级：用户反馈"后期只剩城墙加固/修复没得选"。威力每级 ×1.22 无限涨，
+// 射速每级 ×1.08 温和跟涨（永不封顶但涨得慢，同屏箭矢不至于又糊成光栅）
+function atkMulOf(lv)  { return lv <= 5 ? ATK_STEP[lv]  : ATK_STEP[5]  * Math.pow(1.22, lv - 5); }
+function rateMulOf(lv) { return lv <= 5 ? RATE_STEP[lv] : RATE_STEP[5] * Math.pow(1.08, lv - 5); }
 
 /* ---------- 无尽模式调参（改难度只动这里） ---------- */
 const TUNE = {
@@ -884,10 +889,10 @@ function dmgBase(p) {
     // 23 × 3.5/s = 80.5 DPS（v4.6 是 12.5 × 6.3 = 78.75）。
     // v4.7.0 把射速再砍 44%：每秒 3.5 支，屏幕上一眼看得出"这一支打到哪"。
     // 伤害走阶梯表（+50% / +125% / +220%），升一级就是一次跳变。
-    return 25 * ATK_STEP[Math.min(p.lv.atk, ATK_STEP.length - 1)] * ELEMS[elemOf(p)].dmgK;
+    return 25 * atkMulOf(p.lv.atk) * ELEMS[elemOf(p)].dmgK;
 }
 function rateOf(p) {
-    let r = 3.2 * RATE_STEP[Math.min(p.lv.rate, RATE_STEP.length - 1)];
+    let r = 3.2 * rateMulOf(p.lv.rate);
     if (p.bufT > 0) r *= 1.15;
     if (G.rageT > 0) r *= 1.10;
     if (G.ultT > 0) r *= 1.35;
@@ -3796,8 +3801,8 @@ function drawDock(i) {
         const nx = p.lv[s.id] + 1;
         const full = nx >= s.max;
         let val = '';
-        if (s.id === 'atk') val = `×${ATK_STEP[Math.min(nx, ATK_STEP.length - 1)].toFixed(2)}`;
-        else if (s.id === 'rate') val = `×${RATE_STEP[Math.min(nx, RATE_STEP.length - 1)].toFixed(2)}`;
+        if (s.id === 'atk') val = `×${atkMulOf(nx).toFixed(2)}`;
+        else if (s.id === 'rate') val = `×${rateMulOf(nx).toFixed(2)}`;
         else if (s.req) val = `强度 ${elemLvOf(p, s.elem) + 1}`;
         else if (s.elem) val = `转${ELEMS[s.elem].name}`;
         else if (s.id === 'multi') val = `${nx + 1} 支`;
@@ -4128,8 +4133,8 @@ function pickCard(i, ci, silent) {
         checkEvos(p);
         // 升级反馈：把"这一级涨了多少"直接写在炮塔上方
         let tail = '';
-        if (s.id === 'atk') tail = ` · 伤害 ×${ATK_STEP[Math.min(p.lv.atk, ATK_STEP.length - 1)].toFixed(2)}`;
-        else if (s.id === 'rate') tail = ` · 射速 ×${RATE_STEP[Math.min(p.lv.rate, RATE_STEP.length - 1)].toFixed(2)}`;
+        if (s.id === 'atk') tail = ` · 伤害 ×${atkMulOf(p.lv.atk).toFixed(2)}`;
+        else if (s.id === 'rate') tail = ` · 射速 ×${rateMulOf(p.lv.rate).toFixed(2)}`;
         else if (s.id === 'multi') tail = ` · 共 ${1 + p.lv.multi} 支`;
         else if (s.id === 'exec') tail = ` · ×${(EXEC.dmgMul + (p.lv.exec + 1) * 1.5).toFixed(1)} / ${EXEC.cd - (p.lv.exec + 1) * 2}s`;
         floatText(TOWER_X[i], PIVOT_Y - 96, `${s.icon} ${s.name} Lv.${p.lv[s.id]}${tail}`, p.color, 13);
