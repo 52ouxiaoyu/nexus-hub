@@ -1,7 +1,8 @@
 /* ============================================================
- * 羊羊叠叠消 Sheep Stack Match  v1.0.0
+ * 羊羊叠叠消 Sheep Stack Match  v1.1.0
  * 玩法：层叠卡牌 + 7 格槽位三消（类羊了个羊玩法，原创实现）
- * 特性：牌局按"消除顺序"发牌，数学上保证有解；无广告，道具免费限量
+ * 特性：L1 教学关（有解发牌）；L2 起地狱难度（三深度带深埋）；
+ *       无广告，道具免费限量
  * 句柄：window.__sheep（自动化测试用）
  * ============================================================ */
 (function () {
@@ -26,12 +27,17 @@ const TYPES = [
   { e: '🌰', c: '#ecdfc8' }, { e: '🌻', c: '#fff3cf' },
 ];
 
-// 关卡配置：L1 新手，L2 起地狱难度递增
+// 关卡配置：L1 新手教学（有解发牌）；L2 起地狱难度（同类三张深埋三个深度带，
+// 还原原版「第一关就是最后一关」的卡关体验）
 function levelConf(lv) {
-  const n = Math.min(45 + (lv - 1) * 30, 150);
-  const types = Math.min(5 + lv, TYPES.length);
-  const layers = Math.min(3 + lv, 9);
-  return { n: Math.round(n / 3) * 3, types, layers,
+  if (lv <= 1) {
+    return { n: 45, types: 4, layers: 3, spread: false,
+             undo: 3, out: 1, shuffle: 1 };
+  }
+  const n = Math.min(120 + (lv - 2) * 15, 150);
+  const types = Math.min(11 + (lv - 2), TYPES.length);
+  const layers = Math.min(7 + (lv - 2), 9);
+  return { n: Math.round(n / 3) * 3, types, layers, spread: true,
            undo: 3, out: 1, shuffle: 1 };
 }
 
@@ -52,11 +58,10 @@ const G = {
 const $ = (s) => document.querySelector(s);
 const board = $('#board'), slotBar = $('#slotBar'), outBar = $('#outBar');
 
-// ---------- 发牌（保证有解）----------
-// positions：分层布局；sortIndex：0 = 最顶层（最先可拿）。
-// 发牌把第 t 组三张放在"消除顺序"上连续的三个位置（sortIndex 3t..3t+2）——
-// 严格按 sortIndex 从小到大拿牌时，任何时刻槽内最多压 1 个待配对子 + 1 张单张，
-// 槽位峰值 ≤ 4 < 7，必有一条通关路径；层内格子随机打散，类型不会扎堆相邻。
+// ---------- 发牌 ----------
+// positions：分层布局；sortIndex：0 = 最顶层（最先可拿），rank = N-1-idx = 消除顺序。
+// 教学关用"连续三元组"（严格按序拿牌槽位峰值 ≤4，保证有解）；
+// 地狱关用"三深度带交错"（同类三张分埋顶/中/底，难度对齐原版第二关）。
 function genLayout(conf) {
   const layers = conf.layers;
   const layPos = [];
@@ -83,20 +88,26 @@ function deal(conf) {
   board.style.height = maxBottom + 'px';
   $('#boardWrap').style.width = (maxRight + 6) + 'px';
 
-  // 1) 各层分配数量（底层多、顶层少）
+  // 1) 各层分配数量（底层多、顶层少），并夹到每层格子容量内
   const L = conf.layers;
   const w = []; let wSum = 0;
   for (let i = 0; i < L; i++) { w.push(1 + (L - 1 - i) * 0.45); wSum += w[i]; }
-  const counts = w.map(x => Math.round(conf.n * x / wSum));
+  const counts = w.map((x, i) =>
+    Math.min(Math.round(conf.n * x / wSum), layPos[i].cells.length));
   let diff = conf.n - counts.reduce((a, b) => a + b, 0);
-  for (let i = 0; diff !== 0; i = (i + 1) % L) {           // 差额回填底层
-    const cap = layPos[i].cells.length - counts[i];
-    if (diff > 0 && cap > 0) { counts[i]++; diff--; }
-    else if (diff < 0 && counts[i] > 0) { counts[i]--; diff++; }
-    if (counts.every((c, j) => c <= layPos[j].cells.length) && diff === 0) break;
+  for (let guard = 0; diff !== 0 && guard < 500; guard++) {
+    let changed = false;
+    if (diff > 0) {          // 差额优先回填底层（剩余容量最大）
+      for (let i = 0; i < L && diff > 0; i++)
+        if (counts[i] < layPos[i].cells.length) { counts[i]++; diff--; changed = true; }
+    } else {                 // 多了就从顶层往下扣
+      for (let i = L - 1; i >= 0 && diff < 0; i--)
+        if (counts[i] > 0) { counts[i]--; diff++; changed = true; }
+    }
+    if (!changed) break;     // 容量耗尽，接受少量缺牌（仍保证 3 的倍数）
   }
 
-  // 2) 收集位置（底层→顶层），打乱层内格子
+  // 2) 收集位置（底层→顶层），打乱层内格子；总数强制为 3 的倍数
   const positions = [];
   for (let i = 0; i < L; i++) {
     const lp = layPos[i];
@@ -104,17 +115,24 @@ function deal(conf) {
     for (const [c, r] of cells)
       positions.push({ x: lp.dx + c * PITCH, y: lp.dy + r * PITCH, layer: i });
   }
+  positions.length = positions.length - (positions.length % 3);
   // positions[0..] = 底层先入列；sortIndex = N-1-idx → 顶层最先
   const N = positions.length;
   positions.forEach((p, idx) => { p.sortIndex = N - 1 - idx; });
 
-  // 3) 类型：连续三元组（消除顺序上相邻），类型表打散后循环取用
+  // 3) 类型分配（K = N/3 组，类型表打散后循环取用）
+  //    - 教学关（spread=false）：连续三元组——消除顺序上相邻，严格按序拿牌必通关
+  //    - 地狱关（spread=true）：第 t 组占消除顺序 rank ∈ {t, t+K, t+2K}，
+  //      即顶/中/底三个深度带各埋一张——手里一对要等埋在最底下的第三张
+  const K = N / 3;
   const shuffledTypes = Array.from({ length: conf.types }, (_, i) => i)
     .sort(() => Math.random() - .5);
   const finalType = new Array(N);
-  for (let t = 0; t < N / 3; t++) {
+  const put = (rank, type) => { finalType[N - 1 - rank] = type; }; // rank=消除序
+  for (let t = 0; t < K; t++) {
     const type = shuffledTypes[t % conf.types];
-    finalType[3 * t] = type; finalType[3 * t + 1] = type; finalType[3 * t + 2] = type;
+    if (conf.spread) { put(t, type); put(t + K, type); put(t + 2 * K, type); }
+    else { put(3 * t, type); put(3 * t + 1, type); put(3 * t + 2, type); }
   }
 
   // 4) 生成牌
