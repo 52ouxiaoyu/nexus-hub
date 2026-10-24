@@ -604,7 +604,7 @@
                 <div id="hud-p1" class="player-hud">
                     <div class="hud-ctrl" style="color:#4da6ff;">
                         <div>【P1 控制】移动: W/A/S/D ｜ 建造/确认: F或J</div>
-                        <div>浇水: 空格 ｜ 取消: 右Alt或G ｜ 技能: M ｜ 修门: N</div>
+                        <div>浇水: 空格 ｜ 取消: 右Alt或G ｜ 技能: M ｜ 修门: N ｜ 暂停: P</div>
                     </div>
                     <div style="display:flex; gap:18px; align-items:center;">
                         <span>阳光: <span id="sun1" class="sun-text">0</span></span>
@@ -632,7 +632,7 @@
                 <div id="p2-hud" class="player-hud" style="display:none; right:20px; left:auto; text-align: right;">
                     <div class="hud-ctrl" style="color:#4fc3f7;">
                         <div>【P2 控制】移动: 方向键 ｜ 建造/确认: 1</div>
-                        <div>浇水: 0 ｜ 取消: 2或回车 ｜ 技能: 3或/键 ｜ 修门: 加号键</div>
+                        <div>浇水: 0 ｜ 取消: 2或回车 ｜ 技能: 3或/键 ｜ 修门: 加号键 ｜ 暂停: P</div>
                     </div>
                     <div style="display:flex; gap:18px; align-items:center; justify-content: flex-end;">
                         <span>阳光: <span id="sun2" class="sun-text">0</span></span>
@@ -688,7 +688,7 @@
                                 </div>
                             </div>
                             <b style="color:#ffe14a;">🎮 操作控制</b><br>
-                            · <b>P1 控制</b>：<b>[W/A/S/D] 移动</b> | <b>[F 或 J] 呼出菜单/确认</b> | <b>[空格] 浇水</b> | <b>[G 或 右Alt] 关闭菜单</b> | <b>[M键] 角色技能</b> | <b>[N键] 修门（回25%，CD60秒）</b> | <b>[B键] 倭瓜技能</b> | <b>[A/D] 菜单切栏</b><br>
+                            · <b>P1 控制</b>：<b>[W/A/S/D] 移动</b> | <b>[F 或 J] 呼出菜单/确认</b> | <b>[空格] 浇水</b> | <b>[G 或 右Alt] 关闭菜单</b> | <b>[M键] 角色技能</b> | <b>[N键] 修门（回25%，CD60秒）</b> | <b>[B键] 倭瓜技能</b> | <b>[A/D] 菜单切栏</b> | <b>[P键] 暂停</b><br>
                             &nbsp;&nbsp;<i>* 单人模式也可用鼠标点击地面呼出菜单、点击植物升级/拆除。</i><br>
                             · <b>P2 控制</b>：<b>[方向键] 移动</b> | <b>[1 或 右Shift] 呼出菜单/确认</b> | <b>[0键] 浇水</b> | <b>[2 或 回车] 关闭菜单</b> | <b>[3 或 /键] 角色技能</b> | <b>[加号键] 修门</b> | <b>[5键] 倭瓜技能</b> | <b>[←/→] 菜单切栏</b><br>
                             · <b>僵尸阵营（扮演僵尸时）</b>：<b>[W/A/S/D] 移动</b> | <b>[M键] 狂暴冲刺(5秒极速免疫)</b> | <b>[G键] 切换优先猎杀目标（令旗指向谁、尸潮集火谁）</b> | <b>[H键] 号令尸潮（一次 3~6 只小鬼僵尸，CD 60 秒）</b>。<i>获胜条件：啃破幸存者的大门、吃掉所有植物。</i><br>
@@ -734,6 +734,7 @@
 
                             <b style="color:#9dff6b;">🔧 门板法则（v4.0.48）</b><br>
                             · <b>大门被咬毁即永久消失</b>——无法重建、不会自动修复，僵尸啃门时不会回血！门口格空出后可改种地刺/土豆雷作最后防线。<br>
+                            · <b>暂停（P 键）</b>：随时按 <b>[P键]</b> 进入绝对暂停——<b>阳光产出、植物射击、僵尸行动与啃咬、人机 AI、祝福倒计时全部冻结</b>（画面停在原地让你从容观察），暂停期间<b>无法移动、无法种植/升级/拆除、技能无效</b>；再按一次 <b>[P键]</b> 继续。双人模式任意一方按 P 均可暂停/继续。<br>
                             · <b>修门技能</b>：P1 按 <b>[N键]</b>、P2 按 <b>[加号键]</b>，给自家门板回复 <b>25% 总血量</b>，CD 60 秒；门板满血或已毁时使用不消耗 CD。<br>
                         </div>
                         <div style="text-align:center; margin-top:12px; flex:none;">
