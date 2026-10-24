@@ -115,7 +115,7 @@
 <body>
 <div id="wrap">
     <canvas id="cv" width="1280" height="720"></canvas>
-    <div class="ver">v4.5.1 · 降噪</div>
+    <div class="ver">v4.6.0 · 漫画王</div>
 
     <!-- 主菜单 -->
     <div id="menu" class="overlay">
@@ -192,13 +192,13 @@
 
 <script>
 "use strict";
-/* ================= 向史莱姆开炮 v4.5.1 · 无尽守卫（纯单局 · 升级不暂停） ================= */
+/* ================= 向史莱姆开炮 v4.6.0 · 无尽守卫（纯单局 · 升级不暂停） ================= */
 const W = 1280, H = 720;
 const WALL_TOP = 596;          // 城墙顶面
 const TOWER_X = [206, 1074];   // 两座塔的中心 x
 const TOWER_Y = 646;           // 塔心 y（俯视圆塔）
 const PIVOT_Y = 630;           // 炮口旋转枢轴 y（在塔心偏上）
-const VERSION = 'v4.5.1';
+const VERSION = 'v4.6.0';
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -277,6 +277,17 @@ function sfx(name) {
             if (now - lastHitSfx < 45) return; lastHitSfx = now;
             burst(.045, .05, 2600);
             break;
+        case 'scream': {
+            // 史莱姆的惨叫：一路滑下去 + 颤 + 结尾"噗"
+            tone(780, .55, 'sawtooth', .13, 300);
+            tone(560, .75, 'square', .07, 110, .1);
+            tone(420, .5, 'triangle', .05, 70, .34);
+            burst(.5, .13, 900, .62);
+            break;
+        }
+        case 'taunt':
+            tone(rand(420, 520), .09, 'triangle', .05, 640);
+            break;
         case 'kill':
             if (now - lastKillSfx < 70) return; lastKillSfx = now;   // 倍速下防音频节点爆炸
             burst(.14, .11, 1700); tone(240, .1, 'triangle', .05, 90);
@@ -337,12 +348,12 @@ const EVOLUTIONS = [
 
 /* ---------- 敌人 ---------- */
 const ETYPES = {
-    small:  { hp: 14,  spd: 82, r: 13, bite: 3,  xp: 1, coin: 1, w: 0.55, col: '#8ce86a', col2: '#4fae35' },
-    basic:  { hp: 38,  spd: 58, r: 20, bite: 7,  xp: 2, coin: 2, w: 1.0,  col: '#7ee36a', col2: '#43993a' },
-    big:    { hp: 150, spd: 44, r: 34, bite: 15, xp: 6, coin: 6, w: 2.0,  col: '#63d0ff', col2: '#2b8fc9', split: 3 },
-    spiky:  { hp: 105, spd: 54, r: 25, bite: 20, xp: 5, coin: 5, w: 1.7,  col: '#ff9a5c', col2: '#c95d2a' },
-    shield: { hp: 130, spd: 42, r: 27, bite: 11, xp: 6, coin: 6, w: 1.8,  col: '#b98cff', col2: '#7a4bd0', shield: 70 },
-    flyer:  { hp: 46,  spd: 106, r: 15, bite: 0, xp: 3, coin: 3, w: 1.2,  col: '#ff8fd0', col2: '#c44b93', fly: true },
+    small:  { hp: 14,  spd: 64, r: 13, bite: 3,  xp: 1, coin: 1, w: 0.55, col: '#8ce86a', col2: '#4fae35' },
+    basic:  { hp: 38,  spd: 45, r: 20, bite: 7,  xp: 2, coin: 2, w: 1.0,  col: '#7ee36a', col2: '#43993a' },
+    big:    { hp: 150, spd: 34, r: 34, bite: 15, xp: 6, coin: 6, w: 2.0,  col: '#63d0ff', col2: '#2b8fc9', split: 3 },
+    spiky:  { hp: 105, spd: 42, r: 25, bite: 20, xp: 5, coin: 5, w: 1.7,  col: '#ff9a5c', col2: '#c95d2a' },
+    shield: { hp: 130, spd: 33, r: 27, bite: 11, xp: 6, coin: 6, w: 1.8,  col: '#b98cff', col2: '#7a4bd0', shield: 70 },
+    flyer:  { hp: 46,  spd: 82, r: 15, bite: 0, xp: 3, coin: 3, w: 1.2,  col: '#ff8fd0', col2: '#c44b93', fly: true },
     king:   { hp: 1900, spd: 28, r: 58, bite: 42, xp: 70, coin: 70, w: 6.5, col: '#ff6a6a', col2: '#c62828', boss: true },
 };
 
@@ -379,7 +390,7 @@ const AFFIX_KEYS = ['split', 'shield', 'fast', 'vamp', 'boom'];
 
 /* ---------- 无尽模式调参（改难度只动这里） ---------- */
 const TUNE = {
-    hpA: 1.00,           // 血量倍率 = hpA * (1 + t/hpT) ^ hpE —— 形状直接贴着玩家 DPS 曲线走
+    hpA: 1.66,           // 血量倍率 = hpA * (1 + t/hpT) ^ hpE —— 场上人数砍到四成，单体血 ×2 补回总压力
     hpT: 10, hpE: 2.1,   //  30s→20×  60s→89×  90s→189×  120s→328×  180s→727×  240s→1294×
     hpBell: 2.0,         // 中期额外加厚峰值（让怪群真正压下来，而不是死在出生线上）
     hpBellT: 110,        // 加厚峰值时间
@@ -387,13 +398,13 @@ const TUNE = {
     wallBase: 2800,      // 城墙基础血量：够厚才撑得住"成群压下来"的围攻
     spawnY: 140,         // 出生线：必须落在 HUD 之下，否则整段生命都躲在界面背后
     spawnYJ: 90,         // 出生线随机纵深
-    popBase: 30,         // 场上人数目标：起始
-    popGrow: 2.2,        // 每多少秒 +1 只
-    popMax: 190,         // 人数硬上限
+    popBase: 16,         // 场上人数目标：起始（用户有密集恐惧症，原 30 太满）
+    popGrow: 4.6,        // 每多少秒 +1 只
+    popMax: 74,          // 人数硬上限（原 190 —— 满屏蚂蚁一样，密恐）
     popLate: 190,        // 终末潮起点（秒）
-    popLateK: 0.8,       // 终末潮每秒额外加几只
-    spawnTick: 0.06,     // 出怪判定间隔（秒）
-    spawnBatch: 3,       // 每个判定间隔最多出几只 —— 这是"能不能成群压下来"的总闸门
+    popLateK: 0.30,      // 终末潮每秒额外加几只（数量少，靠血量和 Boss 压）
+    spawnTick: 0.09,     // 出怪判定间隔（秒）—— 0.06 时峰值 50 只/秒，整屏会"喷"出来
+    spawnBatch: 2,       // 每个判定间隔最多出几只（峰值 22 只/秒，够压但不再爆发）
     spawnBase: 0.60,     // 初始出怪间隔（秒）
     spawnDecay: 0.72,    // 每过 25 秒，间隔 ×0.72
     bossEvery: 75,       // 史莱姆王周期
@@ -404,7 +415,7 @@ const TUNE = {
     crossDur: 2.0,       // 合击加成持续
     crossMul: 2.6,       // 合击伤害倍率（两塔锁同一片时的核心收益）
     cardWindow: 4.6,     // 选卡停留时间（超时自动选）
-    bossK: 60,           // 史莱姆王血量 = 同期普通史莱姆 × bossK（成型期约打 9~14 秒）
+    bossK: 30,           // 史莱姆王血量 = 同期普通史莱姆 × bossK（hpA 翻倍后折半，仍是成型期 9~14 秒）
     bossCrowdCap: 4.5,   // Boss 血量按拥挤度稀释的上限（防止末期一味砍血）
 };
 
@@ -454,6 +465,7 @@ function newGame() {
         crisisSpawn: null, lastCrisis: null, wallHitT: 0,
         cross: 0, crossT: 0, hitstopCd: 0,
         execFx: [], boomQ: [], eliteN: 0,
+        bossRef: null, bubble: null, manga: null, bossDeath: null,   // 漫画演出状态
         speed: speedPref,
     };
 }
@@ -472,13 +484,15 @@ function spawnEnemy(type, opt) {
     const t = ETYPES[type];
     const sc = hpMul() * (opt.hpMul || 1);
     const sizeMul = opt.sizeMul || rand(0.92, 1.1);
-    const x = clamp(opt.x !== undefined ? opt.x : rand(300, W - 300), 120, W - 120);
+    // 110~W-110：铺满整条出生线。原 rand(300, W-300) 只占中间 680px，看着就是"全挤在中路"
+    const x = clamp(opt.x !== undefined ? opt.x : rand(110, W - 110), 96, W - 96);
     const e = {
         type, x, y: opt.y !== undefined ? opt.y : TUNE.spawnY + rand(0, TUNE.spawnYJ),
         baseY: 0, r: t.r * sizeMul,
         hp: t.hp * sc, max: t.hp * sc,
         shield: (t.shield || 0) * sc, shieldMax: (t.shield || 0) * sc,
-        spd: t.spd * spdMul() * rand(.92, 1.1),
+        // 个体差异 ±28%：同一批里脚程能差出 2 倍，前排后排自然错落
+        spd: t.spd * spdMul() * rand(.72, 1.28),
         bite: t.bite * biteMul(),
         xp: t.xp, coin: t.coin, w: t.w,
         col: t.col, col2: t.col2,
@@ -487,6 +501,7 @@ function spawnEnemy(type, opt) {
         hurtT: 0, dead: false, chewT: 0, state: 'drop', crossT: 0, crossToastT: -9,
         kb: 0, kbv: 0, fly: !!t.fly, boss: !!t.boss, split: t.split || 0,
         dark: 0, markT: 0,
+        waitT: opt.wait !== undefined ? opt.wait : rand(0, 0.9),   // 出生后的起跑延迟（错落感）
     };
     if (!e.boss && !opt.noAffix && Math.random() < affixRate(G.time)) makeElite(e);
     G.enemies.push(e);
@@ -512,6 +527,72 @@ function makeElite(e) {
     G.eliteN++;
     return e;
 }
+/* ---------- 史莱姆王的人格与台词（漫画演出：出场 / 嘲讽 / 求饶 / 惨叫） ---------- */
+const BOSS_SHOW = {
+    bubbleDur: 4.2,      // 气泡停留
+    tauntGap: [6.5, 10], // 两次嘲讽的间隔（秒）
+    pleadAt: 0.28,       // 血量低于 28% 时求饶并吓呆
+    freeze: 1.15,        // 求饶时僵住多久（给玩家一个"停手听它说"的空当）
+    lineLen: 13,         // 气泡每行字数
+};
+
+const BOSS_PERSONA = [
+    {
+        id: 'arrogant', tag: '傲慢王', col: '#ff6a6a',
+        enter: '本王驾到。跪迎。',
+        taunts: [
+            '你俩这套合击，排练过吗？',
+            '城墙是纸糊的？本王一嘴一个洞。',
+            '瞄点，别老打我脚边。',
+            '本王现在只是热身。',
+            '刚才那箭，是在给我挠痒？',
+        ],
+        pleads: [
+            '等、等等！本王刚才只是活跃气氛！',
+            '停手！本王可以给你们颁个奖！',
+            '你知道本王是谁吗！……好吧，你不知道。',
+        ],
+        deaths: ['啊啊啊啊——本王不服——', '咕噜……这剧本不对……', '本王还会……再……回……'],
+        cry: '啊——！',
+    },
+    {
+        id: 'coward', tag: '怂包王', col: '#8ce86a',
+        enter: '我、我可是很凶的！真的！',
+        taunts: [
+            '你们别过来啊！我很能打的！',
+            '我数到三你们就完了……三！',
+            '这不是逃跑，这是战术撤退！',
+            '别看我腿在抖，那是兴奋。',
+            '我妈说我是最勇敢的一只。',
+        ],
+        pleads: [
+            '投降！我投降！我是文职的！',
+            '别打了别打了！我还有八百个孩子要养！',
+            '我给你当宠物！我吃得很少的！',
+        ],
+        deaths: ['啊啊啊——妈——！', '咕噜噜……我、我会……回……来的……', '不要啊——我作业还没写完——'],
+        cry: '哇啊啊啊——',
+    },
+    {
+        id: 'influencer', tag: '网红王', col: '#ff8fd0',
+        enter: '家人们谁懂啊，刚出场就被瞄了。',
+        taunts: [
+            '这波啊，这波是送。',
+            '点个关注，下一只更猛。',
+            '对面两位兄弟，配合度满分。',
+            '镜头呢？给我个特写。',
+            '这条弹幕说：你打得过我吗？',
+        ],
+        pleads: [
+            '别打脸！我只有这张脸！',
+            '可以商量！我给你们带货！',
+            '掉粉了掉粉了！求你们别打了！',
+        ],
+        deaths: ['啊啊啊啊——这波录下来了吗——', '家人们……我……先下播了……', '咕噜……点赞过万我就复活……'],
+        cry: '呜哇啊啊——',
+    },
+];
+
 /* 时间驱动：出怪种类、密度、血量全部随时间走，没有关卡断点 */
 function pickKind(t) {
     const r = Math.random();
@@ -525,8 +606,43 @@ function bossHpFor() {
     // 同期小怪血量 × bossK，再按拥挤度稀释。
     // 拥挤度这一项是必须的：怪越多，AI 的射线越被杂兵占满，能分给 Boss 的火力越少。
     // （不除它的时候，150 秒以后出生的那只实测能硬扛 40 秒）
-    const crowd = clamp(G.enemies.length / 60, 1, TUNE.bossCrowdCap);
+    const crowd = clamp(G.enemies.length / 30, 1, TUNE.bossCrowdCap);   // 分母跟着人口上限一起降（74 只 = 2.5）
     return Math.round(hpMul() * ETYPES.basic.hp * TUNE.bossK / crowd);
+}
+/* ---------- 漫画演出：气泡 / 集中线 / 惨叫 ---------- */
+function bossSay(kind) {
+    const b = G.bossRef;
+    if (!b || b.dead || b.remove || b.persona === undefined) return;
+    const P = BOSS_PERSONA[b.persona];
+    let pool, dur;
+    if (kind === 'enter') { pool = [P.enter]; dur = 3.4; }
+    else if (kind === 'plead') { pool = P.pleads; dur = 4.6; }
+    else { pool = P.taunts; dur = BOSS_SHOW.bubbleDur; }
+    G.bubble = { text: pool[Math.floor(Math.random() * pool.length)], kind, t: 0, dur, who: b };
+}
+function updateBossShow(dt) {
+    const b = G.bossRef;
+    if (b && (b.dead || b.remove)) G.bossRef = null;
+    if (G.bubble) { G.bubble.t += dt; if (G.bubble.t >= G.bubble.dur) G.bubble = null; }
+    if (G.manga) { G.manga.t += dt; if (G.manga.t >= G.manga.dur) G.manga = null; }
+    if (G.bossDeath) { G.bossDeath.t += dt; if (G.bossDeath.t >= G.bossDeath.dur) G.bossDeath = null; }
+    const bo = G.bossRef;
+    if (!bo || bo.dead) return;
+    if (bo.freezeT > 0) { bo.freezeT -= dt; return; }      // 求饶时僵住不动
+    // 快死了 → 讨饶（每只 Boss 只求一次）
+    if (!bo.pleaded && bo.hp / bo.max < BOSS_SHOW.pleadAt) {
+        bo.pleaded = true;
+        bo.freezeT = BOSS_SHOW.freeze;
+        bossSay('plead');
+        G.manga = { t: 0, dur: 1.0, kind: 'alert', x: bo.x, y: clamp(bo.y, 120, 420), seed: Math.random() * 99 };
+        sfx('taunt');
+        return;
+    }
+    bo.talkT -= dt;
+    if (bo.talkT <= 0 && bo.hp / bo.max >= BOSS_SHOW.pleadAt + 0.04) {
+        bo.talkT = rand(BOSS_SHOW.tauntGap[0], BOSS_SHOW.tauntGap[1]);
+        bossSay('taunt');
+    }
 }
 function spawnBoss() {
     G.bossN++;
@@ -535,8 +651,17 @@ function spawnBoss() {
     // 血量按"两塔当前 DPS × 秒数"现算：不管玩家 build 成什么样，它都恰好要打 5~9 秒
     k.hp = k.max = bossHpFor();
     k.spd *= 1.06;
+    // —— 漫画演出：随机人格 + 出场集中线 + 开场白 ——
+    k.persona = Math.floor(Math.random() * BOSS_PERSONA.length);
+    k.talkT = rand(4.5, 7);
+    k.pleaded = false;
+    k.freezeT = 0;
+    G.bossRef = k;
+    bossSay('enter');
+    G.manga = { t: 0, dur: 1.5, kind: 'enter', x: k.x, y: clamp(k.y, 120, 400), seed: Math.random() * 99 };
+    sfx('taunt');
     G.bannerT = 1.7;
-    G.bannerText = `👑 第 ${G.bossN} 只史莱姆王`;
+    G.bannerText = `👑 第 ${G.bossN} 只 · ${BOSS_PERSONA[k.persona].tag}`;
     G.bannerSub = '打死它，城墙立刻修回 18%';
     G.shake = Math.max(G.shake, 7);
     sfx('warn');
@@ -556,7 +681,7 @@ function updateSpawner(dt) {
         }
     }
     // 兜底：极端情况下敌人堆满战场，多余的直接从城墙前冒出来
-    if (G.enemies.length > 210) {
+    if (G.enemies.length > 84) {
         if (!G.breachFlash || G.time - G.breachFlash > 8) {
             G.breachFlash = G.time;
             toast('⚠ 防线被淹没 —— 它们在城墙前冒出来！', '#ff7a7a');
@@ -1114,6 +1239,17 @@ function killEnemy(e, p) {
         }
         toast(e.elite ? '💥 分裂词缀：又炸出两只！' : '💥 大史莱姆分裂了！', e.col);
     }
+    // Boss 死 → 漫画爆炸框 + 惨叫
+    if (e.boss && e.persona !== undefined) {
+        const P = BOSS_PERSONA[e.persona];
+        const txt = P.deaths[Math.floor(Math.random() * P.deaths.length)];
+        G.bubble = null;
+        G.bossRef = null;
+        G.bossDeath = { text: txt, cry: P.cry, t: 0, dur: 2.9, col: P.col, tag: P.tag };
+        G.manga = { t: 0, dur: 1.25, kind: 'boom', x: e.x, y: clamp(e.y, 300, 500), seed: Math.random() * 99 };
+        G.bannerT = 0;          // 别让横幅压住惨叫
+        sfx('scream');
+    }
     // Boss 死 → 大奖励
     if (e.boss) {
         for (let i = 0; i < 26; i++) G.coins.push({ x: e.x, y: e.y, vx: rand(-260, 260), vy: rand(-330, -120), t: 3, taken: false, v: 2 });
@@ -1131,7 +1267,7 @@ function killEnemy(e, p) {
     e.remove = true;
 }
 function addXp(n) {
-    G.lvT += n * 0.012;      // 击杀加速升级
+    G.lvT += n * 0.028;      // 击杀加速升级（场上人数砍半，单只权重提高）
     levelCheck();
 }
 function allMaxed(p) { return SKILLS.every(s => p.lv[s.id] >= s.max); }
@@ -1286,6 +1422,10 @@ function updateEnemies(dt) {
         }
         // 冰冻暂停移动
         if (e.frozen > 0) continue;
+        // 起跑延迟：整批怪不再齐步走
+        if (e.waitT > 0) { e.waitT -= dt; continue; }
+        // Boss 求饶时僵在原地（吓软了）
+        if (e.freezeT > 0) continue;
         const sm = (1 - e.slow) * berserk;
         // 飞行单位：波浪推进 + 撞墙自爆
         if (e.fly) {
@@ -1588,6 +1728,8 @@ function update(dt, dtReal) {
         s.r = Math.max(0, s.max * (1 - s.t / (s.dur || .34)));
         if (s.t <= 0) G.shocks.splice(i, 1);
     }
+    // 漫画演出（气泡 / 集中线 / 惨叫）
+    updateBossShow(dt);
     // 处决扇形（真实时间，倍速下也不会一闪而过）
     for (let i = G.execFx.length - 1; i >= 0; i--) {
         G.execFx[i].t -= dtReal;
@@ -1771,6 +1913,184 @@ function drawAffixBadge(kind, cx, cy, r) {
         ctx.beginPath(); ctx.arc(cx, cy, r * .24, 0, TAU); ctx.fill();
     }
     ctx.restore();
+}
+
+/* ================= 漫画演出绘制 ================= */
+function wrapText(str, n) {
+    const out = [];
+    for (let i = 0; i < str.length; i += n) out.push(str.slice(i, i + n));
+    return out;
+}
+/* 集中线：从 Boss 辐射出去的白色楔形（漫画的"冲击"语言） */
+function drawMangaLines(m) {
+    const k = clamp(m.t / m.dur, 0, 1);
+    const a = Math.pow(1 - k, 1.6);
+    if (a <= 0.01) return;
+    ctx.save();
+    ctx.globalAlpha = a * .8;
+    ctx.fillStyle = m.kind === 'boom' ? '#fff3c4' : '#ffffff';
+    for (let i = 0; i < 20; i++) {
+        const f1 = ((i * 7.31 + m.seed * 3.7) % 1);
+        const f2 = ((i * 13.7 + m.seed * 5.1) % 1);
+        const ang = (i / 20) * TAU + m.seed;
+        const w = 0.020 + f1 * 0.024;
+        const r0 = 96 + f2 * 70;
+        const r1 = r0 + 240 + f1 * 400;
+        ctx.beginPath();
+        ctx.moveTo(m.x + Math.cos(ang - w) * r0, m.y + Math.sin(ang - w) * r0 * .82);
+        ctx.lineTo(m.x + Math.cos(ang) * r1, m.y + Math.sin(ang) * r1 * .82);
+        ctx.lineTo(m.x + Math.cos(ang + w) * r0, m.y + Math.sin(ang + w) * r0 * .82);
+        ctx.closePath();
+        ctx.fill();
+    }
+    ctx.restore();
+}
+/* 爆炸框：锯齿星形 + 粗黑边 + 拟声词（Boss 死亡的漫画定格） */
+function drawMangaBurst(m) {
+    const k = clamp(m.t / m.dur, 0, 1);
+    const pop = k < .18 ? 0.5 + 0.5 * (k / .18) : 1;
+    const a = k > .7 ? 1 - (k - .7) / .3 : 1;
+    const R = 80 * pop, r = R * .64, n = 14;
+    ctx.save();
+    ctx.translate(m.x, m.y);
+    ctx.rotate(Math.sin(m.t * 26) * .04);
+    ctx.globalAlpha = clamp(a, 0, 1);
+    ctx.beginPath();
+    for (let i = 0; i < n * 2; i++) {
+        const ang = i / (n * 2) * TAU - Math.PI / 2;
+        const rr = i % 2 ? r : R;
+        i === 0 ? ctx.moveTo(Math.cos(ang) * rr, Math.sin(ang) * rr) : ctx.lineTo(Math.cos(ang) * rr, Math.sin(ang) * rr);
+    }
+    ctx.closePath();
+    ctx.fillStyle = '#fffdf0';
+    ctx.fill();
+    ctx.strokeStyle = '#141821';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    ctx.fillStyle = '#141821';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = 'bold 34px "PingFang SC", -apple-system, sans-serif';
+    ctx.fillText('嘭！', 0, 2);
+    ctx.restore();
+}
+/* 对话气泡：圆角白框 + 黑边 + 尾巴 + 打字机 */
+function drawBubble(bb) {
+    const who = bb.who;
+    if (!who || who.dead || who.remove) return;
+    const k = bb.t / bb.dur;
+    const pop = Math.min(1, bb.t / 0.14);
+    const lines = wrapText(bb.text, BOSS_SHOW.lineLen);
+    const fs = 15, lh = 21;
+    ctx.save();
+    ctx.font = `bold ${fs}px "PingFang SC", -apple-system, sans-serif`;
+    let wMax = 0;
+    for (const l of lines) wMax = Math.max(wMax, ctx.measureText(l).width);
+    const bw = wMax + 26, bh = lines.length * lh + 16;
+    let bx = clamp(who.x - bw / 2, 14, W - bw - 14);
+    let by = who.y - who.r - 40 - bh;
+    let tailDown = true;
+    if (by < 190) { by = who.y + who.r + 26; tailDown = false; }   // 顶部留给横幅，别互相遮挡
+    const cx = clamp(who.x, bx + 22, bx + bw - 22);
+    // 弹出：轻微过冲
+    const sc = 0.82 + 0.18 * pop + (pop >= 1 ? 0 : 0.06);
+    ctx.translate(clamp(who.x, bx + 2, bx + bw - 2), by + (tailDown ? bh : 0));
+    ctx.scale(sc, sc);
+    ctx.translate(-clamp(who.x, bx + 2, bx + bw - 2), -(by + (tailDown ? bh : 0)));
+    // 尾巴
+    ctx.beginPath();
+    if (tailDown) {
+        ctx.moveTo(cx - 11, by + bh - 2);
+        ctx.lineTo(who.x, who.y - who.r - 10);
+        ctx.lineTo(cx + 11, by + bh - 2);
+    } else {
+        ctx.moveTo(cx - 11, by + 2);
+        ctx.lineTo(who.x, who.y + who.r + 8);
+        ctx.lineTo(cx + 11, by + 2);
+    }
+    ctx.closePath();
+    ctx.fillStyle = bb.kind === 'plead' ? '#fff4c9' : '#fffdf5';
+    ctx.fill();
+    // 气泡主体
+    ctx.beginPath();
+    const rr = 9;
+    ctx.moveTo(bx + rr, by);
+    ctx.lineTo(bx + bw - rr, by);
+    ctx.quadraticCurveTo(bx + bw, by, bx + bw, by + rr);
+    ctx.lineTo(bx + bw, by + bh - rr);
+    ctx.quadraticCurveTo(bx + bw, by + bh, bx + bw - rr, by + bh);
+    ctx.lineTo(bx + rr, by + bh);
+    ctx.quadraticCurveTo(bx, by + bh, bx, by + bh - rr);
+    ctx.lineTo(bx, by + rr);
+    ctx.quadraticCurveTo(bx, by, bx + rr, by);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#141821';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    // 文字（打字机）
+    const total = lines.join('').length;
+    let shown = Math.floor(clamp(bb.t / 0.5, 0, 1) * total);
+    ctx.fillStyle = '#141821';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.font = `bold ${fs}px "PingFang SC", -apple-system, sans-serif`;
+    for (let i = 0; i < lines.length; i++) {
+        const l = lines[i];
+        const take = Math.max(0, Math.min(l.length, shown));
+        if (take <= 0) break;
+        ctx.fillText(l.slice(0, take), bx + 13, by + 8 + lh * (i + 0.5));
+        shown -= l.length;
+    }
+    ctx.restore();
+}
+/* 死亡惨叫：屏幕中央的漫画大字 + 下方法台词 */
+function drawBossDeath() {
+    const d = G.bossDeath;
+    if (!d) return;
+    const k = clamp(d.t / d.dur, 0, 1);
+    const a = k < .08 ? k / .08 : (k > .74 ? (1 - k) / .26 : 1);
+    const pop = k < .14 ? .55 + .45 * (k / .14) : 1;
+    const jx = Math.sin(d.t * 52) * (1 - k) * 7;
+    const jy = Math.cos(d.t * 41) * (1 - k) * 5;
+    ctx.save();
+    ctx.globalAlpha = clamp(a, 0, 1);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // 拟声词：粗黑描白
+    ctx.font = `bold 62px "PingFang SC", -apple-system, sans-serif`;
+    ctx.save();
+    ctx.translate(W / 2 + jx, 166 + jy);
+    ctx.rotate(-0.05);
+    ctx.scale(pop * (1 + (1 - k) * .06), pop);
+    ctx.lineWidth = 10; ctx.strokeStyle = '#141821';
+    ctx.strokeText(d.cry, 0, 0);
+    ctx.fillStyle = d.col;
+    ctx.fillText(d.cry, 0, 0);
+    ctx.restore();
+    // 台词条
+    ctx.font = `bold 21px "PingFang SC", -apple-system, sans-serif`;
+    const tw = ctx.measureText(d.text).width + 34;
+    const ty = 220 + jy * .6;
+    const bx0 = W / 2 - tw / 2;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(bx0, ty - 19, tw, 38, 8); else ctx.rect(bx0, ty - 19, tw, 38);
+    ctx.fillStyle = 'rgba(10,14,22,.84)';
+    ctx.fill();
+    ctx.strokeStyle = d.col; ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(d.text, W / 2, ty + 1);
+    // 人格标签
+    ctx.font = 'bold 12px "PingFang SC", sans-serif';
+    ctx.fillStyle = d.col;
+    ctx.fillText('👑 ' + d.tag, W / 2, ty - 30);   // 标签放台词条上方，下方留给 toast
+    ctx.restore();
+}
+function drawBossShow() {
+    if (G.manga) {
+        if (G.manga.kind === 'boom') drawMangaBurst(G.manga);
+        else drawMangaLines(G.manga);
+    }
+    if (G.bubble) drawBubble(G.bubble);
 }
 
 /* 史莱姆身体轮廓：fill 与 stroke 共用同一条路径 */
@@ -3279,10 +3599,12 @@ function render() {
     drawBullets();
     drawParts();
     for (const p of G.players) drawSideFx(p);
+    drawBossShow();
     ctx.restore();
     drawHud();
     drawPlayerPanels();
     drawDocks();
+    drawBossDeath();
     if (G.whiteFlash > 0) {
         ctx.fillStyle = `rgba(255,255,255,${G.whiteFlash * .45})`;
         ctx.fillRect(0, 0, W, H);
@@ -3444,6 +3766,7 @@ function loop(ts) {
     render();
 }
 function updateVisualOnly(dt) {
+    updateBossShow(dt);
     G.shake = Math.max(0, G.shake - dt * 62);
     G.whiteFlash = Math.max(0, G.whiteFlash - dt * 2.6);
     G.time += dt;
@@ -3469,6 +3792,7 @@ window.__slime = {
     spawnBoss, pickKind, updateSpawner, fmtTime, update, allMaxed,
     scoreOf, fmtScore, fmtScoreFull, gameOver, P_COLOR,
     doExec, execTargets, dmgOneOf, EXEC, AFFIX, AFFIX_KEYS, makeElite, affixRate, updateBooms, render, drawSlime,
+    BOSS_PERSONA, BOSS_SHOW, bossSay, updateBossShow, drawBossShow, drawBossDeath, spawnBoss, killEnemy,
     get speed() { return G ? (G.speed || 1) : speedPref; },
     setState(s) { state = s; },
 };
