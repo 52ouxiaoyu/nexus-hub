@@ -115,7 +115,7 @@
 <body>
 <div id="wrap">
     <canvas id="cv" width="1280" height="720"></canvas>
-    <div class="ver">v4.4.0 · 纯键盘</div>
+    <div class="ver">v4.5.0 · 词缀精英</div>
 
     <!-- 主菜单 -->
     <div id="menu" class="overlay">
@@ -126,14 +126,14 @@
             <div class="keyrow">
                 <div class="kbox p1">
                     <div class="kt">🟦 左塔 · P1</div>
-                    <div class="kd"><kbd>A</kbd><kbd>D</kbd> 转动炮口 · <kbd>W</kbd> 换卡 · <kbd>S</kbd> 选中</div>
+                    <div class="kd"><kbd>A</kbd><kbd>D</kbd> 转动炮口 · <kbd>W</kbd> 换卡 · <kbd>S</kbd> 选中<br><kbd>空格</kbd> <b style="color:#ffd76a">处决</b>（90° 扇形 · 12s）</div>
                 </div>
                 <div class="kbox p2">
                     <div class="kt">🟧 右塔 · P2</div>
-                    <div class="kd"><kbd>←</kbd><kbd>→</kbd> 转动炮口 · <kbd>↑</kbd> 换卡 · <kbd>↓</kbd> 选中</div>
+                    <div class="kd"><kbd>←</kbd><kbd>→</kbd> 转动炮口 · <kbd>↑</kbd> 换卡 · <kbd>↓</kbd> 选中<br><kbd>小键盘 Enter</kbd> <b style="color:#ffd76a">处决</b>（90° 扇形 · 12s）</div>
                 </div>
             </div>
-            <div class="tip">升级<b>不再暂停</b>：卡片浮在各自 HUD 下方，<b>4.6 秒</b>后自动帮你选最优的那张。<br>两座塔<b>同时打同一只</b>会触发<b style="color:#ffd76a">合击</b>（该目标受创 ×2.1）—— 这是唯一能超过 5 分钟的办法。<br>前 3 分钟你会强得很快，第 4 分钟开始敌人才真正发力。全程<b>纯键盘</b>，鼠标<b>不能</b>操作炮台。</div>
+            <div class="tip">升级<b>不再暂停</b>：卡片浮在各自 HUD 下方，<b>4.6 秒</b>后自动帮你选最优的那张。<br>两座塔<b>同时打同一只</b>会触发<b style="color:#ffd76a">合击</b>（该目标受创 ×2.1）—— 这是唯一能超过 5 分钟的办法。<br>前 3 分钟你会强得很快，第 4 分钟开始敌人才真正发力。全程<b>纯键盘</b>，鼠标<b>不能</b>操作炮台。<br>场上会出现<b style="color:#ffcd40">金色描边</b>的词缀精英（分裂/护盾/加速/吸血/死亡爆炸），优先点掉它们。</div>
             <div style="margin:16px 0 4px;">
                 <button class="btn green big" id="btnStart">开始守卫 <span class="kc">Enter</span></button>
             </div>
@@ -156,6 +156,8 @@
                 🎯 箭矢<b style="color:#5ee6ff">微微吸附</b>：方向大致对上了，会自己拐一点点去咬住目标<br>
                 💥 击杀累积<b style="color:#ffd76a">连击</b>，连击越高射速越快；双塔伤害共同充能<b>共鸣槽</b>，满了自动放光束<br>
                 🤖 某一边 <b style="color:#45e08a">5 秒无操作</b> → 那一边自动 AI 托管，一动就抢回<br>
+                ⚔️ <b style="color:#ffd76a">处决</b>：<kbd>空格</kbd>（P1）/ <kbd>小键盘 Enter</kbd>（P2），<b>12 秒</b>冷却，炮口前方 <b>90° 扇形</b>内全体 <b>×3 伤害 + 重击退</b>；扇形里没敌人时不扣冷却<br>
+                ✨ <b style="color:#ffcd40">词缀精英</b>：金色描边、体积更大、血更厚。词缀 = 分裂 / 护盾 / 加速 / 吸血 / 死亡爆炸，每只随机 1~2 条，越往后来得越多 —— 优先点掉它们<br>
                 ⚠️ 突发危机：兽潮 / 史莱姆王 / 酸雨 / 暗夜 / 狂暴 / 重甲突袭，越往后来得越勤<br>
                 👑 每 <b>75 秒</b> 一只史莱姆王，打死它 <b style="color:#45e08a">修墙 18%</b>；补给箱也修墙<br>
                 ⏩ <kbd>1</kbd>~<kbd>5</kbd> <b>调速</b>，炮台强了直接开到 ×5（计时也一起快，但成绩按游戏内时间算）<br>
@@ -190,13 +192,13 @@
 
 <script>
 "use strict";
-/* ================= 向史莱姆开炮 v4.4.0 · 无尽守卫（纯单局 · 升级不暂停） ================= */
+/* ================= 向史莱姆开炮 v4.5.0 · 无尽守卫（纯单局 · 升级不暂停） ================= */
 const W = 1280, H = 720;
 const WALL_TOP = 596;          // 城墙顶面
 const TOWER_X = [206, 1074];   // 两座塔的中心 x
 const TOWER_Y = 646;           // 塔心 y（俯视圆塔）
 const PIVOT_Y = 630;           // 炮口旋转枢轴 y（在塔心偏上）
-const VERSION = 'v4.4.0';
+const VERSION = 'v4.5.0';
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -353,6 +355,28 @@ const P_COLOR = ['#5ee6ff', '#ffb347'];
 const P_COLOR2 = ['#1b6f8a', '#8a5a1b'];
 const ANG_MAX = 1.45;   // 炮管最大偏转（≈83°）
 
+/* ---------- 处决（每人一个键 · 12 秒冷却 · 炮口 90° 扇形） ---------- */
+const EXEC = {
+    cd: 12,              // 冷却（秒）—— 唯一主动技能，必须"按得下手"
+    half: Math.PI / 4,   // 扇形半角：45° → 全角 90°
+    range: 660,          // 射程（枢轴到出生线约 490，余量留给飞行单位）
+    dmgMul: 3,           // 单发伤害 ×3
+    hpPct: 0.008,        // 保底：至少打掉目标 0.8% 最大血。
+                         // 别再调高！实测 12% 时扇形内几十只怪叠加 = 数倍 DPS，直接把"4 分钟必败"拖到 5:42。
+                         // 这招的后期价值在"成片击退 + 打断啃墙"，不在数字。
+    kbv: 900,            // 击退初速（≈105px 位移）；1500 时每 6 秒全屏后退 180px，墙面压力被削掉三成
+};
+
+/* ---------- 词缀精英 ---------- */
+const AFFIX = {
+    split:  { col: '#8ce86a' },   // 分裂：死亡时炸成两只小号
+    shield: { col: '#b98cff' },   // 护盾：出生自带 55% 血的护盾
+    fast:   { col: '#ff9a5c' },   // 加速：移动 ×1.55
+    vamp:   { col: '#ff7ab0' },   // 吸血：啃墙时按咬伤回血
+    boom:   { col: '#ffb347' },   // 死亡爆炸：炸墙 + 炸周围同类
+};
+const AFFIX_KEYS = ['split', 'shield', 'fast', 'vamp', 'boom'];
+
 /* ---------- 无尽模式调参（改难度只动这里） ---------- */
 const TUNE = {
     hpA: 1.00,           // 血量倍率 = hpA * (1 + t/hpT) ^ hpE —— 形状直接贴着玩家 DPS 曲线走
@@ -407,6 +431,8 @@ function makePlayer(i) {
         hitMark: -99,            // 最近一次命中同一目标的时间（合击判定）
         crossN: 0,               // 该侧参与的合击次数
         dmg: 0, kills: 0,        // 本局累计实际伤害 / 补刀数（算分与对比用）
+        execCd: 0, execN: 0,     // 处决：剩余冷却 / 本局用了几次
+        aiExecT: 0,              // AI 检查处决的节流计时
     };
 }
 function newGame() {
@@ -427,6 +453,7 @@ function newGame() {
         wallBonus: 1, bolts: [], toasts: [],
         crisisSpawn: null, lastCrisis: null, wallHitT: 0,
         cross: 0, crossT: 0, hitstopCd: 0,
+        execFx: [], boomQ: [], eliteN: 0,
         speed: speedPref,
     };
 }
@@ -461,7 +488,28 @@ function spawnEnemy(type, opt) {
         kb: 0, kbv: 0, fly: !!t.fly, boss: !!t.boss, split: t.split || 0,
         dark: 0, markT: 0,
     };
+    if (!e.boss && !opt.noAffix && Math.random() < affixRate(G.time)) makeElite(e);
     G.enemies.push(e);
+    return e;
+}
+/* 词缀精英：撑内容量的核心 —— 同一套怪，挂不同词缀就是不同的威胁 */
+function affixRate(t) { return clamp(0.05 + t / 1400, 0.05, 0.30); }   // 30s 7% → 120s 13% → 240s 22% → 上限 30%
+function affixTier(t) { return clamp((t - 70) / 260, 0, .5); }         // 70 秒后才开始有概率挂两个词缀
+function makeElite(e) {
+    e.elite = true;
+    e.affixes = [];
+    const pool = AFFIX_KEYS.slice();
+    const n = Math.random() < affixTier(G.time) ? 2 : 1;
+    for (let i = 0; i < n && pool.length; i++) {
+        e.affixes.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    }
+    // 体积 ×1.3、血量 ×1.5、收益 ×2 —— 精英必须是"值得停手打"的目标，不是换皮的杂兵
+    e.r *= 1.3;
+    e.max = e.hp = e.hp * 1.5;
+    e.xp *= 2; e.coin = Math.round(e.coin * 2); e.w *= 1.6;
+    if (e.affixes.indexOf('fast') >= 0) e.spd *= 1.55;
+    if (e.affixes.indexOf('shield') >= 0) { e.shield += e.max * .55; e.shieldMax = e.shield; }
+    G.eliteN++;
     return e;
 }
 /* 时间驱动：出怪种类、密度、血量全部随时间走，没有关卡断点 */
@@ -539,8 +587,8 @@ function updateSpawner(dt) {
 
 /* ---------- 输入（只用四键：左右转炮 + 上下选卡） ---------- */
 const KEYMAP = [
-    { left: ['KeyA'], right: ['KeyD'], up: ['KeyW'], down: ['KeyS'] },                        // P1 左塔
-    { left: ['ArrowLeft'], right: ['ArrowRight'], up: ['ArrowUp'], down: ['ArrowDown'] },     // P2 右塔
+    { left: ['KeyA'], right: ['KeyD'], up: ['KeyW'], down: ['KeyS'], exec: ['Space'] },                    // P1 左塔
+    { left: ['ArrowLeft'], right: ['ArrowRight'], up: ['ArrowUp'], down: ['ArrowDown'], exec: ['NumpadEnter'] },   // P2 右塔
 ];
 const held = [{ left: 0, right: 0, up: 0, down: 0 }, { left: 0, right: 0, up: 0, down: 0 }];
 
@@ -617,6 +665,12 @@ window.addEventListener('keydown', e => {
     const i = hit.p, p = G.players[i];
     markActive(i);
 
+    // 处决：唯一主动技能（P1 空格 / P2 小键盘回车），不占 held
+    if (hit.act === 'exec') {
+        if (state === 'PLAYING' && !e.repeat) doExec(i);
+        return;
+    }
+
     // 升级坞（游戏一直在跑）：W/↑ 换一张，S/↓ 选中
     if (p.q.length && !e.repeat) {
         if (hit.act === 'up') {
@@ -690,6 +744,7 @@ function scanBestAngle(p) {
             score += e.w * threat * sizeW * near * edge;
             if (e.state === 'chew') score += 6;   // 正在啃墙：最高优先
             if (e.boss && e.y > 0) score += 34;   // 史莱姆王：进场后优先集火（还没进场就别浪费火力）
+            if (e.elite) score += 3 + (e.affixes ? e.affixes.length : 0) * 2;   // 词缀精英值得优先点
         }
         // 打补给箱
         for (let k = 0; k < G.pickups.length; k++) {
@@ -718,6 +773,24 @@ function updateAI(p, dt) {
     const step = 9.5 * dt;
     p.tower.ang += Math.abs(d) <= step ? d : Math.sign(d) * step;
     p.tower.ang = clamp(p.tower.ang, -ANG_MAX, ANG_MAX);
+    // 托管也会用处决：扇形里够多（或有精英搭档）才按，不浪费
+    if (p.execCd <= 0 && state === 'PLAYING') {
+        p.aiExecT = (p.aiExecT || 0) - dt;
+        if (p.aiExecT <= 0) {
+            p.aiExecT = .45;
+            const t = p.tower;
+            let n = 0, elite = 0;
+            for (const e of G.enemies) {
+                if (e.dead || e.remove) continue;
+                const rx = e.x - t.x, ry = e.y - t.py;
+                if (Math.hypot(rx, ry) > EXEC.range + e.r) continue;
+                if (Math.abs(angDiff(Math.atan2(rx, -ry), t.ang)) > EXEC.half) continue;
+                n++;
+                if (e.elite || e.boss) elite++;
+            }
+            if (n >= 4 || (elite >= 1 && n >= 2)) doExec(p.idx);
+        }
+    }
 }
 function aiPickBest(p, offers) {
     let best = 0, bestS = -1e9;
@@ -917,6 +990,77 @@ function explodeAt(x, y, r, dmg, p, col) {
         if (Math.hypot(e.x - x, e.y - y) < r + e.r * .6) hitEnemy(e, dmg, p, {});
     }
 }
+/* ---------- 处决：扇形爆发 + 击退，玩家的"我按了一下"高光 ---------- */
+function dmgOneOf(p) {
+    return dmgBase(p) * (1 + p.lv.heavy * 0.45) * (p.powT > 0 ? 1.7 : 1);
+}
+function execTargets(p) {
+    const t = p.tower, out = [];
+    for (const e of G.enemies) {
+        if (e.dead || e.remove) continue;
+        const rx = e.x - t.x, ry = e.y - t.py;
+        if (Math.hypot(rx, ry) > EXEC.range + e.r) continue;
+        if (Math.abs(angDiff(Math.atan2(rx, -ry), t.ang)) > EXEC.half) continue;   // 90° 全角扇形
+        out.push(e);
+    }
+    return out;
+}
+function doExec(i) {
+    if (!G || state !== 'PLAYING') return false;
+    const p = G.players[i];
+    if (!p || p.execCd > 0) return false;
+    const t = p.tower;
+    const hits = execTargets(p);
+    if (!hits.length) {                      // 空放不扣冷却：干按一下没反应最挫
+        toast(`${i === 0 ? 'P1' : 'P2'} 扇形里没敌人 —— 冷却未消耗`, '#8fa3c8');
+        sfx('move');
+        return false;
+    }
+    p.execCd = EXEC.cd;
+    p.execN = (p.execN || 0) + 1;
+    const base = dmgOneOf(p) * EXEC.dmgMul;
+    // 手感：后坐 + 白闪 + 顿帧 + 震屏
+    t.recoil = 1; t.flash = .4;
+    G.execFx.push({ x: t.x, y: t.py, ang: t.ang, t: .38, dur: .38, col: p.color });
+    G.shake = Math.max(G.shake, 15);
+    G.whiteFlash = Math.max(G.whiteFlash, .22);
+    G.hitstop = Math.max(G.hitstop, .09);
+    G.hitstopCd = Math.max(G.hitstopCd || 0, .3);
+    sfx('ult');
+    // 扇形内的炮口火花
+    for (let k = 0; k < 28; k++) {
+        const a = t.ang + rand(-EXEC.half, EXEC.half);
+        const sp = rand(320, 940);
+        part(t.x + Math.sin(a) * 30, t.py - Math.cos(a) * 30,
+            Math.sin(a) * sp, -Math.cos(a) * sp, k % 3 ? p.color : '#ffffff', rand(.2, .45), rand(2, 5), 120);
+    }
+    for (const e of hits) {
+        const d = Math.max(base, e.max * EXEC.hpPct);
+        hitEnemy(e, d, p, { noNum: hits.length > 8 });
+        if (!e.dead && (e.kbCd || 0) <= 0) {      // 全体击退：沿炮口方向掀回出生线
+            e.kbCd = 1.0; e.kb = 1; e.kbv = EXEC.kbv;
+            e.vx = Math.sin(t.ang) * EXEC.kbv;
+            e.vy = -Math.cos(t.ang) * EXEC.kbv;
+        }
+    }
+    toast(`⚔ ${i === 0 ? 'P1' : 'P2'} 处决！${hits.length} 只被掀翻`, p.color);
+    announce('处 决', p.color);
+    return true;
+}
+/* 死亡爆炸的二次结算（队列化的意义：不在 killEnemy 里递归） */
+function updateBooms() {
+    if (!G.boomQ || !G.boomQ.length) return;
+    const q = G.boomQ; G.boomQ = [];
+    for (const b of q) {
+        if (b.nearWall) damageWall(b.wallDmg);
+        for (const o of G.enemies) {
+            if (o.dead || o.remove) continue;
+            if (Math.hypot(o.x - b.x, o.y - b.y) < b.r + o.r * .5) {
+                hitEnemy(o, b.dmg, b.p, { noNum: true });
+            }
+        }
+    }
+}
 function killEnemy(e, p) {
     if (e.dead) return;
     e.dead = true;
@@ -943,13 +1087,28 @@ function killEnemy(e, p) {
     }
     // 经验
     addXp(e.xp);
-    // 分裂
-    if (e.split > 0) {
-        for (let i = 0; i < e.split; i++) {
-            const c = spawnEnemy('small', { x: e.x + rand(-24, 24), y: e.y, hpMul: .9 });
+    // 死亡爆炸：炸墙（只算贴墙的）+ 炸周围的同类（走队列，避免在 killEnemy 里递归）
+    if (e.affixes && e.affixes.indexOf('boom') >= 0) {
+        // 半径/伤害别再放大：后期精英占 22%，每只炸周围十几只 ×18% 血 = 额外近一倍的击杀量，
+        // 实测会把"4 分钟必败"拖到 5:25（kills 直接翻倍）
+        const R = 120;
+        G.shocks.push({ x: e.x, y: e.y, r: 8, max: R, t: .34, dur: .34, col: '#ffb347' });
+        burstAt(e.x, e.y, 24, '#ffb347', 360, 7);
+        G.boomQ.push({
+            x: e.x, y: e.y, r: R, dmg: e.max * 0.05, p,
+            nearWall: (WALL_TOP - e.y) < R, wallDmg: e.bite * 1.5,
+        });
+        G.shake = Math.max(G.shake, 11);
+        G.flash = Math.max(G.flash, .25);
+    }
+    // 分裂：大史莱姆自带 3 只；「分裂」词缀额外再炸 2 只（上限 4，防止指数增长）
+    const splitN = Math.min(4, (e.split || 0) + (e.affixes && e.affixes.indexOf('split') >= 0 ? 2 : 0));
+    if (splitN > 0) {
+        for (let i = 0; i < splitN; i++) {
+            const c = spawnEnemy('small', { x: e.x + rand(-24, 24), y: e.y, hpMul: .9, noAffix: true });
             c.vx = rand(-120, 120); c.vy = rand(-160, -40); c.kb = 1;
         }
-        toast('💥 大史莱姆分裂了！', e.col);
+        toast(e.elite ? '💥 分裂词缀：又炸出两只！' : '💥 大史莱姆分裂了！', e.col);
     }
     // Boss 死 → 大奖励
     if (e.boss) {
@@ -1153,6 +1312,15 @@ function updateEnemies(dt) {
                 damageWall(e.bite);
                 e.sq = 1.35;
                 burstAt(e.x, WALL_TOP - 6, 4, '#b9a7c9', 120, 3);
+                // 吸血词缀：咬多少回多少（它贴墙越久越难杀，逼你优先点掉）
+                if (e.affixes && e.affixes.indexOf('vamp') >= 0 && e.hp < e.max) {
+                    const heal = Math.min(e.max - e.hp, e.bite * 1.2);
+                    e.hp += heal;
+                    if (heal > 0) {
+                        floatText(e.x, e.y - e.r - 16, '+' + Math.round(heal), '#ff7ab0', 12);
+                        part(e.x, WALL_TOP - 10, rand(-30, 30), rand(-160, -80), '#ff7ab0', .45, 3, 160);
+                    }
+                }
             }
         }
     }
@@ -1416,6 +1584,13 @@ function update(dt, dtReal) {
         s.r = Math.max(0, s.max * (1 - s.t / (s.dur || .34)));
         if (s.t <= 0) G.shocks.splice(i, 1);
     }
+    // 处决扇形（真实时间，倍速下也不会一闪而过）
+    for (let i = G.execFx.length - 1; i >= 0; i--) {
+        G.execFx[i].t -= dtReal;
+        if (G.execFx[i].t <= 0) G.execFx.splice(i, 1);
+    }
+    // 死亡爆炸的二次结算
+    updateBooms();
     // 闪电
     for (let i = G.bolts.length - 1; i >= 0; i--) {
         G.bolts[i].t -= dt;
@@ -1439,6 +1614,7 @@ function update(dt, dtReal) {
     for (const p of G.players) {
         if (p.bufT > 0) p.bufT -= dt;
         if (p.powT > 0) p.powT -= dt;
+        if (p.execCd > 0) p.execCd = Math.max(0, p.execCd - dt);
         for (let i = p.fx.length - 1; i >= 0; i--) {
             p.fx[i].t -= dtReal;
             if (p.fx[i].t <= 0) p.fx.splice(i, 1);
@@ -1455,6 +1631,10 @@ function update(dt, dtReal) {
 }
 
 /* ================= 绘制 ================= */
+function hexA(hex, a) {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
 function shade(hex, amt) {
     // amt > 0 变亮，< 0 变暗
     const n = parseInt(hex.slice(1), 16);
@@ -1537,6 +1717,68 @@ function drawBg() {
 }
 
 /* --- 史莱姆 --- */
+/* 词缀徽章：5 种几何小图标（不用 emoji，形状/配色才可控） */
+function drawAffixBadge(kind, cx, cy, r) {
+    const A = AFFIX[kind];
+    ctx.save();
+    ctx.fillStyle = 'rgba(8,12,20,.78)';
+    ctx.beginPath(); ctx.arc(cx, cy, r + 1.8, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,201,64,.9)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(cx, cy, r + 1.8, 0, TAU); ctx.stroke();
+    ctx.fillStyle = A.col;
+    if (kind === 'split') {              // 一分为二
+        ctx.beginPath(); ctx.arc(cx - r * .34, cy + r * .1, r * .44, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx + r * .34, cy - r * .12, r * .44, 0, TAU); ctx.fill();
+    } else if (kind === 'shield') {      // 盾牌
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - r * .88);
+        ctx.lineTo(cx + r * .74, cy - r * .3);
+        ctx.lineTo(cx + r * .52, cy + r * .7);
+        ctx.lineTo(cx, cy + r * .92);
+        ctx.lineTo(cx - r * .52, cy + r * .7);
+        ctx.lineTo(cx - r * .74, cy - r * .3);
+        ctx.closePath(); ctx.fill();
+    } else if (kind === 'fast') {        // 双箭头
+        for (let s = 0; s < 2; s++) {
+            const ox = -r * .42 + s * r * .62;
+            ctx.beginPath();
+            ctx.moveTo(cx + ox - r * .22, cy - r * .62);
+            ctx.lineTo(cx + ox + r * .44, cy);
+            ctx.lineTo(cx + ox - r * .22, cy + r * .62);
+            ctx.closePath(); ctx.fill();
+        }
+    } else if (kind === 'vamp') {        // 血滴
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - r * .9);
+        ctx.quadraticCurveTo(cx + r * .82, cy + r * .2, cx, cy + r * .88);
+        ctx.quadraticCurveTo(cx - r * .82, cy + r * .2, cx, cy - r * .9);
+        ctx.closePath(); ctx.fill();
+    } else {                             // 爆炸星芒
+        for (let i = 0; i < 6; i++) {
+            const a = i * TAU / 6 - Math.PI / 2;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(a - .2) * r * .96, cy + Math.sin(a - .2) * r * .96);
+            ctx.lineTo(cx + Math.cos(a + .2) * r * .96, cy + Math.sin(a + .2) * r * .96);
+            ctx.closePath(); ctx.fill();
+        }
+        ctx.fillStyle = '#fff5d6';
+        ctx.beginPath(); ctx.arc(cx, cy, r * .24, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+}
+
+/* 史莱姆身体轮廓：fill 与 stroke 共用同一条路径 */
+function slimePath(x, y, rx, ry) {
+    ctx.beginPath();
+    ctx.moveTo(x - rx, y + ry * .42);
+    ctx.bezierCurveTo(x - rx * 1.08, y - ry * .95, x + rx * 1.08, y - ry * .95, x + rx, y + ry * .42);
+    ctx.quadraticCurveTo(x + rx * .6, y + ry * .92, x, y + ry * .9);
+    ctx.quadraticCurveTo(x - rx * .6, y + ry * .92, x - rx, y + ry * .42);
+    ctx.closePath();
+}
+
 function drawSlime(e) {
     // 远处（上方）隐在雾中，近处清晰 —— 制造纵深
     const fogA = clamp(0.46 + (e.y + 60) / 520 * 0.56, 0.42, 1);
@@ -1563,12 +1805,7 @@ function drawSlime(e) {
     bodyG.addColorStop(.62, base);
     bodyG.addColorStop(1, flash ? '#fff' : e.col2);
     ctx.fillStyle = bodyG;
-    ctx.beginPath();
-    ctx.moveTo(x - rx, y + ry * .42);
-    ctx.bezierCurveTo(x - rx * 1.08, y - ry * .95, x + rx * 1.08, y - ry * .95, x + rx, y + ry * .42);
-    ctx.quadraticCurveTo(x + rx * .6, y + ry * .92, x, y + ry * .9);
-    ctx.quadraticCurveTo(x - rx * .6, y + ry * .92, x - rx, y + ry * .42);
-    ctx.closePath();
+    slimePath(x, y, rx, ry);
     ctx.fill();
 
     // 内部高光
@@ -1584,10 +1821,18 @@ function drawSlime(e) {
     ctx.fill();
     ctx.restore();
 
-    // 描边
+    // 描边（必须先重画身体路径：上一个 beginPath 是内部高光椭圆）
+    slimePath(x, y, rx, ry);
     ctx.strokeStyle = isFrozen ? 'rgba(150,210,255,.9)' : 'rgba(0,0,0,.16)';
     ctx.lineWidth = isFrozen ? 2.5 : 1.5;
     ctx.stroke();
+
+    // 词缀精英：沿身体轮廓描一道实金边（不用 shadowBlur —— 性能红线）
+    if (e.elite) {
+        ctx.strokeStyle = 'rgba(255,214,80,.98)';
+        ctx.lineWidth = 3.4;
+        ctx.stroke();
+    }
 
     // 眼睛
     const look = (e.x < TOWER_X[1] && e.x < TOWER_X[0]) ? -1 : 0;
@@ -1674,6 +1919,27 @@ function drawSlime(e) {
         part(e.x + rand(-r, r), e.y + r * .7, rand(-40, 40), rand(-90, -20), '#c9b8d8', .3, 2.4, 500);
     }
     ctx.restore();
+    // 金色描边的第二层：不吃雾化，远处也能一眼认出精英
+    if (e.elite) {
+        ctx.save();
+        ctx.globalAlpha = clamp(fogA, .8, 1);
+        ctx.strokeStyle = 'rgba(255,206,90,.42)';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.ellipse(x, y + ry * .14, rx * 1.19, ry * 1.16, 0, 0, TAU);
+        ctx.stroke();
+        ctx.restore();
+    }
+    // 词缀徽章（挂在血条上方，一眼看清这只挂了几条词缀）
+    if (e.elite && e.affixes && e.affixes.length) {
+        const br = clamp(r * 0.26, 4.4, 7.2);      // 徽章随体型缩放，小怪身上才不会糊成一团
+        const gap = br * 2 + 2;
+        let bx0 = x - (e.affixes.length * gap) / 2;
+        for (const k of e.affixes) {
+            drawAffixBadge(k, bx0 + gap / 2, y - ry - (br + 13), br);
+            bx0 += gap;
+        }
+    }
     // 血条
     if (e.hp < e.max && !e.boss) {
         const w = r * 1.7;
@@ -1684,6 +1950,46 @@ function drawSlime(e) {
     }
 }
 
+
+/* 处决扇形：白→玩家色的锥形冲击，向前扩张 */
+function drawExec() {
+    if (!G.execFx || !G.execFx.length) return;
+    for (const f of G.execFx) {
+        const k = clamp(1 - f.t / f.dur, 0, 1);
+        const R = EXEC.range * (0.35 + 0.65 * (1 - (1 - k) * (1 - k)));
+        const a = (1 - k) * (1 - k);
+        ctx.save();
+        ctx.translate(f.x, f.y);
+        ctx.rotate(f.ang);
+        const g = ctx.createRadialGradient(0, 0, 18, 0, 0, R);
+        g.addColorStop(0, `rgba(255,255,255,${.62 * a})`);
+        g.addColorStop(.4, hexA(f.col, .4 * a));
+        g.addColorStop(1, hexA(f.col, 0));
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, R, -Math.PI / 2 - EXEC.half, -Math.PI / 2 + EXEC.half);
+        ctx.closePath();
+        ctx.fill();
+        // 前缘弧
+        ctx.strokeStyle = `rgba(255,255,255,${.85 * a})`;
+        ctx.lineWidth = 1 + 3.2 * (1 - k);
+        ctx.beginPath();
+        ctx.arc(0, 0, R, -Math.PI / 2 - EXEC.half, -Math.PI / 2 + EXEC.half);
+        ctx.stroke();
+        // 三条放射线（强化"扇面"读数）
+        ctx.strokeStyle = hexA(f.col, .55 * a);
+        ctx.lineWidth = 2;
+        for (const o of [-.62, 0, .62]) {
+            const ang = o * EXEC.half;
+            ctx.beginPath();
+            ctx.moveTo(Math.sin(ang) * 26, -Math.cos(ang) * 26);
+            ctx.lineTo(Math.sin(ang) * R * .92, -Math.cos(ang) * R * .92);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+}
 
 /* --- 城墙（俯视石墙 + 城垛） --- */
 function drawWall() {
@@ -2605,7 +2911,7 @@ function drawPlayerPanel(i) {
     ctx.textAlign = 'left';
     ctx.font = '10.5px -apple-system, sans-serif';
     ctx.fillStyle = 'rgba(178,198,228,.92)';
-    const dmgOne = Math.round(dmgBase(p) * (1 + p.lv.heavy * 0.45) * (p.powT > 0 ? 1.7 : 1));
+    const dmgOne = Math.round(dmgOneOf(p));
     ctx.fillText(`伤害 ${dmgOne} × ${1 + p.lv.multi} 支 · 射速 ${rateOf(p).toFixed(1)}/s · 暴击 ${Math.round(critChance(p) * 100)}%`, lx, y + 36);
 
     // —— 得分：本侧分数 + 与对手的差距 + 双人占比条 ——
@@ -2674,11 +2980,28 @@ function drawPlayerPanel(i) {
         cx0 += cell;
     }
 
-    // —— 第四行：键位 ——
+    // —— 第四行：键位 + 处决冷却 ——
     ctx.textAlign = 'left';
     ctx.font = 'bold 10.5px -apple-system, sans-serif';
     ctx.fillStyle = i === 0 ? 'rgba(150,230,255,.88)' : 'rgba(255,205,135,.9)';
     ctx.fillText(i === 0 ? 'A/D 转炮　W 换卡　S 选中' : '←/→ 转炮　↑ 换卡　↓ 选中', lx, y + 113);
+
+    // 处决：就绪时呼吸描边，冷却时显示剩余秒数 + 恢复进度
+    const ew = 80, eh = 17, exx = x + PANEL_W - 16 - ew, eyy = y + 104;
+    const ready = p.execCd <= 0;
+    if (ready) {
+        const pulse = .5 + .5 * Math.sin(G.time * 7);
+        chipBox(exx, eyy, ew, eh, 5, hexA(p.color, .16 + .12 * pulse), hexA(p.color, .85));
+    } else {
+        chipBox(exx, eyy, ew, eh, 5, 'rgba(255,255,255,.05)', 'rgba(255,255,255,.16)');
+        const f = 1 - p.execCd / EXEC.cd;
+        chipBox(exx + 1, eyy + 1, Math.max(2, (ew - 2) * f), eh - 2, 4, 'rgba(255,255,255,.10)', null);
+    }
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 10px -apple-system, sans-serif';
+    ctx.fillStyle = ready ? '#ffffff' : 'rgba(190,206,232,.82)';
+    const execTxt = ready ? (i === 0 ? '⚔ 空格 就绪' : '⚔ 小回车 就绪') : '⚔ ' + p.execCd.toFixed(1) + 's';
+    ctx.fillText(execTxt, exx + ew / 2, eyy + eh / 2 + .5);
 
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
@@ -2753,7 +3076,7 @@ function drawSpeedChip() {
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
 function drawGlobalHints() {
-    const txt = '1~5 调速　·　W/↑ 换卡　·　S/↓ 选中　·　P 暂停';
+    const txt = '空格/小回车 处决　·　W/↑ 换卡　·　S/↓ 选中　·　1~5 调速　·　P 暂停';
     ctx.font = 'bold 11.5px -apple-system, sans-serif';
     const w = ctx.measureText(txt).width + 26;
     const bx = W / 2 - w / 2, by = H - 26;
@@ -2941,6 +3264,7 @@ function render() {
     for (let i = 0; i < 2; i++) drawTowerBase(i);
     drawLoot();
     drawUlt();
+    drawExec();
     for (const p of G.players) drawBallista(p);
     drawBullets();
     drawParts();
@@ -3134,6 +3458,7 @@ window.__slime = {
     hpMul, biteMul, spdMul, levelCheck, offerLevels, updateDocks, rollOffers,
     spawnBoss, pickKind, updateSpawner, fmtTime, update, allMaxed,
     scoreOf, fmtScore, fmtScoreFull, gameOver, P_COLOR,
+    doExec, execTargets, dmgOneOf, EXEC, AFFIX, AFFIX_KEYS, makeElite, affixRate, updateBooms, render, drawSlime,
     get speed() { return G ? (G.speed || 1) : speedPref; },
     setState(s) { state = s; },
 };
