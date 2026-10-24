@@ -115,7 +115,7 @@
 <body>
 <div id="wrap">
     <canvas id="cv" width="1280" height="720"></canvas>
-    <div class="ver">v4.5.0 · 词缀精英</div>
+    <div class="ver">v4.5.1 · 降噪</div>
 
     <!-- 主菜单 -->
     <div id="menu" class="overlay">
@@ -192,13 +192,13 @@
 
 <script>
 "use strict";
-/* ================= 向史莱姆开炮 v4.5.0 · 无尽守卫（纯单局 · 升级不暂停） ================= */
+/* ================= 向史莱姆开炮 v4.5.1 · 无尽守卫（纯单局 · 升级不暂停） ================= */
 const W = 1280, H = 720;
 const WALL_TOP = 596;          // 城墙顶面
 const TOWER_X = [206, 1074];   // 两座塔的中心 x
 const TOWER_Y = 646;           // 塔心 y（俯视圆塔）
 const PIVOT_Y = 630;           // 炮口旋转枢轴 y（在塔心偏上）
-const VERSION = 'v4.5.0';
+const VERSION = 'v4.5.1';
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -538,7 +538,7 @@ function spawnBoss() {
     G.bannerT = 1.7;
     G.bannerText = `👑 第 ${G.bossN} 只史莱姆王`;
     G.bannerSub = '打死它，城墙立刻修回 18%';
-    G.shake = Math.max(G.shake, 11);
+    G.shake = Math.max(G.shake, 7);
     sfx('warn');
 }
 function updateSpawner(dt) {
@@ -578,7 +578,7 @@ function updateSpawner(dt) {
         G.bannerT = 1.5;
         G.bannerText = `威胁等级 ${th}`;
         G.bannerSub = th <= 2 ? '敌人开始变厚' : (th <= 4 ? '史莱姆正在变得更强 —— 抓紧合击' : '它们已经超过你了，看还能拖多久');
-        G.shake = Math.max(G.shake, 8);
+        G.shake = Math.max(G.shake, 5);
         G.flash = Math.max(G.flash, .35);
         sfx('warn');
     }
@@ -704,9 +704,13 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) relea
    鼠标划过画布不再抢左塔、也不会把 AI 托管拽回手动。 */
 
 /* ---------- 数值 ---------- */
-function dmgBase(p) { return 7.5 * (1 + p.lv.atk * 0.28); }
+function dmgBase(p) {
+    // 12.5 × 6.3/s = 7.5 × 10.5/s（v4.5.1 把射速砍到 60%、单发等比提高，
+    // 数学上 DPS 一点没变，但每秒 21 发变成 12.6 发，箭矢不再连成一条直线）
+    return 12.5 * (1 + p.lv.atk * 0.28);
+}
 function rateOf(p) {
-    let r = 10.5 * (1 + p.lv.rate * 0.22);
+    let r = 6.3 * (1 + p.lv.rate * 0.22);   // 别再调回两位数：10.5/s × 4 支 = 42 发/秒，密到糊成光束
     if (p.bufT > 0) r *= 1.35;
     if (G.rageT > 0) r *= 1.22;
     if (G.ultT > 0) r *= 1.5;
@@ -816,7 +820,7 @@ function aiPickBest(p, offers) {
 
 
 /* ---------- 粒子 / 飘字 / 提示 ---------- */
-const MAX_PARTS = 300;
+const MAX_PARTS = 220;
 function part(x, y, vx, vy, col, life, size, grav) {
     if (G.parts.length >= MAX_PARTS) G.parts.shift();
     G.parts.push({ x, y, vx, vy, col, t: life, max: life, size: size || 3, grav: grav === undefined ? 520 : grav });
@@ -845,7 +849,7 @@ function toast(text, col) {
 function shoot(p) {
     const t = p.tower;
     const n = 1 + p.lv.multi;
-    const spread = n > 1 ? 0.155 : 0;
+    const spread = n > 1 ? 0.19 : 0;     // 多重箭扇得更开，四支箭各走各的，不并成一条线
     const heavy = p.lv.heavy;
     const dmg = dmgBase(p) * (1 + heavy * 0.45) * (G.ultT > 0 ? 1.7 : 1) * (p.powT > 0 ? 1.7 : 1);
     const sp = 1380;
@@ -858,7 +862,7 @@ function shoot(p) {
             vx: Math.sin(a) * sp, vy: -Math.cos(a) * sp,
             dmg, crit: Math.random() < critChance(p), owner: p.idx,
             pierce: p.lv.pierce, hit: [], life: 1.0,
-            size: 4.4 + heavy * 2.6, heavy,
+            size: 4.4 + heavy * 2.6, heavy, jl: rand(0.7, 1.35),   // 拖尾长度抖动，避免整齐排列像光栅
             burst: p.lv.burst, fire: p.lv.fire, ice: p.lv.ice, light: p.lv.light,
             evoFire: !!p.evos.evoFire, evoFrost: !!p.evos.evoFrost, evoBolt: !!p.evos.evoBolt,
         });
@@ -866,7 +870,7 @@ function shoot(p) {
     t.recoil = 1; t.flash = .07;
     sfx('shot');
     // 枪口火花
-    if (Math.random() < .5) {
+    if (Math.random() < .28) {
         const a2 = t.ang + rand(-.2, .2);
         part(t.x + Math.sin(a2) * 32, t.py - Math.cos(a2) * 32, Math.sin(a2) * rand(80, 220), -Math.cos(a2) * rand(80, 220), p.color, .18, 3, 200);
     }
@@ -923,7 +927,7 @@ function updateTowers(dt, dtReal) {
                         hitEnemy(e, 34 * (1 + p.lv.atk * .2), p, { noNum: true });
                     }
                 }
-                G.shake = Math.max(G.shake, 7);
+                G.shake = Math.max(G.shake, 4.5);
                 sfx('big');
                 toast('💢 塔基震退！', p.color);
             }
@@ -1022,13 +1026,13 @@ function doExec(i) {
     // 手感：后坐 + 白闪 + 顿帧 + 震屏
     t.recoil = 1; t.flash = .4;
     G.execFx.push({ x: t.x, y: t.py, ang: t.ang, t: .38, dur: .38, col: p.color });
-    G.shake = Math.max(G.shake, 15);
+    G.shake = Math.max(G.shake, 10);
     G.whiteFlash = Math.max(G.whiteFlash, .22);
     G.hitstop = Math.max(G.hitstop, .09);
     G.hitstopCd = Math.max(G.hitstopCd || 0, .3);
     sfx('ult');
     // 扇形内的炮口火花
-    for (let k = 0; k < 28; k++) {
+    for (let k = 0; k < 18; k++) {
         const a = t.ang + rand(-EXEC.half, EXEC.half);
         const sp = rand(320, 940);
         part(t.x + Math.sin(a) * 30, t.py - Math.cos(a) * 30,
@@ -1070,17 +1074,17 @@ function killEnemy(e, p) {
     if (G.combo > G.bestCombo) G.bestCombo = G.combo;
     const big = e.boss || e.r > 28 || e.type === 'spiky' || e.type === 'shield';
     // 爆汁
-    const n = e.boss ? 46 : Math.round(7 + e.r * .8);
-    burstAt(e.x, e.y, Math.min(n, 60), e.col, e.boss ? 460 : 300, e.boss ? 9 : 6);
+    const n = e.boss ? 34 : Math.round(5 + e.r * .6);
+    burstAt(e.x, e.y, Math.min(n, 40), e.col, e.boss ? 460 : 300, e.boss ? 9 : 6);
     if (e.slowT > 0 || e.frozen > 0) burstAt(e.x, e.y, 8, '#a8e8ff', 220, 5);
     if (e.burnT > 0) burstAt(e.x, e.y, 8, '#ffa53d', 220, 5);
     // 音效 & 顿帧
-    if (e.boss) { sfx('big'); G.shake = 26; G.hitstop = .22; G.whiteFlash = .55; }
+    if (e.boss) { sfx('big'); G.shake = 16; G.hitstop = .22; G.whiteFlash = .34; }
     else if (big) {
-        sfx('big'); G.shake = Math.max(G.shake, 9);
+        sfx('big'); G.shake = Math.max(G.shake, 6);
         if ((G.hitstopCd || 0) <= 0) { G.hitstop = Math.max(G.hitstop, .06); G.hitstopCd = .42; }
     }
-    else { sfx('kill'); G.shake = Math.max(G.shake, 1.6); }
+    else { sfx('kill'); G.shake = Math.max(G.shake, 1.0); }   // 普通击杀：每秒几十次，1.6 会顶成持续抖动
     // 金币
     for (let i = 0; i < e.coin; i++) {
         G.coins.push({ x: e.x, y: e.y, vx: rand(-90, 90), vy: rand(-220, -90), t: 2.4, taken: false, v: 1 });
@@ -1093,12 +1097,12 @@ function killEnemy(e, p) {
         // 实测会把"4 分钟必败"拖到 5:25（kills 直接翻倍）
         const R = 120;
         G.shocks.push({ x: e.x, y: e.y, r: 8, max: R, t: .34, dur: .34, col: '#ffb347' });
-        burstAt(e.x, e.y, 24, '#ffb347', 360, 7);
+        burstAt(e.x, e.y, 14, '#ffb347', 360, 7);
         G.boomQ.push({
             x: e.x, y: e.y, r: R, dmg: e.max * 0.05, p,
             nearWall: (WALL_TOP - e.y) < R, wallDmg: e.bite * 1.5,
         });
-        G.shake = Math.max(G.shake, 11);
+        G.shake = Math.max(G.shake, 7);
         G.flash = Math.max(G.flash, .25);
     }
     // 分裂：大史莱姆自带 3 只；「分裂」词缀额外再炸 2 只（上限 4，防止指数增长）
@@ -1242,7 +1246,7 @@ function updateBullets(dt) {
 function damageWall(d) {
     if (G.wall.hp <= 0) return;
     G.wall.hp -= d;
-    G.shake = Math.max(G.shake, 3.2);
+    G.shake = Math.max(G.shake, 2.2);
     G.wallHitT = 0.3;
     if (Math.random() < .25) sfx('hurt');
     for (let i = 0; i < 4; i++) part(rand(200, W - 200), WALL_TOP - rand(0, 10), rand(-70, 70), rand(-160, -40), '#8b7793', .5, 3, 600);
@@ -1291,7 +1295,7 @@ function updateEnemies(dt) {
             if (e.y > WALL_TOP - 26) {
                 damageWall(8 + G.time * 0.06);
                 burstAt(e.x, e.y, 14, e.col, 240, 5);
-                G.shake = Math.max(G.shake, 5);
+                G.shake = Math.max(G.shake, 3.4);
                 e.dead = true; e.remove = true;
                 toast('💢 飞行史莱姆撞墙了！', '#ff8fd0');
                 G.enemies.splice(i, 1);
@@ -1400,7 +1404,7 @@ function openPickup(k, owner) {
     const p = G.players[owner];
     const nm = owner === 0 ? 'P1 左塔' : 'P2 右塔';
     const roll = Math.random();
-    G.shake = Math.max(G.shake, 6);
+    G.shake = Math.max(G.shake, 4);
     sfx('level');
     burstAt(k.x, k.y, 22, '#ffd76a', 300, 6);
     if (roll < .26) {
@@ -1467,7 +1471,7 @@ function startCrisis() {
     G.crisis.next = 0;
     G.lastCrisis = c.id;
     G.bannerT = 1.9; G.bannerText = c.name; G.bannerSub = c.sub;
-    G.shake = Math.max(G.shake, 12);
+    G.shake = Math.max(G.shake, 8);
     sfx('warn');
     c.fn();
 }
@@ -1518,7 +1522,7 @@ function updateCrisis(dt) {
 /* ---------- 终极技：双子贯穿光束 ---------- */
 function startUlt() {
     G.ult = 0; G.ultT = 2.8; G.ultDir = 0;
-    G.whiteFlash = .8; G.shake = 20;
+    G.whiteFlash = .55; G.shake = 13;
     sfx('ult');
     toast('🌀 双子贯穿光束 —— 开火！', '#7df9ff');
     announce('双 子 贯 穿 光 束', '#8ce8ff');
@@ -1554,7 +1558,7 @@ function update(dt, dtReal) {
     if (G.hitstopCd > 0) G.hitstopCd -= dtReal;
     if (G.hitstop > 0) { G.hitstop -= dt; dt *= 0.14; }
     G.time += dt;
-    G.shake = Math.max(0, G.shake - dt * 46);
+    G.shake = Math.max(0, G.shake - dt * 62);
     G.flash = Math.max(0, G.flash - dt * 3);
     G.whiteFlash = Math.max(0, G.whiteFlash - dt * 2.6);
     if (G.bannerT > 0) G.bannerT -= dt;
@@ -2510,9 +2514,10 @@ function drawBallista(p) {
 function drawBullets() {
     // 弹幕越密，拖尾越短越淡 —— 否则满级时屏幕会被箭雨糊死，看不见史莱姆
     const N = G.bullets.length;
-    const thin = N > 60 ? clamp(60 / N, 0.28, 1) : 1;
-    const tl = 72 * thin;
+    const thin = N > 42 ? clamp(42 / N, 0.28, 1) : 1;
+    const BASE_TL = 42 * thin;   // 拖尾 72→42：原来长度够跨半个屏，视觉上就是连续光条
     for (const b of G.bullets) {
+        const tl = BASE_TL * (b.jl || 1);
         const a = Math.atan2(b.vy, b.vx);
         const col = G.players[b.owner] ? G.players[b.owner].color : '#fff';
         ctx.save();
@@ -2533,7 +2538,7 @@ function drawBullets() {
         tg.addColorStop(0, 'rgba(255,255,255,0)');
         tg.addColorStop(.5, col);
         tg.addColorStop(1, '#ffffff');
-        ctx.globalAlpha = .5 * (0.45 + 0.55 * thin);
+        ctx.globalAlpha = .42 * (0.45 + 0.55 * thin);
         ctx.fillStyle = tg;
         ctx.beginPath();
         ctx.moveTo(-tl, 0);
@@ -2543,21 +2548,21 @@ function drawBullets() {
         ctx.closePath(); ctx.fill();
         // 外光（密集时收掉，避免叠成一团白光）
         if (thin > 0.6) {
-            ctx.globalAlpha = .26 * thin;
+            ctx.globalAlpha = .17 * thin;
             ctx.fillStyle = col;
-            ctx.beginPath(); ctx.ellipse(0, 0, b.size * 3.6, b.size * 1.5, 0, 0, TAU); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(0, 0, b.size * 2.3, b.size * 1.0, 0, 0, TAU); ctx.fill();
         }
         // 弹头：两侧不同形态（1P 冰晶箭 / 2P 熔金火弹）
         ctx.globalAlpha = 1;
         if (b.owner === 1) {
             ctx.fillStyle = '#fff1cf';
             ctx.beginPath(); ctx.arc(3, 0, b.size * 1.15, 0, TAU); ctx.fill();
-            ctx.globalAlpha = .5;
+            ctx.globalAlpha = .42;
             ctx.fillStyle = '#ff9a3d';
-            ctx.beginPath(); ctx.arc(-2, 0, b.size * 2.1, 0, TAU); ctx.fill();
-            ctx.globalAlpha = .3;
-            ctx.strokeStyle = '#ffd76a'; ctx.lineWidth = 1.6;
-            ctx.beginPath(); ctx.ellipse(0, 0, b.size * 3.1, b.size * 1.1, 0, 0, TAU); ctx.stroke();
+            ctx.beginPath(); ctx.arc(-2, 0, b.size * 1.5, 0, TAU); ctx.fill();
+            ctx.globalAlpha = .26;
+            ctx.strokeStyle = '#ffd76a'; ctx.lineWidth = 1.4;
+            ctx.beginPath(); ctx.ellipse(0, 0, b.size * 2.1, b.size * .8, 0, 0, TAU); ctx.stroke();
         } else {
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
@@ -3254,8 +3259,13 @@ function render() {
     ctx.clearRect(0, 0, W, H);
     if (!G) return;
     ctx.save();
-    const sh = G.shake;
-    if (sh > 0) ctx.translate(rand(-sh, sh) * .35, rand(-sh, sh) * .35);
+    // 震动：每帧随机白噪声最容易让人头晕（画面在高频"麻"）。
+    // 改成两条低频正弦叠加 = 有节奏的"晃"，且幅度封顶 3.8px（原 Boss 死时 9.1px 随机跳）
+    const sh = Math.min(G.shake, 9) * 0.42;
+    if (sh > 0.06) {
+        const ph = G.time;
+        ctx.translate(Math.sin(ph * 37) * sh, Math.cos(ph * 53) * sh * 0.8);
+    }
     drawBg();
     for (const e of G.enemies) drawSlime(e);
     // 暗夜压暗地面与敌人（城墙塔楼画在其后，保证操作可视）
@@ -3388,7 +3398,7 @@ function gameOver() {
     if (state === 'OVER') return;
     state = 'OVER';
     G.overT = 0;
-    G.shake = 30; G.whiteFlash = .4;
+    G.shake = 18; G.whiteFlash = .28;
     sfx('big');
     $('overTime').textContent = `你守了 ${fmtTime(G.time)}`;
     $('overKills').textContent = G.kills;
@@ -3434,7 +3444,7 @@ function loop(ts) {
     render();
 }
 function updateVisualOnly(dt) {
-    G.shake = Math.max(0, G.shake - dt * 46);
+    G.shake = Math.max(0, G.shake - dt * 62);
     G.whiteFlash = Math.max(0, G.whiteFlash - dt * 2.6);
     G.time += dt;
     for (let i = G.parts.length - 1; i >= 0; i--) {
