@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>羊羊叠叠消 · Sheep Stack Match</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: linear-gradient(180deg, #9be2a4 0%, #7cc97e 40%, #5aa85f 100%);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; user-select: none;
+  }
+  #stage {
+    width: 430px; height: min(100vh, 780px);
+    position: relative; display: flex; flex-direction: column;
+    transform-origin: center center;
+  }
+
+  /* ===== 顶栏 ===== */
+  #hud {
+    height: 52px; display: flex; align-items: center; gap: 10px;
+    padding: 0 14px; flex-shrink: 0;
+  }
+  #hud .logo { font-size: 20px; font-weight: 900; color: #fff; text-shadow: 0 2px 0 #3c7d42, 0 3px 6px rgba(0,0,0,.25); letter-spacing: 1px; }
+  #hud .sub { font-size: 10px; color: rgba(255,255,255,.85); margin-top: 1px; }
+  #verBadge {
+    margin-left: auto; font-size: 11px; font-weight: 700; color: #fff;
+    background: rgba(0,0,0,.28); padding: 3px 9px; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.35);
+  }
+  #lvlBadge {
+    font-size: 12px; font-weight: 800; color: #6b3f1d;
+    background: #ffe9b8; padding: 4px 10px; border-radius: 10px;
+    border: 2px solid #d8a860;
+  }
+
+  /* ===== 牌区 ===== */
+  #boardWrap {
+    flex: 1; position: relative; margin: 2px auto 0;
+    width: 406px; overflow: hidden;
+    border-radius: 14px;
+  }
+  #board { position: absolute; left: 0; top: 0; width: 400px; }
+  .tile {
+    position: absolute; width: 54px; height: 54px;
+    background: linear-gradient(160deg, #ffffff 0%, #f2f4e8 100%);
+    border: 2px solid #c9b892; border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; line-height: 1;
+    box-shadow: 0 3px 0 #b3a37e, 0 5px 8px rgba(0,0,0,.28);
+    cursor: pointer; transition: filter .15s;
+    will-change: transform, left, top;
+  }
+  .tile.blocked { filter: brightness(.62) saturate(.75); cursor: default; box-shadow: 0 2px 0 #8f8468, 0 3px 5px rgba(0,0,0,.2); }
+  .tile.pop { animation: pop .32s ease forwards; pointer-events: none; }
+  @keyframes pop {
+    0% { transform: scale(1); }
+    45% { transform: scale(1.25); filter: brightness(1.3); }
+    100% { transform: scale(0); opacity: 0; }
+  }
+
+  /* ===== 道具栏 ===== */
+  #helpBar {
+    height: 44px; display: flex; align-items: center; justify-content: center;
+    gap: 12px; flex-shrink: 0;
+  }
+  .helpBtn {
+    min-width: 86px; padding: 5px 10px; border: none; border-radius: 20px;
+    background: linear-gradient(180deg, #ffd76e, #f5a623);
+    color: #5d3a00; font-size: 13px; font-weight: 800;
+    box-shadow: 0 3px 0 #c47f10, 0 4px 8px rgba(0,0,0,.25);
+    cursor: pointer; font-family: inherit;
+  }
+  .helpBtn:active { transform: translateY(2px); box-shadow: 0 1px 0 #c47f10; }
+  .helpBtn:disabled { filter: grayscale(.85) brightness(.85); cursor: not-allowed; }
+  .helpBtn .cnt { font-size: 11px; opacity: .85; }
+
+  /* ===== 槽位栏 ===== */
+  #slotBar {
+    height: 74px; flex-shrink: 0; margin: 0 12px 4px;
+    background: linear-gradient(180deg, #6d4a2f, #4e3320);
+    border-radius: 14px; border: 3px solid #3a2416;
+    position: relative; box-shadow: inset 0 3px 8px rgba(0,0,0,.45);
+  }
+  #slotBar .slot-ghost {
+    position: absolute; top: 7px; width: 54px; height: 54px;
+    border: 2px dashed rgba(255,255,255,.22); border-radius: 11px;
+  }
+  #slotBar .tile { box-shadow: 0 3px 0 #b3a37e, 0 4px 10px rgba(0,0,0,.4); }
+
+  /* ===== 移出暂存区 ===== */
+  #outBar {
+    height: 40px; margin: 0 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  #outBar .out-cell {
+    width: 34px; height: 34px; border-radius: 8px;
+    background: rgba(0,0,0,.22); border: 1px dashed rgba(255,255,255,.3);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #outBar .tile { width: 34px; height: 34px; font-size: 19px; border-radius: 8px; border-width: 1.5px; position: relative; left: 0; top: 0; }
+  #outHint { font-size: 10px; color: rgba(255,255,255,.7); margin-right: 4px; }
+
+  /* ===== 遮罩 / 面板 ===== */
+  #overlay {
+    position: absolute; inset: 0; z-index: 50;
+    background: rgba(20, 40, 24, .55); backdrop-filter: blur(3px);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .panel {
+    width: 320px; background: linear-gradient(180deg, #fffef5, #f4eeda);
+    border-radius: 20px; padding: 26px 24px 22px; text-align: center;
+    box-shadow: 0 12px 40px rgba(0,0,0,.4); border: 3px solid #e2d5ae;
+    animation: rise .35s ease;
+  }
+  @keyframes rise { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .panel h1 { font-size: 26px; color: #3c7d42; margin-bottom: 4px; }
+  .panel .en { font-size: 11px; color: #9a927b; margin-bottom: 14px; }
+  .panel .sheep { font-size: 52px; margin: 6px 0 10px; }
+  .panel p { font-size: 13px; color: #6b6250; line-height: 1.75; margin-bottom: 6px; }
+  .panel .sig { font-size: 11px; color: #b0a78c; margin-top: 12px; }
+  .bigBtn {
+    display: block; width: 100%; margin-top: 12px; padding: 12px;
+    border: none; border-radius: 14px; font-family: inherit;
+    font-size: 17px; font-weight: 900; color: #fff; cursor: pointer;
+    background: linear-gradient(180deg, #6fce6a, #46a34c);
+    box-shadow: 0 4px 0 #2f7a38, 0 6px 12px rgba(0,0,0,.25);
+  }
+  .bigBtn:active { transform: translateY(2px); box-shadow: 0 2px 0 #2f7a38; }
+  .bigBtn.alt { background: linear-gradient(180deg, #b9b298, #928b72); box-shadow: 0 4px 0 #6e6852, 0 6px 12px rgba(0,0,0,.2); }
+  .hidden { display: none !important; }
+
+  /* 飘字 */
+  .fly {
+    position: absolute; z-index: 40; font-size: 16px; font-weight: 900;
+    color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.5);
+    pointer-events: none; animation: flyUp .8s ease forwards;
+  }
+  @keyframes flyUp { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-46px); opacity: 0; } }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="hud">
+    <div>
+      <div class="logo">🐑 羊羊叠叠消</div>
+      <div class="sub">Sheep Stack Match</div>
+    </div>
+    <div id="lvlBadge">第 1 关</div>
+    <div id="verBadge">v1.0.0</div>
+  </div>
+
+  <div id="boardWrap"><div id="board"></div></div>
+
+  <div id="helpBar">
+    <button class="helpBtn" id="btnUndo">↩️ 撤回 <span class="cnt">×3</span></button>
+    <button class="helpBtn" id="btnOut">🧺 移出 <span class="cnt">×1</span></button>
+    <button class="helpBtn" id="btnShuffle">🔀 洗牌 <span class="cnt">×1</span></button>
+  </div>
+
+  <div id="slotBar"></div>
+  <div id="outBar">
+    <span id="outHint">移出暂存(点击取回)</span>
+    <div class="out-cell"></div><div class="out-cell"></div><div class="out-cell"></div>
+  </div>
+
+  <div id="overlay">
+    <div class="panel" id="menuPanel">
+      <div class="sheep">🐑🐑🐑</div>
+      <h1>羊羊叠叠消</h1>
+      <div class="en">Sheep Stack Match · v1.0.0</div>
+      <p>点击亮起的方块收进底部槽位，<b>三张同款</b>即可消除。<br>槽位七格，塞满即败；清空全部方块即胜。<br>本作<b>无任何广告</b>，道具免费限量，牌局保证有解。</p>
+      <p id="bestLine" style="font-weight:700;color:#8a6d3b;"></p>
+      <button class="bigBtn" id="btnStart">开始冒险 / PLAY</button>
+      <button class="bigBtn alt" id="btnRestart">从第 1 关重来 / RESTART</button>
+      <div class="sig">© 2026 区耀丁 Ou Yaoding</div>
+    </div>
+    <div class="panel hidden" id="winPanel">
+      <div class="sheep">🎉🐑</div>
+      <h1>过关啦！</h1>
+      <div class="en">Level Clear!</div>
+      <p id="winInfo"></p>
+      <button class="bigBtn" id="btnNext">下一关 / NEXT →</button>
+    </div>
+    <div class="panel hidden" id="losePanel">
+      <div class="sheep">😵🐑</div>
+      <h1>槽位满了…</h1>
+      <div class="en">Slots Full!</div>
+      <p id="loseInfo"></p>
+      <button class="bigBtn" id="btnRetry">再试一次 / RETRY</button>
+      <button class="bigBtn alt" id="btnMenu">回主菜单 / MENU</button>
+    </div>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
