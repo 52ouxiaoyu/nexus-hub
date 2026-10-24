@@ -115,7 +115,7 @@
 <body>
 <div id="wrap">
     <canvas id="cv" width="1280" height="720"></canvas>
-    <div class="ver">v4.2.0 · 箭弩塔</div>
+    <div class="ver">v4.3.0 · 双人比分</div>
 
     <!-- 主菜单 -->
     <div id="menu" class="overlay">
@@ -172,6 +172,7 @@
             <div class="subtitle" id="overTime">你守了 00:00</div>
             <div class="stat-line">击杀 <b id="overKills">0</b> 只 · 最高连击 <b id="overCombo">0</b> · 合击 <b id="overCross">0</b> 次</div>
             <div class="stat-line">史莱姆王 <b id="overBoss">0</b> 只 · 本局拾取 <b id="overCoins">0</b> 金币</div>
+            <div class="stat-line">比分　<b id="overS1">0</b> <span style="opacity:.5">:</span> <b id="overS2">0</b>　·　本局赢家 <b id="overMvp">—</b></div>
             <div class="tip" style="margin-bottom:9px;">按 <b>Enter</b> 再来一局　·　按 <b>Esc</b> 回到基地</div>
             <button class="btn green" id="btnRetry">再来一局 <span class="kc">Enter</span></button>
             <button class="btn gray" id="btnHome">回到基地 <span class="kc">Esc</span></button>
@@ -188,13 +189,13 @@
 
 <script>
 "use strict";
-/* ================= 向史莱姆开炮 v4.2.0 · 无尽守卫（纯单局 · 升级不暂停） ================= */
+/* ================= 向史莱姆开炮 v4.3.0 · 无尽守卫（纯单局 · 升级不暂停） ================= */
 const W = 1280, H = 720;
 const WALL_TOP = 596;          // 城墙顶面
 const TOWER_X = [206, 1074];   // 两座塔的中心 x
 const TOWER_Y = 646;           // 塔心 y（俯视圆塔）
 const PIVOT_Y = 630;           // 炮口旋转枢轴 y（在塔心偏上）
-const VERSION = 'v4.2.0';
+const VERSION = 'v4.3.0';
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -378,7 +379,8 @@ const TUNE = {
     crossDur: 2.0,       // 合击加成持续
     crossMul: 2.6,       // 合击伤害倍率（两塔锁同一片时的核心收益）
     cardWindow: 4.6,     // 选卡停留时间（超时自动选）
-    bossK: 60,           // 史莱姆王血量 = 同期普通史莱姆 × bossK（实测 ≈ 打 9~14 秒）
+    bossK: 60,           // 史莱姆王血量 = 同期普通史莱姆 × bossK（成型期约打 9~14 秒）
+    bossCrowdCap: 4.5,   // Boss 血量按拥挤度稀释的上限（防止末期一味砍血）
 };
 
 function makeTower(i) {
@@ -403,6 +405,7 @@ function makePlayer(i) {
         q: [], cardT: 0,         // 升级坞：待选卡队列 / 倒计时
         hitMark: -99,            // 最近一次命中同一目标的时间（合击判定）
         crossN: 0,               // 该侧参与的合击次数
+        dmg: 0, kills: 0,        // 本局累计实际伤害 / 补刀数（算分与对比用）
     };
 }
 function newGame() {
@@ -470,10 +473,11 @@ function pickKind(t) {
     return r < .20 ? 'small' : r < .50 ? 'basic' : r < .68 ? 'big' : r < .81 ? 'spiky' : r < .91 ? 'shield' : 'flyer';
 }
 function bossHpFor() {
-    // 按"同期普通史莱姆的血量"折算，而不是按 dpsOf 折算：
-    // 穿透/多重让真实吞吐是 dpsOf 的二十几倍，用 dpsOf 估出来的 Boss 一枪就没。
-    // 200 倍 ≈ 两塔全力集火 5~8 秒，且随难度曲线自动同步。
-    return Math.round(hpMul() * ETYPES.basic.hp * TUNE.bossK);
+    // 同期小怪血量 × bossK，再按拥挤度稀释。
+    // 拥挤度这一项是必须的：怪越多，AI 的射线越被杂兵占满，能分给 Boss 的火力越少。
+    // （不除它的时候，150 秒以后出生的那只实测能硬扛 40 秒）
+    const crowd = clamp(G.enemies.length / 60, 1, TUNE.bossCrowdCap);
+    return Math.round(hpMul() * ETYPES.basic.hp * TUNE.bossK / crowd);
 }
 function spawnBoss() {
     G.bossN++;
@@ -901,13 +905,16 @@ function hitEnemy(e, dmg, p, opt) {
         e.flash = .08;
         if (e.shield <= 0) { burstAt(e.x, e.y, 12, '#d7c0ff', 190, 4); sfx('freeze'); }
     }
+    // 记分用「实际打掉的血量」：打死 1 血小怪也只算 1，避免抢残血虚高
+    const eff = d > 0 ? Math.min(d, Math.max(0, e.hp)) : 0;
     if (d > 0) e.hp -= d;
+    if (p && eff > 0) p.dmg += eff;
     e.flash = .09; e.sq = 1.2; e.hurtT = .1;
     if (!opt.noNum) {
         dmgNum(e.x, e.y - e.r - 6, d, crit, crit ? '#ffe28a' : (p ? p.color : '#fff'));
     }
     if (p) {
-        if (opt.burn) { e.burn = 2 + p.lv.fire * 2.6; e.burnT = 2.4; }
+        if (opt.burn) { e.burn = 2 + p.lv.fire * 2.6; e.burnT = 2.4; e.burnBy = p; }
         if (opt.slow) { e.slow = Math.max(e.slow, Math.min(.32, .24 + p.lv.ice * .05)); e.slowT = 1.6; }
     }
     // 共鸣充能
@@ -931,6 +938,7 @@ function killEnemy(e, p) {
     if (e.dead) return;
     e.dead = true;
     G.kills++;
+    if (p) p.kills++;
     G.combo++; G.comboT = 2.6;
     if (G.combo > G.bestCombo) G.bestCombo = G.combo;
     const big = e.boss || e.r > 28 || e.type === 'spiky' || e.type === 'shield';
@@ -1115,7 +1123,9 @@ function updateEnemies(dt) {
         // 灼烧
         if (e.burnT > 0) {
             e.burnT -= dt;
+            const bd = Math.min(e.burn * dt, Math.max(0, e.hp));
             e.hp -= e.burn * dt;
+            if (e.burnBy && bd > 0) e.burnBy.dmg += bd;   // 灼烧算点火者的输出
             if (Math.random() < .35) part(e.x + rand(-e.r, e.r), e.y + rand(-e.r * .5, e.r * .5), rand(-30, 30), rand(-120, -50), '#ff9a3d', .34, 3.4, 200);
             if (e.hp <= 0) { killEnemy(e, null); G.enemies.splice(i, 1); continue; }
         }
@@ -2513,11 +2523,26 @@ function drawSideFx(p) {
 }
 
 /* ---------- 双人 HUD 面板：火力 / 技能 / 键位 ---------- */
-const PANEL_W = 300, PANEL_H = 102, PANEL_Y = 52;
+const PANEL_W = 300, PANEL_H = 124, PANEL_Y = 52;
 function dpsOf(p) {
     const arrows = 1 + p.lv.multi;
     const dmg = dmgBase(p) * (1 + p.lv.heavy * 0.45) * (p.powT > 0 ? 1.7 : 1) * (G.ultT > 0 ? 1.7 : 1);
     return dmg * arrows * rateOf(p) * (1 + critChance(p) * 1.3);
+}
+// 分数 = 真实输出/100 + 补刀×8 + 合击×5
+// 合击只给一点点，因为它的收益已经通过 ×2.6 伤害体现过了，再给高分就变成"刷合击"而不是"打得狠"
+function scoreOf(p) {
+    if (!p) return 0;
+    return Math.round(p.dmg / 100) + p.kills * 8 + p.crossN * 5;
+}
+function fmtScoreFull(v) {
+    return String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+function fmtScore(v) {
+    v = Math.round(v);
+    if (v >= 1000000) return (v / 1000000).toFixed(2) + 'M';
+    if (v >= 100000) return (v / 1000).toFixed(1) + 'k';
+    return fmtScoreFull(v);
 }
 function fmtPow(v) {
     if (v >= 100000) return Math.round(v / 1000) + 'k';
@@ -2598,10 +2623,41 @@ function drawPlayerPanel(i) {
     ctx.font = '10.5px -apple-system, sans-serif';
     ctx.fillStyle = 'rgba(178,198,228,.92)';
     const dmgOne = Math.round(dmgBase(p) * (1 + p.lv.heavy * 0.45) * (p.powT > 0 ? 1.7 : 1));
-    ctx.fillText(`伤害 ${dmgOne} × ${1 + p.lv.multi} 支 · 射速 ${rateOf(p).toFixed(1)}/s · 暴击 ${Math.round(critChance(p) * 100)}%`, lx, y + 38);
+    ctx.fillText(`伤害 ${dmgOne} × ${1 + p.lv.multi} 支 · 射速 ${rateOf(p).toFixed(1)}/s · 暴击 ${Math.round(critChance(p) * 100)}%`, lx, y + 36);
+
+    // —— 得分：本侧分数 + 与对手的差距 + 双人占比条 ——
+    const s0 = scoreOf(G.players[0]), s1 = scoreOf(G.players[1]);
+    const mine = i === 0 ? s0 : s1, foe = i === 0 ? s1 : s0;
+    const lead = mine - foe;
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 9.5px -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(168,190,222,.85)';
+    ctx.fillText('得分', lx, y + 55);
+    ctx.font = 'bold 19px -apple-system, sans-serif';
+    ctx.fillStyle = p.color;
+    ctx.fillText(fmtScore(mine), lx + 27, y + 54.5);
+    // 差距标签（领先金 / 落后灰）
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 11px -apple-system, sans-serif';
+    ctx.fillStyle = lead > 0 ? '#ffd76a' : (lead < 0 ? 'rgba(176,196,226,.9)' : 'rgba(200,220,255,.7)');
+    const gapPct = (s0 + s1) > 0 ? Math.max(1, Math.round(Math.abs(lead) / (s0 + s1) * 100)) : 0;
+    const gapTxt = lead > 0 ? `▲ 领先 ${gapPct}%` : (lead < 0 ? `▼ 落后 ${gapPct}%` : '平分');
+    ctx.fillText(gapTxt, x + PANEL_W - 16, y + 55);
+    // 占比条：左段恒 1P / 右段恒 2P，两块面板画的是同一条，一眼看出谁过半
+    const barX = lx, barY = y + 70, barW = PANEL_W - 32, barH = 6;
+    chipBox(barX, barY, barW, barH, 3, 'rgba(255,255,255,.09)', null);
+    const tot2 = s0 + s1;
+    const f1 = tot2 > 0 ? clamp(s0 / tot2, 0, 1) : .5;
+    const w1 = Math.max(1, barW * f1), w2 = Math.max(1, barW - w1);
+    chipBox(barX, barY, w1, barH, 3, G.players[0].color, null);
+    chipBox(barX + w1, barY, w2, barH, 3, G.players[1].color, null);
+    ctx.fillStyle = 'rgba(255,255,255,.92)';
+    ctx.fillRect(barX + w1 - 1, barY - 1.5, 2, barH + 3);
+    ctx.fillStyle = 'rgba(6,10,18,.5)';
+    ctx.fillRect(barX + barW / 2 - .5, barY - 1, 1, barH + 2);
 
     // —— 第三行：技能图标 ——
-    const cy0 = y + 50;
+    const cy0 = y + 85;
     let cx0 = lx;
     const owned = SKILLS.filter(s => p.lv[s.id] > 0);
     const evoList = EVOLUTIONS.filter(e => p.evos[e.id]);
@@ -2639,7 +2695,7 @@ function drawPlayerPanel(i) {
     ctx.textAlign = 'left';
     ctx.font = 'bold 10.5px -apple-system, sans-serif';
     ctx.fillStyle = i === 0 ? 'rgba(150,230,255,.88)' : 'rgba(255,205,135,.9)';
-    ctx.fillText(i === 0 ? 'A/D 转炮　W 换卡　S 选中' : '←/→ 转炮　↑ 换卡　↓ 选中', lx, y + 89);
+    ctx.fillText(i === 0 ? 'A/D 转炮　W 换卡　S 选中' : '←/→ 转炮　↑ 换卡　↓ 选中', lx, y + 113);
 
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
@@ -3029,10 +3085,18 @@ function gameOver() {
     sfx('big');
     $('overTime').textContent = `你守了 ${fmtTime(G.time)}`;
     $('overKills').textContent = G.kills;
-    $('overCombo').textContent = G.bestCombo;
+    $('overCombo').textContent = G.bestCombo > 999 ? '999+' : G.bestCombo;
     $('overCross').textContent = G.cross;
     $('overBoss').textContent = G.bossKill || 0;
     $('overCoins').textContent = G.coinsRun;
+    // 双人比分：让"这局谁在带"有个明确交代
+    const sc0 = scoreOf(G.players[0]), sc1 = scoreOf(G.players[1]);
+    $('overS1').textContent = fmtScoreFull(sc0);
+    $('overS1').style.color = P_COLOR[0];
+    $('overS2').textContent = fmtScoreFull(sc1);
+    $('overS2').style.color = P_COLOR[1];
+    $('overMvp').textContent = sc0 === sc1 ? '平局' : (sc0 > sc1 ? '1P' : '2P');
+    $('overMvp').style.color = sc0 > sc1 ? P_COLOR[0] : (sc1 > sc0 ? P_COLOR[1] : '#cfe0ff');
     setTimeout(() => showOnly('overOverlay'), 1200);
 }
 $('btnStart').onclick = () => startGame();
@@ -3086,6 +3150,7 @@ window.__slime = {
     setSpeed, dpsOf, sideFx, openPickup, goHome, startGame,
     hpMul, biteMul, spdMul, levelCheck, offerLevels, updateDocks, rollOffers,
     spawnBoss, pickKind, updateSpawner, fmtTime, update, allMaxed,
+    scoreOf, fmtScore, fmtScoreFull, gameOver, P_COLOR,
     get speed() { return G ? (G.speed || 1) : speedPref; },
     setState(s) { state = s; },
 };
