@@ -115,7 +115,7 @@
 <body>
 <div id="wrap">
     <canvas id="cv" width="1280" height="720"></canvas>
-    <div class="ver">v4.7.1 · 元素共鸣</div>
+    <div class="ver">v4.7.2 · 元素共鸣</div>
 
     <!-- 主菜单 -->
     <div id="menu" class="overlay">
@@ -162,7 +162,7 @@
                 🎯 箭矢<b style="color:#5ee6ff">微微吸附</b>：方向大致对上了，会自己拐一点点去咬住目标<br>
                 💥 击杀累积<b style="color:#ffd76a">连击</b>，连击越高射速越快；双塔伤害共同充能<b>共鸣槽</b>，满了自动放<b style="color:#7df9ff">双子贯穿光束</b> —— 光束<b>实时跟随炮口</b>，A/D 指哪照哪，命中附带各自元素效果<br>
                 🤖 某一边 <b style="color:#45e08a">5 秒无操作</b> → 那一边自动 AI 托管，一动就抢回<br>
-                ⚔️ <b style="color:#ffd76a">处决</b>：<kbd>空格</kbd>（P1）/ <kbd>小键盘 Enter</kbd>（P2），<b>12 秒</b>冷却，炮口前方 <b>90° 扇形</b>内全体 <b>×3 伤害 + 重击退</b>；扇形里没敌人时不扣冷却<br>
+                ⚔️ <b style="color:#ffd76a">处决</b>：<kbd>空格</kbd>（P1）/ <kbd>小键盘 Enter</kbd>（P2），<b>12 秒</b>冷却，炮口前方 <b>90° 扇形</b>内全体 <b>×3 伤害 + 重击退</b>；扇形里没敌人时不扣冷却；选<b style="color:#ffd76a">处决强化</b>卡可升到 <b>×7.5 / 6 秒冷却</b><br>
                 ✨ <b style="color:#ffcd40">词缀精英</b>：金色描边、体积更大、血更厚。词缀 = 分裂 / 护盾 / 加速 / 吸血 / 死亡爆炸，每只随机 1~2 条，越往后来得越多 —— 优先点掉它们<br>
                 ⚠️ 突发危机：兽潮 / 史莱姆王 / 酸雨 / 暗夜 / 狂暴 / 重甲突袭，越往后来得越勤<br>
                 👑 每 <b>75 秒</b> 一只史莱姆王，打死它 <b style="color:#45e08a">修墙 18%</b>；补给箱也修墙<br>
@@ -199,13 +199,13 @@
 
 <script>
 "use strict";
-/* ================= 向史莱姆开炮 v4.7.1 · 元素共鸣（纯单局 · 升级不暂停） ================= */
+/* ================= 向史莱姆开炮 v4.7.2 · 元素共鸣（纯单局 · 升级不暂停） ================= */
 const W = 1280, H = 720;
 const WALL_TOP = 596;          // 城墙顶面
 const TOWER_X = [206, 1074];   // 两座塔的中心 x
 const TOWER_Y = 646;           // 塔心 y（俯视圆塔）
 const PIVOT_Y = 630;           // 炮口旋转枢轴 y（在塔心偏上）
-const VERSION = 'v4.7.1';
+const VERSION = 'v4.7.2';
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -333,18 +333,19 @@ function sfx(name) {
 
 /* ---------- 技能卡池 ---------- */
 const SKILLS = [
-    { id: 'rate',   name: '速射机簧', icon: '⏩', max: 3, desc: lv => `射速阶梯 +20% / +42% / +68%` },
-    { id: 'atk',    name: '淬火箭矢', icon: '🔥', max: 3, desc: lv => `单发伤害阶梯 +50% / +125% / +220%` },
+    { id: 'rate',   name: '速射机簧', icon: '⏩', max: 5, desc: lv => `射速阶梯 +15% / +28% / +42% / +56% / +70%` },
+    { id: 'atk',    name: '淬火箭矢', icon: '🔥', max: 5, desc: lv => `单发伤害阶梯 +50% / +125% / +230% / +380% / +600%` },
     { id: 'multi',  name: '分叉射击', icon: '🎯', max: 2, desc: lv => `多射 1 支箭（共 ${lv + 1} 支）` },
-    { id: 'pierce', name: '破甲穿云', icon: '➤', max: 3, desc: lv => `穿透 +1 个敌人（${lv + 1} 层）` },
+    { id: 'pierce', name: '破甲穿云', icon: '➤', max: 4, desc: lv => `穿透 +1 个敌人（${lv + 1} 层）` },
     { id: 'crit',   name: '致命瞄准', icon: '💥', max: 3, desc: lv => `暴击率 +11%，暴击 2.3 倍` },
-    { id: 'fire',   name: '烈焰附魔', icon: '🔥', max: 3, elem: 'fire', desc: lv => `本塔转为【火】：命中点燃，持续灼烧` },
-    { id: 'ice',    name: '寒霜附魔', icon: '❄', max: 3, elem: 'ice',  desc: lv => `本塔转为【冰】：减速 + 概率冻结` },
-    { id: 'light',  name: '雷霆附魔', icon: '⚡', max: 3, elem: 'bolt', desc: lv => `本塔转为【雷】：连锁弹射 + 概率麻痹` },
+    { id: 'fire',   name: '烈焰附魔', icon: '🔥', max: 4, elem: 'fire', desc: lv => `本塔转为【火】：命中点燃，持续灼烧` },
+    { id: 'ice',    name: '寒霜附魔', icon: '❄', max: 4, elem: 'ice',  desc: lv => `本塔转为【冰】：减速 + 概率冻结` },
+    { id: 'light',  name: '雷霆附魔', icon: '⚡', max: 4, elem: 'bolt', desc: lv => `本塔转为【雷】：连锁弹射 + 概率麻痹` },
     { id: 'heavy',  name: '重弩',     icon: '🏹', max: 3, desc: lv => `箭矢巨大化，伤害 +45%、击退` },
     { id: 'wall',   name: '城墙加固', icon: '🧱', max: 3, desc: lv => `城墙上限 +25% 并立刻修复 30%` },
     { id: 'coin',   name: '赏金猎人', icon: '🪙', max: 3, desc: lv => `金币收益 +18%，额外充能共鸣槽` },
     { id: 'burst',  name: '爆裂箭',   icon: '💣', max: 3, desc: lv => `命中时小幅范围爆炸（Lv.${lv + 1}）` },
+    { id: 'exec',   name: '处决强化', icon: '💀', max: 3, desc: lv => { const t = Math.min(lv + 1, 3); return `处决伤害 ×${(3 + t * 1.5).toFixed(1)} · 冷却 ${12 - t * 2}s · 范围 +${t * 80}`; } },
 ];
 /* 质变降到 2+2：现在一局有 ~35 个卡点，玩家真的能凑出来 */
 const EVOLUTIONS = [
@@ -384,6 +385,11 @@ const EXEC = {
                          // 这招的后期价值在"成片击退 + 打断啃墙"，不在数字。
     kbv: 900,            // 击退初速（≈105px 位移）；1500 时每 6 秒全屏后退 180px，墙面压力被削掉三成
 };
+/* v4.7.2 处决可升级（技能卡「处决强化」max 3）：
+   Lv0 ×3.0/12s → Lv3 ×7.5/6s；范围 +80/级。hpPct 保底不动（教训见上） */
+function execCdOf(p)    { return EXEC.cd - p.lv.exec * 2; }
+function execMulOf(p)   { return EXEC.dmgMul + p.lv.exec * 1.5; }
+function execRangeOf(p) { return EXEC.range + p.lv.exec * 80; }
 
 /* ---------- 词缀精英 ---------- */
 const AFFIX = {
@@ -413,8 +419,8 @@ const REACT = {
     breach: { name: '破绽', icon: '', col: '#ffffff', shout: '破 绽 ！' },
 };
 /* 阶梯升级：每一级都是跳变，不是线性堆叠 —— 让"升它"这个决定有分量 */
-const ATK_STEP  = [1, 1.50, 2.25, 3.20];
-const RATE_STEP = [1, 1.15, 1.28, 1.42];   // 满级也只有 4.5/s：再多就又糊成光条了
+const ATK_STEP  = [1, 1.50, 2.25, 3.30, 4.80, 7.00];   // v4.7.2 满级 5：Lv4/5 是大跳变，升满就是"威力夸张"
+const RATE_STEP = [1, 1.15, 1.28, 1.42, 1.56, 1.70];   // 射速只温和加长（5.4/s 封顶），密度红线不能破
 
 /* ---------- 无尽模式调参（改难度只动这里） ---------- */
 const TUNE = {
@@ -463,7 +469,7 @@ function makePlayer(i) {
     const t = makeTower(i);
     return {
         idx: i, tower: t, color: P_COLOR[i], color2: P_COLOR2[i],
-        lv: { rate: 0, atk: 0, multi: 0, pierce: 0, crit: 0, fire: 0, ice: 0, light: 0, heavy: 0, wall: 0, coin: 0, burst: 0 },
+        lv: { rate: 0, atk: 0, multi: 0, pierce: 0, crit: 0, fire: 0, ice: 0, light: 0, heavy: 0, wall: 0, coin: 0, burst: 0, exec: 0 },
         evos: {},
         idleT: 0, auto: false,   // 5 秒无输入 → AI 托管
         cardsSel: 0, cardsDone: false, aiPickT: 0, aiAng: 0, aiT: 0,
@@ -999,6 +1005,7 @@ function aiPickBest(p, offers) {
         if (s.id === 'pierce' && p.lv.pierce === 0 && G.enemies.length > 12) sc += 2.2;
         if (s.id === 'rate' || s.id === 'atk') sc += 1.2;
         if (s.id === 'crit' && p.lv.crit === 0) sc += 1.5;
+        if (s.id === 'exec') sc += p.lv.exec === 0 ? 2.4 : 1.0;   // 处决是唯一主动技，先立起来
         // 元素分工：托管也要懂得"和搭档错开"，两个人都点冰等于没有配合
         if (s.elem) {
             const fe = elemOf(G.players[1 - p.idx]);
@@ -1298,7 +1305,7 @@ function execTargets(p) {
     for (const e of G.enemies) {
         if (e.dead || e.remove) continue;
         const rx = e.x - t.x, ry = e.y - t.py;
-        if (Math.hypot(rx, ry) > EXEC.range + e.r) continue;
+        if (Math.hypot(rx, ry) > execRangeOf(p) + e.r) continue;
         if (Math.abs(angDiff(Math.atan2(rx, -ry), t.ang)) > EXEC.half) continue;   // 90° 全角扇形
         out.push(e);
     }
@@ -1315,12 +1322,12 @@ function doExec(i) {
         sfx('move');
         return false;
     }
-    p.execCd = EXEC.cd;
+    p.execCd = execCdOf(p);
     p.execN = (p.execN || 0) + 1;
-    const base = dmgOneOf(p) * EXEC.dmgMul;
+    const base = dmgOneOf(p) * execMulOf(p);
     // 手感：后坐 + 白闪 + 顿帧 + 震屏
     t.recoil = 1; t.flash = .4;
-    G.execFx.push({ x: t.x, y: t.py, ang: t.ang, t: .38, dur: .38, col: p.color });
+    G.execFx.push({ x: t.x, y: t.py, ang: t.ang, t: .38, dur: .38, col: p.color, range: execRangeOf(p) });
     G.shake = Math.max(G.shake, 10);
     G.whiteFlash = Math.max(G.whiteFlash, .22);
     G.hitstop = Math.max(G.hitstop, .09);
@@ -2506,7 +2513,7 @@ function drawExec() {
     if (!G.execFx || !G.execFx.length) return;
     for (const f of G.execFx) {
         const k = clamp(1 - f.t / f.dur, 0, 1);
-        const R = EXEC.range * (0.35 + 0.65 * (1 - (1 - k) * (1 - k)));
+        const R = (f.range || EXEC.range) * (0.35 + 0.65 * (1 - (1 - k) * (1 - k)));
         const a = (1 - k) * (1 - k);
         ctx.save();
         ctx.translate(f.x, f.y);
@@ -3713,7 +3720,7 @@ function drawPlayerPanel(i) {
         chipBox(exx, eyy, ew, eh, 5, hexA(p.color, .16 + .12 * pulse), hexA(p.color, .85));
     } else {
         chipBox(exx, eyy, ew, eh, 5, 'rgba(255,255,255,.05)', 'rgba(255,255,255,.16)');
-        const f = 1 - p.execCd / EXEC.cd;
+        const f = 1 - p.execCd / execCdOf(p);
         chipBox(exx + 1, eyy + 1, Math.max(2, (ew - 2) * f), eh - 2, 4, 'rgba(255,255,255,.10)', null);
     }
     ctx.textAlign = 'center';
@@ -3774,6 +3781,7 @@ function drawDock(i) {
         else if (s.id === 'rate') val = `×${RATE_STEP[Math.min(nx, RATE_STEP.length - 1)].toFixed(2)}`;
         else if (s.elem) val = `转${ELEMS[s.elem].name}`;
         else if (s.id === 'multi') val = `${nx + 1} 支`;
+        else if (s.id === 'exec') val = `×${(EXEC.dmgMul + nx * 1.5).toFixed(1)} · ${EXEC.cd - nx * 2}s`;
         const tag = (full ? '满级' : `Lv.${nx}`) + (val ? ` · ${val}` : '');
         ctx.font = 'bold 9px -apple-system, sans-serif';
         ctx.fillStyle = full ? '#ffd76a' : 'rgba(190,212,242,.85)';
@@ -4090,6 +4098,7 @@ function pickCard(i, ci, silent) {
         if (s.id === 'atk') tail = ` · 伤害 ×${ATK_STEP[Math.min(p.lv.atk, ATK_STEP.length - 1)].toFixed(2)}`;
         else if (s.id === 'rate') tail = ` · 射速 ×${RATE_STEP[Math.min(p.lv.rate, RATE_STEP.length - 1)].toFixed(2)}`;
         else if (s.id === 'multi') tail = ` · 共 ${1 + p.lv.multi} 支`;
+        else if (s.id === 'exec') tail = ` · ×${(EXEC.dmgMul + (p.lv.exec + 1) * 1.5).toFixed(1)} / ${EXEC.cd - (p.lv.exec + 1) * 2}s`;
         floatText(TOWER_X[i], PIVOT_Y - 96, `${s.icon} ${s.name} Lv.${p.lv[s.id]}${tail}`, p.color, 13);
         // 主元素变了 → 全屏播报（这是"吃不同技能，画面就不一样"的开关）
         const elemNow = elemOf(p);
