@@ -35,6 +35,13 @@
     .btn.orange { background: linear-gradient(180deg, #ffb04a, #e07a10); box-shadow: 0 4px 0 #95500a, 0 8px 24px rgba(255,176,74,.3); }
     .btn.gray { background: linear-gradient(180deg, #5a6a85, #3c4a63); box-shadow: 0 4px 0 #232e42; }
     .btn.big { font-size: 19px; padding: 17px 60px; letter-spacing: 6px; }
+    .kc {
+        display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: 0;
+        padding: 2px 8px; margin-left: 7px; border-radius: 6px; vertical-align: 2px;
+        background: rgba(0,0,0,.32); border: 1px solid rgba(255,255,255,.4); color: #eaf4ff;
+    }
+    .cardfoot { margin-top: 16px; color: #93a7c9; font-size: 12.5px; letter-spacing: .5px; }
+    .cardfoot b { color: #ffd76a; }
     .stat-line { color: #8fa3c8; font-size: 13px; margin: 5px 0; }
     .stat-line b { color: #ffd76a; }
     .ver {
@@ -108,7 +115,7 @@
 <body>
 <div id="wrap">
     <canvas id="cv" width="1280" height="720"></canvas>
-    <div class="ver">v3.1.0 · 子弹自动吸附</div>
+    <div class="ver">v3.2.0 · 1~5 倍速 · 全键盘</div>
 
     <!-- 主菜单 -->
     <div id="menu" class="overlay">
@@ -126,11 +133,11 @@
                     <div class="kd"><kbd>←</kbd><kbd>→</kbd> 转动炮口 · <kbd>↑</kbd> 往后推 · <kbd>↓</kbd> 选中</div>
                 </div>
             </div>
-            <div class="tip">只有<b>四键</b>：左右转炮口，升级时上下选卡。箭矢会<b>自动微调</b>咬住目标。<br>哪边<b>5 秒没动</b>，那一边的炮塔自动交给 AI 托管。<br>每盘独立开局，过关即送<b>战地改装</b>。</div>
+            <div class="tip">只有<b>四键</b>：左右转炮口，升级时上下选卡。箭矢会<b>自动微调</b>咬住目标。<br>哪边<b>5 秒没动</b>，那一边的炮塔自动交给 AI 托管。<br>炮台变强了就按 <b>1~5</b> 提速（最高 <b>×5</b>）· 全程<b>不用鼠标</b>。</div>
             <div style="margin:16px 0 4px;">
-                <button class="btn green big" id="btnStart">开始守卫</button>
+                <button class="btn green big" id="btnStart">开始守卫 <span class="kc">Enter</span></button>
             </div>
-            <button class="btn gray" id="btnHelp">玩法说明</button>
+            <button class="btn gray" id="btnHelp">玩法说明 <span class="kc">H</span></button>
         </div>
     </div>
 
@@ -150,9 +157,12 @@
                 🌀 双塔伤害共同充能<b>共鸣槽</b>，满了<b>自动</b>放「双子贯穿光束」<br>
                 ⚠️ 小心<b style="color:#ff7a7a">突发危机</b>：兽潮 / 史莱姆王 / 酸雨 / 暗夜 / 狂暴 / 重甲突袭<br>
                 🧱 共享一道城墙，墙塌即败 · 每关 5 波，第 5 波是硬仗<br>
-                ⏸️ <kbd>P</kbd> 暂停 · <kbd>F</kbd> 全屏
+                ⏩ <kbd>1</kbd>~<kbd>5</kbd> <b>调速</b>：1~5 倍速，炮台强了就开到 ×5（关内保留）<br>
+                🕹️ 全<b>键盘</b>可玩：<kbd>Enter</kbd> 确认 · <kbd>Esc</kbd> 返回/暂停 · <kbd>H</kbd> 说明<br>
+                🎨 两侧特效不同：<b style="color:#5ee6ff">冰蓝科技</b>（P1）与 <b style="color:#ffb347">熔金火焰</b>（P2），吃到的补给也不一样<br>
+                ⏸️ <kbd>P</kbd>/<kbd>Esc</kbd> 暂停 · <kbd>F</kbd> 全屏
             </div>
-            <div style="margin-top:14px;"><button class="btn" id="btnHelpBack">返 回</button></div>
+            <div style="margin-top:14px;"><button class="btn" id="btnHelpBack">返 回 <span class="kc">Esc</span></button></div>
         </div>
     </div>
 
@@ -161,6 +171,7 @@
         <h2>⬆️ 升级！各自选择强化</h2>
         <div class="lvinfo" id="cardLvInfo"></div>
         <div class="picks" id="picksRow"></div>
+        <div class="cardfoot"><b>↑/W 往后推</b>　<b>↓/S 选中</b>（右侧用方向键）　·　两边都选好后<b>自动继续</b></div>
     </div>
 
     <!-- 过关 -->
@@ -169,7 +180,8 @@
             <h1 class="title" style="font-size:28px;">✅ 第 <span id="clearStage">1</span> 关达成</h1>
             <div class="subtitle" id="clearInfo"></div>
             <div class="stat-line">下一关开局获得 <b style="color:#ffd76a">战地改装</b>：双塔各选一次强化</div>
-            <button class="btn green" id="btnNext">进入下一关</button>
+            <div class="tip" style="margin-bottom:9px;">按 <b>Enter</b> 直接进入下一关 · 当前<b>速度档位保留</b></div>
+            <button class="btn green" id="btnNext">进入下一关 <span class="kc">Enter</span></button>
         </div>
     </div>
 
@@ -180,8 +192,9 @@
             <div class="subtitle">THE WALL HAS FALLEN</div>
             <div class="stat-line">坚守到第 <b id="overStage">1</b> 波 · 击杀 <b id="overKills">0</b> 只 · 最高连击 <b id="overCombo">0</b></div>
             <div class="stat-line">本局拾取 <b id="overCoins">0</b> 金币</div>
-            <button class="btn green" id="btnRetry">再来一局</button>
-            <button class="btn gray" id="btnHome">回到基地</button>
+            <div class="tip" style="margin-bottom:9px;">按 <b>Enter</b> 再来一局　·　按 <b>Esc</b> 回到基地</div>
+            <button class="btn green" id="btnRetry">再来一局 <span class="kc">Enter</span></button>
+            <button class="btn gray" id="btnHome">回到基地 <span class="kc">Esc</span></button>
         </div>
     </div>
 
@@ -201,7 +214,7 @@ const WALL_TOP = 596;          // 城墙顶面
 const TOWER_X = [206, 1074];   // 两座塔的中心 x
 const TOWER_Y = 646;           // 塔心 y（俯视圆塔）
 const PIVOT_Y = 630;           // 炮口旋转枢轴 y（在塔心偏上）
-const VERSION = 'v3.1.0';
+const VERSION = 'v3.2.0';
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -221,12 +234,12 @@ function fit() {
     cv.style.width = Math.round(W * s) + 'px';
     cv.style.height = Math.round(H * s) + 'px';
     const rot = document.getElementById('rotateHint');
-    if (rot) rot.classList.toggle('hidden', !(vw < vh && vw < 820 && state !== 'MENU'));
+    if (rot) rot.classList.toggle('hidden', !(vw < vh && vw < 820 && state !== 'MENU' && state !== 'HELP'));
 }
 window.addEventListener('resize', fit);
 
 /* ---------- WebAudio 音效 ---------- */
-let AC = null, noiseBuf = null, lastShotSfx = 0, lastHitSfx = 0;
+let AC = null, noiseBuf = null, lastShotSfx = 0, lastHitSfx = 0, lastKillSfx = 0, lastBigSfx = 0;
 function ac() {
     if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; } }
     if (AC && AC.state === 'suspended') AC.resume();
@@ -281,9 +294,11 @@ function sfx(name) {
             burst(.045, .05, 2600);
             break;
         case 'kill':
+            if (now - lastKillSfx < 70) return; lastKillSfx = now;   // 倍速下防音频节点爆炸
             burst(.14, .11, 1700); tone(240, .1, 'triangle', .05, 90);
             break;
         case 'big':
+            if (now - lastBigSfx < 110) return; lastBigSfx = now;
             burst(.4, .2, 900); tone(90, .38, 'sine', .16, 40);
             break;
         case 'level':
@@ -350,6 +365,7 @@ const ETYPES = {
 let state = 'MENU';
 let G = null;
 let lastTs = 0;
+let speedPref = 1;             // 速度档位 1~5（跨关 / 跨局保留）
 const P_COLOR = ['#5ee6ff', '#ffb347'];
 const P_COLOR2 = ['#1b6f8a', '#8a5a1b'];
 const ANG_MAX = 1.45;   // 炮管最大偏转（≈83°）
@@ -370,7 +386,9 @@ function makePlayer(i) {
         evos: {},
         idleT: 0, auto: false,   // 5 秒无输入 → AI 托管
         cardsSel: 0, cardsDone: false, aiPickT: 0, aiAng: 0, aiT: 0,
-        bufT: 0,                 // 狂暴 buff 计时
+        bufT: 0,                 // 射速狂暴 buff
+        powT: 0,                 // 火力全开 buff
+        fx: [], picked: 0,       // 该侧专属特效队列 / 吃到的补给数
     };
 }
 function newGame() {
@@ -390,6 +408,7 @@ function newGame() {
         paused: false, overT: 0, bannerT: 0, bannerText: '', bannerSub: '',
         wallBonus: 1, bolts: [], toasts: [], picksDone: [false, false],
         crisisSpawn: null, lastCrisis: null, wallHitT: 0, freeUpT: 0,
+        speed: speedPref,
     };
 }
 
@@ -475,6 +494,22 @@ function markActive(i) {
     }
 }
 
+/* ---------- 速度档位（1~5 倍速） ---------- */
+const SPEED_KEYS = {
+    Digit1: 1, Digit2: 2, Digit3: 3, Digit4: 4, Digit5: 5,
+    Numpad1: 1, Numpad2: 2, Numpad3: 3, Numpad4: 4, Numpad5: 5,
+};
+function setSpeed(v) {
+    v = clamp(Math.round(v), 1, 5);
+    speedPref = v;
+    if (G) G.speed = v;
+    if (state === 'MENU' || state === 'HELP') return;
+    toast(v > 1 ? `⏩ 速度 ×${v}` : '▶ 恢复 1 倍速', v > 1 ? '#ffd76a' : '#8fa3c8');
+    sfx('move');
+}
+function goHome() { state = 'MENU'; newGame(); showOnly('menu'); fit(); }
+function backToMenu() { state = 'MENU'; showOnly('menu'); fit(); }
+
 window.addEventListener('keydown', e => {
     // 通用
     if (e.code === 'KeyP') {
@@ -485,7 +520,30 @@ window.addEventListener('keydown', e => {
         if (!document.fullscreenElement) { if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); }
         else if (document.exitFullscreen) document.exitFullscreen();
     }
-    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].indexOf(e.code) >= 0) e.preventDefault();
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space', 'Enter', 'NumpadEnter', 'Tab'].indexOf(e.code) >= 0) e.preventDefault();
+
+    // ---- 调速：1~5 倍速，随时可切 ----
+    if (SPEED_KEYS[e.code] !== undefined) { setSpeed(SPEED_KEYS[e.code]); return; }
+
+    const okKey = (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space');
+    const escKey = (e.code === 'Escape');
+
+    // ---- 全键盘流程：菜单 / 说明 / 过关 / 结算 ----
+    if (state === 'MENU') {
+        if (e.code === 'KeyH') { state = 'HELP'; showOnly('help'); return; }
+        if (okKey && !e.repeat) startGame();
+        return;
+    }
+    if (state === 'HELP') { if ((okKey || escKey) && !e.repeat) backToMenu(); return; }
+    if (state === 'CLEAR') { if (okKey && !e.repeat) nextStage(); return; }
+    if (state === 'OVER') {
+        if ($('overOverlay').classList.contains('hidden')) return;
+        if (okKey && !e.repeat) startGame();
+        else if (escKey && !e.repeat) goHome();
+        return;
+    }
+    if (state === 'PLAYING' && escKey) { state = 'PAUSE'; return; }
+    if (state === 'PAUSE' && (escKey || okKey)) { state = 'PLAYING'; lastTs = 0; return; }
 
     const hit = playerOfCode(e.code);
     if (!hit || !G) return;
@@ -665,7 +723,7 @@ function shoot(p) {
     const n = 1 + p.lv.multi;
     const spread = n > 1 ? 0.155 : 0;
     const heavy = p.lv.heavy;
-    const dmg = dmgBase(p) * (1 + heavy * 0.45) * (G.ultT > 0 ? 1.7 : 1);
+    const dmg = dmgBase(p) * (1 + heavy * 0.45) * (G.ultT > 0 ? 1.7 : 1) * (p.powT > 0 ? 1.7 : 1);
     const sp = 1380;
     for (let i = 0; i < n; i++) {
         const off = n === 1 ? 0 : (i - (n - 1) / 2) * spread;
@@ -689,7 +747,8 @@ function shoot(p) {
         part(t.x + Math.sin(a2) * 32, t.py - Math.cos(a2) * 32, Math.sin(a2) * rand(80, 220), -Math.cos(a2) * rand(80, 220), p.color, .18, 3, 200);
     }
 }
-function updateTowers(dt) {
+function updateTowers(dt, dtReal) {
+    if (dtReal === undefined) dtReal = dt;
     for (const p of G.players) {
         const t = p.tower;
         if (p.auto) {
@@ -702,8 +761,8 @@ function updateTowers(dt) {
                 t.targetAng = t.ang;
                 p.idleT = 0;
             }
-            // 无输入计时 → 5 秒 AI 托管
-            p.idleT += dt;
+            // 无输入计时 → 5 秒 AI 托管（按真实时间，5 倍速不会变成 1 秒）
+            p.idleT += dtReal;
             if (p.idleT > 5) {
                 p.auto = true;
                 p.aiT = 0; p.aiAng = t.ang;
@@ -1048,6 +1107,14 @@ function updateCoins(dt) {
         }
     }
 }
+function sideFx(i, kind, text) {
+    if (!G || !G.players[i]) return;
+    const p = G.players[i];
+    if (!p.fx) p.fx = [];
+    p.fx.push({ kind, text, t: 1.25, max: 1.25 });
+    if (p.fx.length > 3) p.fx.shift();
+    p.picked = (p.picked || 0) + 1;
+}
 function spawnPickup() {
     G.pickups.push({ x: rand(340, W - 340), y: -40, vy: 66, hp: 26, max: 26, wob: rand(0, TAU), t: 0, got: false });
 }
@@ -1066,30 +1133,43 @@ function updatePickups(dt) {
             burstAt(k.x, k.y, 5, '#ffd76a', 160, 4);
             G.bullets.splice(j, 1);
             if (k.hp <= 0) {
-                openPickup(k);
+                openPickup(k, b.owner);
                 G.pickups.splice(i, 1);
                 break;
             }
         }
     }
 }
-function openPickup(k) {
+function openPickup(k, owner) {
+    owner = (owner === 0 || owner === 1) ? owner : (k.x < W / 2 ? 0 : 1);
+    const p = G.players[owner];
+    const nm = owner === 0 ? 'P1 左塔' : 'P2 右塔';
     const roll = Math.random();
     G.shake = Math.max(G.shake, 6);
     sfx('level');
     burstAt(k.x, k.y, 22, '#ffd76a', 300, 6);
-    if (roll < .3) {
+    if (roll < .26) {
+        // 团队：修墙
         G.wall.hp = Math.min(G.wall.max, G.wall.hp + G.wall.max * .22);
+        sideFx(0, 'heal', '城墙修复');
+        sideFx(1, 'heal', '城墙修复');
         toast('🛠️ 补给：城墙修复 22%', '#45e08a');
-    } else if (roll < .6) {
+    } else if (roll < .52) {
+        // 该侧：射速狂暴
+        p.bufT = 8;
+        sideFx(owner, 'fury', '狂暴射速 ×1.35');
+        toast(`⚡ ${nm} 狂暴射速 8 秒！`, p.color);
+    } else if (roll < .76) {
+        // 该侧：火力全开
+        p.powT = 8;
+        sideFx(owner, 'power', '火力全开 ×1.7');
+        toast(`🔥 ${nm} 火力全开 8 秒！`, p.color);
+    } else if (roll < .9) {
         const c = 90 + G.stage * 30;
         G.coinsRun += c;
         G.ult = Math.min(100, G.ult + c * 0.6);
         for (let i = 0; i < 10; i++) G.coins.push({ x: k.x, y: k.y, vx: rand(-180, 180), vy: rand(-260, -60), t: 2.2, v: 1 });
         toast(`🪙 补给：金币 +${c}`, '#ffd76a');
-    } else if (roll < .82) {
-        G.players.forEach(p => p.bufT = 7);
-        toast('⚡ 补给：双塔狂暴射速 7 秒！', '#ffd76a');
     } else {
         G.ult = Math.min(100, G.ult + 55);
         toast('🌀 补给：共鸣槽 +55', '#7df9ff');
@@ -1243,7 +1323,8 @@ function updateUlt(dt) {
 
 
 /* ---------- 主更新 ---------- */
-function update(dt) {
+function update(dt, dtReal) {
+    if (dtReal === undefined) dtReal = dt;
     if (G.hitstop > 0) { G.hitstop -= dt; dt *= 0.14; }
     G.time += dt;
     G.shake = Math.max(0, G.shake - dt * 46);
@@ -1259,7 +1340,7 @@ function update(dt) {
         if (G.freeUpT <= 0) { G.pendingLv++; toast('🔧 战地改装 · 立即强化！', '#ffd76a'); sfx('level'); }
     }
 
-    updateTowers(dt);
+    updateTowers(dt, dtReal);
     updateBullets(dt);
     updateEnemies(dt);
     updateCoins(dt);
@@ -1301,8 +1382,15 @@ function update(dt) {
             if (t.t <= 0) G.toasts.splice(i, 1);
         }
     }
-    // 玩家 buff
-    for (const p of G.players) if (p.bufT > 0) p.bufT -= dt;
+    // 玩家 buff + 该侧特效计时（特效用真实时间，倍速下不会一闪而过）
+    for (const p of G.players) {
+        if (p.bufT > 0) p.bufT -= dt;
+        if (p.powT > 0) p.powT -= dt;
+        for (let i = p.fx.length - 1; i >= 0; i--) {
+            p.fx[i].t -= dtReal;
+            if (p.fx[i].t <= 0) p.fx.splice(i, 1);
+        }
+    }
     // 共鸣满了自动放
     if (G.ult >= 100 && G.ultT <= 0) startUlt();
     // 波次
@@ -1700,13 +1788,52 @@ function drawTowerBase(i) {
         ctx.stroke();
     }
 
-    // 玩家色能量环
+    // 玩家色能量环（两侧完全不同的视觉语言）
     const pulse = .5 + .5 * Math.sin(G.time * 2.4 + i);
-    ctx.strokeStyle = p.color;
-    ctx.globalAlpha = .2 + pulse * .25;
-    ctx.lineWidth = 3 + pulse * 2.5;
-    ctx.beginPath(); ctx.arc(cx, cy, R * .74, 0, TAU); ctx.stroke();
-    ctx.globalAlpha = 1;
+    const buffed = p.bufT > 0 || p.powT > 0;
+    if (i === 0) {
+        // ── 1P 寒霜科技：旋转六边形虚线 + 外厚环
+        ctx.save();
+        ctx.strokeStyle = '#a8f4ff';
+        ctx.globalAlpha = .30 + pulse * .30 + (buffed ? .28 : 0);
+        ctx.lineWidth = 2.6 + pulse * 1.8;
+        ctx.setLineDash([16, 10]);
+        ctx.beginPath();
+        for (let s = 0; s <= 6; s++) {
+            const ang = s / 6 * TAU + G.time * .55;
+            const px2 = cx + Math.cos(ang) * R * .78, py2 = cy + Math.sin(ang) * R * .78;
+            s === 0 ? ctx.moveTo(px2, py2) : ctx.lineTo(px2, py2);
+        }
+        ctx.closePath(); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = .16 + (buffed ? .22 : 0);
+        ctx.strokeStyle = p.color; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.arc(cx, cy, R * .9, 0, TAU); ctx.stroke();
+        ctx.restore();
+    } else {
+        // ── 2P 熔金火环：外圈 + 8 道跳动火舌
+        ctx.save();
+        ctx.globalAlpha = .22 + pulse * .22 + (buffed ? .24 : 0);
+        ctx.strokeStyle = '#ffb347';
+        ctx.lineWidth = 3 + pulse * 2;
+        ctx.beginPath(); ctx.arc(cx, cy, R * .78, 0, TAU); ctx.stroke();
+        for (let s = 0; s < 8; s++) {
+            const ang = s / 8 * TAU + G.time * .5;
+            const fh = 10 + Math.sin(G.time * 7 + s * 1.4) * 5 + (buffed ? 7 : 0);
+            const r0 = R * .86, r1 = r0 + fh;
+            const grd = ctx.createLinearGradient(
+                cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0,
+                cx + Math.cos(ang) * r1, cy + Math.sin(ang) * r1);
+            grd.addColorStop(0, 'rgba(255,200,90,.95)');
+            grd.addColorStop(1, 'rgba(255,90,30,0)');
+            ctx.strokeStyle = grd; ctx.lineWidth = 5.5;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0);
+            ctx.lineTo(cx + Math.cos(ang) * r1, cy + Math.sin(ang) * r1);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
 
     // 旗帜（朝外一侧）
     const sgn = i === 0 ? 1 : -1;
@@ -1752,7 +1879,8 @@ function drawTowerBase(i) {
         ctx.globalAlpha = 1;
     }
 
-    // 名牌
+    // 名牌（菜单/说明页不显示）
+    if (state === 'MENU' || state === 'HELP') return;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = 'bold 12.5px -apple-system, sans-serif';
     const label = p.auto ? `${i === 0 ? '1P' : '2P'} · AI 托管` : `${i === 0 ? '1P' : '2P'} · 手动`;
@@ -1872,10 +2000,32 @@ function drawBullets() {
         ctx.globalAlpha = .26;
         ctx.fillStyle = col;
         ctx.beginPath(); ctx.ellipse(0, 0, b.size * 3.6, b.size * 1.5, 0, 0, TAU); ctx.fill();
-        // 亮核（细长）
+        // 弹头：两侧不同形态（1P 冰晶箭 / 2P 熔金火弹）
         ctx.globalAlpha = 1;
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath(); ctx.ellipse(3, 0, b.size * 1.9, b.size * .62, 0, 0, TAU); ctx.fill();
+        if (b.owner === 1) {
+            ctx.fillStyle = '#fff1cf';
+            ctx.beginPath(); ctx.arc(3, 0, b.size * 1.15, 0, TAU); ctx.fill();
+            ctx.globalAlpha = .5;
+            ctx.fillStyle = '#ff9a3d';
+            ctx.beginPath(); ctx.arc(-2, 0, b.size * 2.1, 0, TAU); ctx.fill();
+            ctx.globalAlpha = .3;
+            ctx.strokeStyle = '#ffd76a'; ctx.lineWidth = 1.6;
+            ctx.beginPath(); ctx.ellipse(0, 0, b.size * 3.1, b.size * 1.1, 0, 0, TAU); ctx.stroke();
+        } else {
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(b.size * 3.2, 0);
+            ctx.lineTo(0, -b.size * .95);
+            ctx.lineTo(-b.size * 2.4, 0);
+            ctx.lineTo(0, b.size * .95);
+            ctx.closePath(); ctx.fill();
+            ctx.globalAlpha = .62;
+            ctx.strokeStyle = '#c9fbff'; ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.moveTo(-b.size * 3.6, -b.size * 1.6); ctx.lineTo(-b.size * .7, 0);
+            ctx.moveTo(-b.size * 3.6, b.size * 1.6); ctx.lineTo(-b.size * .7, 0);
+            ctx.stroke();
+        }
         ctx.restore();
     }
     ctx.globalAlpha = 1;
@@ -2027,9 +2177,254 @@ function drawDark() {
 }
 
 
+
+/* ---------- 两侧专属特效（吃补给 / 强化） ---------- */
+function drawSideFx(p) {
+    if (!p.fx || !p.fx.length) return;
+    const t = p.tower;
+    for (const f of p.fx) {
+        const k = 1 - f.t / f.max;               // 0 → 1
+        const a = clamp(f.t / f.max * 2.2, 0, 1);
+        const cx = t.x, cy = t.py - 40;
+        ctx.save();
+        if (p.idx === 0) {
+            // ── P1 冰蓝科技：六边形环 + 旋转虚线 + 上升冰晶
+            for (let n = 0; n < 3; n++) {
+                const al = a * (1 - k) * (0.85 - n * 0.22);
+                if (al <= 0) continue;
+                const rr = 30 + k * 100 + n * 9;
+                ctx.globalAlpha = al;
+                ctx.strokeStyle = n === 0 ? '#d8ffff' : '#5ee6ff';
+                ctx.lineWidth = 2.6 - n * .6;
+                ctx.beginPath();
+                for (let s = 0; s <= 6; s++) {
+                    const ang = s / 6 * TAU + k * 1.8;
+                    const px2 = cx + Math.cos(ang) * rr, py2 = cy + Math.sin(ang) * rr * .58;
+                    s === 0 ? ctx.moveTo(px2, py2) : ctx.lineTo(px2, py2);
+                }
+                ctx.closePath(); ctx.stroke();
+            }
+            ctx.globalAlpha = a * (1 - k);
+            ctx.strokeStyle = 'rgba(200,250,255,.9)';
+            ctx.lineWidth = 1.8; ctx.setLineDash([6, 11]);
+            ctx.beginPath(); ctx.arc(cx, cy, 46 + k * 62, k * 5, k * 5 + TAU * .8); ctx.stroke();
+            ctx.setLineDash([]);
+            for (let n = 0; n < 7; n++) {
+                const ag = n / 7 * TAU + k * 2.2;
+                const rr = 24 + k * 74;
+                ctx.fillStyle = n % 2 ? '#eaffff' : '#7ff0ff';
+                const sz = 3 + (1 - k) * 2.5;
+                ctx.fillRect(cx + Math.cos(ag) * rr - sz / 2, cy + Math.sin(ag) * rr * .58 - k * 56, sz, sz);
+            }
+        } else {
+            // ── P2 熔金火焰：放射尖刺 + 逆旋菱形 + 火星
+            for (let n = 0; n < 12; n++) {
+                const ag = n / 12 * TAU + k * 1.1;
+                const r0 = 26 + k * 42, r1 = r0 + 20 + k * 74;
+                ctx.globalAlpha = a * (1 - k) * .92;
+                ctx.strokeStyle = n % 2 ? '#ffd76a' : '#ff8a3d';
+                ctx.lineWidth = 2.6 * (1 - k) + .9;
+                ctx.beginPath();
+                ctx.moveTo(cx + Math.cos(ag) * r0, cy + Math.sin(ag) * r0 * .58);
+                ctx.lineTo(cx + Math.cos(ag) * r1, cy + Math.sin(ag) * r1 * .58);
+                ctx.stroke();
+            }
+            ctx.globalAlpha = a * (1 - k);
+            ctx.strokeStyle = '#ffd08a'; ctx.lineWidth = 2.6;
+            for (let n = 0; n < 2; n++) {
+                const rr = 34 + k * 68 + n * 20, ag0 = -k * 2.6 + n * Math.PI;
+                ctx.beginPath();
+                ctx.moveTo(cx + Math.cos(ag0) * rr, cy + Math.sin(ag0) * rr * .58);
+                ctx.lineTo(cx + Math.cos(ag0 + .9) * rr, cy + Math.sin(ag0 + .9) * rr * .58);
+                ctx.lineTo(cx + Math.cos(ag0 + 1.57) * rr, cy + Math.sin(ag0 + 1.57) * rr * .58);
+                ctx.lineTo(cx + Math.cos(ag0 + .7) * (rr - 15), cy + Math.sin(ag0 + .7) * (rr - 15) * .58);
+                ctx.closePath(); ctx.stroke();
+            }
+            for (let n = 0; n < 8; n++) {
+                const ag = n / 8 * TAU + k * 2.6;
+                const rr = 20 + k * 70;
+                ctx.fillStyle = n % 2 ? '#ffe08a' : '#ff7a2e';
+                const sz = 3 + (1 - k) * 3.4;
+                ctx.fillRect(cx + Math.cos(ag) * rr - sz / 2, cy + Math.sin(ag) * rr * .58 - k * 60 - (n % 3) * 8, sz, sz);
+            }
+        }
+        // 飘字（两侧文案样式也不同）
+        ctx.globalAlpha = a;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = 'bold 17px -apple-system, sans-serif';
+        ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.78)';
+        const label = p.idx === 0 ? `❄ ${f.text}` : `✦ ${f.text}`;
+        const ty = cy - 50 - k * 58;
+        ctx.strokeText(label, cx, ty);
+        ctx.fillStyle = p.idx === 0 ? '#d8ffff' : '#ffe6a8';
+        ctx.fillText(label, cx, ty);
+        ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+
+/* ---------- 双人 HUD 面板：火力 / 技能 / 键位 ---------- */
+const PANEL_W = 300, PANEL_H = 102, PANEL_Y = 52;
+function dpsOf(p) {
+    const arrows = 1 + p.lv.multi;
+    const dmg = dmgBase(p) * (1 + p.lv.heavy * 0.45) * (p.powT > 0 ? 1.7 : 1) * (G.ultT > 0 ? 1.7 : 1);
+    return dmg * arrows * rateOf(p) * (1 + critChance(p) * 1.3);
+}
+function fmtPow(v) {
+    if (v >= 100000) return Math.round(v / 1000) + 'k';
+    if (v >= 1000) return (v / 1000).toFixed(1) + 'k';
+    return String(Math.round(v));
+}
+function chipBox(x, y, w, h, r, fill, stroke) {
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+    else ctx.rect(x, y, w, h);
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1.2; ctx.stroke(); }
+}
+function drawPlayerPanels() {
+    if (state === 'MENU' || state === 'HELP') return;
+    drawPlayerPanel(0);
+    drawPlayerPanel(1);
+}
+function drawPlayerPanel(i) {
+    const p = G.players[i];
+    const x = i === 0 ? 12 : W - PANEL_W - 12;
+    const y = PANEL_Y;
+    const lx = x + 16;
+
+    // 底板
+    const bg = ctx.createLinearGradient(x, y, x, y + PANEL_H);
+    bg.addColorStop(0, 'rgba(5,11,20,.84)');
+    bg.addColorStop(1, 'rgba(5,11,20,.56)');
+    chipBox(x, y, PANEL_W, PANEL_H, 12, bg, i === 0 ? 'rgba(94,230,255,.42)' : 'rgba(255,179,71,.42)');
+    // 侧色竖条（P1 左 / P2 右，镜像）
+    chipBox(i === 0 ? x : x + PANEL_W - 4, y + 10, 4, PANEL_H - 20, 2, p.color, null);
+    // 顶部侧色光带
+    const lg = ctx.createLinearGradient(x, y, x + PANEL_W, y);
+    lg.addColorStop(0, i === 0 ? 'rgba(94,230,255,.55)' : 'rgba(94,230,255,0)');
+    lg.addColorStop(1, i === 0 ? 'rgba(255,179,71,0)' : 'rgba(255,179,71,.55)');
+    chipBox(x + 8, y, PANEL_W - 16, 2.5, 2, lg, null);
+
+    ctx.textBaseline = 'middle';
+    // —— 第一行：玩家 / 状态 / DPS ——
+    ctx.font = 'bold 14px -apple-system, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = p.color;
+    const nameTxt = i === 0 ? '1P · 左塔' : '2P · 右塔';
+    ctx.fillText(nameTxt, lx, y + 17);
+    const nameW = ctx.measureText(nameTxt).width;
+
+    const stTxt = p.auto ? 'AI 托管' : '手动';
+    ctx.font = 'bold 10px -apple-system, sans-serif';
+    const stW = ctx.measureText(stTxt).width + 13;
+    const stX = lx + nameW + 8;
+    chipBox(stX, y + 9, stW, 16, 8,
+        p.auto ? 'rgba(69,224,138,.22)' : 'rgba(255,255,255,.07)',
+        p.auto ? 'rgba(69,224,138,.7)' : 'rgba(255,255,255,.18)');
+    ctx.fillStyle = p.auto ? '#7dffb4' : 'rgba(180,200,230,.85)';
+    ctx.textAlign = 'center';
+    ctx.fillText(stTxt, stX + stW / 2, y + 17.5);
+
+    // 增益倒计时
+    if (p.bufT > 0 || p.powT > 0) {
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 10px -apple-system, sans-serif';
+        ctx.fillStyle = p.powT >= p.bufT ? '#ffb04a' : '#8cf0ff';
+        const gt = p.powT >= p.bufT ? `🔥${p.powT.toFixed(1)}s` : `⚡${p.bufT.toFixed(1)}s`;
+        ctx.fillText(gt, stX + stW + 7, y + 17.5);
+    }
+
+    // DPS（右侧）
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 15px -apple-system, sans-serif';
+    ctx.fillStyle = '#ffe9a8';
+    ctx.fillText(fmtPow(dpsOf(p)), x + PANEL_W - 36, y + 17);
+    ctx.font = 'bold 9.5px -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(200,215,240,.62)';
+    ctx.fillText('DPS', x + PANEL_W - 13, y + 18);
+
+    // —— 第二行：火力细项 ——
+    ctx.textAlign = 'left';
+    ctx.font = '10.5px -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(178,198,228,.92)';
+    const dmgOne = Math.round(dmgBase(p) * (1 + p.lv.heavy * 0.45) * (p.powT > 0 ? 1.7 : 1));
+    ctx.fillText(`伤害 ${dmgOne} × ${1 + p.lv.multi} 支 · 射速 ${rateOf(p).toFixed(1)}/s · 暴击 ${Math.round(critChance(p) * 100)}%`, lx, y + 38);
+
+    // —— 第三行：技能图标 ——
+    const cy0 = y + 50;
+    let cx0 = lx;
+    const owned = SKILLS.filter(s => p.lv[s.id] > 0);
+    const evoList = EVOLUTIONS.filter(e => p.evos[e.id]);
+    if (!owned.length && !evoList.length) {
+        ctx.font = '10.5px -apple-system, sans-serif';
+        ctx.fillStyle = 'rgba(140,160,190,.72)';
+        ctx.fillText('尚无强化 · 打碎补给箱 / 升级选卡', lx, cy0 + 10);
+    }
+    // 图标多时自动收窄，保证不溢出面板
+    const cell = Math.max(16, Math.min(22, (PANEL_W - 26) / Math.max(1, owned.length + evoList.length)));
+    const cs = cell - 2, ico = cell >= 21 ? 13 : 11;
+    for (const s of owned) {
+        chipBox(cx0, cy0, cs, 20, 5,
+            i === 0 ? 'rgba(94,230,255,.14)' : 'rgba(255,179,71,.14)',
+            i === 0 ? 'rgba(94,230,255,.32)' : 'rgba(255,179,71,.32)');
+        ctx.textAlign = 'center';
+        ctx.font = ico + 'px -apple-system, sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.fillText(s.icon, cx0 + cs / 2, cy0 + 9);
+        ctx.font = 'bold 8px -apple-system, sans-serif';
+        ctx.fillStyle = p.lv[s.id] >= s.max ? '#ffd76a' : 'rgba(214,228,252,.95)';
+        ctx.fillText(p.lv[s.id], cx0 + cs - 4, cy0 + 16.5);
+        cx0 += cell;
+    }
+    for (const evo of evoList) {
+        chipBox(cx0, cy0, cs, 20, 5, 'rgba(255,215,106,.26)', 'rgba(255,215,106,.9)');
+        ctx.textAlign = 'center';
+        ctx.font = ico + 'px -apple-system, sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.fillText(evo.icon, cx0 + cs / 2, cy0 + 10);
+        cx0 += cell;
+    }
+
+    // —— 第四行：键位 ——
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 10.5px -apple-system, sans-serif';
+    ctx.fillStyle = i === 0 ? 'rgba(150,230,255,.88)' : 'rgba(255,205,135,.9)';
+    ctx.fillText(i === 0 ? 'A/D 转炮　W 换卡　S 选中' : '←/→ 转炮　↑ 换卡　↓ 选中', lx, y + 89);
+
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+
+/* ---------- 速度徽标 / 全局键位提示 ---------- */
+function drawSpeedChip() {
+    const sp = G.speed || 1;
+    const bw = 70, bh = 22, bx = W - bw - 12, by = 12;
+    const hot = sp > 1;
+    chipBox(bx, by, bw, bh, 8,
+        hot ? 'rgba(255,120,40,.28)' : 'rgba(255,255,255,.07)',
+        hot ? `rgba(255,190,90,${.55 + .3 * Math.sin(G.time * 6)})` : 'rgba(255,255,255,.18)');
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = 'bold 13px -apple-system, sans-serif';
+    ctx.fillStyle = hot ? '#ffd76a' : '#9fb2d6';
+    ctx.fillText(`⏩×${sp}`, bx + bw / 2, by + bh / 2 + .5);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+function drawGlobalHints() {
+    const txt = '1~5 调速　·　Enter 确认　·　P 暂停　·　F 全屏';
+    ctx.font = 'bold 11.5px -apple-system, sans-serif';
+    const w = ctx.measureText(txt).width + 26;
+    const bx = W / 2 - w / 2, by = H - 26;
+    chipBox(bx, by, w, 20, 10, 'rgba(4,8,14,.58)', 'rgba(120,150,200,.22)');
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(175,198,230,.88)';
+    ctx.fillText(txt, W / 2, by + 10.5);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+
 /* --- HUD --- */
 function drawHud() {
-    if (state === 'MENU') return;
+    if (state === 'MENU' || state === 'HELP') return;
     // 顶栏
     ctx.fillStyle = 'rgba(4,8,14,.8)';
     ctx.fillRect(0, 0, W, 46);
@@ -2073,12 +2468,13 @@ function drawHud() {
         ctx.textAlign = 'left';
     }
 
-    // 右：金币
+    // 右：金币 + 速度徽标
     ctx.textAlign = 'right';
     ctx.font = 'bold 16px -apple-system, sans-serif';
     ctx.fillStyle = '#ffd76a';
-    ctx.fillText(`🪙 ${G.coinsRun}`, W - 18, 24);
+    ctx.fillText(`🪙 ${G.coinsRun}`, W - 96, 24);
     ctx.textAlign = 'left';
+    drawSpeedChip();
 
     // 共鸣槽（城墙中段，血条下方）
     const bw = 680, bh = 13, bx = W / 2 - bw / 2, by = WALL_TOP + 34;
@@ -2161,6 +2557,9 @@ function drawHud() {
         ctx.globalAlpha = 1;
     }
 
+    // 底部全局键位提示
+    if (state === 'PLAYING' || state === 'PAUSE') drawGlobalHints();
+
     // 城墙告急边框
     if (G.wall.hp / G.wall.max < .3 && state === 'PLAYING') {
         const a = .1 + .14 * Math.sin(G.time * 7);
@@ -2191,8 +2590,10 @@ function render() {
     for (const p of G.players) drawArcher(p);
     drawBullets();
     drawParts();
+    for (const p of G.players) drawSideFx(p);
     ctx.restore();
     drawHud();
+    drawPlayerPanels();
     if (G.whiteFlash > 0) {
         ctx.fillStyle = `rgba(255,255,255,${G.whiteFlash * .45})`;
         ctx.fillRect(0, 0, W, H);
@@ -2206,7 +2607,7 @@ function render() {
         ctx.fillText('已暂停', W / 2, H / 2 - 10);
         ctx.font = '15px -apple-system, sans-serif';
         ctx.fillStyle = '#9fb2d6';
-        ctx.fillText('按 P 继续', W / 2, H / 2 + 28);
+        ctx.fillText('按 P / Enter / Esc 继续', W / 2, H / 2 + 28);
         ctx.textAlign = 'left';
     }
 }
@@ -2382,11 +2783,11 @@ function gameOver() {
     setTimeout(() => showOnly('overOverlay'), 1200);
 }
 $('btnStart').onclick = () => startGame();
-$('btnHelp').onclick = () => showOnly('help');
-$('btnHelpBack').onclick = () => { showOnly('menu'); };
+$('btnHelp').onclick = () => { state = 'HELP'; showOnly('help'); };
+$('btnHelpBack').onclick = () => backToMenu();
 $('btnNext').onclick = () => nextStage();
 $('btnRetry').onclick = () => startGame();
-$('btnHome').onclick = () => { state = 'MENU'; newGame(); showOnly('menu'); fit(); };
+$('btnHome').onclick = () => goHome();
 
 /* --- 主循环 --- */
 function loop(ts) {
@@ -2395,7 +2796,17 @@ function loop(ts) {
     let dt = (ts - lastTs) / 1000;
     lastTs = ts;
     dt = Math.min(dt, 0.05);
-    if (state === 'PLAYING') update(dt);
+    if (state === 'PLAYING') {
+        // 倍速：拆成多个子步进，保证碰撞/吸附在 5 倍速下依然精确
+        const sp = G.speed || 1;
+        let total = dt * sp, guard = 0;
+        while (total > 1e-4 && guard++ < 10) {
+            const step = Math.min(total, 0.033);
+            update(step, step / sp);
+            total -= step;
+            if (state !== 'PLAYING') break;   // 升级 / 结算打断
+        }
+    }
     else if (state === 'OVER') updateVisualOnly(dt);
     else if (state === 'LEVELUP') updateCardAI(dt);
     render();
@@ -2420,7 +2831,9 @@ window.__slime = {
     get G() { return G; }, get state() { return state; }, get offers() { return cardOffers; },
     startGame, SKILLS, EVOLUTIONS, ETYPES, CRISES, pickCard, scanBestAngle,
     spawnEnemy, damageWall, startCrisis, rateOf, dmgBase, updateAI, hitEnemy, homingSteer,
-    ANG_MAX, TOWER_X, PIVOT_Y, W, H,
+    ANG_MAX, TOWER_X, PIVOT_Y, W, H, SPEED_KEYS,
+    setSpeed, dpsOf, sideFx, openPickup, nextStage, goHome, startGame,
+    get speed() { return G ? (G.speed || 1) : speedPref; },
     setState(s) { state = s; },
 };
 newGame();
