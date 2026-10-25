@@ -150,7 +150,8 @@ const ok = (c, m) => { if (c) { pass++; console.log('  PASS ' + m); } else { fai
   });
   ok(t4.before.embedded === true, `T4a 已人为复现「内鬼正好站在自己植物格上」（嵌入=${t4.before.embedded}，四向可走=${JSON.stringify(t4.before.canMove)}）`);
   ok(t4.mid.movedPx > 100 || t4.mid.embedded === false, `T4b 0.35 秒脱困生效——2.5 秒内已离开原位 ${t4.mid.movedPx}px（现在 ${t4.mid.x},${t4.mid.y}，嵌入=${t4.mid.embedded}）`);
-  ok(t4.moved > 200, `T4c 脱困后真的走了起来（8 秒位移 ${t4.moved}px）`);
+  // v4.0.122 修订：内鬼若已贴到幸存者身边就会停下啃咬（净位移不再增长），此时看"是否真的走到了人跟前"
+  ok(t4.moved > 200 || t4.minD < 60, `T4c 脱困后真的走了起来（8 秒净位移 ${t4.moved}px，离最近幸存者 ${t4.minD}px）`);
   ok(t4.leftOwnFrames > 0 || t4.minD < t4.bd0 - 100, `T4d 出门有效果：在屋外 ${t4.leftOwnFrames}/${t4.samples} 帧，离最近目标 ${t4.bd0}px → ${t4.minD}px`);
 
   ok(errors.length === 0, `T5 全程 0 页面报错（${errors.slice(0, 3).join(' | ') || '无'}）`);

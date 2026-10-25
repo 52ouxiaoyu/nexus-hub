@@ -505,6 +505,10 @@ class HauntedDorm {
         this._placeHomeSpawn();  // v4.0.108：植物方出生在最近空房的【门外空地】（场外），必须自己走进房间
         this.bindInput();
         this._updateGhostChip();
+        // v4.0.122：新开一局必须重画血条——HUD 的 #hp-fill/#hp-fill2 是 index.html 里的**静态元素**，
+        // 上一局结束时留下的内联 width（例如 23% / 57%）与数字不会被销毁，而构造过程只调
+        // _refreshHud()（不碰血条）→ 用户看到的「再来一次血量带到下一轮」就是这份残留 UI。
+        this.setHp();
         this._refreshHud();
         // v4.0.107：开局引导——不进屋就没有任何阳光，原版没有任何提示
         if (!this.isZombieFaction) {
@@ -2026,18 +2030,26 @@ class HauntedDorm {
     }
 
     setHp() {
+        // v4.0.122：血条只按真实 hp/maxHp 渲染，非法值（NaN/0/undefined）一律按 0 显示。
+        // 旧版 `Math.max(0, hp/maxHp*100)` 在 hp 或 maxHp 为 NaN 时会得到 NaN → width:'NaN%'
+        // 被浏览器忽略 → 血条回落到 CSS 默认 width:100%，看起来就是「血量莫名变满」。
+        const pctOf = (hp, maxHp) => {
+            if (!Number.isFinite(hp) || !Number.isFinite(maxHp) || maxHp <= 0) return 0;
+            return Math.max(0, Math.min(100, hp / maxHp * 100));
+        };
         const p = this.player;
-        const pct = Math.max(0, p.hp / p.maxHp * 100);
-        document.getElementById('hp-fill').style.width = pct + '%';
-        document.getElementById('hp-num').innerText = Math.max(0, Math.ceil(p.hp));
-        
+        if (p) {
+            const fill1 = document.getElementById('hp-fill');
+            if (fill1) fill1.style.width = pctOf(p.hp, p.maxHp) + '%';
+            const num1 = document.getElementById('hp-num');
+            if (num1) num1.innerText = Math.max(0, Math.ceil(Number.isFinite(p.hp) ? p.hp : 0));
+        }
         if (this.gameMode === '2p' && this.player2) {
             const p2 = this.player2;
-            const pct2 = Math.max(0, p2.hp / p2.maxHp * 100);
             const fill2 = document.getElementById('hp-fill2');
-            if (fill2) fill2.style.width = pct2 + '%';
+            if (fill2) fill2.style.width = pctOf(p2.hp, p2.maxHp) + '%';
             const num2 = document.getElementById('hp-num2');
-            if (num2) num2.innerText = Math.max(0, Math.ceil(p2.hp));
+            if (num2) num2.innerText = Math.max(0, Math.ceil(Number.isFinite(p2.hp) ? p2.hp : 0));
         }
     }
 
@@ -2338,6 +2350,84 @@ class HauntedDorm {
                 rm.tpl.grid[row - rm.y][col - rm.x] === 1) return rm;
         }
         return null;
+    }
+
+    // ===== v4.0.122：房间「区域」= 室内地形格 + 该房自己的门格 =====
+    // 用户实报「站在门上升级门时被僵尸咬死，明明还隔着一个格子」——
+    // 根因：门格在房间模板里是通道格（grid=0），_insideRoom(门格) 返回 null，
+    // 咬人判定的 safeBehindDoor 因此整段被跳过（if (pRm) ...），门板活着也照样掉血。
+    // _insideRoom 本身不能改（大量建造/寻路逻辑依赖「门格不是室内格」），所以单独加一层。
+    _roomZoneOf(col, row) {
+        const rm = this._insideRoom(col, row);
+        if (rm) return rm;
+        for (const r of this.rooms) {
+            if (r.doorCol === col && r.doorRow === row) return r;
+        }
+        return null;
+    }
+    _cellInZone(rm, col, row) {
+        if (!rm) return false;
+        if (rm.doorCol === col && rm.doorRow === row) return true;
+        return this._insideRoom(col, row) === rm;
+    }
+
+    // ===== v4.0.122：房门朝向（门外方向）——门在模板上/下/左边时分别朝外 =====
+    _doorOutDir(rm) {
+        if (!rm || !rm.tpl || !rm.tpl.door) return { ox: 0, oy: 0 };
+        const d = rm.tpl.door;
+        if (d.r === -1) return { ox: 0, oy: -1 };
+        if (d.r >= rm.h) return { ox: 0, oy: 1 };
+        if (d.c === -1) return { ox: -1, oy: 0 };
+        if (d.c >= rm.w) return { ox: 1, oy: 0 };
+        return { ox: 0, oy: 0 };
+    }
+
+    // ===== v4.0.122：房内不能直接走出去——出门只能走跳板或按出门键 =====
+    // 用户要求：实际行走撞到门边就拦住（防止"迈出门半步被僵尸咬死"），
+    // 按 O（P2 按 4）直接传送到门外一格，跳板逻辑保持原样。
+    _canWalkTo(p, nx, ny) {
+        if (!p || p.isZombie || p.traitor || p.angelic || p.isAi || p._afkHost) return true; // 僵尸/内鬼/天使/AI/托管不受限
+        const gs = this.gridSize;
+        const c0 = Math.floor(p.x / gs), r0 = Math.floor(p.y / gs);
+        const c1 = Math.floor(nx / gs), r1 = Math.floor(ny / gs);
+        if (c0 === c1 && r0 === r1) return true;
+        const z0 = this._roomZoneOf(c0, r0);
+        if (!z0) return true;                       // 当前在屋外 → 随便走
+        return this._cellInZone(z0, c1, r1);        // 从屋内跨出去 → 一律拦住
+    }
+
+    // ===== v4.0.122：出门键（P1=O / P2=4）——直接落到门外一格 =====
+    _doorExit(p) {
+        if (!p || p.dead || this.over) return false;
+        if (p.isZombie || p.traitor || p.angelic) return false;
+        if (this.gameTime - (p._doorExitAt || -9999) < 300) return false; // 防连按
+        const gs = this.gridSize;
+        const rm = this._roomZoneOf(Math.floor(p.x / gs), Math.floor(p.y / gs));
+        if (!rm) {
+            p._doorExitAt = this.gameTime;
+            this._flyText(p.x, p.y - 40, '你已经在屋外了', '#ffd54a');
+            return false;
+        }
+        const dir = this._doorOutDir(rm);
+        if (!dir.ox && !dir.oy) return false;
+        // 门外 1 格优先；被墙/植物占住就退到 2、3 格
+        for (const step of [1, 2, 3]) {
+            const c = rm.doorCol + dir.ox * step, r = rm.doorRow + dir.oy * step;
+            if (c < 1 || r < 1 || c >= this.cols - 1 || r >= this.rows - 1) continue;
+            if (this.walls.has(`${c},${r}`)) continue;
+            const x = c * gs + 40, y = r * gs + 40;
+            if (this.checkCollision(x, y, 12, false)) continue;
+            // 落点有僵尸（60px 内）→ 退到下一档，别把玩家直接送进嘴里
+            if (this.zombies.some(z => !z.dead && Math.hypot(z.x - x, z.y - y) < 60)) continue;
+            p._doorExitAt = this.gameTime;
+            p.x = x; p.y = y; p.vx = 0; p.vy = 0;
+            if (p.el1) { p.el1.style.left = x + 'px'; p.el1.style.top = y + 'px'; }
+            this._flyText(x, y - 42, '🚪 出门！', '#8ad4ff');
+            return true;
+        }
+        p._doorExitAt = this.gameTime;
+        this._flyText(p.x, p.y - 40, '门口被堵住了！', '#ff4b4b');
+        return false;
     }
 
     // v4.0.49：僵尸出生/回血点 = 最上排两组房间的正中心（原地图中心圆圈取消，圆圈随布局上移）
@@ -2729,6 +2819,18 @@ class HauntedDorm {
             }
             if ((key === '/' || key === '3' || key === 'pagedown' || e.code === 'Slash' || e.code === 'Digit3' || e.code === 'Numpad3' || e.code === 'PageDown') && !e.repeat && this.gameMode === '2p' && this.player2 && !this.player2.angelic && !this.player2.traitor && this.player2.skillCd <= 0) {
                 this._useSkill(this.player2);
+            }
+            // v4.0.122：出门键——P1 = O，P2 = 4（走是走不出去的：房内迈到门边会被拦住）
+            if (!e.repeat && !this.over && !this.player.dead) {
+                const menuBusy1 = this.kmenus[1].active || (this.popup && this.popup.style.display === 'block');
+                if ((key === 'o' || e.code === 'KeyO') && !menuBusy1 && !this.playerTraitor && !this.playerAngelic) {
+                    this._doorExit(this.player);
+                }
+                if (this.gameMode === '2p' && this.player2 && !this.player2.dead &&
+                    (key === '4' || e.code === 'Digit4' || e.code === 'Numpad4') &&
+                    !this.kmenus[2].active && !this.player2.traitor && !this.player2.angelic) {
+                    this._doorExit(this.player2);
+                }
             }
             if (e.code === 'Space') {
                 e.preventDefault();
@@ -3241,6 +3343,10 @@ class HauntedDorm {
         this.player.el1.classList.add('dead-slash');
         this.player.el1.style.filter = 'grayscale(1)';
         this.player.vx = 0; this.player.vy = 0;
+        // v4.0.122：无论走哪条分支（2p 待抉择 / 单人抉择框 / 直接结算），血条都要立刻归零。
+        // 旧版只在最后一条路径上刷血条，2p 首次倒下（pendingFate 分支）直接 return → 血条停在残格上，
+        // 玩家看到的"P1 死了但血还有"、"P2 血条莫名满格"就是这种没刷新造成的显示错位。
+        this.setHp();
         // v4.0.44：单人模式首次阵亡 → 弹出「天使 / 内鬼」抉择框（天使/内鬼形态下再倒下=直接结算）
         // v4.0.48：僵尸阵营不弹抉择（用户实报：当僵尸死了也弹天使/内鬼很抽象）——只有单人植物方才有，僵尸玩家死亡直接结算
         // v4.0.104：双人协作——P1 第一次倒下不判死，进入按键抉择等待（N=天使 / M=内鬼）
@@ -3304,6 +3410,7 @@ class HauntedDorm {
                 this._refreshHud();
                 return;
             }
+            this.setHp(); // v4.0.122：P2 倒下必须把血条刷到 0（旧版不刷新 → 残格停在旧值，看着像"血回满了"）
             if (p.angelic) this._announce('😇 P2 的天使陨落！', 'scream.mp3', true);
             if (!this._checkHumansOut()) {
                 this._announce('💔 P2 倒下了！P1 继续战斗！', 'scream.mp3', true);
@@ -5704,10 +5811,13 @@ class HauntedDorm {
         this.player.vy = (this.player.vy || 0) + (vy1 - (this.player.vy || 0)) * acc;
         let nx1 = this.player.x + this.player.vx * dt;
         let ny1 = this.player.y;
-        if (nx1 > 20 && nx1 < this.worldWidth - 20 && !this.checkCollision(nx1, ny1, 10, this.player.isZombie)) this.player.x = nx1;
+        // v4.0.122：房内不能靠走路迈出门（出门只能跳板 / O 键），撞到门边就停住
+        if (nx1 > 20 && nx1 < this.worldWidth - 20 && !this.checkCollision(nx1, ny1, 10, this.player.isZombie)
+            && this._canWalkTo(this.player, nx1, ny1)) this.player.x = nx1;
         else this.player.vx = 0;
         nx1 = this.player.x; ny1 = this.player.y + this.player.vy * dt;
-        if (ny1 > 30 && ny1 < this.worldHeight - 10 && !this.checkCollision(nx1, ny1, 10, this.player.isZombie)) this.player.y = ny1;
+        if (ny1 > 30 && ny1 < this.worldHeight - 10 && !this.checkCollision(nx1, ny1, 10, this.player.isZombie)
+            && this._canWalkTo(this.player, nx1, ny1)) this.player.y = ny1;
         else this.player.vy = 0;
 
         // P2 Movement - 【SOC防冲突】
@@ -5734,10 +5844,12 @@ class HauntedDorm {
             this.player2.vy = (this.player2.vy || 0) + (vy2 - (this.player2.vy || 0)) * acc2;
             let nx2 = this.player2.x + this.player2.vx * dt;
             let ny2 = this.player2.y;
-            if (nx2 > 20 && nx2 < this.worldWidth - 20 && !this.checkCollision(nx2, ny2, 10, this.player2.isZombie)) this.player2.x = nx2;
+            if (nx2 > 20 && nx2 < this.worldWidth - 20 && !this.checkCollision(nx2, ny2, 10, this.player2.isZombie)
+                && this._canWalkTo(this.player2, nx2, ny2)) this.player2.x = nx2;
             else this.player2.vx = 0;
             nx2 = this.player2.x; ny2 = this.player2.y + this.player2.vy * dt;
-            if (ny2 > 30 && ny2 < this.worldHeight - 10 && !this.checkCollision(nx2, ny2, 10, this.player2.isZombie)) this.player2.y = ny2;
+            if (ny2 > 30 && ny2 < this.worldHeight - 10 && !this.checkCollision(nx2, ny2, 10, this.player2.isZombie)
+                && this._canWalkTo(this.player2, nx2, ny2)) this.player2.y = ny2;
             else this.player2.vy = 0;
         }
         
@@ -6937,12 +7049,17 @@ class HauntedDorm {
                 if (p.isZombie) continue; // v4.0.107：僵尸阵营玩家不被己方僵尸/小怪咬
                 if (Math.hypot(p.x - zb.x, p.y - zb.y) < 80) { // v4.0.91：接触半径 50→80（僵尸更容易蹭到玩家，别开局全程零接触）
                     // 如果中间隔着门（玩家在房间里且门活着，僵尸在外面），则免疫接触伤害
-                    const pRm = this._insideRoom(Math.floor(p.x/80), Math.floor(p.y/80));
+                    // v4.0.122：这里原来用 _insideRoom（门格=通道格，返回 null）→ 玩家站在门格上升级门时
+                    // pRm 为 null，整段门保护被跳过，门板活着也被门外相邻格的僵尸咬死（用户实报多次）。
+                    // 改用 _roomZoneOf（室内格 + 本房门格），并给"门格"单独兜底：只要门板活着、
+                    // 僵尸不在同一个门的格子区域，就判安全。
+                    const pc0 = Math.floor(p.x/80), pr0 = Math.floor(p.y/80);
+                    const pRm = this._roomZoneOf(pc0, pr0);
                     let safeBehindDoor = false;
                     if (pRm) {
                         const doorPlant = this.getPlantAt(pRm.doorCol*80, pRm.doorRow*80);
-                        const zRm = this._insideRoom(Math.floor(zb.x/80), Math.floor(zb.y/80));
-                        if (doorPlant && zRm !== pRm) safeBehindDoor = true; // 门活着=绝对安全（残门威胁由"门残血溅射"承担）
+                        const zRm = this._roomZoneOf(Math.floor(zb.x/80), Math.floor(zb.y/80));
+                        if (doorPlant && doorPlant.isDoor && zRm !== pRm) safeBehindDoor = true; // 门活着=绝对安全（残门威胁由"门残血溅射"承担）
                     }
                     
                     if (!safeBehindDoor) {
