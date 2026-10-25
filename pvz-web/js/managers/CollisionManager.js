@@ -12,6 +12,10 @@ class CollisionManager {
         
         for (let p of projectiles) {
             for (let z of zombies) {
+                // v4.0.119：玉米加农炮的炮弹不走普通单点命中——它是"落地爆"弹，由
+                // Projectile._cobExplode() 在落点做 3×3 圆形范围伤害。放进来会变成
+                // "撞到第一只僵尸就 1800 单杀 + 炮弹消失"，范围与落点痕迹全部丢失。
+                if (p.type === 'cob' || p.cobBomb) continue;
                 if (p.row === z.row && p.type !== 'cattail' && p.type !== 'cattail_snow' && p.type !== 'gloom_puff' && p.type !== 'gloom_snow' && p.type !== 'zpea') {
                     // 抛射型子弹（西瓜/冰西瓜）走抛物线：只有落到接近本行高度时才判定命中，
                     // 否则它在半空中就会把僵尸"隔空打死"（canHitNow 对普通子弹恒为 true）

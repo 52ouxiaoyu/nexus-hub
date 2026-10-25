@@ -737,20 +737,59 @@ body {
     pointer-events: none;
 }
 
-/* ===== v3.65.0 玉米加农炮炮弹焦痕：4×4 黑色烧痕块（普通爆炸焦土，非毁灭菇陨石坑）===== */
-.cob-scorch {
-    position: absolute;
-    pointer-events: none;
-    z-index: 0;
-    background: radial-gradient(ellipse at 50% 55%,
-        rgba(18, 14, 10, 0.88) 0%,
-        rgba(28, 22, 16, 0.62) 52%,
-        rgba(34, 26, 18, 0.28) 74%,
-        rgba(34, 26, 18, 0) 88%);
-}
+/* v4.0.119：删除 .cob-scorch（v3.65.0 的 4×4 黑色方块焦痕），落点痕迹改用原版 BlastMark.png */
 
 /* Dorm Mode Phase 1 */
 #game-container.dorm-mode .row:not(:nth-child(3)) { display: none !important; }
 #game-container.dorm-mode #grid-overlay { border: 20px solid #555; background: rgba(0,0,0,0.8); box-shadow: inset 0 0 50px #000; }
 #game-container.dorm-mode { background: #111; }
 
+/* ===== v4.0.119 玉米加农炮：原版发射动作（抬炮口 → 后坐 → 回弹） =====
+   注意：所有帧都必须带上 translate(-50%,-50%) 与 translateX(-8px) 基准，
+   否则会把 .entity 的居中基准顶掉（本项目多次踩坑）。
+   transform-origin 偏到左下轮心，让旋转看起来是"炮口抬起"而不是整车打转。 */
+.cob-firing {
+    transform-origin: 34% 97%;
+    animation: cobCannonFire .72s cubic-bezier(.34, .68, .36, 1);
+}
+@keyframes cobCannonFire {
+    0%   { transform: translate(-50%, -50%) translateX(-8px) rotate(0deg); }
+    10%  { transform: translate(-50%, -50%) translateX(-2px) translateY(-6px) rotate(-25deg); }
+    32%  { transform: translate(-50%, -50%) translateX(-4px) translateY(-5px) rotate(-22deg); }
+    46%  { transform: translate(-50%, -50%) translateX(-23px) translateY(2px) rotate(-2deg); }
+    64%  { transform: translate(-50%, -50%) translateX(-2px) translateY(0) rotate(2.5deg); }
+    82%  { transform: translate(-50%, -50%) translateX(-12px) rotate(-1deg); }
+    100% { transform: translate(-50%, -50%) translateX(-8px) rotate(0deg); }
+}
+.cob-muzzle-puff {
+    position: absolute;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(circle at 46% 44%, rgba(255,255,255,1) 0%, rgba(252,246,220,.9) 38%, rgba(226,212,176,.35) 66%, rgba(210,200,170,0) 76%);
+    animation: cobMuzzlePuff .95s ease-out forwards;
+}
+@keyframes cobMuzzlePuff {
+    0%   { opacity: 1;   transform: translate(-50%, -50%) scale(.3); }
+    40%  { opacity: .8;  transform: translate(-50%, -50%) translate(20px, -14px) scale(1.35); }
+    100% { opacity: 0;   transform: translate(-50%, -50%) translate(52px, -34px) scale(2.7); }
+}
+/* 玉米炮落地：暖黄烟团（原版玉米炮是烟团+玉米粒，不是樱桃的「嘭!」） */
+.cob-boom-puff {
+    position: absolute;
+    width: 168px;
+    height: 168px;
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(circle at 50% 52%,
+        rgba(255,244,178,.96) 0%, rgba(255,206,86,.94) 26%,
+        rgba(238,150,40,.72) 52%, rgba(150,84,18,.30) 68%, rgba(120,64,12,0) 78%);
+    transform: translate(-50%, -50%) scale(.32);
+    animation: cobBoomPuff .76s ease-out forwards;
+}
+@keyframes cobBoomPuff {
+    0%   { opacity: .96; transform: translate(-50%, -50%) scale(.32); }
+    42%  { opacity: .88; transform: translate(-50%, -50%) scale(1.06); }
+    100% { opacity: 0;   transform: translate(-50%, -50%) scale(1.95); }
+}

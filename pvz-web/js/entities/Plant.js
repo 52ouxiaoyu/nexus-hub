@@ -1260,14 +1260,43 @@ class Plant extends Entity {
         if (this.fusionOverlay2) this.fusionOverlay2.style.display = 'block';
     }
 
-    // ===== v3.24.0 玉米加农炮发射：朝准星位置抛出玉米炮弹，落地 3×3 爆炸 =====
+    // ===== v3.24.0 玉米加农炮发射：朝准星位置抛出玉米炮弹，落地爆炸 =====
+    // v4.0.119：补上原版发射动作——炮口先抬起，随后整车后坐、回弹，炮口喷白烟
     fireCob(tx, ty) {
         this.chargeReady = false;
         this.chargeTimer = this.chargeTime;
         this._showCobShell(false);
-        const proj = new Projectile(this.game, this.x + 36, this.y + this.yOffset - 16, this.row, 'cob', null);
+        this._playCobFireAnim();
+        // 起飞点跟着"抬起的炮口"走（炮口上翘 25° 时大概比静止位置高 18px、略靠后）
+        const proj = new Projectile(this.game, this.x + 32, this.y + this.yOffset - 34, this.row, 'cob', null);
         proj.setupLobToPoint(tx, ty);
         this.game.entities.push(proj);
+    }
+
+    // v4.0.119 原版发射动作：抬起炮口（rotate -25°，支点 34%/97% 在炮尾）→ 后坐（整车后退 23px）→ 回弹过冲
+    // 走 CSS keyframes（动画声明优先级高于内联 transform，所以不会顶掉 translate(-50%,-50%) 居中基准）
+    _playCobFireAnim() {
+        const el = this.element;
+        if (!el) return;
+        el.classList.remove('cob-firing');
+        void el.offsetWidth;              // 强制 reflow：连续两发也能重放
+        el.classList.add('cob-firing');
+        clearTimeout(this._cobAnimTimer);
+        this._cobAnimTimer = setTimeout(() => el.classList.remove('cob-firing'), 760);
+        // 炮口白烟：3 团错开 60ms 向后上方飘散
+        const g = this.game;
+        if (!g || !g.entityLayer) return;
+        const mx = this.x + 40, my = this.y + this.yOffset - 44;   // 贴住抬起的炮口
+        for (let i = 0; i < 3; i++) {
+            const puff = document.createElement('div');
+            puff.className = 'cob-muzzle-puff';
+            puff.style.left = (mx + i * 4) + 'px';
+            puff.style.top = (my - i * 3) + 'px';
+            puff.style.zIndex = String(Math.floor(this.y) + 4);
+            puff.style.animationDelay = (i * 60) + 'ms';
+            g.entityLayer.appendChild(puff);
+            setTimeout(() => { if (puff.parentNode) puff.remove(); }, 1000 + i * 60);
+        }
     }
 
     update(deltaTime) {

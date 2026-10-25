@@ -282,52 +282,103 @@ class Projectile extends Entity {
         this.peakHeight = peak;
     }
 
-    // v3.24.0 玉米加农炮炮弹落地爆炸
-    // v3.65.0：范围 3×3→4×4（以落点格为中央的 4 行 × 4 列）；圈内僵尸无视种类/血量直接秒杀；
-    // 地面留下 4×4 的黑色焦块（普通爆炸烧痕，非毁灭菇陨石坑），15 秒后淡出
+    // ===== v4.0.119 玉米加农炮炮弹落地爆炸（恢复 PVZ1 原版规格）=====
+    // 原版：以落点为圆心、半径 1.5 格的圆（≈3×3 格）内全部 1800 炸弹伤害，
+    //       地面留下 BlastMark（黑圆斑 + 四边放射尖刺）。
+    // 历史坑：v3.65.0 曾改成 4×4 秒杀 + 逐格黑方块；随后 CollisionManager 把这个弹
+    //        当普通子弹单点命中，炮弹撞到第一只僵尸就消失 → 范围伤害与痕迹双双消失。
+    //        现由 CollisionManager 显式跳过 cob 弹（见该文件），只在落点爆炸。
     _cobExplode() {
         const g = this.game;
         const b = g.board;
-        const boom = document.createElement('img');
-        boom.src = 'assets/images/Plants/CherryBomb/Boom.gif';
-        boom.style.cssText = 'position:absolute;width:320px;height:320px;object-fit:contain;pointer-events:none;transform:translate(-50%,-50%);z-index:500;';
-        boom.style.left = this.x + 'px';
-        boom.style.top = this.y + 'px';
-        g.entityLayer.appendChild(boom);
-        setTimeout(() => boom.remove(), 900);
-        // 落点所在格 (R,C)：4×4 = 行 R-1..R+2 / 列 C-2..C+1（落点居块中央），越界裁剪
-        const R = Math.floor((this.y - b.offsetY) / b.cellHeight);
-        const C = Math.floor((this.x - b.offsetX) / b.cellWidth);
-        const rowLo = Math.max(0, R - 1), rowHi = Math.min(b.rows - 1, R + 2);
-        const colLo = Math.max(0, C - 2), colHi = Math.min(b.cols - 1, C + 1);
+        const px = this.x;
+        const py = this.baseY !== undefined ? this.baseY : this.y;
+
+        // —— 爆炸特效：原版玉米炮不是樱桃炸弹那种「嘭!」漫画爆炸，
+        //     而是暖黄烟团炸开 + 玉米粒四散（玉米粒直接复用原版 Kernel.png）
+        this._cobBoomFx(px, py);
+
+        // —— 范围判定：归一化成"格"单位后的椭圆距离（格子 80×100 不等比，按各自半轴缩放）
+        const R_GIRD = 1.5;                                  // 原版爆炸半径 1.5 格
+        const cy = (py - b.offsetY) / b.cellHeight;          // 落点的连续行坐标（行 r 中心 = r+0.5）
         const zombies = g.entities.filter(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
+        let hitCount = 0;
         for (const z of zombies) {
-            if (z.row >= rowLo && z.row <= rowHi &&
-                z.x >= b.offsetX + colLo * b.cellWidth && z.x <= b.offsetX + (colHi + 1) * b.cellWidth) {
-                z.takeDamage(9999, { bomb: true, oneshot: true, obliterate: true });
+            const dx = (z.x - px) / b.cellWidth;             // 横向差（格）
+            const dy = (z.row + 0.5) - cy;                   // 纵向差（格）
+            if (Math.sqrt(dx * dx + dy * dy) <= R_GIRD) {
+                // 1800 炸弹伤害：无视护甲直接落本体（原版玉米炮可秒铁桶/铁门，巨人要两发）
+                z.takeDamage(1800, { bomb: true });
+                hitCount++;
             }
         }
-        // 地面焦块：覆盖 4×4 每格一块半透明黑斑（垫在实体层最底下，与冰道同一层位）
-        for (let r = rowLo; r <= rowHi; r++) {
-            for (let c = colLo; c <= colHi; c++) {
-                const sc = document.createElement('div');
-                sc.className = 'cob-scorch';
-                sc.style.left = (b.offsetX + c * b.cellWidth) + 'px';
-                sc.style.top = (b.offsetY + r * b.cellHeight) + 'px';
-                sc.style.width = b.cellWidth + 'px';
-                sc.style.height = b.cellHeight + 'px';
-                if (g.entityLayer.firstChild) g.entityLayer.insertBefore(sc, g.entityLayer.firstChild);
-                else g.entityLayer.appendChild(sc);
-                setTimeout(() => {
-                    if (!sc.parentNode) return;
-                    sc.style.transition = 'opacity 3s ease-out';
-                    sc.style.opacity = '0';
-                    setTimeout(() => { if (sc.parentNode) sc.remove(); }, 3100);
-                }, 12000);
-            }
-        }
+        this._cobHitCount = hitCount;
+
+        // —— 落点痕迹：原版 BlastMark.png（黑圆斑 + 四边放射尖刺），垫在地面层
+        const mark = document.createElement('img');
+        mark.src = 'assets/images/Plants/CobCannon/BlastMark.png?v=' + (g.assetStamp ? g.assetStamp() : '1792751289');
+        mark.className = 'cob-blastmark';
+        mark.style.cssText = 'position:absolute;width:270px;height:270px;object-fit:contain;pointer-events:none;'
+            + 'transform:translate(-50%,-50%);z-index:1;opacity:.94;';
+        mark.style.left = px + 'px';
+        mark.style.top = (py + 34) + 'px';                   // 下移：痕迹贴在他脚下的草地
+        if (g.entityLayer.firstChild) g.entityLayer.insertBefore(mark, g.entityLayer.firstChild);
+        else g.entityLayer.appendChild(mark);
+        setTimeout(() => {
+            if (!mark.parentNode) return;
+            mark.style.transition = 'opacity 4s ease-out';
+            mark.style.opacity = '0';
+            setTimeout(() => { if (mark.parentNode) mark.remove(); }, 4200);
+        }, 14000);
+
         if (g.audioManager && g.audioManager.playFx) g.audioManager.playFx('crash');
         this.isDead = true;
+    }
+
+    // v4.0.119：玉米炮落地特效——暖黄烟团 + 玉米粒四散（全部复用原版贴图/CSS，无手绘）
+    _cobBoomFx(px, py) {
+        const g = this.game;
+        if (!g || !g.entityLayer) return;
+        // 三层烟团错位摆放（不是同心圆）——同心会看起来像一个"发光球"
+        const PUFFS = [
+            { w: 150, dx: -22, dy: 8, delay: 20, dur: .70 },
+            { w: 186, dx: 6, dy: -10, delay: 0, dur: .78 },
+            { w: 132, dx: 26, dy: 14, delay: 90, dur: .66 }
+        ];
+        for (const cfg of PUFFS) {
+            const puff = document.createElement('div');
+            puff.className = 'cob-boom-puff';
+            puff.style.left = (px + cfg.dx) + 'px';
+            puff.style.top = (py + cfg.dy) + 'px';
+            puff.style.width = cfg.w + 'px';
+            puff.style.height = (cfg.w * 0.88) + 'px';
+            puff.style.zIndex = '499';
+            puff.style.animationDelay = cfg.delay + 'ms';
+            puff.style.animationDuration = cfg.dur + 's';
+            g.entityLayer.appendChild(puff);
+            setTimeout(() => { if (puff.parentNode) puff.remove(); }, 900 + cfg.delay);
+        }
+        const stamp = g.assetStamp ? g.assetStamp() : '1792751289';
+        for (let i = 0; i < 9; i++) {
+            const k = document.createElement('img');
+            k.src = 'assets/images/Plants/KernelPult/Kernel.png?v=' + stamp;
+            k.style.cssText = 'position:absolute;width:15px;height:16px;object-fit:contain;pointer-events:none;'
+                + 'transform:translate(-50%,-50%);z-index:502;';
+            k.style.left = px + 'px';
+            k.style.top = py + 'px';
+            g.entityLayer.appendChild(k);
+            const ang = (Math.PI * 2 * i) / 9 + Math.random() * 0.5;
+            const dist = 70 + Math.random() * 70;
+            const dx = Math.cos(ang) * dist;
+            const dy = Math.sin(ang) * dist * 0.66 - 34;   // 整体略向上抛
+            const rot = Math.random() * 720 - 360;
+            requestAnimationFrame(() => {
+                k.style.transition = 'transform .6s cubic-bezier(.2,.6,.4,1), opacity .6s ease-out';
+                k.style.transform = 'translate(calc(-50% + ' + dx.toFixed(0) + 'px), calc(-50% + ' + dy.toFixed(0) + 'px)) rotate(' + rot.toFixed(0) + 'deg)';
+                k.style.opacity = '0';
+            });
+            setTimeout(() => { if (k.parentNode) k.remove(); }, 760);
+        }
     }
 
     // 是否到了"可以命中"的时机（非抛物线子弹恒为 true）
@@ -404,6 +455,11 @@ class Projectile extends Entity {
                  return;
             }
         } else if (this.lobbed) {
+            // v4.0.119 玉米炮弹空中翻滚（原版玉米炮的炮弹是转着飞出去的）
+            if (this.type === 'cob' && this.element) {
+                this._spinDeg = ((this._spinDeg || 0) + deltaTime * 300) % 360;
+                this.setTransform('rotate(' + this._spinDeg.toFixed(1) + 'deg)');
+            }
             // 抛物线飞行：水平匀速 + 竖直匀加速（重力）
             this.flightT += deltaTime;
             this.x += this.vx * deltaTime;

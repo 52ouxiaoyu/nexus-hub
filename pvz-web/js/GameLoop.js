@@ -3398,19 +3398,23 @@ class Game {
 
     getPlantName(type) {
         const names = {            sunflower: '向日葵', peashooter: '豌豆射手', wallnut: '坚果墙', cherrybomb: '樱桃炸弹',
-            snowpea: '寒冰射手', repeater: '双发射手', squash: '窝瓜', jalapeno: '火爆辣椒',
+            snowpea: '寒冰射手', repeater: '双发豌豆', squash: '窝瓜', jalapeno: '火爆辣椒',
             potatomine: '土豆地雷', chomper: '大嘴花', tallnut: '高坚果', puffshroom: '小喷菇',
             fumeshroom: '大喷菇', sunshroom: '阳光菇', scaredyshroom: '胆小菇', iceshroom: '寒冰菇',
-            doomshroom: '毁灭菇', spikeweed: '地刺', threepeater: '三线射手', splitpea: '裂荚射手',
+            doomshroom: '毁灭菇', spikeweed: '地刺', threepeater: '三线射手', splitpea: '双向豌豆',
             gatlingpea: '机枪射手', twinsunflower: '双子向日葵', torchwood: '火炬树桩', garlic: '大蒜', plantern: '路灯花',
-            wintermelon: '冰西瓜', starfruit: '杨桃', hypnoshroom: '魅惑菇', pumpkinhead: '南瓜壳',
+            // v4.0.119：以下 4 个基础植物原本漏登记（getPlantName 直接回落成英文 type，
+            // 融合成功/盲盒开出的播报会出现「融合成功：cattail!」这种英文），一并补齐；
+            // 同时把 3 个与图鉴不同的叫法对齐（双发射手→双发豌豆 / 裂荚射手→双向豌豆 / 冰西瓜→冰西瓜投手）
+            melonpult: '西瓜投手', cattail: '猫尾草', gloomshroom: '忧郁菇', spikerock: '钢地刺',
+            wintermelon: '冰西瓜投手', starfruit: '杨桃', hypnoshroom: '魅惑菇', pumpkinhead: '南瓜壳',
             fusion_peaflower: '豌豆向日葵', fusion_nutshooter: '坚果射手', fusion_frostbomb: '寒冰炸弹',
             fusion_sporemine: '孢子地雷', fusion_spikynut: '地刺坚果', fusion_snownut: '寒冰坚果',
             fusion_snowtallnut: '寒冰高坚果',
             fusion_cherrybomb_peashooter: '樱桃射手', fusion_doomshroom_sunflower: '毁灭向日葵',
             // v3.36.0 新融合
             fusion_snowpea_starfruit: '冰杨桃',
-            fusion_spikerock_tallnut: '钢地刺高坚果',
+            fusion_spikerock_tallnut: '钢刺高坚果', // v4.0.119：与图鉴/守屋/Plant.js 对齐（原误写「钢地刺高坚果」）
             fusion_melon_cattail: '西瓜猫尾草', fusion_wintermelon_cattail: '冰西瓜猫尾草',
             fusion_starfruit: '杨桃', fusion_hypnoshroom: '魅惑菇',
             fusion_pumpkinhead: '南瓜壳', fusion_chomper_wallnut: '大嘴坚果',
