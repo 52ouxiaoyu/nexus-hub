@@ -90,7 +90,10 @@ class HauntedDorm {
                              shoot: { dmg: 890, cd: 2.2, n: 1, range: 560, img: 'Plants/MelonPult/WinterMelon_small.png', homing: true, aoe: 80, slow: true },
                              up: { cost: 16384, to: 'cattail' } },
             cattail:       { tier: 12, name: '猫尾草', img: 'Plants/Cattail/Cattail.gif',       hp: 4200, cost: 0, scale: 1.15, // v4.0.53：新——尖刺针雨自动索敌
-                             shoot: { dmg: 1650, cd: 1.1, n: 3, range: 580, img: 'Plants/Cattail/Cattail.png', homing: true },
+                             // v4.0.120：子弹原来是 Plants/Cattail/Cattail.png（220×220 的整张卡面图，像素猫头像）
+                             // → 打出去就是"飞出去一张图片"。改用**经典模式猫尾草同款原版尖刺** Cactus/Projectile32.png
+                             // （30×16 RGBA，红色仙人掌尖刺），size 单独定小一点，别按默认 26 放大成 47px 大块
+                             shoot: { dmg: 1650, cd: 1.1, n: 3, range: 580, img: 'Plants/Cactus/Projectile32.png', homing: true, size: 15 },
                              up: { cost: 32768, to: 'superbox' } },
             superbox:      { tier: 13, name: '超级机枪', img: 'Plants/GatlingPea/GatlingPea.gif', hp: 5000, cost: 0, scale: 1.25, // v4.0.116：超级机箱→已有融合植物「超级机枪」（机枪射手+双发射手）
                              tint: 'saturate(1.3) brightness(1.1)',
@@ -3123,17 +3126,17 @@ class HauntedDorm {
                 if (sh.fan) { // 三线/忧郁菇：扇形多向
                     for (let i = 0; i < sh.n; i++) {
                         const a = isFocus ? base : base + (i - (sh.n - 1) / 2) * sh.fan;
-                        this._firePea(px, py, a, sh.dmg * dmgMul, { img: sh.img, range: sh.range, slow: sh.slow, homing: sh.homing, owner });
+                        this._firePea(px, py, a, sh.dmg * dmgMul, { img: sh.img, range: sh.range, slow: sh.slow, homing: sh.homing, owner, size: sh.size });
                     }
                 } else { // 连发：同向串行
                     const actualN = (sh.dualChance && Math.random() < sh.dualChance) ? 2 : sh.n;
                     for (let i = 0; i < actualN; i++) {
                         this._firePea(px - Math.cos(base) * i * 22, py - Math.sin(base) * i * 22, base, sh.dmg * dmgMul,
-                            { img: sh.img, range: sh.range, slow: sh.slow, homing: sh.homing, owner });
+                            { img: sh.img, range: sh.range, slow: sh.slow, homing: sh.homing, owner, size: sh.size });
                     }
                 }
                 if (sh.back) { // 双向射手：脑后再补一发
-                    this._firePea(px, py, base + Math.PI, sh.dmg * dmgMul, { img: sh.img, range: sh.range, slow: sh.slow, homing: sh.homing, owner });
+                    this._firePea(px, py, base + Math.PI, sh.dmg * dmgMul, { img: sh.img, range: sh.range, slow: sh.slow, homing: sh.homing, owner, size: sh.size });
                 }
             }
             this.playSfx('ballooninflate.mp3', 0.15);
