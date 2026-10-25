@@ -18,7 +18,8 @@ class HauntedDorm {
             //      每 0.4s 一跳、无需浇水按键；产 1→1024 翻倍；v4.0.46：作息反转——白天醒着产阳光，夜晚熄灯睡觉) ——
             sunshroom:     { tier: 1, name: '阳光菇',   img: 'Plants/SunShroom/0.gif',   hp: 1000, cost: 0, nightOnly: true,
                              produce: { sun: 1, every: 0.4 }, up: { cost: 25, to: 'bigsunshroom' } },
-            bigsunshroom:  { tier: 2, name: '大阳光菇', img: 'Plants/SunShroom/0.gif',   hp: 1500, cost: 0, scale: 1.2, nightOnly: true,
+            bigsunshroom:  { tier: 2, name: '阳光小喷菇', img: 'Plants/PuffShroom/PuffShroom.gif', hp: 1500, cost: 0, scale: 1.15, nightOnly: true, // v4.0.116：大阳光菇→已有融合植物「阳光小喷菇」
+                             tint: 'sepia(1) saturate(2.6) hue-rotate(-8deg) brightness(1.25)',
                              produce: { sun: 2, every: 0.4 }, up: { cost: 50, to: 'sunflower' } },
             sunflower:     { tier: 3, name: '向日葵',   img: 'Plants/SunFlower/0.gif',   hp: 2000, cost: 0, scale: 1.0, nightOnly: true,
                              produce: { sun: 4, every: 0.4 }, up: { cost: 100, to: 'peasunflower' } },
@@ -35,18 +36,14 @@ class HauntedDorm {
                              overlay: 'Plants/TwinSunflower/TwinSunflower1.gif',
                              overTransform: 'translate(-50%, -50%) translate(10px, 6px) scaleX(-1) scale(1.15)',
                              produce: { sun: 128, every: 0.4 }, up: { cost: 6400, sporeCost: 128, to: 'crystalsunflower' } },
-            crystalsunflower:{ tier: 9, name: '水晶向日葵',img: 'Plants/TwinSunflower/TwinSunflower1.gif', hp: 16000, cost: 0, scale: 1.25, // v4.0.53：新——冰蓝水晶质感多头
-                             tint: 'hue-rotate(180deg) saturate(1.6) brightness(1.3) drop-shadow(0 0 8px #7fd8ff)',
-                             overlay: 'Plants/TwinSunflower/TwinSunflower1.gif',
-                             overTransform: 'translate(-50%, -50%) translate(10px, 6px) scaleX(-1) scale(1.15)',
+            crystalsunflower:{ tier: 9, name: '冰晶向日葵',img: 'Plants/SunFlower/SunFlower1.gif', hp: 16000, cost: 0, scale: 1.2, // v4.0.116：水晶向日葵→已有融合植物「冰晶向日葵」（向日葵+寒冰菇）
+                             tint: 'hue-rotate(150deg) saturate(1.5) brightness(1.15)',
                              produce: { sun: 256, every: 0.4 }, up: { cost: 12800, sporeCost: 256, to: 'charmsunflower' } },
-            charmsunflower:{ tier: 10, name: '魅惑向日葵',img: 'Plants/TwinSunflower/TwinSunflower1.gif', hp: 20000, cost: 0, scale: 1.35, // v4.0.53：新——粉紫魅惑光晕多头
-                             tint: 'hue-rotate(290deg) saturate(1.8) brightness(1.15) drop-shadow(0 0 10px #ff9de0)',
-                             overlay: 'Plants/TwinSunflower/TwinSunflower1.gif',
-                             overTransform: 'translate(-50%, -50%) translate(10px, 6px) scaleX(-1) scale(1.15)',
+            charmsunflower:{ tier: 10, name: '魅惑向日葵',img: 'Plants/SunFlower/SunFlower1.gif', hp: 20000, cost: 0, scale: 1.25, // v4.0.116：就是融合植物「魅惑向日葵」（魅惑菇+向日葵），外观对齐
+                             tint: 'hue-rotate(290deg) saturate(1.5) brightness(1.08)',
                              produce: { sun: 512, every: 0.4 }, up: { cost: 25600, sporeCost: 512, to: 'stonestarfruit' } },
-            stonestarfruit:{ tier: 11, name: '石芒杨桃', img: 'Plants/Starfruit/Starfruit.gif', hp: 25000, cost: 0, scale: 1.35, // v4.0.53：新——岩石质感巨型杨桃
-                             tint: 'grayscale(0.35) sepia(0.6) saturate(1.6) brightness(0.95) drop-shadow(0 0 8px #ffcc80)',
+            stonestarfruit:{ tier: 11, name: '十芒杨桃', img: 'Plants/Starfruit/Starfruit.gif', hp: 25000, cost: 0, scale: 1.25, // v4.0.116：石芒杨桃→已有融合植物「十芒杨桃」（杨桃+杨桃）
+                             tint: 'saturate(1.6) brightness(1.2) hue-rotate(15deg)',
                              produce: { sun: 1024, every: 0.4 } },
 
             // —— 豌豆系 (v4.0.53 重排：豌豆射手→卷心菜投手→玉米投手→双向投手→双向豌豆→寒冰豌豆→双发豌豆→三线豌豆→机枪射手→
@@ -63,20 +60,22 @@ class HauntedDorm {
             kernelpult:    { tier: 3, name: '玉米投手',   img: 'Plants/KernelPult/KernelPult.png',    hp: 500, cost: 0,
                              shoot: { dmg: 4, cd: 1.5, n: 1, range: 320, img: 'Plants/PB00.gif', homing: true },
                              up: { cost: 64, to: 'dualpea' } },
-            dualpea:       { tier: 4, name: '双向投手', img: 'Plants/SplitPea/SplitPea.gif',      hp: 600, cost: 0,
+            dualpea:       { tier: 4, name: '冰双向射手', img: 'Plants/SplitPea/SplitPea.gif',    hp: 600, cost: 0, tint: 'hue-rotate(165deg) saturate(1.5) brightness(1.1)', // v4.0.116：双向投手→已有融合植物「冰双向射手」
                              shoot: { dmg: 8, cd: 1.5, n: 1, range: 360, img: 'Plants/PB00.gif', homing: true },
                              up: { cost: 128, to: 'bidipea' } },
             bidipea:       { tier: 5, name: '双向豌豆', img: 'Plants/SplitPea/SplitPea.gif',      hp: 700, cost: 0, // v4.0.53：新——前后双向连发
                              tint: 'hue-rotate(200deg) saturate(1.4) brightness(1.05)',
                              shoot: { dmg: 16, cd: 1.3, n: 2, range: 400, img: 'Plants/PB00.gif', homing: true },
                              up: { cost: 256, to: 'snowpea' } },
-            snowpea:       { tier: 6, name: '寒冰豌豆', img: 'Plants/SnowPea/SnowPea.gif',       hp: 800, cost: 0, scale: 1.1,
+            snowpea:       { tier: 6, name: '寒冰射手', // v4.0.116：与经典图鉴统一叫法（原「寒冰豌豆」= 自造名）
+ img: 'Plants/SnowPea/SnowPea.gif',       hp: 800, cost: 0, scale: 1.1,
                              shoot: { dmg: 32, cd: 1.5, n: 1, range: 420, img: 'Plants/PB00.gif', homing: true, slow: true },
                              up: { cost: 512, to: 'repeater' } },
             repeater:      { tier: 7, name: '双发豌豆', img: 'Plants/Repeater/Repeater.gif',      hp: 1000, cost: 0, scale: 1.1,
                              shoot: { dmg: 64, cd: 1.5, n: 2, range: 440, img: 'Plants/PB00.gif', homing: true },
                              up: { cost: 1024, to: 'threepeater' } },
-            threepeater:   { tier: 8, name: '三线豌豆', img: 'Plants/Threepeater/Threepeater.gif',   hp: 1500, cost: 0, scale: 1.2,
+            threepeater:   { tier: 8, name: '三线射手', // v4.0.116：与经典图鉴统一叫法（原「三线豌豆」= 自造名）
+ img: 'Plants/Threepeater/Threepeater.gif',   hp: 1500, cost: 0, scale: 1.2,
                              shoot: { dmg: 128, cd: 1.5, n: 3, range: 480, img: 'Plants/PB00.gif', homing: true },
                              up: { cost: 2048, to: 'gatlingpea' } },
             gatlingpea:    { tier: 9, name: '机枪射手', img: 'Plants/GatlingPea/GatlingPea.gif',    hp: 2500, cost: 0, scale: 1.2,
@@ -91,12 +90,12 @@ class HauntedDorm {
             cattail:       { tier: 12, name: '猫尾草', img: 'Plants/Cattail/Cattail.gif',       hp: 4200, cost: 0, scale: 1.15, // v4.0.53：新——尖刺针雨自动索敌
                              shoot: { dmg: 1650, cd: 1.1, n: 3, range: 580, img: 'Plants/Cattail/Cattail.png', homing: true },
                              up: { cost: 32768, to: 'superbox' } },
-            superbox:      { tier: 13, name: '超级机箱', img: 'Plants/GatlingPea/GatlingPea.gif', hp: 5000, cost: 0, scale: 1.25, // v4.0.53：新——金色重炮机箱
-                             tint: 'sepia(1) saturate(2.4) hue-rotate(-12deg) brightness(1.1) drop-shadow(0 0 6px #ffd54a)',
+            superbox:      { tier: 13, name: '超级机枪', img: 'Plants/GatlingPea/GatlingPea.gif', hp: 5000, cost: 0, scale: 1.25, // v4.0.116：超级机箱→已有融合植物「超级机枪」（机枪射手+双发射手）
+                             tint: 'saturate(1.3) brightness(1.1)',
                              shoot: { dmg: 3050, cd: 1.0, n: 5, range: 600, img: 'Plants/PB00.gif', homing: true },
                              up: { cost: 65536, to: 'machinestail' } },
-            machinestail:  { tier: 14, name: '机箱猫尾草', img: 'Plants/Cattail/Cattail.gif',   hp: 6000, cost: 0, scale: 1.2, // v4.0.53：新——机枪猫尾草（金属色）
-                             tint: 'grayscale(0.3) sepia(0.8) saturate(1.6) brightness(1.05) drop-shadow(0 0 6px #bdbdbd)',
+            machinestail:  { tier: 14, name: '机枪猫尾草', img: 'Plants/Cattail/Cattail.gif',   hp: 6000, cost: 0, scale: 1.2, // v4.0.116：机箱猫尾草→已有融合植物「机枪猫尾草」（机枪射手+猫尾草）
+                             tint: 'saturate(1.15) brightness(1.05)',
                              overlay: 'Plants/GatlingPea/GatlingPea.gif', overTransform: 'translate(-50%, -50%) translate(0px, -24px) scale(0.55)',
                              shoot: { dmg: 5650, cd: 0.95, n: 5, range: 620, img: 'Plants/PB00.gif', homing: true },
                              up: { cost: 131072, to: 'melonstail' } },
@@ -131,20 +130,21 @@ class HauntedDorm {
             nutlv7:        { tier: 7,  name: '辣椒高坚果', img: 'Plants/TallNut/TallNut.gif',       hp: 45000,  cost: 0,
                              tint: 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.1)',
                              up: { cost: 1024, sporeCost: 32, to: 'nutlv8' } },
-            nutlv8:        { tier: 8,  name: '寒冰高坚果', img: 'Plants/TallNut/TallNut.gif',       hp: 67500,  cost: 0,
+            nutlv8:        { tier: 8,  name: '寒冰坚果', img: 'Plants/TallNut/TallNut.gif',         hp: 67500,  cost: 0, // v4.0.116：寒冰高坚果→已有融合植物「寒冰坚果」
                              tint: 'hue-rotate(180deg) saturate(1.5) brightness(1.2)',
                              up: { cost: 2048, sporeCost: 64, to: 'nutlv9' } },
             nutlv9:        { tier: 9,  name: '大嘴坚果',   img: 'Plants/Chomper/Chomper.gif',       hp: 100000, cost: 0,
                              overlay: 'Plants/WallNut/WallNut.gif', overTransform: 'translate(-50%, -50%) translate(0px, 16px) scale(0.85)',
                              up: { cost: 4096, sporeCost: 128, to: 'nutlv10' } },
-            nutlv10:       { tier: 10, name: '巨型坚果',   img: 'Plants/TenManNut/0.gif',           hp: 150000, cost: 0, scale: 1.1,
+            nutlv10:       { tier: 10, name: '钢刺坚果',   img: 'Plants/WallNut/WallNut.gif',       hp: 150000, cost: 0, scale: 1.1, // v4.0.116：巨型坚果→已有融合植物「钢刺坚果」
+                             overlay: 'Plants/Spikerock/Spikerock.gif', overTransform: 'translate(-50%, -50%) translate(0px, 34px)',
                              up: { cost: 8192, sporeCost: 256, to: 'nutlv11' } },
-            nutlv11:       { tier: 11, name: '南瓜堡垒',   img: 'Plants/PumpkinHead/PumpkinHead.gif', hp: 225000, cost: 0, scale: 1.4,
-                             tint: 'brightness(1.1) saturate(1.2)',
+            nutlv11:       { tier: 11, name: '高坚果堡垒', img: 'Plants/TallNut/TallNut.gif',       hp: 225000, cost: 0, scale: 1.2, // v4.0.116：南瓜堡垒→已有融合植物「高坚果堡垒」
+                             tint: 'brightness(1.06)',
+                             overlay: 'Plants/CabbagePult/CabbagePult.png', overTransform: 'translate(-50%, -50%) translate(4px, -56px) scale(0.7)',
                              up: { cost: 16384, sporeCost: 512, to: 'nutlv12' } },
-            nutlv12:       { tier: 12, name: '永恒高坚果', img: 'Plants/TallNut/TallNut.gif',       hp: 340000, cost: 0, scale: 1.2,
-                             tint: 'brightness(1.25) saturate(1.3) drop-shadow(0 0 12px #ffd700)',
-                             overlay: 'Plants/WallNut/WallNut.gif', overTransform: 'translate(-50%, -50%) translate(0px, -40px) scale(0.7)' },
+            nutlv12:       { tier: 12, name: '高坚果 Lv12', img: 'Plants/TallNut/TallNut.gif',      hp: 340000, cost: 0, scale: 1.2, // v4.0.116：永恒高坚果→经典植物「高坚果」（同名同物，只升等级）
+                             tint: 'brightness(1.25) saturate(1.3) drop-shadow(0 0 12px #ffd700)' },
 
             // —— 孢子系 (v4.0.39：每 0.4s 产包子 1→50；建造 200☀，升费 400 起翻倍) ——
             puffshroom:    { tier: 1, name: '小喷菇', img: 'Plants/PuffShroom/PuffShroom.gif',     card: 'PuffShroom.png',     hp: 300, cost: 200, scale: 0.9,
@@ -161,13 +161,13 @@ class HauntedDorm {
                              spore: { n: 15, every: 0.4 }, up: { cost: 12800, to: 'icegloom' } },
             icegloom:      { tier: 7, name: '冰忧郁菇', img: 'Plants/GloomShroom/GloomShroom.gif', hp: 6000, cost: 0, scale: 1.0, tint: 'brightness(1.15) hue-rotate(160deg) saturate(1.7)',
                              spore: { n: 20, every: 0.4 }, auraSlow: true, up: { cost: 25600, to: 'sporelv8' } },
-            sporelv8:      { tier: 8, name: '巨型忧郁菇', img: 'Plants/GloomShroom/GloomShroom.gif', hp: 8000, cost: 0, scale: 1.15, tint: 'saturate(1.5) brightness(1.2)',
+            sporelv8:      { tier: 8, name: '忧郁蒜雾', img: 'Plants/GloomShroom/GloomShroom.gif', hp: 8000, cost: 0, scale: 1.15, tint: 'sepia(.85) saturate(1.9) hue-rotate(-12deg) brightness(1.18)', // v4.0.116：巨型忧郁菇→已有融合植物「忧郁蒜雾」
                              spore: { n: 22, every: 0.4 }, up: { cost: 51200, to: 'sporelv9' } },
-            sporelv9:      { tier: 9, name: '暗影忧郁菇', img: 'Plants/GloomShroom/GloomShroom.gif', hp: 10000, cost: 0, scale: 1.25, tint: 'grayscale(0.6) brightness(0.9) hue-rotate(260deg) saturate(1.8)',
+            sporelv9:      { tier: 9, name: '忧郁菇 Lv9', img: 'Plants/GloomShroom/GloomShroom.gif', hp: 10000, cost: 0, scale: 1.25, tint: 'grayscale(0.6) brightness(0.9) hue-rotate(260deg) saturate(1.8)',
                              spore: { n: 30, every: 0.4 }, up: { cost: 102400, to: 'sporelv10' } },
-            sporelv10:     { tier: 10, name: '星际忧郁菇', img: 'Plants/GloomShroom/GloomShroom.gif', hp: 12000, cost: 0, scale: 1.35, tint: 'saturate(1.8) brightness(1.25) drop-shadow(0 0 10px #c79aff)',
+            sporelv10:     { tier: 10, name: '忧郁菇 Lv10', img: 'Plants/GloomShroom/GloomShroom.gif', hp: 12000, cost: 0, scale: 1.35, tint: 'saturate(1.8) brightness(1.25) drop-shadow(0 0 10px #c79aff)',
                              spore: { n: 40, every: 0.4 }, up: { cost: 204800, to: 'sporelv11' } },
-            sporelv11:     { tier: 11, name: '宇宙忧郁菇', img: 'Plants/GloomShroom/GloomShroom.gif', hp: 15000, cost: 0, scale: 1.45, tint: 'hue-rotate(280deg) saturate(2.2) brightness(1.3) drop-shadow(0 0 14px #9d6bff)',
+            sporelv11:     { tier: 11, name: '忧郁菇 Lv11', img: 'Plants/GloomShroom/GloomShroom.gif', hp: 15000, cost: 0, scale: 1.45, tint: 'hue-rotate(280deg) saturate(2.2) brightness(1.3) drop-shadow(0 0 14px #9d6bff)',
                              spore: { n: 50, every: 0.4 } },
 
             // —— 地刺系 + 土豆雷（v4.0.53：门口可种地刺与土豆雷；火焰地刺改用钢地刺模型+火焰色，图鉴一致） ——
@@ -177,7 +177,7 @@ class HauntedDorm {
                              spike: { dps: 16, r: 55 }, up: { sporeCost: 1250, to: 'spikerock' } },
             spikerock:     { name: '钢地刺', img: 'Plants/Spikerock/Spikerock.gif', hp: 99999, cost: 0, sporeCost: 6250, scale: 1.0, ground: true, // v4.0.87：补 sporeCost——原无价=免费种植
                              spike: { dps: 64, r: 55 }, up: { sporeCost: 6250, to: 'ultimatefirespikeweed' } },
-            ultimatefirespikeweed: { name: '终极火焰地刺', img: 'Plants/Spikerock/Spikerock.gif', hp: 99999, cost: 0, sporeCost: 12500, scale: 1.1, tint: 'hue-rotate(-50deg) saturate(3) drop-shadow(0 0 10px #f00)', ground: true, // v4.0.87：补 sporeCost——原无价=免费种植
+            ultimatefirespikeweed: { name: '火焰钢刺', img: 'Plants/Spikerock/Spikerock.gif', hp: 99999, cost: 0, sporeCost: 12500, scale: 1.1, tint: 'sepia(1) saturate(2.6) hue-rotate(-22deg) brightness(1.15)', ground: true, // v4.0.116：终极火焰地刺→已有融合植物「火焰钢刺」（钢地刺+火炬树桩） // v4.0.87：补 sporeCost——原无价=免费种植
                              spike: { dps: 256, r: 60 } },
 
             // —— 土豆地雷（v4.0.53 新：门口可种；30 秒引信后伸头待爆；被啃不炸直接消失；威慑僵尸 50% 绕开；升级烈焰地雷） ——
@@ -221,13 +221,13 @@ class HauntedDorm {
             // 改用正常南瓜套立绘 PumpkinHead.gif，scale 统一 1.0，去掉路灯花的 sepia 滤镜
             pumpkinshell:  { name: '南瓜壳', img: 'Plants/PumpkinHead/PumpkinHead.gif', card: 'PumpkinHead.png', hp: 3000, cost: 0, sporeCost: 128, scale: 1.0,
                              healDoor: 35, up: { sporeCost: 512, to: 'pumpkinshell2' } },
-            pumpkinshell2: { name: '南瓜壳·愈', img: 'Plants/PumpkinHead/PumpkinHead.gif', hp: 3500, cost: 0, sporeCost: 0, scale: 1.0,
+            pumpkinshell2: { name: '南瓜壳 Lv2', img: 'Plants/PumpkinHead/PumpkinHead.gif', hp: 3500, cost: 0, sporeCost: 0, scale: 1.0,
                              tint: 'brightness(1.1)',
                              healDoor: 30, up: { sporeCost: 2048, to: 'pumpkinshell3' } },
-            pumpkinshell3: { name: '南瓜壳·愈金', img: 'Plants/PumpkinHead/PumpkinHead.gif', hp: 4000, cost: 0, sporeCost: 0, scale: 1.0,
+            pumpkinshell3: { name: '南瓜壳 Lv3', img: 'Plants/PumpkinHead/PumpkinHead.gif', hp: 4000, cost: 0, sporeCost: 0, scale: 1.0,
                              tint: 'brightness(1.2) drop-shadow(0 0 6px #ffd54a)',
                              healDoor: 20, up: { sporeCost: 8192, to: 'pumpkinshell4' } },
-            pumpkinshell4: { name: '南瓜壳·不朽', img: 'Plants/PumpkinHead/PumpkinHead.gif', hp: 5000, cost: 0, sporeCost: 0, scale: 1.0,
+            pumpkinshell4: { name: '南瓜壳 Lv4', img: 'Plants/PumpkinHead/PumpkinHead.gif', hp: 5000, cost: 0, sporeCost: 0, scale: 1.0,
                              tint: 'brightness(1.3) drop-shadow(0 0 10px #ffb74d)',
                              healDoor: 15 },
             // v4.0.63：倭瓜位置修复（用户实报：躺在向日葵上、身体约等于下一格）——
@@ -235,7 +235,7 @@ class HauntedDorm {
             // 旧 scale 1.1 在 80×80 格里 contain 后主体被压成 35×50 的小瓜且贴格底 → 视觉错位。
             // 修复：放大到正常植物尺寸（scale 1.3）+ 底部锚定（imgPos 50% 100%）+
             // 裁掉顶部 40% 空白（imgClip）→ 主体约 55×75px 与其他植物同规格站进格内。
-            squash:        { name: '倭瓜',   img: 'Plants/Squash/Squash.gif',    card: 'Squash.png',    hp: 2500, cost: 0, sporeCost: 2048, scale: 1.3, raisePx: 4,
+            squash:        { name: '窝瓜',   img: 'Plants/Squash/Squash.gif',    card: 'Squash.png',    hp: 2500, cost: 0, sporeCost: 2048, scale: 1.3, raisePx: 4,
                              imgPos: '50% 100%', imgClip: 'polygon(0 40%, 100% 40%, 100% 100%, 0 100%)',
                              squashSkill: 120 }, // B/5 技能：2分钟CD，打掉僵尸一半血
             torchwood:     { name: '火炬树桩', img: 'Plants/Torchwood/Torchwood.gif', card: 'Torchwood.png', hp: 4000, cost: 0, sporeCost: 2048, scale: 1.1,

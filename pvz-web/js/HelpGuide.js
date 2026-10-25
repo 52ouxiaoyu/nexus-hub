@@ -157,31 +157,6 @@
         { n: '火焰双发', base: PL + 'Repeater/Repeater.gif', ov: PL + 'Repeater/Repeater.gif', oc: 'polygon(0 0, 100% 0, 100% 48%, 60% 48%, 58% 60%, 42% 60%, 40% 48%, 0 48%)', ot: 'translate(0px, -2px) scale(1.04)', of: 'sepia(1) saturate(3) hue-rotate(-22deg) brightness(1.18)', md: 73, t: '双发射手+火炬树桩：原版绿身顶着火头，2 连发火焰豌豆 40×2；大技能【过热爆发】——每第 8 轮改为 6 连发爆炎 60×6（弹体加大发光）' },
         { n: '四头向日葵', base: PL + 'TwinSunflower/TwinSunflower1.gif', bf: 'saturate(1.35) brightness(1.12)', bt: 'scale(1.15)', ov: PL + 'TwinSunflower/TwinSunflower1.gif', ot: 'translate(10px, 6px) scaleX(-1) scale(1.15)', md: 84, t: '双子向日葵+双子向日葵：每轮 4 颗阳光共 100；大技能【阳光雨】——每 120 秒全场天降 3 颗阳光' },
         { n: '辣椒高坚果', base: PL + 'TallNut/TallNut.gif', bf: 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.1)', md: 119, t: '高坚果+火爆辣椒：8000 血肉盾，啃它的僵尸每秒被烫 40' },
-        // v4.0.74：补全守屋可产出植物的图鉴条目（此前游戏里能出现但图鉴查无此物，玩家容易懵）
-        // v4.0.110：k:'dorm' = 守屋专属升级形态 —— 它们靠《守屋大作战》里的「升级」获得，**没有融合配方**。
-        //   旧版误把它们混在融合区（副标题统一"融合获得"），用户翻配方大全找不到 → 以为新融合植物漏配方。
-        //   现在图鉴单独分「守屋专属」区；4 个与真融合产物同名的加「·守屋」后缀消歧。
-        { n: '大阳光菇', k: 'dorm', base: PL + 'SunShroom/0.gif', md: 112, t: '守屋模式：阳光菇升到第 2 级。更大更快产阳光，夜晚每轮 8 点' },
-        { n: '水晶向日葵', k: 'dorm', base: PL + 'TwinSunflower/TwinSunflower1.gif', md: 125, t: '守屋模式：四头向日葵升级。冰蓝水晶质感多头，每轮 256 阳光' },
-        { n: '魅惑向日葵·守屋', k: 'dorm', base: PL + 'TwinSunflower/TwinSunflower1.gif', md: 135, t: '守屋模式：水晶向日葵升级。粉紫魅惑光晕，每轮 512 阳光（注意：与融合植物「魅惑向日葵」同名不同物——那只靠「魅惑菇+向日葵」融出来）' },
-        { n: '石芒杨桃', k: 'dorm', base: PL + 'Starfruit/Starfruit.gif', md: 112, t: '守屋模式：杨桃升级。五向石弹连射，带破甲' },
-        { n: '双向投手', k: 'dorm', base: PL + 'SplitPea/SplitPea.gif', md: 96, t: '守屋模式：豌豆射手升级。前后双向发射（前方 2 连发，后方 1 发）' },
-        { n: '超级机箱', k: 'dorm', base: PL + 'GatlingPea/GatlingPea.gif', md: 110, t: '守屋模式：机枪射手合体升级。6 连发速射机枪' },
-        { n: '机箱猫尾草', k: 'dorm', base: PL + 'Cattail/Cattail.gif', md: 100, t: '守屋模式：超级机箱再升级。全场自动追踪，高速连射' },
-        { n: '巨型坚果', k: 'dorm', base: PL + 'TenManNut/0.gif', md: 110, t: '守屋模式：高坚果十级。150000 血的巨型壁垒' },
-        { n: '南瓜堡垒', k: 'dorm', base: PL + 'PumpkinHead/PumpkinHead.gif', md: 140, t: '守屋模式：巨型坚果升级。南瓜护盾巨墙，225000 血' },
-        { n: '永恒高坚果', k: 'dorm', base: PL + 'TallNut/TallNut.gif', md: 125, t: '守屋模式：南瓜堡垒升级。340000 血永恒壁垒' },
-        { n: '巨型忧郁菇', k: 'dorm', base: PL + 'GloomShroom/GloomShroom.gif', md: 115, t: '守屋模式：大喷菇升级。穿透群伤，伤害与体型更大' },
-        { n: '暗影忧郁菇', k: 'dorm', base: PL + 'GloomShroom/GloomShroom.gif', bf: 'grayscale(0.6) brightness(0.9) hue-rotate(260deg) saturate(1.8)', md: 125, t: '守屋模式：巨型忧郁菇升级。暗影系穿透群伤' },
-        { n: '星际忧郁菇', k: 'dorm', base: PL + 'GloomShroom/GloomShroom.gif', bf: 'saturate(1.8) brightness(1.25) drop-shadow(0 0 10px #c79aff)', md: 135, t: '守屋模式：暗影忧郁菇升级。星光范围群伤' },
-        { n: '宇宙忧郁菇', k: 'dorm', base: PL + 'GloomShroom/GloomShroom.gif', bf: 'hue-rotate(280deg) saturate(2.2) brightness(1.3) drop-shadow(0 0 14px #9d6bff)', md: 145, t: '守屋模式：星际忧郁菇升级。宇宙暗紫，范围群伤封顶' },
-        { n: '终极火焰地刺', k: 'dorm', base: PL + 'Spikerock/Spikerock.gif', bf: 'hue-rotate(-50deg) saturate(3) drop-shadow(0 0 10px #f00)', md: 110, t: '守屋模式：火焰地刺终极形态。99999 血反伤地刺' },
-        { n: '冰蒜卫士·守屋', k: 'dorm', base: PL + 'Garlic/0.gif', md: 110, t: '守屋模式：大蒜升到第 2 级。血量不变，僵尸吃后减速（与融合植物「冰蒜卫士」同名不同物——那只靠「大蒜+寒冰射手」融出来）' },
-        { n: '金蒜坚果·守屋', k: 'dorm', base: PL + 'Garlic/0.gif', md: 120, t: '守屋模式：大蒜升到第 3 级。任意僵尸要啃 4 下才能啃掉（与融合植物「金蒜坚果」同名不同物——那只靠「坚果墙+大蒜」融出来）' },
-        { n: '蒜味高坚果·守屋', k: 'dorm', base: PL + 'Garlic/0.gif', md: 135, t: '守屋模式：大蒜升到第 4 级。僵尸要啃 10 下才啃掉（与融合植物「蒜味高坚果」同名不同物——那只靠「高坚果+大蒜」融出来）' },
-        { n: '南瓜壳·愈', k: 'dorm', base: PL + 'PumpkinHead/PumpkinHead.gif', md: 100, t: '守屋模式：南瓜壳升级（Lv2）。3500 护盾' },
-        { n: '南瓜壳·愈金', k: 'dorm', base: PL + 'PumpkinHead/PumpkinHead.gif', md: 110, t: '守屋模式：南瓜壳升级（Lv3）。4000 金纹护盾' },
-        { n: '南瓜壳·不朽', k: 'dorm', base: PL + 'PumpkinHead/PumpkinHead.gif', md: 120, t: '守屋模式：南瓜壳升级（Lv4）。5000 不朽护盾' },
     ];
     // v3.50.0：数据驱动新融合（PVZ_FUSION_EXTRA 同源）自动追加到融合图鉴
     if (window.PVZ_FUSION_EXTRA) {
@@ -426,13 +401,14 @@
         }
         let bs = '';
         if (fusion) {
-            bs += badge(p.k === 'dorm' ? '🏰 守屋专属形态' : '🧬 融合植物');
+            // v4.0.116：守屋专属分区取消——图鉴里只剩真融合植物（用户：不要自己创造融合植物）
+            bs += badge('🧬 融合植物');
         } else {
             bs += badge('☀ 阳光 ' + p.c);
             bs += badge('⏳ 冷却 ' + p.cd + ' 秒');
             bs += badge('❤️ 耐久 ' + p.hp);
         }
-        bs += badge('📖 ' + (fusion ? (p.k === 'dorm' ? '守屋模式升级获得' : '手套融合获得') : '经典选卡'));
+        bs += badge('📖 ' + (fusion ? '手套融合获得' : '经典选卡'));
         // v3.69.0：详情卡不再附攻击方式演示小剧场（用户：爆炸过程这类演示太难看，全部去掉）
         return '<div class="hg-d-art">' + art + '</div>' +
             '<div class="hg-d-name">' + p.n + '</div>' +
@@ -563,20 +539,14 @@
     function renderPlants() {
         for (const [i, p] of CLASSIC.entries()) plantTile(p, false, 'pc' + i);
         for (const [i, p] of FUSION.entries()) plantTile(p, true, 'pf' + i);
-        // v4.0.110：FUSION 里混着 21 个"守屋专属升级形态"（k:'dorm'），它们没有融合配方 —— 单独成区，
-        // 免得玩家在融合区看到它们、翻遍配方大全找不到对应配方（用户实报）
-        const fuseList = FUSION.map((p, i) => ({ p, i })).filter(o => o.p.k !== 'dorm');
-        const dormList = FUSION.map((p, i) => ({ p, i })).filter(o => o.p.k === 'dorm');
+        // v4.0.116：取消「守屋专属」分区 —— 用户明确「不要自己创造融合植物，守屋里那些没出现过的植物应该用已有的融合植物」。
+        // 守屋植物链里的升级形态已全部改名为经典/融合里的现有植物（见 HauntedDorm DEFS），所以图鉴只剩两区。
         return groupBar('经 典', '') +
             '<div class="hg-grid">' + CLASSIC.map((p, i) => plantTile(p, false, 'pc' + i)).join('') + '</div>' +
             groupBar('融 合', 'hg-orange') +
-            '<div class="hg-grid">' + fuseList.map(o => plantTile(o.p, true, 'pf' + o.i)).join('') + '</div>' +
-            (dormList.length
-                ? groupBar('守屋专属', 'hg-red') +
-                  '<div class="hg-grid">' + dormList.map(o => plantTile(o.p, true, 'pf' + o.i)).join('') + '</div>'
-                : '') +
+            '<div class="hg-grid">' + FUSION.map((p, i) => plantTile(p, true, 'pf' + i)).join('') + '</div>' +
             '<div class="hg-tip">※ 经典 = 选卡栏直接可选 · 融合 = 手套融合获得（配方见游戏内「融合配方大全」）' +
-            ' · 守屋专属 = 只在《守屋大作战》里靠「升级 / 套壳」获得，<b>没有融合配方</b></div>';
+            ' · 《守屋大作战》里的升级形态用的都是这两类里已有的植物，没有额外自造品种</div>';
     }
 
     function renderZombies() {
