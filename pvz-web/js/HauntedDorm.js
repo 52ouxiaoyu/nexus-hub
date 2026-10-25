@@ -1949,8 +1949,9 @@ class HauntedDorm {
                 skillEl.innerHTML = `😇 ${cap} ｜ ${spd} <span style="color:#ffd54a; font-size:12px;">｜ ⭐功德 ${this.playerMerit || 0}/6 (6:定身5s)</span>`;
             } else if (this.isZombieFaction) {
                 // v4.0.61：指挥键位并入技能栏——尸潮冷却与令旗目标动态显示
-                const cmdTxt = this.commandTarget
-                    ? (this.commandTarget === this.player ? (this.player2 ? 'P2' : '你') : (this.commandTarget.roleDef ? this.commandTarget.roleDef.name : '?'))
+                // v4.0.115：令旗目标只会是植物方幸存者，本体不再是候选（原来这里会显示「目标:你」）
+                const cmdTxt = this.commandTarget && !this.commandTarget.dead
+                    ? (this.commandTarget.roleDef ? this.commandTarget.roleDef.name : '幸存者')
                     : '无';
                 const hordTxt = this.waveOrderCd > 0
                     ? `<span style="color:#777777;"><s>【H】号令尸潮</s> (CD:${Math.ceil(this.waveOrderCd)}s)</span>`
@@ -5389,13 +5390,18 @@ class HauntedDorm {
     // ===== v4.0.61：僵尸阵营指挥 =====
     // G 键：在存活幸存者（人机 + P1/P2）中循环切换"优先猎杀目标"，小怪集火该目标
     _cycleCommandTarget() {
-        const candidates = [...this.ais, ...(this.player2 ? [this.player2] : [])].filter(v => !v.dead);
-        if (this.player && !this.player.dead) candidates.unshift(this.player);
-        if (candidates.length === 0) return;
+        // v4.0.115：候选只留植物方幸存者——你自己和 P2 在僵尸阵营里是尸潮的主人，不是猎物（原来候选里含本体，HUD 上写着「目标:你」）
+        const candidates = [...this.ais, ...(this.player2 ? [this.player2] : [])].filter(v => !v.dead && !v.isZombie);
+        if (this.player && !this.player.dead && !this.player.isZombie) candidates.unshift(this.player);
+        if (candidates.length === 0) {
+            this.commandTarget = null;
+            this._updateGhostChip();
+            this._flyText(this.player.x, this.player.y - 40, '场上没有活着的幸存者了', '#ff8a8a');
+            return;
+        }
         let idx = candidates.indexOf(this.commandTarget);
         this.commandTarget = candidates[(idx + 1) % candidates.length];
-        const nm = this.commandTarget === this.player ? (this.player2 ? 'P2' : '你(本体)')
-            : (this.commandTarget.roleDef ? this.commandTarget.roleDef.name : '幸存者');
+        const nm = this.commandTarget.roleDef ? this.commandTarget.roleDef.name : '幸存者';
         this._announce(`⚑ 指挥令旗指向：${nm}——尸潮优先猎杀他！`, 'points.mp3');
         this._updateGhostChip();
     }
@@ -5417,6 +5423,26 @@ class HauntedDorm {
         }
         this._announce(`🧟 尸潮号令：${n} 只僵尸听令出击${bossCount ? `（含 ${bossCount} 只巨人僵尸！）` : ''}！`, 'evillaugh.mp3', true);
         this._updateGhostChip();
+    }
+
+    // v4.0.115：僵尸阵营的尸潮猎物——就近在"有植物的房间"里随机挑一株植物（先啃门，再啃坚果）
+    // 用途：玩家本体与尸潮同阵营，不能当目标；一个活人都没有时，尸潮就去屋里啃植物，不会原地发呆
+    _hordePlantPrey(zb) {
+        if (!zb || !this.plants || this.plants.length === 0) return null;
+        const rooms = this.rooms.filter(rm => this.plants.some(pl =>
+            pl.hp > 0 && !pl.def.ground &&
+            pl.c >= rm.x && pl.c < rm.x + rm.w && pl.r >= rm.y && pl.r < rm.y + rm.h));
+        if (rooms.length === 0) return null;
+        // 就近随机：在最近 3 间有植物的房里挑一间，保留随机性（不会每只都挤同一扇门）
+        rooms.sort((a, b) => Math.hypot(a.x * 80 - zb.x, a.y * 80 - zb.y) - Math.hypot(b.x * 80 - zb.x, b.y * 80 - zb.y));
+        const pick = rooms[Math.floor(Math.random() * Math.min(3, rooms.length))];
+        const inside = this.plants.filter(pl =>
+            pl.hp > 0 && !pl.def.ground &&
+            pl.c >= pick.x && pl.c < pick.x + pick.w && pl.r >= pick.y && pl.r < pick.y + pick.h);
+        if (inside.length === 0) return null;
+        const target = inside[Math.floor(Math.random() * inside.length)];
+        return { x: target.c * 80 + 40, y: target.r * 80 + 40, hp: target.hp, maxHp: target.maxHp,
+                 dead: false, _isPlant: true, _plant: target, roleDef: { name: '坚果' } };
     }
 
     _defeatTraitor(killer) {
@@ -6449,6 +6475,11 @@ class HauntedDorm {
             // 找综合仇恨值最高的目标（距离、门血量、门等级综合判断）
             zb.targetEvalT = (zb.targetEvalT || 0) + dt;
             let closestTarget = zb.lockedTarget;
+            // v4.0.115：锁的是"有植物房间里的某株植物"（虚拟猎物），植物被啃掉/被铲走 → 立刻作废重选
+            if (closestTarget && closestTarget._isPlant &&
+                (!closestTarget._plant || this.plants.indexOf(closestTarget._plant) < 0 || closestTarget._plant.hp <= 0)) {
+                closestTarget = null; zb.lockedTarget = null; zb.targetSwitched = true;
+            }
 
             // v4.0.84：走出房间的玩家优先——任何户外玩家进入近距（220px）立即锁定他，不再等 8 秒重评；
             // 解决"僵尸锁定目标后不改变，玩家靠得很近也不打"（僵尸一旦咬上某个门就无视身旁的人）
@@ -6456,6 +6487,7 @@ class HauntedDorm {
                 pp.hp > 0 && !pp.dead &&
                 !(this.traitorRevealed && pp === this.traitor) &&
                 !pp.traitor &&
+                !pp.isZombie && // v4.0.115：僵尸阵营里玩家本体是自己人——尸潮绝不把他当"跑出去的猎物"锁
                 !(pp === this.player && this.player.stealthT > 0) &&
                 !this._insideRoom(Math.floor(pp.x / this.gridSize), Math.floor(pp.y / this.gridSize)) &&
                 Math.hypot(pp.x - zb.x, pp.y - zb.y) < 220);
@@ -6479,6 +6511,7 @@ class HauntedDorm {
                     if (p.hp <= 0 || p.dead) continue;
                     if (this.traitorRevealed && p === this.traitor) continue; // v4.0.20：内鬼是僵尸方的
                     if (p.traitor) continue; // v4.0.44/104：玩家内鬼=僵尸方
+                    if (p.isZombie) continue; // v4.0.115：僵尸阵营玩家（你/P2）与尸潮同阵营，不再是猎物
                     if (p === this.player && this.player.stealthT > 0) continue;
                     let score = Math.hypot(p.x - zb.x, p.y - zb.y);
                     // v4.0.84：走出房间（户外）的玩家优先级大幅提高——仅次于"门被攻破"（-50000）
@@ -6523,7 +6556,12 @@ class HauntedDorm {
                 closestTarget = this.commandTarget;
                 zb.targetSwitched = true;
             }
-            if (!closestTarget) closestTarget = this.player;
+            if (!closestTarget) {
+                // v4.0.115：一个活人都没有时不再回头咬玩家本体（同阵营），改去有植物的房间啃坚果
+                closestTarget = this.isZombieFaction ? this._hordePlantPrey(zb) : this.player;
+                if (closestTarget) zb.lockedTarget = closestTarget;
+            }
+            if (!closestTarget) continue; // 场上既没人也没植物 → 这帧原地待命
 
             // 如果目标在房间里，优先攻击门的坐标
             let targetX = closestTarget.x;
@@ -6676,6 +6714,7 @@ class HauntedDorm {
                                 for (const pp of this.allPlayers) {
                                     if (pp.dead || pp.invincibleT > 0) continue;
                                     if (pp.traitor) continue; // v4.0.107：任一人内鬼都免疫自家门板溅射
+                                    if (pp.isZombie) continue; // v4.0.115：僵尸阵营玩家与尸潮同阵营——自己人啃门不该溅到自己身上
                                     if (Math.hypot(pp.x - dcx, pp.y - dcy) < 80) {
                                         if (pp === this.player) this.player.hp -= splash;
                                         else { pp.hp -= splash; this.setHp(); if (pp === this.player2) this.flashDamage(); }
