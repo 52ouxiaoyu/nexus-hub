@@ -50,7 +50,8 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✅ ' + m); } else { fail
      `T1 图鉴只剩 经典 / 融合 两区（实测 ${tags.join(' / ')}）`);
   const classic = info.groups[0].names, fusion = info.groups[1].names;
   ok(classic.length === 36, `T2a 经典 36 条（实测 ${classic.length}）`);
-  ok(fusion.length === 55, `T2b 融合 55 条（实测 ${fusion.length}，v4.0.110 是 76 = 55 + 21 自造）`);
+  // v4.0.118：新增真融合植物「寒冰高坚果」（寒冰射手+高坚果）→ 55→56
+  ok(fusion.length === 56, `T2b 融合 56 条（实测 ${fusion.length}；v4.0.110 是 76 = 55 + 21 自造，v4.0.118 +1 寒冰高坚果）`);
   ok(!tags.includes('守屋专属'), 'T3 不再有「守屋专属」分区');
   const all = [...classic, ...fusion];
   ok(!all.some(n => n.includes('·守屋')), `T4 没有任何「·守屋」后缀条目（${all.filter(n => n.includes('守屋')).join(',') || '无'}）`);

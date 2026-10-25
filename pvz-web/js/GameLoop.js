@@ -143,6 +143,10 @@ class AudioManager {
 // md = 素材最大边（HelpGuide lawnStage 缩放锚点，与 v3.44.0 约定一致）。
 // ============================================================================
 const PVZ_FUSION_EXTRA = [
+    // v4.0.118：寒冰高坚果——寒冰射手+高坚果（高坚果造型染冰蓝，比寒冰坚果更厚）
+    { type: 'fusion_snowtallnut', a: 'tallnut', b: 'snowpea', name: '寒冰高坚果', md: 119,
+      look: { base: 'assets/images/Plants/TallNut/TallNut.gif', bf: 'hue-rotate(180deg) saturate(1.5) brightness(1.2)' },
+      t: '高坚果+寒冰射手：8000 血肉盾，啃它的人被冻慢；大技能【极寒波动】' },
     // —— 冰系补全（与寒冰卷心菜同门，均带【极寒波动】大技能）——
     { type: 'fusion_repeater_snowpea', a: 'repeater', b: 'snowpea', name: '冰双发射手', md: 73,
       look: { base: 'assets/images/Plants/Repeater/Repeater.gif', bf: 'hue-rotate(165deg) saturate(1.5) brightness(1.12)' },
@@ -272,7 +276,7 @@ const PLANT_ART_BBOX = {
 // 【极寒波动】冰系家族大技能名单（v3.50.0）
 window.PVZ_ICE_ULT_TYPES = new Set([
     'fusion_icekernel', 'fusion_snow_cattail', 'fusion_gloomsnow', 'fusion_gatlingsnow',
-    'fusion_snowpea_starfruit', 'fusion_snownut', 'fusion_wintermelon_cattail',
+    'fusion_snowpea_starfruit', 'fusion_snownut', 'fusion_snowtallnut', 'fusion_wintermelon_cattail',
     'fusion_repeater_snowpea', 'fusion_threepeater_snowpea', 'fusion_splitpea_snowpea',
     'fusion_puffshroom_snowpea', 'fusion_garlic_snowpea', 'fusion_sunflower_iceshroom',
     'fusion_wintermelon_torchwood', 'fusion_wintermelon_cabbagepult', 'fusion_icecabbage'
@@ -3402,6 +3406,7 @@ class Game {
             wintermelon: '冰西瓜', starfruit: '杨桃', hypnoshroom: '魅惑菇', pumpkinhead: '南瓜壳',
             fusion_peaflower: '豌豆向日葵', fusion_nutshooter: '坚果射手', fusion_frostbomb: '寒冰炸弹',
             fusion_sporemine: '孢子地雷', fusion_spikynut: '地刺坚果', fusion_snownut: '寒冰坚果',
+            fusion_snowtallnut: '寒冰高坚果',
             fusion_cherrybomb_peashooter: '樱桃射手', fusion_doomshroom_sunflower: '毁灭向日葵',
             // v3.36.0 新融合
             fusion_snowpea_starfruit: '冰杨桃',
@@ -3444,6 +3449,7 @@ class Game {
         if (set.has('puffshroom') && set.has('potatomine')) return 'fusion_sporemine';
 
         if (set.has('wallnut') && set.has('snowpea')) return 'fusion_snownut';
+        if (set.has('tallnut') && set.has('snowpea')) return 'fusion_snowtallnut'; // v4.0.118 寒冰高坚果（高坚果版的冰坚果）
         if (set.has('peashooter') && set.has('iceshroom')) return 'snowpea';
         if (set.has('peashooter') && set.has('squash')) return 'splitpea';
         if (set.has('melonpult') && set.has('iceshroom')) return 'wintermelon';
@@ -3507,7 +3513,7 @@ class Game {
             'snowpea', 'splitpea', 'wintermelon', 'cattail', 'sunshroom', 'gloomshroom',
             'spikerock', 'scaredyshroom', 'torchwood', 'starfruit', 'hypnoshroom', 'pumpkinhead',
             'fusion_peaflower', 'fusion_nutshooter', 'fusion_frostbomb', 'fusion_cherrybomb_peashooter',
-            'fusion_doomshroom_sunflower', 'fusion_sporemine', 'fusion_spikynut', 'fusion_snownut',
+            'fusion_doomshroom_sunflower', 'fusion_sporemine', 'fusion_spikynut', 'fusion_snownut', 'fusion_snowtallnut',
             'fusion_spikerock_tallnut', 'fusion_melon_cattail', 'fusion_wintermelon_cattail',
             'fusion_icecabbage', 'fusion_popcorn', 'fusion_cabbagenut', 'fusion_veggiepult',
             'fusion_starfruit', 'fusion_hypnoshroom', 'fusion_pumpkinhead', 'fusion_chomper_wallnut',
@@ -3531,7 +3537,7 @@ class Game {
             'cabbagepult', 'kernelpult', 'garlic', 'fumeshroom', 'scaredyshroom', 'sunshroom',
             'pumpkinhead', 'hypnoshroom', 'starfruit', 'tallnut', 'iceshroom',
             'fusion_peaflower', 'fusion_nutshooter', 'fusion_cherrybomb_peashooter',
-            'fusion_sporemine', 'fusion_spikynut', 'fusion_snownut', 'fusion_popcorn',
+            'fusion_sporemine', 'fusion_spikynut', 'fusion_snownut', 'fusion_snowtallnut', 'fusion_popcorn',
             'fusion_cabbagenut', 'fusion_starfruit', 'fusion_hypnoshroom', 'fusion_pumpkinhead',
             'fusion_starfruit10', 'fusion_firemine', 'fusion_boomsquash',
             'fusion_icekernel', 'fusion_firespikeweed', 'fusion_firerepeater', 'fusion_firetallnut',
@@ -4946,7 +4952,7 @@ class Game {
             'fusion_wintermelon_cattail', 'fusion_melon_cattail', 'fusion_veggiepult', 'fusion_popcorn',
             'fusion_icecabbage', 'fusion_cabbagenut', 'fusion_doomshroom_sunflower', 'fusion_spikerock_tallnut',
             'fusion_chomper_wallnut', 'fusion_frostbomb', 'fusion_nutshooter', 'fusion_peaflower',
-            'fusion_snownut', 'fusion_spikynut', 'fusion_sporemine', 'fusion_cherrybomb_peashooter',
+            'fusion_snownut', 'fusion_snowtallnut', 'fusion_spikynut', 'fusion_sporemine', 'fusion_cherrybomb_peashooter',
             'fusion_starfruit', 'fusion_hypnoshroom',
             'fusion_cabbage_tallnut', 'fusion_wintermelon_cabbagepult', 'fusion_gatlingpea_repeater',
             'fusion_gatlingpea_cattail', 'fusion_melon_cabbagepult',
@@ -4958,7 +4964,7 @@ class Game {
             'snowpea', 'splitpea', 'wintermelon', 'cattail', 'sunshroom', 'gloomshroom',
             'spikerock', 'scaredyshroom', 'torchwood', 'starfruit', 'hypnoshroom', 'pumpkinhead',
             'fusion_peaflower', 'fusion_nutshooter', 'fusion_frostbomb', 'fusion_cherrybomb_peashooter',
-            'fusion_doomshroom_sunflower', 'fusion_sporemine', 'fusion_spikynut', 'fusion_snownut',
+            'fusion_doomshroom_sunflower', 'fusion_sporemine', 'fusion_spikynut', 'fusion_snownut', 'fusion_snowtallnut',
             'fusion_spikerock_tallnut', 'fusion_melon_cattail', 'fusion_wintermelon_cattail',
             'fusion_icecabbage', 'fusion_popcorn', 'fusion_cabbagenut', 'fusion_veggiepult',
             'fusion_starfruit', 'fusion_hypnoshroom', 'fusion_pumpkinhead', 'fusion_chomper_wallnut',
@@ -4979,6 +4985,7 @@ class Game {
             fusion_sporemine: ['potatomine', 'puffshroom'],
             fusion_spikynut: ['wallnut', 'spikeweed'],
             fusion_snownut: ['wallnut', 'snowpea'],
+            fusion_snowtallnut: ['tallnut', 'snowpea'],
             fusion_melon_cattail: ['cattail', 'melonpult'],
             fusion_wintermelon_cattail: ['cattail', 'wintermelon'],
             fusion_chomper_wallnut: ['wallnut', 'chomper'],

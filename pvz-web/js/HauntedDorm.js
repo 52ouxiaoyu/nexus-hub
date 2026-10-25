@@ -64,7 +64,9 @@ class HauntedDorm {
                              shoot: { dmg: 8, cd: 1.5, n: 1, range: 360, img: 'Plants/PB00.gif', homing: true },
                              up: { cost: 128, to: 'bidipea' } },
             bidipea:       { tier: 5, name: '双向豌豆', img: 'Plants/SplitPea/SplitPea.gif',      hp: 700, cost: 0, // v4.0.53：新——前后双向连发
-                             tint: 'hue-rotate(200deg) saturate(1.4) brightness(1.05)',
+                             // v4.0.118：去掉 hue-rotate(200deg) 的粉紫染色——图鉴/经典里的「双向豌豆」就是原版绿裂荚射手，
+                             // 守屋染成粉色会让玩家以为多了个"粉色裂荚射手"（用户实拍反馈）。只留轻微提亮保持分级感。
+                             tint: 'saturate(1.15) brightness(1.06)',
                              shoot: { dmg: 16, cd: 1.3, n: 2, range: 400, img: 'Plants/PB00.gif', homing: true },
                              up: { cost: 256, to: 'snowpea' } },
             snowpea:       { tier: 6, name: '寒冰射手', // v4.0.116：与经典图鉴统一叫法（原「寒冰豌豆」= 自造名）
@@ -130,7 +132,7 @@ class HauntedDorm {
             nutlv7:        { tier: 7,  name: '辣椒高坚果', img: 'Plants/TallNut/TallNut.gif',       hp: 45000,  cost: 0,
                              tint: 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.1)',
                              up: { cost: 1024, sporeCost: 32, to: 'nutlv8' } },
-            nutlv8:        { tier: 8,  name: '寒冰坚果', img: 'Plants/TallNut/TallNut.gif',         hp: 67500,  cost: 0, // v4.0.116：寒冰高坚果→已有融合植物「寒冰坚果」
+            nutlv8:        { tier: 8,  name: '寒冰高坚果', img: 'Plants/TallNut/TallNut.gif',       hp: 67500,  cost: 0, // v4.0.118：立绘本就是高坚果 → 名字改回「寒冰高坚果」（融合植物，寒冰射手+高坚果）
                              tint: 'hue-rotate(180deg) saturate(1.5) brightness(1.2)',
                              up: { cost: 2048, sporeCost: 64, to: 'nutlv9' } },
             nutlv9:        { tier: 9,  name: '大嘴坚果',   img: 'Plants/Chomper/Chomper.gif',       hp: 100000, cost: 0,
@@ -2837,12 +2839,16 @@ class HauntedDorm {
         return { visited: this._bfsVisited, parent: this._bfsParent, q: this._bfsQ, plantMap: this._bfsPlantMap };
     }
 
-    _findPath(startX, startY, targetX, targetY, passDoors = true) {
+    // v4.0.118：opts.ignorePlants —— 植物不进障碍表（僵尸专用：它本来就该边走边啃穿）；
+    //           opts.nearest      —— 目标不可达时返回「离目标最近的可达格」路径（原来直接 null → 调用方走直线撞墙）
+    _findPath(startX, startY, targetX, targetY, passDoors = true, opts = null) {
+        const ignorePlants = !!(opts && opts.ignorePlants);
+        const wantNearest = !!(opts && opts.nearest);
         const sc = Math.floor(startX / this.gridSize);
         const sr = Math.floor(startY / this.gridSize);
         const tc = Math.floor(targetX / this.gridSize);
         const tr = Math.floor(targetY / this.gridSize);
-        
+
         if (sc === tc && sr === tr) return [{x: targetX, y: targetY}];
 
         // 使用 1D 数组且复用全局内存代替每次 new，彻底消除寻路 GC 造成的卡顿
@@ -2850,13 +2856,18 @@ class HauntedDorm {
         const { visited, parent, q, plantMap } = this._getBfsArrays(MAX_CELLS);
         
         const startIdx = sr * this.cols + sc;
-        const targetIdx = tr * this.cols + tc;
+        let targetIdx = tr * this.cols + tc;
         
         for (const pl of this.plants) {
             // v4.0.16：门板(isDoor)对玩家方(玩家/人机)不阻挡——玩家可自由过门，AI 同权；
             // 僵尸(passDoors=false)仍视门板为障碍，会被引导到门前啃门。
             // 原先门格一律阻挡 → 玩家造门后其他 AI 进房 BFS 必失败 → 走直线穿墙（用户实拍 bug）
-            if (!pl.def.ground && !(passDoors && pl.isDoor)) plantMap[pl.r * this.cols + pl.c] = 1;
+            if (pl.def.ground) continue; // 地刺贴地，不挡路
+            // v4.0.118：僵尸寻路（ignorePlants）时除门板外一律当"可通行"。
+            // 原来植物全进障碍表 → 屋内唯一通道被坚果/塔堵死时 BFS 必失败 → 退回直线 → 撞墙卡死。
+            // 实际能不能穿由 checkCollision 拦（僵尸进不了植物格）+ 前方 25px 探针啃食决定，不会真穿模。
+            if (ignorePlants && !pl.isDoor) continue;
+            if (!(passDoors && pl.isDoor)) plantMap[pl.r * this.cols + pl.c] = 1;
         }
         
         let head = 0;
@@ -2897,7 +2908,20 @@ class HauntedDorm {
         }
         
         // v4.0.16：寻路失败返回 null（原返回直线目标 → AI 直线穿墙）——调用方必须兜底
-        if (!found) return null;
+        if (!found) {
+            // v4.0.118：僵尸专用兜底——走到「离目标最近的可达格」，靠前方 25px 探针啃掉挡路的植物/门。
+            // 原来直接 null → 调用方拿直线硬怼 → 撞墙 detour 来回滑 → 永远站在原地（用户实拍"卡在墙那里")
+            if (!wantNearest) return null;
+            let bestIdx = -1, bestD = Infinity;
+            for (let idx = 0; idx < MAX_CELLS; idx++) {
+                if (!visited[idx] || idx === startIdx) continue;
+                const bc = idx % this.cols, br = (idx - bc) / this.cols;
+                const bd = Math.abs(bc - tc) + Math.abs(br - tr);
+                if (bd < bestD) { bestD = bd; bestIdx = idx; }
+            }
+            if (bestIdx < 0) return null;
+            targetIdx = bestIdx;
+        }
         
         const path = [];
         let curr = targetIdx;
@@ -6511,6 +6535,8 @@ class HauntedDorm {
         let playerHurt = 0;
         for (const zb of [...this.zombies]) {
             if (zb.dead) continue;
+            const _preX = zb.x, _preY = zb.y; // v4.0.118：僵死锁检测用（本帧起始位置）
+            zb._didBite = false;
 
             // 眩晕（眩晕菇/冰冻）：停住不动、不咬人
             if (zb.stunT > 0) {
@@ -6689,9 +6715,15 @@ class HauntedDorm {
             if (zb.pathTimer > 1.0 || !zb.path || zb.targetSwitched) {
                 zb.pathTimer = 0;
                 zb.targetSwitched = false;
-                zb.path = this._findPath(zb.x, zb.y, targetX, targetY, false); // 僵尸：门板视为障碍（引到门前啃）
+                // 僵尸：门板视为障碍（引到门前啃）；植物可通行（边走边啃）；不可达时走最近可达点
+                zb.path = this._findPath(zb.x, zb.y, targetX, targetY, false, { ignorePlants: true, nearest: true });
                 if (zb.path && zb.path.length > 0) {
-                    zb.path.push({x: targetX, y: targetY}); // 确保最后一步精确定位到玩家
+                    // v4.0.118：只有最后一格就在目标旁（≤1.5 格）才补精确像素点，
+                    // 否则兜底路径的末端离目标很远，硬 push 会变成一段穿墙直线
+                    const _lp = zb.path[zb.path.length - 1];
+                    if (Math.abs(_lp.x - targetX) + Math.abs(_lp.y - targetY) <= this.gridSize * 1.5) {
+                        zb.path.push({x: targetX, y: targetY});
+                    }
                 }
             }
 
@@ -6735,6 +6767,7 @@ class HauntedDorm {
                 const probeY = zb.y + dy * 25;
                 const atkPlant = this.getPlantAt(probeX, probeY);
                 if (atkPlant && !atkPlant.def.ground && !zb.retreating && !(zb.garlicScareT > 0)) { // v4.0.33：被大蒜臭吓的僵尸径直走开不啃食
+                    zb._didBite = true; // v4.0.118：正在啃 = 没卡死
                     // 站定慢啃：每 2.4s 一口，一口一口咬
                     zb.biteT = (zb.biteT || 0) + dt;
                     if (zb.biteT >= BITE_CD) {
@@ -6882,6 +6915,19 @@ class HauntedDorm {
                         if (!this.checkCollision(p.x, ny, 10, p.isZombie)) p.y = ny;
                     }
                 }
+            }
+            // v4.0.118：僵死锁兜底——既不位移也不啃食（含回血/绕行）超过 5 秒，说明目标在物理上够不到，
+            // 直接作废锁定换目标；否则僵尸会贴着墙角 detour 来回滑、永远不咬人也不走（用户实拍 bug）
+            if (zb._didBite || Math.hypot(zb.x - _preX, zb.y - _preY) > 1) {
+                zb.idleT = 0;
+            } else if ((zb.idleT = (zb.idleT || 0) + dt) > 5) {
+                zb.idleT = 0;
+                zb.lockedTarget = null;
+                zb.targetSwitched = true;
+                zb.path = null;
+                zb.side = -(zb.side || 1);
+                zb.stuck = 0;
+                if (zb.retreating) { zb.retreating = false; zb.targetEvalT = 9; } // 回城也走不到 → 放弃回血，继续进攻
             }
             if (zb.el1) { zb.el1.style.left = zb.x + 'px'; zb.el1.style.top = zb.y + 'px'; }
         }

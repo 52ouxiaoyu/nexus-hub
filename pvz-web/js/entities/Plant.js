@@ -232,6 +232,7 @@ class Plant extends Entity {
             else if (type === 'fusion_sporemine') { p1 = 'puffshroom'; p2 = 'potatomine'; }
             else if (type === 'fusion_spikynut') { p1 = 'spikeweed'; p2 = 'wallnut'; }
             else if (type === 'fusion_snownut') { p1 = 'snowpea'; p2 = 'wallnut'; }
+            else if (type === 'fusion_snowtallnut') { p1 = 'snowpea'; p2 = 'tallnut'; } // v4.0.118 寒冰高坚果：寒冰射手+高坚果
             else if (type === 'fusion_melon_cattail') { p1 = 'melonpult'; p2 = 'cattail'; }
             else if (type === 'fusion_wintermelon_cattail') { p1 = 'wintermelon'; p2 = 'cattail'; }
             else if (type === 'fusion_starfruit') { p1 = 'splitpea'; p2 = 'sunflower'; }          // 杨桃：裂荚射手+向日葵
@@ -363,6 +364,11 @@ class Plant extends Entity {
                     this.element.src = s2.src; // wallnut
                     this.element.style.filter = 'hue-rotate(180deg) saturate(1.5) brightness(1.2)';
                     this.fusionOverlay.style.display = 'none'; // hide overlay
+                } else if (type === 'fusion_snowtallnut') {
+                    // v4.0.118 寒冰高坚果：高坚果本体染冰蓝（与寒冰坚果同色系，但保留高坚果身高）
+                    this.element.src = s2.src; // tallnut
+                    this.element.style.filter = 'hue-rotate(180deg) saturate(1.5) brightness(1.2)';
+                    this.fusionOverlay.style.display = 'none';
                 } else if (type === 'fusion_cherrybomb_peashooter') {
                     this.element.src = s2.src; // peashooter
                     this.element.style.filter = 'hue-rotate(-45deg) saturate(2.0)';
