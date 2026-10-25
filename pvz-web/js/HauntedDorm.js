@@ -324,6 +324,12 @@ class HauntedDorm {
     // 仅放大真人玩家血池，AI 僵尸小怪不变；所有伤害源按数值照扣，等效生存 ×3，地图中心 %回血自动同步放大
     static get PLAYER_HP_MUL() { return 3; }
 
+    // v4.0.121：阳光 / 孢子产出节奏的全局倍率（用户实报「后期阳光太容易获得」）。
+    // 所有 produce/spore 的 every 都是 0.4s——满级石芒杨桃 1024/跳 = 2560☀/秒，后期确实没有压力。
+    // 这里统一把「一跳」的间隔乘上倍率：1.25 → 0.4s 变 0.5s，整体产出 −20%。
+    // 以后要再调只改这一个数（1.5 = −33%），别去逐条改 DEFS 的 every。
+    static get PROD_TICK_MUL() { return 1.25; }
+
     // v4.0.26：opts 支持主站 index.html 内嵌启动（startHauntedDorm({mode,role1,role2,faction})）；
     // 未传 opts 的键回退到 URL 参数（旧独立页 haunted-dorm.html 直链兼容，行为不变）
     constructor(opts = {}) {
@@ -2378,6 +2384,8 @@ class HauntedDorm {
     // 解除条件：门危逃亡 / 抢盲盒（这两个是主动出门，由上面逻辑先把 pinned 清掉或绕过判定）/ 归还控制权。
     _pinToBed(p, rm) {
         if (!p || !rm || !rm.tpl || !rm.tpl.beds) return;
+        // v4.0.121：内鬼不钉床——反水后它必须能离开房间去袭击幸存者
+        if (p.isTraitor) return;
         const bed = rm.tpl.beds[0];
         if (!bed) return;
         p.pinX = (rm.x + bed.c) * this.gridSize + 40;
@@ -3768,9 +3776,10 @@ class HauntedDorm {
             if (!rm && Math.hypot(wx - owner.x, wy - owner.y) > 300) continue;
 
             const boost = this.waterBoostT > 0 ? 2 : 1; // v4.0.39：丰收祝福改「全植物产出 ×2」
+            const tickMul = HauntedDorm.PROD_TICK_MUL; // v4.0.121：全局产出节奏（1.25 = 每跳间隔 +25%）
             if (def.produce) {
                 pl.prodT += dt;
-                if (pl.prodT >= (def.produce.every * (pl._cbProduceMul || 1))) { // v4.0.53：樱桃炸弹产速增益（+1/8）
+                if (pl.prodT >= (def.produce.every * tickMul * (pl._cbProduceMul || 1))) { // v4.0.53：樱桃炸弹产速增益（+1/8）
                     pl.prodT = 0;
                     let sAmt = def.produce.sun * boost * aiProdMul;
                     if (owner.sunBuffT > 0) sAmt *= 2; // 向日葵技能生效
@@ -3789,7 +3798,7 @@ class HauntedDorm {
             }
             if (def.spore) {
                 pl.sporeT += dt;
-                if (pl.sporeT >= (def.spore.every * (pl._cbProduceMul || 1))) { // v4.0.53：樱桃炸弹产速增益（+1/8）
+                if (pl.sporeT >= (def.spore.every * tickMul * (pl._cbProduceMul || 1))) { // v4.0.53：樱桃炸弹产速增益（+1/8）
                     pl.sporeT = 0;
                     const spAmt = def.spore.n * boost * aiProdMul;
                     if (owner === this.player || owner === this.player2) {
@@ -5266,6 +5275,40 @@ class HauntedDorm {
 
     _spawnBoss() { this._spawnMinion(true); }
 
+    // ===== v4.0.121：内鬼脱困 =====
+    // 判定「嵌入」= 自身判定中心（checkCollision 会强制 r=15 并采样 9 个点，中心点就在里面）
+    // 已经落在墙/植物格里。这种状态任何方向的位移仍然压着那格 → 双向都被拦 → 永久冻结，
+    // 而且旧代码在「走去跳板」分支里是 `return` 出去的（不累计 stuck、不触发重寻路），
+    // 所以一旦嵌进去就再也出不来。这里每帧检查一次，确认 0.35 秒还嵌着就吸附到最近的可站立格心。
+    _escapeIfEmbedded(t, dt) {
+        const gs = this.gridSize;
+        const blk = (x, y) => this.checkCollision(x, y, 15, true);
+        const selfStuck = blk(t.x, t.y);
+        const boxed = blk(t.x + 6, t.y) && blk(t.x - 6, t.y) && blk(t.x, t.y + 6) && blk(t.x, t.y - 6);
+        if (!selfStuck && !boxed) { t._embedT = 0; return; }
+        t._embedT = (t._embedT || 0) + (dt || 0.016);
+        if (t._embedT < 0.35) return;
+        t._embedT = 0;
+        const c0 = Math.floor(t.x / gs), r0 = Math.floor(t.y / gs);
+        for (let ring = 1; ring <= 4; ring++) {
+            for (let dr = -ring; dr <= ring; dr++) {
+                for (let dc = -ring; dc <= ring; dc++) {
+                    if (Math.max(Math.abs(dr), Math.abs(dc)) !== ring) continue;
+                    const cc = c0 + dc, rr = r0 + dr;
+                    if (cc < 1 || rr < 1 || cc >= this.cols - 1 || rr >= this.rows - 1) continue;
+                    const x = cc * gs + 40, y = rr * gs + 40;
+                    if (this.walls.has(`${cc},${rr}`)) continue;
+                    if (blk(x, y)) continue;
+                    t.x = x; t.y = y;
+                    t.path = null; t.pathTimer = 0; t.stuck = 0;
+                    if (t.el1) { t.el1.style.left = x + 'px'; t.el1.style.top = y + 'px'; }
+                    this._flyText(x, y - 34, '😈 内鬼脱困', '#ff8a8a');
+                    return;
+                }
+            }
+        }
+    }
+
     // ===== v4.0.20：内鬼模式 =====
     _updateTraitor(dt) {
         const t = this.traitor;
@@ -5281,6 +5324,9 @@ class HauntedDorm {
             this.traitorRevealed = true;
             t.isTraitor = true;
             t.hp = 300; t.maxHp = 300; // v4.0.22：600→300，植物集火打得动
+            // v4.0.121「内鬼不出门」根因修复：人机平时是「钉床」的（pinned=true，每帧被拉回自家床位），
+            // 反水后如果不清掉，钉床逻辑每帧把它按回床上 → 看起来就是内鬼永远站在屋里不动、也不出门。
+            t.pinned = false; t.pinX = undefined; t.pinY = undefined; t._embedT = 0;
             const badge = document.createElement('div');
             badge.className = 'lv-badge';
             badge.style.background = '#c62828';
@@ -5297,6 +5343,13 @@ class HauntedDorm {
             this._announce(`😈 【${t.roleDef.name}】变成了内鬼！`, 'scream.mp3', true);
             return;
         }
+        // v4.0.121：反水后先做一次「嵌入检测」——内鬼是僵尸碰撞（checkCollision isZombie=true，
+        // 一切植物都是绝对实体）。如果它脚下正好压着一株植物（人机反水前在自己房间随手种下的，
+        // spawnPlant 只查植物格子、不查实体站位），那么它的判定中心点落在植物格里 →
+        // 往哪个方向挪 5px 都还是压着这株植物 → 前进轴全被拦 → 永久冻结，
+        // 玩家看到的现象就是「内鬼不出门、站在原地不动」。诊断实测：站在 sunshroom 上，
+        // 四向 canMove 全 false，_findPath 能算出 9 个路点却一步也走不出去。
+        this._escapeIfEmbedded(t, dt);
         // v4.0.43 重做（用户实报：内鬼卡在墙里、不挠门）：跟正常僵尸同一套行为——
         // ①穿门寻路走出自己的房间（旧 passDoors=false 被自己的门锁死 → BFS 失败走直线撞墙卡死）
         // ②目标在房内且门活着 → 走到门口格「挠门」（前方 25px probe 咬门，同僵尸范式）
@@ -5833,7 +5886,7 @@ class HauntedDorm {
 
             // v4.0.105：钉床——已入住的人机/托管者固定在自家阳光菇格上，不参与任何随机走动
             //（抢盲盒/门危逃亡在上面已经优先处理，这里只兜住「没事乱走」）
-            if (ai.pinned && ai.room && !ai.fleeing && !ai.targetDrop) {
+            if (ai.pinned && ai.room && !ai.fleeing && !ai.targetDrop && !ai.isTraitor) { // v4.0.121：内鬼不钉床
                 if (ai.pinX !== undefined && Math.hypot(ai.x - ai.pinX, ai.y - ai.pinY) > 2) {
                     ai.x = ai.pinX; ai.y = ai.pinY;
                     if (ai.el1) { ai.el1.style.left = ai.x + 'px'; ai.el1.style.top = ai.y + 'px'; }
