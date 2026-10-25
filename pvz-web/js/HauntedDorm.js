@@ -359,6 +359,9 @@ class HauntedDorm {
         // v4.0.61：僵尸阵营指挥——G 键循环切换优先猎杀目标；H 键号令尸潮（60s CD）
         this.commandTarget = null;
         this.waveOrderCd = 0;
+        // v4.0.117：号令尸潮解锁进度——僵尸方真人亲手啃死的幸存者数（尸潮小怪咬死的不算）
+        this.survivorKills = 0;
+        this._frozenTipAt = 0;
         this.blessingAt = 90000;      // 存活 90 秒后首次送出祝福
         this.aiBlessAt = 90000;       // 僵尸方模式下 AI 植物的存活奖励计时
         this.blessing = null;         // 当前打开的三选一 { options, idx, deadline }
@@ -615,7 +618,7 @@ class HauntedDorm {
             if (p1Ctl) {
                 // v4.0.61：加入指挥键位说明（G 切换猎杀目标 / H 号令尸潮）
                 p1Ctl.innerHTML = '<div>【僵尸 控制】移动: W/A/S/D ｜ 靠近植物自动慢咬 ｜ 技能: M 狂暴冲刺</div>' +
-                                  '<div>【指挥】G: 切换优先猎杀目标 ｜ H: 号令尸潮(60s) ｜ 最上排中心红圈自动回血 ｜ 啃破大门吃掉幸存者获胜</div>';
+                                  '<div>【指挥】G: 切换优先猎杀目标 ｜ H: 号令尸潮(击杀2人后解锁·60s) ｜ 最上排中心红圈自动回血 ｜ 啃破大门吃掉幸存者获胜</div>';
             }
             const p1Stats = document.querySelector('#hud-p1 > div:nth-child(2)');
             if (p1Stats) p1Stats.id = 'zombie-stats-bar';
@@ -1019,6 +1022,8 @@ class HauntedDorm {
         this.blessingAt = 90000;
         this.aiBlessAt = 90000;
         this.zombieFreezeT = this.isZombieFaction ? 10 : 0;
+        this.survivorKills = 0;   // v4.0.117：尸潮解锁进度随局重置
+        this._frozenTipAt = 0;
         if (this.blessing) { this.blessing = null; if (this.blessEl) this.blessEl.style.display = 'none'; }
 
         // v4.0.30：小推车=存活奖励（祝福发放），删地图散落道具；僵尸方开局 10 秒禁行动
@@ -1953,10 +1958,15 @@ class HauntedDorm {
                 const cmdTxt = this.commandTarget && !this.commandTarget.dead
                     ? (this.commandTarget.roleDef ? this.commandTarget.roleDef.name : '幸存者')
                     : '无';
-                const hordTxt = this.waveOrderCd > 0
-                    ? `<span style="color:#777777;"><s>【H】号令尸潮</s> (CD:${Math.ceil(this.waveOrderCd)}s)</span>`
-                    : `<span style="color:#ff5252;">【H】号令尸潮</span>`;
-                if (this.player.skillCd > 0) {
+                const hordTxt = !this._hordeUnlocked()
+                    ? `<span style="color:#8a8a8a;"><s>【H】号令尸潮</s>（击杀幸存者 ${Math.min(2, this.survivorKills || 0)}/2 解锁）</span>`
+                    : (this.waveOrderCd > 0
+                        ? `<span style="color:#777777;"><s>【H】号令尸潮</s> (CD:${Math.ceil(this.waveOrderCd)}s)</span>`
+                        : `<span style="color:#ff5252;">【H】号令尸潮</span>`);
+                if (this._zombieFrozen()) {
+                    // v4.0.117：观察期内技能栏整体锁定（不再显示"可放"的绿色/红色高亮）
+                    skillEl.innerHTML = `<span style="color:#8ad4ff;">❄️ 观察期 ${Math.ceil(this.zombieFreezeT)}s · 技能锁定</span>`;
+                } else if (this.player.skillCd > 0) {
                     skillEl.innerHTML = `<span style="color:#aaa;"><s>【M键】狂暴冲刺</s> (CD: ${Math.ceil(this.player.skillCd)}s)</span> ｜ ${hordTxt} <span style="color:#ffd54a; font-size:12px;">⚑ 目标:${cmdTxt} (G切换)</span>`;
                 } else {
                     skillEl.innerHTML = `<span style="color:#ff5252;">【M键】狂暴冲刺 (5秒内极速免疫)</span> ｜ ${hordTxt} <span style="color:#ffd54a; font-size:12px;">⚑ 目标:${cmdTxt} (G切换)</span>`;
@@ -2661,6 +2671,20 @@ class HauntedDorm {
                 return;
             }
             if (this.paused) return; // 暂停期间其余按键一律无效（移动/技能/修门/建造/浇水）
+            // v4.0.117：僵尸阵营观察期内——技能/指挥键一律无效（原来只有 M 被 _useSkill 挡住，G/H 照样能放）
+            if (this._zombieFrozen() && !e.repeat) {
+                const _sk = ['m', 'n', 'b', 'g', 'h', '5', '/', '3', '+', ' '];
+                const _sc = ['KeyM', 'KeyN', 'KeyB', 'KeyG', 'KeyH', 'Digit5', 'Numpad5',
+                             'Slash', 'Digit3', 'Numpad3', 'PageDown', 'NumpadAdd', 'Space'];
+                if (_sk.includes(key) || _sc.includes(e.code)) {
+                    if (this.gameTime - (this._frozenTipAt || 0) > 900) {
+                        this._frozenTipAt = this.gameTime;
+                        this._frozenSkillBlock();
+                    }
+                    if (e.preventDefault) e.preventDefault();
+                    return;
+                }
+            }
             // v4.0.104：2p 双人形态系统——死亡按键抉择 / P2 天使技能 先于一切处理（吃掉后续键位）
             if (this.gameMode === '2p' && !e.repeat && !this.over && this._fateKeydown(e)) return;
             if ((key === 'm' || e.code === 'KeyM') && !e.repeat && this.player && !this.player.dead) {
@@ -4762,20 +4786,36 @@ class HauntedDorm {
     _zombieFrozen() {
         return this.isZombieFaction && this.zombieFreezeT > 0;
     }
+    // v4.0.117：观察期内一律不许放技能/指挥（用户实报：人不能动，却能按 H 号令尸潮刷出一队僵尸）
+    _frozenSkillBlock() {
+        if (!this._zombieFrozen()) return false;
+        this.playSfx('buzzer.mp3', 0.3);
+        this._flyText(this.player.x, this.player.y - 40,
+            `❄️ 观察期中——还有 ${Math.ceil(this.zombieFreezeT)} 秒才能行动`, '#8ad4ff');
+        return true;
+    }
+    // v4.0.117：号令尸潮解锁条件——亲手击杀 2 名幸存者
+    _hordeUnlocked() { return (this.survivorKills || 0) >= 2; }
     _updateZombieFreeze(dt) {
         if (!this.isZombieFaction || this.over || !(this.zombieFreezeT > 0)) {
             if (this.freezeEl) this.freezeEl.style.display = 'none';
             return;
         }
         this.zombieFreezeT -= dt;
+        // v4.0.117：技能栏的观察期读秒跟着走（原来只在整秒 HUD 刷新时更新，会慢 1 秒）
+        const _fzSec = Math.max(0, Math.ceil(this.zombieFreezeT));
+        if (_fzSec !== this._fzShownSec) { this._fzShownSec = _fzSec; this._refreshHud(); }
         if (!this.freezeEl) {
             this.freezeEl = document.createElement('div');
-            this.freezeEl.style.cssText = 'position:fixed; top:14%; left:50%; transform:translateX(-50%); color:#ff8a8a; font-size:30px; font-weight:bold; text-shadow:2px 2px 0 #000; z-index:2500; font-family:"Kaiti SC",serif; pointer-events:none; white-space:nowrap;';
-            document.body.appendChild(this.freezeEl);
+            this.freezeEl.style.cssText = 'position:fixed; top:13%; left:50%; transform:translateX(-50%); color:#ff8a8a; font-size:26px; line-height:1.35; text-align:center; font-weight:bold; text-shadow:2px 2px 0 #000; z-index:2500; font-family:"Kaiti SC",serif; pointer-events:none; white-space:nowrap;';
+            // v4.0.117：原来挂在 body 上（z-index 2500）被 #dorm-screen（z-index 4000）整块盖住——玩家只看到"不能动"，看不到倒计时
+            (document.getElementById('dorm-screen') || document.body).appendChild(this.freezeEl);
         }
         if (this.zombieFreezeT > 0) {
             this.freezeEl.style.display = 'block';
-            this.freezeEl.innerText = '🧟 僵尸还在发呆… ' + Math.ceil(this.zombieFreezeT) + ' 秒后开始行动（AI 正在布防）';
+            // v4.0.117：分行显示，避免长句横穿左侧信息面板
+            this.freezeEl.innerHTML = '🧟 观察期 ' + Math.ceil(this.zombieFreezeT) + ' 秒 · 移动与技能已锁定'
+                + '<div style="font-size:15px; color:#ffd0d0; margin-top:6px; letter-spacing:1px; font-weight:normal;">AI 正在布防——观察期结束后才能移动和放技能</div>';
         } else {
             this.freezeEl.style.display = 'none';
             this._announce('🧟 观察期结束，行动开始！', 'scream.mp3');
@@ -5390,6 +5430,7 @@ class HauntedDorm {
     // ===== v4.0.61：僵尸阵营指挥 =====
     // G 键：在存活幸存者（人机 + P1/P2）中循环切换"优先猎杀目标"，小怪集火该目标
     _cycleCommandTarget() {
+        if (this._frozenSkillBlock()) return; // v4.0.117：观察期内不许下指令
         // v4.0.115：候选只留植物方幸存者——你自己和 P2 在僵尸阵营里是尸潮的主人，不是猎物（原来候选里含本体，HUD 上写着「目标:你」）
         const candidates = [...this.ais, ...(this.player2 ? [this.player2] : [])].filter(v => !v.dead && !v.isZombie);
         if (this.player && !this.player.dead && !this.player.isZombie) candidates.unshift(this.player);
@@ -5407,6 +5448,14 @@ class HauntedDorm {
     }
     // H 键：号令一波尸潮（3~6 只小鬼僵尸）立即进攻，60s CD
     _orderHorde() {
+        if (this._frozenSkillBlock()) return; // v4.0.117：观察期内不许号令尸潮
+        // v4.0.117：解锁门槛——必须先亲手啃死 2 名幸存者
+        if (!this._hordeUnlocked()) {
+            this.playSfx('buzzer.mp3', 0.3);
+            this._flyText(this.player.x, this.player.y - 40,
+                `🩸 号令尸潮未解锁——先击杀 2 名幸存者（${Math.min(2, this.survivorKills || 0)}/2）`, '#ff8a8a');
+            return;
+        }
         if (this.waveOrderCd > 0) {
             this._flyText(this.player.x, this.player.y - 40, `尸潮冷却 ${Math.ceil(this.waveOrderCd)}s`, '#ff8a8a');
             this.playSfx('buzzer.mp3', 0.3);
@@ -6094,7 +6143,16 @@ class HauntedDorm {
                             this.playSfx('chomp.mp3', 0.4);
                             if (v.hp <= 0 && !v.dead) {
                                 this.kills++;
-                                this._announce('🩸 击杀了一名幸存者！', 'finalwave.mp3');
+                                // v4.0.117：号令尸潮解锁进度——只算僵尸方真人自己咬死的（尸潮小怪的不算）
+                                // 注意：不能连发两条 _announce（后者会顶掉前者），解锁那次直接替换文案
+                                const _wasLocked = !this._hordeUnlocked();
+                                this.survivorKills = (this.survivorKills || 0) + 1;
+                                const _unlockedNow = _wasLocked && this._hordeUnlocked();
+                                this._announce(_unlockedNow
+                                    ? '🩸 击杀第 2 名幸存者——【H】号令尸潮 已解锁！'
+                                    : `🩸 击杀了一名幸存者！（${Math.min(2, this.survivorKills)}/2）`,
+                                    'finalwave.mp3', _unlockedNow);
+                                if (_unlockedNow) this._refreshHud();
                                 // v4.0.60：内鬼堕落值成长——咬杀一名幸存者
                                 if (zpTraitor) this._gainCorrupt(zp);
                                 this._checkPlayerDown(v);

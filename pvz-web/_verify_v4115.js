@@ -52,8 +52,8 @@ const launch = async () => {
   await sleep(7000);
   const pre = await page.evaluate(() => {
     const g = window.game;
-    g.waveOrderCd = 0; g._orderHorde();
-    g.waveOrderCd = 0; g._orderHorde();
+    g.zombieFreezeT = 0; g.survivorKills = 2; g.waveOrderCd = 0; g._orderHorde(); // v4.0.117：号令尸潮改为「击杀 2 人解锁」且观察期内禁用，测试先满足前置
+    g.zombieFreezeT = 0; g.survivorKills = 2; g.waveOrderCd = 0; g._orderHorde(); // v4.0.117：号令尸潮改为「击杀 2 人解锁」且观察期内禁用，测试先满足前置
     return { zombies: g.zombies.length, plants: g.plants.length,
              roomsWithPlants: g.rooms.filter(rm => g.plants.some(pl => pl.c >= rm.x && pl.c < rm.x + rm.w && pl.r >= rm.y && pl.r < rm.y + rm.h)).length };
   });
@@ -120,7 +120,7 @@ const launch = async () => {
     const g = window.game;
     if (g.over) return { skip: true, why: 'over' };
     g.ais.forEach(a => { a.dead = true; a.hp = 0; });
-    g.waveOrderCd = 0; g._orderHorde();
+    g.zombieFreezeT = 0; g.survivorKills = 2; g.waveOrderCd = 0; g._orderHorde(); // v4.0.117：号令尸潮改为「击杀 2 人解锁」且观察期内禁用，测试先满足前置
     const seq = [];
     for (let i = 0; i < 15; i++) {
       await new Promise(r => setTimeout(r, 100));
@@ -178,7 +178,7 @@ const launch = async () => {
     const bothZombie = !!g.player.isZombie && !!g.player2.isZombie;
     const seq = [];
     for (let i = 0; i < 8; i++) { g._cycleCommandTarget(); const t = g.commandTarget; seq.push(t === g.player ? 'P' : (t === g.player2 ? 'P2' : (t && t.roleDef ? 'ai' : 'none'))); }
-    g.waveOrderCd = 0; g._orderHorde();
+    g.zombieFreezeT = 0; g.survivorKills = 2; g.waveOrderCd = 0; g._orderHorde(); // v4.0.117：号令尸潮改为「击杀 2 人解锁」且观察期内禁用，测试先满足前置
     let lockPlayers = 0;
     for (let i = 0; i < 12; i++) {
       await new Promise(r => setTimeout(r, 150));
