@@ -3788,7 +3788,8 @@ class Game {
                 this.board.addPlant(newPlant, row, col);
                 
                 this.audioManager.play('plant');
-                this.showAnnouncement(`升级成功！获得 ${this.seeds.find(s=>s.type===up.next)?.type||up.next}`, '#4caf50');
+                const UP_CN = { sunflower: '向日葵', repeater: '双发豌豆', threepeater: '三线射手', tallnut: '高坚果' };
+                this.showAnnouncement(`升级成功！获得 ${UP_CN[up.next] || '新植物'}`, '#4caf50');
             } else {
                 this.showAnnouncement(`升级需要 ${up.cost} 阳光`, '#ff8a5c');
             }

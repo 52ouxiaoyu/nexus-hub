@@ -330,6 +330,9 @@ class HauntedDorm {
     // 以后要再调只改这一个数（1.5 = −33%），别去逐条改 DEFS 的 every。
     static get PROD_TICK_MUL() { return 1.25; }
 
+    // v4.0.123：出门抢盲盒的人机移动速度（200 是常速、300 是逃命）——用户要求「他们在外面走路不要太快」
+    static get LOOT_SPEED() { return 150; }
+
     // v4.0.26：opts 支持主站 index.html 内嵌启动（startHauntedDorm({mode,role1,role2,faction})）；
     // 未传 opts 的键回退到 URL 参数（旧独立页 haunted-dorm.html 直链兼容，行为不变）
     constructor(opts = {}) {
@@ -408,11 +411,11 @@ class HauntedDorm {
         this._fateShown = false;
         
         this.playerRoles = [
-            { id: 'sunflower', name: '向日葵', icon: 'assets/images/Plants/SunFlower/0.gif', skillDesc: '10秒阳光翻倍 (CD:60s)' },
-            { id: 'peashooter', name: '豌豆射手', icon: 'assets/images/Plants/Peashooter/0.gif', skillDesc: '15秒攻击翻倍 (CD:60s)', imgStyle: 'width: 120%; height: 120%; margin-left: -10%; margin-top: -10%;' },
-            { id: 'wallnut', name: '坚果', icon: 'assets/images/Plants/WallNut/0.gif', skillDesc: '免费升一级门 (CD:60s)' },
-            { id: 'chomper', name: '大嘴花', icon: 'assets/images/Plants/Chomper/0.gif', skillDesc: '赶跑全场僵尸10秒 (CD:30s)', imgStyle: 'width: 120%; height: 120%; margin-left: -10%; margin-top: -10%;' },
-            { id: 'squash', name: '倭瓜', icon: 'assets/images/Plants/Squash/0.gif', skillDesc: '重创僵尸半血 (CD:60s)', imgStyle: 'width: 200%; height: 200%; margin-left: -50%; margin-top: -50%;' }
+            { id: 'sunflower', name: '向日葵', icon: 'assets/images/Plants/SunFlower/0.gif', skillDesc: '10秒阳光翻倍（冷却 60 秒）' },
+            { id: 'peashooter', name: '豌豆射手', icon: 'assets/images/Plants/Peashooter/0.gif', skillDesc: '15秒攻击翻倍（冷却 60 秒）', imgStyle: 'width: 120%; height: 120%; margin-left: -10%; margin-top: -10%;' },
+            { id: 'wallnut', name: '坚果', icon: 'assets/images/Plants/WallNut/0.gif', skillDesc: '免费升一级门（冷却 60 秒）' },
+            { id: 'chomper', name: '大嘴花', icon: 'assets/images/Plants/Chomper/0.gif', skillDesc: '赶跑全场僵尸10秒（冷却 30 秒）', imgStyle: 'width: 120%; height: 120%; margin-left: -10%; margin-top: -10%;' },
+            { id: 'squash', name: '倭瓜', icon: 'assets/images/Plants/Squash/0.gif', skillDesc: '重创僵尸半血（冷却 60 秒）', imgStyle: 'width: 200%; height: 200%; margin-left: -50%; margin-top: -50%;' }
         ];
         
         this.playerRoleDef1 = this.playerRoles.find(r => r.id === this.role1) || this.playerRoles[1];
@@ -1605,6 +1608,60 @@ class HauntedDorm {
         }
     }
 
+    // ===== v4.0.123：人机技能触发条件（用户实报「人机都在乱放技能」）=====
+    // 只约束人机；真人玩家完全不受限，想按就按（用户明确要求）。
+    _hostileNearDoor(rm, radius = 130) {
+        if (!rm) return null;
+        const dx = rm.doorCol * this.gridSize + 40, dy = rm.doorRow * this.gridSize + 40;
+        for (const z of this._getHostileTargets()) {
+            if (!z || z.dead) continue;
+            if (Math.hypot(z.x - dx, z.y - dy) <= radius) return z;
+        }
+        return null;
+    }
+    _countRoomAttackers(rm, owner) {
+        if (!rm) return 0;
+        let n = 0;
+        for (const pl of this.plants) {
+            if (!pl || pl.isDoor) continue;
+            if (pl.c < rm.x || pl.c >= rm.x + rm.w || pl.r < rm.y || pl.r >= rm.y + rm.h) continue;
+            if (owner && pl.owner !== owner) continue;
+            if (pl.def && pl.def.shoot) n++;
+        }
+        return n;
+    }
+    _aiSkillGate(ai) {
+        if (!ai || !ai.roleDef) return false;
+        if (this.isZombieFaction) return true;              // 僵尸阵营的狂暴冲刺不受这些条件管
+        const r = ai.roleDef.id;
+        const rms = this._ownedRooms(ai);
+        if (rms.length === 0) return false;                 // 没有固定房间 → 一律不放
+        const doorZb = rms.some(rm => !!this._hostileNearDoor(rm, 130));
+        if (r === 'sunflower') {
+            // 白天向日葵才醒着：夜里（蘑菇上班）不放，白天有几率放
+            return !this.isNight && Math.random() < 0.55;
+        }
+        if (r === 'peashooter') {
+            if (!doorZb) return false;                      // 僵尸不在门口 → 不浪费爆发
+            return rms.some(rm => this._countRoomAttackers(rm, ai) >= 3);
+        }
+        if (r === 'wallnut') {
+            // 不限制时机：有房、门下还有可升级等级就放
+            return rms.some(rm => {
+                const d = this.getPlantAt(rm.doorCol * this.gridSize, rm.doorRow * this.gridSize);
+                return !!(d && d.def && d.def.up);
+            });
+        }
+        if (r === 'chomper') return doorZb;                 // 僵尸在门口 → 赶走
+        if (r === 'squash') {
+            if (rms.some(rm => !!this._hostileNearDoor(rm, 300))) return true;
+            return this._getHostileTargets().some(z => !z.dead && rms.some(rm =>
+                z.x >= rm.x * this.gridSize && z.x <= (rm.x + rm.w) * this.gridSize &&
+                z.y >= rm.y * this.gridSize && z.y <= (rm.y + rm.h) * this.gridSize));
+        }
+        return true;
+    }
+
     _updateAIs(dt) {
         // v4.0.101：2p 挂机托管——10 秒无操作的真人由 AI 以普通人机实力接管（行为全链路复用人机逻辑）
         const hostList = this.ais.slice();
@@ -1643,16 +1700,27 @@ class HauntedDorm {
                 }
             }
             if (ai === this.traitor && this.traitorRevealed) continue; // v4.0.20：内鬼由 _updateTraitor 接管
-            // v4.0.46：人机会使用手持技能——CD 好了之后 1 分钟内随机时机释放，随后 CD 重新计时（赶路/干活时不耽误放技能）
-            if (ai.skillAt === undefined) ai.skillAt = this.gameTime + 10000 + Math.random() * 50000;
+            // v4.0.46：人机会使用手持技能。
+            // v4.0.123：不再「CD 一到就随便放」——每个角色都有明确的触发条件（见 _aiSkillGate）：
+            //   向日葵   = 白天醒着（夜里睡觉不放），有几率；
+            //   豌豆射手 = 僵尸堵在自己门口 + 房里已种 3 株以上攻击植物（火力够了才开爆发）；
+            //   坚果     = 只要有固定房间、门还能升（不限制时机）；
+            //   大嘴花   = 僵尸在自己门口（把它赶走）；
+            //   窝瓜     = 僵尸真的来了（门口/屋里），没僵尸绝不空放。
+            // 条件不满足时每 1.5~3 秒重新评估一次，条件一满足就立刻放（不再干等一个 CD）。
+            if (ai.skillAt === undefined) ai.skillAt = this.gameTime + 8000 + Math.random() * 20000;
             if (this.gameTime >= ai.skillAt && (!ai.skillCd || ai.skillCd <= 0)) {
-                this._useSkill(ai);
-                if (!ai.skillCd || ai.skillCd <= 0) {
-                    ai.skillAt = this.gameTime + 8000 + Math.random() * 7000;   // 没放出来（无敌可咬/门不可升）→ 8~15s 后再试
+                if (this._aiSkillGate(ai)) {
+                    this._useSkill(ai);
+                    if (!ai.skillCd || ai.skillCd <= 0) {
+                        ai.skillAt = this.gameTime + 8000 + Math.random() * 7000;   // 没放出来（无敌可咬/门不可升）→ 8~15s 后再试
+                    } else {
+                        // v4.0.49：大嘴花 CD 30s，其余角色仍 60s——AI 按角色实际 CD 重新计时
+                        const cdMs = (ai.roleDef && ai.roleDef.id === 'chomper') ? 30000 : 60000;
+                        ai.skillAt = this.gameTime + cdMs + Math.random() * cdMs; // 放成功 → 等 CD 结束后再随机 0~1 个 CD
+                    }
                 } else {
-                    // v4.0.49：大嘴花 CD 30s，其余角色仍 60s——AI 按角色实际 CD 重新计时
-                    const cdMs = (ai.roleDef && ai.roleDef.id === 'chomper') ? 30000 : 60000;
-                    ai.skillAt = this.gameTime + cdMs + Math.random() * cdMs; // 放成功 → 等 CD 结束后再随机 0~1 个 CD
+                    ai.skillAt = this.gameTime + 1500 + Math.random() * 1500; // 条件不满足：过两秒再看
                 }
             }
             // v4.0.72：门危逃亡——自己门板血量 < 1/20 → 走跳板出房，去其他有空床的房间。
@@ -5147,6 +5215,16 @@ class HauntedDorm {
         return n;
     }
 
+    // ===== v4.0.123：点名本轮出门抢盲盒的人机（1~2 个）=====
+    _pickLooters() {
+        const pool = this.ais.filter(a => a && !a.dead && !a.isTraitor && a.room);
+        if (pool.length === 0) return [];
+        const n = Math.min(pool.length, Math.random() < 0.4 ? 2 : 1);
+        const out = [];
+        for (let i = 0; i < n; i++) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+        return out;
+    }
+
     // ===== v4.0.19：存活三选一祝福 =====
     _offerBlessings() {
         // v4.0.60：内鬼/天使已反水/升华，不再是"存活者"——不发存活奖励
@@ -5927,38 +6005,44 @@ class HauntedDorm {
                 }
             }
 
-            // 【新增】人机抢盲盒机制（v4.0.103：托管真人禁抢——出门抢盲盒=送人头，宅家发育）
+            // 【v4.0.123 重做】人机抢盲盒（托管真人禁抢——出门抢盲盒=送人头，宅家发育）
+            // 用户新规则：每轮（每次空投）只派 1~2 个人机出门；他们在外面走路要慢；僵尸优先咬出去抢的人。
             if (!ai.dead && !isHosted && this.ghostSpawned && this.airdrops && this.airdrops.length > 0) {
-                // v4.0.80：AI 竞争抢盲盒——去掉「发育好」门槛，每 6~14 秒评估一次；同时出门抢的 AI 上限 2 人；
-                // 僵尸在附近（zombieNear）才退缩；僵尸在回血/回血途中、或正在啃别人门（忙=顾不上你）时都会出门抢。
                 if (ai.room && (!ai.path || ai.path.length === 0) && Math.random() < 0.001) {
                     this._say(ai, ["好无聊啊，僵尸怎么还不来？", "谁敢跟我比阳光多？", "外面的世界太危险，还是床舒服~", "睡一觉醒来，希望能赢！", "室友别抢我阳光啊！"][Math.floor(Math.random()*5)]);
                 }
-                if (ai.room && (!ai.path || ai.path.length === 0) && !zombieNear &&
-                    (this.gameTime - (ai.lootAt || 0) > 6000 + Math.random() * 8000)) {
-                    ai.lootAt = this.gameTime;
-                    const chasers = this.ais.filter(x => !x.dead && x.targetDrop && x !== ai).length;
-                    if (chasers < 2 && Math.random() < 0.5) {
-                        const drop = this.airdrops[Math.floor(Math.random() * this.airdrops.length)];
-                        if (drop) {
-                            ai.targetDrop = drop;
-                            ai.path = this._findPath(ai.x, ai.y, drop.x, drop.y) || ai.path; // v4.0.16：寻路失败不穿墙
-                            if (Math.random() < 0.6) this._say(ai, ["盲盒是我的！", "抢到就是赚到！", "这颗钻石归我了！", "手快有手慢无！", "谁也别跟我抢盲盒！"][Math.floor(Math.random()*5)]);
-                        }
-                    }
-                }
-                // 如果盲盒消失了，或者碰到僵尸靠近，立刻放弃目标回家！
-                if (ai.targetDrop && ai.path && ai.path.length > 0) {
-                    if (!this.airdrops.includes(ai.targetDrop) || zombieNear) {
-                        if (zombieNear) this._say(ai, "僵尸来了，快撤！放弃盲盒保命！", 2500);
+                // 放弃：箱子没了 / 僵尸贴到 160px 内 → 保命回家
+                if (ai.targetDrop) {
+                    const dropGone = !this.airdrops.includes(ai.targetDrop);
+                    const tooClose = !!(zbTarget && !zbTarget.dead &&
+                        Math.hypot(ai.x - zbTarget.x, ai.y - zbTarget.y) < 160);
+                    if (dropGone || tooClose) {
+                        if (tooClose) this._say(ai, "僵尸来了，快撤！放弃盲盒保命！", 2500);
                         ai.targetDrop = null;
+                        ai.speed = 300; // 回撤时允许小跑（回房就重置 200）
                         if (ai.room) {
-                            const p = this._pathToBed(ai.x, ai.y, ai.room);
-                            if (p) ai.path = p;
-                            if (zombieNear) ai.speed = 300; // 吓得跑快点
+                            const back = this._pathToBed(ai.x, ai.y, ai.room);
+                            if (back) ai.path = back;
                         }
                     }
                 }
+                // 认领：只有「本轮被空投点到名」的 1~2 个人才会出门，不再全体一窝蜂
+                if (!ai.targetDrop && ai.room && (!ai.path || ai.path.length === 0) &&
+                    this.gameTime - (ai.lootAt || 0) > 3000) {
+                    const drop = this.airdrops.find(d => d.looters && d.looters.includes(ai));
+                    if (drop) {
+                        ai.lootAt = this.gameTime;
+                        const p0 = this._findPath(ai.x, ai.y, drop.x, drop.y);
+                        if (p0 && p0.length > 0) {
+                            ai.targetDrop = drop;
+                            ai.path = p0;
+                            ai.speed = HauntedDorm.LOOT_SPEED; // 出门抢东西不敢跑快
+                            if (Math.random() < 0.6) this._say(ai, ["盲盒是我的！", "抢到就是赚到！", "这次轮到我去拿！", "手快有手慢无！", "谁也别跟我抢盲盒！"][Math.floor(Math.random()*5)]);
+                        }
+                    }
+                }
+                // 限速兜底：背着 targetDrop 时，其他分支不许把它改成 300
+                if (ai.targetDrop && ai.speed > HauntedDorm.LOOT_SPEED) ai.speed = HauntedDorm.LOOT_SPEED;
             }
 
             // 【新增】人机逃生机制
@@ -6394,6 +6478,8 @@ class HauntedDorm {
                     else { kind = 'gift'; icon = '🎁'; }
                     const kindNames = { diamond: '钻石大奖', money: '钱袋', bag: '背包', box: '补给箱', trophy: '团队奖杯', gift: '惊喜礼盒' };
                     const box = { x: rx, y: ry, life: 25, kind: kind };
+                    // v4.0.123：每次空投点名 1~2 个人机出门去抢（4~5 人里只出这么多人不至于全空）
+                    box.looters = this._pickLooters();
                     const el = document.createElement('div');
                     el.className = 'entity';
                     el.style.cssText = `width:70px; height:70px; z-index:50; left:${rx}px; top:${ry}px;`;
@@ -6403,7 +6489,8 @@ class HauntedDorm {
                     box.el = el;
                     if (!this.airdrops) this.airdrops = [];
                     this.airdrops.push(box);
-                    this._announce('🎁 神秘盲盒已空降过道！快出房抢！', 'readysetplant.mp3');
+                    this._announce('🎁 神秘盲盒已空降过道！快出房抢！' +
+                        (box.looters.length ? `（${box.looters.length} 个人机也出门了）` : ''), 'readysetplant.mp3');
                 }
             }
         }
@@ -6438,6 +6525,7 @@ class HauntedDorm {
                     a.el.remove();
                     this.airdrops.splice(i, 1);
                     // AI 抢到后回家
+                    pickedByAI.speed = 200;
                     if (pickedByAI.room) {
                         const p = this._findPath(pickedByAI.x, pickedByAI.y, pickedByAI.room.frontX, pickedByAI.room.frontY);
                         if (!p) { pickedByAI.path = null; pickedByAI.targetDrop = null; } // v4.0.68：寻路失败不崩溃，原地等下次重试
@@ -6742,7 +6830,7 @@ class HauntedDorm {
                 !pp.isZombie && // v4.0.115：僵尸阵营里玩家本体是自己人——尸潮绝不把他当"跑出去的猎物"锁
                 !(pp === this.player && this.player.stealthT > 0) &&
                 !this._insideRoom(Math.floor(pp.x / this.gridSize), Math.floor(pp.y / this.gridSize)) &&
-                Math.hypot(pp.x - zb.x, pp.y - zb.y) < 220);
+                Math.hypot(pp.x - zb.x, pp.y - zb.y) < (pp.targetDrop ? 600 : 220));
             if (outdoorNow && outdoorNow !== zb.lockedTarget) {
                 zb.lockedTarget = outdoorNow;
                 zb.targetSwitched = true;
@@ -6768,6 +6856,8 @@ class HauntedDorm {
                     let score = Math.hypot(p.x - zb.x, p.y - zb.y);
                     // v4.0.84：走出房间（户外）的玩家优先级大幅提高——仅次于"门被攻破"（-50000）
                     if (!this._insideRoom(Math.floor(p.x / this.gridSize), Math.floor(p.y / this.gridSize))) score -= 30000;
+                    // v4.0.123：正在外面抢盲盒的人机是首要猎物（优先级高于破门）——用户要求
+                    if (p.targetDrop) score -= 60000;
                     const rm = p.room || this.rooms.find(r => p.x >= r.x*80 && p.x <= (r.x+r.w)*80 && p.y >= r.y*80 && p.y <= (r.y+r.h)*80);
                     let doorHpScore = 0;
                     if (rm) {
