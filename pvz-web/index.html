@@ -845,9 +845,11 @@
             const container = document.getElementById('game-container');
             const scaleX = window.innerWidth / 900;
             const scaleY = window.innerHeight / 600;
-            // v4.0.125：上限 1.5——基准 900×600 下，1920 屏原会放大到 1.8 倍，
-            // 主菜单整体巨大、双人/守屋卡占满屏幕、说明卡被挤出第一行；封顶后菜单 5 卡一行、宽卡不再溢出
-            const scale = Math.min(scaleX, scaleY, 1.5);
+            // v4.0.127：撤掉 v4.0.125 的 1.5 倍上限——那行 `, 1.5` 会让 1350×900 以上的屏幕
+            // 不再放大，1920×1080 下画布只有 1350×900、四周一圈黑边，整个游戏缩在中间。
+            // 当初加上限是为了「菜单卡片被挤出第一行」，而 v4.0.126 已把菜单收口进 900×600 设计面
+            // （行宽 828、左右各留 36px），放大只是等比拉伸，不会再溢出。故恢复纯等比铺满。
+            const scale = Math.min(scaleX, scaleY);
             container.style.transform = `scale(${scale})`;
             container.style.transformOrigin = 'center center';
             // Store scale for InputManager
