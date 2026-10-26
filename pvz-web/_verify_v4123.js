@@ -237,13 +237,15 @@ const boot = async (page) => {
       hasTopbar: !!document.querySelector('#start-menu .menu-topbar'),
       inCorner: !!(corner && corner.querySelector('#player-name') && corner.querySelector('#btn-back-gc')),
       actionBtns: actions ? actions.children.length : 0,
+      // v4.0.126：说明按钮已从右上角挪成「我是僵尸」右侧的独立窄卡，右上角只留成就
+      helpCard: !!document.querySelector('#start-menu #btn-help-guide'),
       subGone: !document.querySelector('#start-menu .game-sub') && !document.querySelector('#start-menu').textContent.includes('PLANTS vs ZOMBIES'),
       ver: (document.getElementById('start-version') || {}).textContent || ''
     };
   });
   ok(E.hasTopbar, '存在顶部工具行 .menu-topbar');
   ok(E.inCorner, '玩家名 + 返回键在左上角工具行内');
-  ok(E.actionBtns >= 2, '右上角有 ' + E.actionBtns + ' 个按钮（说明 / 成就）');
+  ok(E.actionBtns >= 1 && E.helpCard, '右上角 ' + E.actionBtns + ' 个按钮（成就）+ 说明为独立窄卡');
   ok(E.corner && E.title && E.corner.b <= E.title.y + 2, '左上角工具行不与标题重叠');
   ok(E.title && E.cards && E.title.b <= E.cards.y + 2, '标题在卡片上方');
   ok(E.subGone, '英文副标题已删除');

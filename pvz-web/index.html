@@ -106,7 +106,7 @@
             .menu-corner { display: flex; align-items: center; gap: 14px; }
             .menu-actions { display: flex; align-items: center; gap: 12px; }
             /* ===== 标题：v4.0.95 空间扩大一倍（margin-top 62→118px，字号 46→58px） ===== */
-            .menu-title { position: relative; z-index: 2; margin-top: 118px; text-align: center; }
+            .menu-title { position: relative; z-index: 2; margin-top: 78px; text-align: center; }
             .menu-title .game-title {
                 font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif;
                 font-size: 58px; font-weight: 900; letter-spacing: 8px; line-height: 1.1;
@@ -118,8 +118,8 @@
             /* ===== 模式卡（种子包样式）：v3.7.0 起 4 卡一行 ===== */
             /* v4.0.125：flex-wrap: nowrap——5 张卡（4 模式卡+操作与说明）永远一行，
                小窗口由 flex-shrink 等比例收紧（min-width 保护可读性），不再把说明卡挤到第二行 */
-            .menu-cards { position: relative; z-index: 2; display: flex; gap: 20px; margin-top: 16px; flex-wrap: nowrap; justify-content: center; max-width: 1100px; }
-            .menu-cards .mode-card { min-width: 172px; }
+            .menu-cards { position: relative; z-index: 2; display: flex; gap: 14px; margin-top: 8px; flex-wrap: nowrap; justify-content: center; max-width: 900px; }
+            .menu-cards .mode-card { min-width: 150px; }
             /* ===== v3.81.1 双人对战：第五张模式卡（与四卡同款种子包样式）=====
                宽 = 砸罐子卡 + 间距 + 我是僵尸卡（208+18+208=434px）；
                高 = 第一行卡片下方的剩余空间（flex:1 撑满）；矮宽卡用左图右文横排
@@ -131,7 +131,7 @@
                 position: relative; z-index: 2;
                 display: flex; justify-content: center; align-items: stretch; gap: 18px;
                 width: 638px; max-width: 100%;
-                margin-top: 12px;
+                margin-top: 8px;
                 flex: 0 0 auto; min-height: 0;
             }
             /* v3.86.0：猛鬼宿舍宽卡与双人对战完全同款；v4.0.125 改竖排——
@@ -144,7 +144,7 @@
                 flex-direction: column; align-items: center; gap: 8px;
             }
             /* v4.0.125：所有卡片绿色插图区统一为 176×110（面积相等，不再一高一矮） */
-            #btn-vs .pkt-art, #btn-dorm .pkt-art { flex: 0 0 110px; width: 176px; height: 110px; align-self: center; }
+            #btn-vs .pkt-art, #btn-dorm .pkt-art { flex: 0 0 100px; width: 176px; height: 100px; align-self: center; }
             /* v4.0.125：修复双人对战卡豌豆射手/僵尸图被 object-fit:fill 46×46 拉伸裁切（图不完整、脚缺失）——
                改为等比 contain + 52px 高，完整显示 */
             #btn-vs .pkt-art img, #btn-dorm .pkt-art img { height: 52px; width: auto; object-fit: contain; }
@@ -240,14 +240,14 @@
             .vz-card.picked { border-color: #9dff5e; background: rgba(157,255,94,0.16); filter: brightness(1.15); }
             .vz-card:hover { background: rgba(255,255,255,0.18); }
             .mode-card {
-                width: 196px; height: 258px;
+                width: 158px; height: 200px;
                 background: linear-gradient(180deg, #fdf3d0 0%, #f3e2ab 78%, #e6cf8c 100%);
                 border: 6px solid #6b4a22;
                 border-radius: 18px;
                 box-shadow: inset 0 0 0 2px #caa95f, inset 0 0 24px rgba(120,80,20,0.18),
                             0 12px 26px rgba(0,0,0,0.45);
                 cursor: pointer;
-                padding: 10px 10px 12px;
+                padding: 8px 8px 10px;
                 display: flex; flex-direction: column; align-items: center;
                 font-family: inherit;
                 transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
@@ -262,7 +262,7 @@
             .mode-card:active { transform: translateY(-2px) scale(0.99); }
             /* 卡头插图区 */
             .pkt-art {
-                width: 100%; height: 110px; border-radius: 12px;
+                width: 100%; height: 82px; flex: 0 0 82px; border-radius: 12px;
                 background: linear-gradient(180deg, #bfe89a 0%, #a4d87a 100%);
                 border: 3px solid #55703a;
                 box-shadow: inset 0 -10px 18px rgba(40,80,20,0.25);
@@ -270,38 +270,38 @@
                 overflow: hidden;
                 position: relative;
             }
-            .pkt-art img { height: 96px; width: auto; image-rendering: pixelated; }
+            .pkt-art img { height: 72px; width: auto; image-rendering: pixelated; }
             /* 融合卡：公式排版（两行：植物+植物  / = ？）*/
-            .pkt-art.formula { flex-direction: column; gap: 6px; font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif; color: #3a2a10; }
+            .pkt-art.formula { flex-direction: column; gap: 2px; font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif; color: #3a2a10; }
             .pkt-art.formula .row { display: flex; align-items: center; justify-content: center; }
             .pkt-art.formula .row.plants { gap: 8px; }
-            .pkt-art.formula .row.plants img { height: 58px; width: auto; image-rendering: pixelated; display: block; }
+            .pkt-art.formula .row.plants img { height: 42px; width: auto; image-rendering: pixelated; display: block; }
             .pkt-art.formula .row.plants .img-a { transform: translateY(2px); }
             /* v3.13.0：封面改用静止态樱桃炸弹（倭瓜是竖长图，压到 58px 后太窄显小） */
-            .pkt-art.formula .row.plants .img-b { height: 58px; transform: translateY(2px); }
-            .pkt-art.formula .row.result  { gap: 4px; margin-top: -2px; }
-            .pkt-art.formula .formula-op   { font-size: 22px; font-weight: 900; color: #a14b18; line-height: 1; }
-            .pkt-art.formula .formula-eq   { font-size: 26px; font-weight: 900; color: #4a3414; line-height: 1; }
-            .pkt-art.formula .formula-q    { font-size: 30px; font-weight: 900; color: #c0211e;
+            .pkt-art.formula .row.plants .img-b { height: 42px; transform: translateY(2px); }
+            .pkt-art.formula .row.result  { gap: 4px; margin-top: -6px; }
+            .pkt-art.formula .formula-op   { font-size: 16px; font-weight: 900; color: #a14b18; line-height: 1; }
+            .pkt-art.formula .formula-eq   { font-size: 20px; font-weight: 900; color: #4a3414; line-height: 1; }
+            .pkt-art.formula .formula-q    { font-size: 22px; font-weight: 900; color: #c0211e;
                 text-shadow: 1px 1px 0 #fff, 2px 2px 0 rgba(0,0,0,0.25);
                 animation: q-pulse 2.2s ease-in-out infinite;
                 display: inline-block; transform-origin: center; }
             @keyframes q-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
             .pkt-name {
-                margin-top: 8px;
+                margin-top: 6px;
                 font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif;
-                font-size: 24px; font-weight: 900; letter-spacing: 4px; color: #4a3414;
+                font-size: 21px; font-weight: 900; letter-spacing: 4px; color: #4a3414;
                 text-shadow: 1px 1px 0 rgba(255,255,255,0.7);
             }
             .pkt-tag {
-                margin-top: 3px; font-family: monospace; font-size: 12px; font-weight: bold;
+                margin-top: 2px; font-family: monospace; font-size: 11px; font-weight: bold;
                 letter-spacing: 2px; color: #7a5c22;
                 background: rgba(255,255,255,0.35); border-radius: 9px; padding: 2px 9px;
             }
             .pkt-sub {
                 margin-top: 5px; text-align: center;
                 font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
-                font-size: 11.5px; line-height: 1.5; color: #6d5626;
+                font-size: 10.5px; line-height: 1.42; color: #6d5626;
             }
             .pkt-sub b { color: #3f6e1f; }
             /* 底部信息行 */
@@ -317,10 +317,10 @@
             }
             /* 版本徽标：右下角小号芯片（v4.0.123 起只显示 v4.0.x，完整说明进 title） */
             .ver {
-                position: absolute; right: 14px; bottom: 10px; z-index: 6;
-                font-family: monospace; font-size: 11px; color: rgba(255,255,255,0.85);
+                position: absolute; right: 10px; bottom: 6px; z-index: 6;
+                font-family: monospace; font-size: 10px; color: rgba(255,255,255,0.85);
                 background: rgba(20,40,20,0.62); border: 1px solid rgba(255,255,255,0.22);
-                border-radius: 10px; padding: 3px 9px; pointer-events: auto;
+                border-radius: 10px; padding: 2px 8px; pointer-events: auto;
                 text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
             }
             /* v3.73.0 返回 Game Center：v4.0.95 放大（padding/字号加大），黑底白字不变 */
@@ -340,10 +340,10 @@
                右上角只留成就按钮）——同模式卡木牌质感，图标在上文字在下 */
             #btn-help-guide {
                 display: flex; flex-direction: column; align-items: center; justify-content: center;
-                width: 176px; flex: 0 0 176px; min-width: 150px; min-height: 104px;
-                padding: 8px 6px; cursor: pointer;
+                width: 140px; flex: 0 0 140px; min-width: 120px; min-height: 96px;
+                padding: 8px 5px; cursor: pointer;
                 font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif;
-                font-size: 20px; font-weight: 900; letter-spacing: 4px; text-align: center;
+                font-size: 17px; font-weight: 900; letter-spacing: 2px; text-align: center;
                 color: #f7e9c0; text-shadow: 1px 1px 0 #2a1c0c;
                 background: linear-gradient(180deg,#7a5a33 0%,#5d4223 60%,#4a331b 100%);
                 border: 3px solid #3a2812; border-radius: 14px;
@@ -351,7 +351,7 @@
                 transition: transform .12s ease, filter .12s ease;
             }
             #btn-help-guide:hover { transform: translateY(-2px); filter: brightness(1.12); }
-            #btn-help-guide .hg-ico { font-size: 26px; margin-bottom: 3px; line-height: 1; }
+            #btn-help-guide .hg-ico { font-size: 22px; margin-bottom: 2px; line-height: 1; }
         </style>
         <div id="start-menu">
             <div class="menu-scene">
@@ -374,7 +374,7 @@
                         </div>
                         <div class="pkt-name">经典冒险</div>
                         <div class="pkt-tag">ADVENTURE</div>
-                        <div class="pkt-sub">原汁原味的防线塔防<br>白昼草地 · 经典植物 · 波次攻防</div>
+                        <div class="pkt-sub">原汁原味的防线塔防<br>白昼草地 · 经典植物</div>
                     </button>
 
                     <button id="btn-fusion" class="mode-card">
@@ -391,25 +391,25 @@
                         </div>
                         <div class="pkt-name">融合进化</div>
                         <div class="pkt-tag">FUSION</div>
-                        <div class="pkt-sub">两种植物合二为一 · 进化新形态<br>手套融合 · 探索 55+ 秘密配方</div>
+                        <div class="pkt-sub">两种植物合二为一<br>手套融合 · 55+ 秘密配方</div>
                     </button>
 
                     <button id="btn-vase" class="mode-card">
                         <div class="pkt-art vase">
-                            <img src="assets/images/Vase/Vase_Question.png" alt="问号罐子" class="vase-hero" style="height: 102px; width: auto; image-rendering: pixelated;">
+                            <img src="assets/images/Vase/Vase_Question.png" alt="问号罐子" class="vase-hero" style="height: 78px; width: auto; image-rendering: pixelated;">
                         </div>
                         <div class="pkt-name">砸罐子</div>
                         <div class="pkt-tag">VASEBREAKER</div>
-                        <div class="pkt-sub">锤开罐子 · 里面是植物还是僵尸？<br>植物罐稳赚 · 僵尸罐提防 · 问号罐惊喜</div>
+                        <div class="pkt-sub">锤开罐子 · 是敌是友？<br>植物罐稳赚 · 僵尸罐提防</div>
                     </button>
 
                     <button id="btn-zombie" class="mode-card">
                         <div class="pkt-art zombie">
-                            <img src="assets/images/Zombies/Zombie/0.gif" alt="我是僵尸" style="height: 104px; width: auto; image-rendering: pixelated; transform: translateY(4px);">
+                            <img src="assets/images/Zombies/Zombie/0.gif" alt="我是僵尸" style="height: 74px; width: auto; image-rendering: pixelated; transform: translateY(2px);">
                         </div>
                         <div class="pkt-name">我是僵尸</div>
                         <div class="pkt-tag">I, ZOMBIE</div>
-                        <div class="pkt-sub">这次换你当僵尸 · 指挥僵尸大军<br>啃穿植物防线 · 吃掉脑子即可通关</div>
+                        <div class="pkt-sub">这次你当僵尸 · 指挥大军<br>啃穿防线 · 吃掉脑子通关</div>
                     </button>
                 </div>
 
@@ -975,8 +975,9 @@
                         // 原样输出会把底部拉成一整行长条（视口窄时会盖住卡片）。完整说明放进 title。
                         const m = String(v.version).match(/v\d+\.\d+\.\d+/);
                         const shortVer = m ? m[0] : String(v.version);
-                        const label = 'pvz-web ' + shortVer + ' · build ' + (v.build || '?');
-                        if (sv) { sv.textContent = label; sv.title = String(v.version) + '\n' + (v.feature || ''); }
+                        // v4.0.126：只显示版本号（带 build 时宽 252px，会压住守屋卡右下角）；build 放进 tooltip
+                        const label = 'pvz-web ' + shortVer;
+                        if (sv) { sv.textContent = label; sv.title = 'build ' + (v.build || '?') + '\n' + String(v.version) + '\n' + (v.feature || ''); }
                         if (el) { el.textContent = label; el.title = (v.feature || '') + '\nasset version: ' + (v.assetVersion || '?'); }
                     } else if (sv) {
                         sv.textContent = 'no version.json';
