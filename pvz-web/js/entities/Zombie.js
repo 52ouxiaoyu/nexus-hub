@@ -19,6 +19,21 @@ class Zombie extends Entity {
         // v3.50.0：盲盒位置对齐头部（用户：盲盒应该在脑袋那部分）——topOff 与射手头统一 -72
         mysterybox:  { src: 'assets/images/Plants/PlantBox/GiftBox.png',      cw: 192, ch: 140, keepTop: 1.0, w: 88, topOff: -72 }
     };
+    // v4.0.125：我是僵尸模式「僵尸进化链」——玩家僵尸每连续啃死 2 株植物进化一级：
+    // 普通 → 路障 → 铁桶 → 铁门 → 橄榄球 → 巨人（旧版升级路线；巨人砸扁植物不吃"进化击杀"，
+    // 仍按啃死计——只要 _zombieKill 标记来自 EATING 分支即可）。
+    // 档位基准血量与构造函数（我是僵尸档数值）一一对应。
+    static EVOLVE_CHAIN = ['normal', 'conehead', 'buckethead', 'screendoor', 'football', 'gargantuar'];
+    // 各档位基准血量（与构造函数我是僵尸档数值一致）
+    static EVOLVE_BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, screendoor: 1450, football: 1300, gargantuar: 2600 };
+    static EVOLVE_LOOKS = {
+        normal:     { walk: 'assets/images/Zombies/Zombie/Zombie.gif',            attack: 'assets/images/Zombies/Zombie/ZombieAttack.gif', die: 'assets/images/Zombies/Zombie/ZombieDie.gif', h: 0 },
+        conehead:   { walk: 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif', attack: 'assets/images/Zombies/ConeheadZombie/ConeheadZombieAttack.gif', die: 'assets/images/Zombies/Zombie/ZombieDie.gif', h: 0 },
+        buckethead: { walk: 'assets/images/Zombies/BucketheadZombie/BucketheadZombie.gif', attack: 'assets/images/Zombies/BucketheadZombie/BucketheadZombieAttack.gif', die: 'assets/images/Zombies/Zombie/ZombieDie.gif', h: 0 },
+        screendoor: { walk: 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombie.gif', attack: 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombieAttack.gif', die: 'assets/images/Zombies/Zombie/ZombieDie.gif', h: 0 },
+        football:   { walk: 'assets/images/Zombies/FootballZombie/FootballZombie.gif', attack: 'assets/images/Zombies/FootballZombie/Attack.gif', die: 'assets/images/Zombies/FootballZombie/Die.gif', h: 0 },
+        gargantuar: { walk: 'assets/images/Zombies/Gargantuar/0.png',            attack: 'assets/images/Zombies/Gargantuar/0.png', die: 'assets/images/Zombies/Zombie/ZombieDie.gif', h: 200 }
+    };
     constructor(game, row, type = 'normal') {
         const x = 950;
         const y = game.board.offsetY + row * game.board.cellHeight + game.board.cellHeight / 2 - 20;
@@ -322,6 +337,50 @@ class Zombie extends Entity {
         }
         // 破甲基准血量（放在所有血量调整之后，保证与 armorMul 的换算一致）
         this.armorHp = this.hp;
+    }
+
+    // v4.0.125：我是僵尸模式进化链——由 Plant 死亡处调用（玩家僵尸啃死植物时）
+    // 每累计啃死 2 株植物进化一级：外观换档、血量升到新档基准、攻击/移速小幅提升
+    evolveOnEat() {
+        if (!this.game || !this.game.zombieMode || this.isDead || this.hypnotized) return;
+        this._evolveKills = (this._evolveKills || 0) + 1;
+        if (this._evolveKills < 2) return;
+        this._evolveKills = 0;
+        const chain = Zombie.EVOLVE_CHAIN;
+        const i = chain.indexOf(this.type);
+        if (i < 0 || i >= chain.length - 1) return;
+        const next = chain[i + 1];
+        const base = Zombie.EVOLVE_LOOKS[next];
+        if (!base) return;
+        // 清掉旧挂件/植物头（路障/铁桶/盲盒等）
+        if (this._accEl && this._accEl.parentNode) this._accEl.parentNode.removeChild(this._accEl);
+        this._accEl = null;
+        if (this.headEl && this.headEl.parentNode) this.headEl.parentNode.removeChild(this.headEl);
+        this.headEl = null;
+        // 应用新档位
+        this.type = next;
+        this.walkSrc = base.walk;
+        this.attackSrc = base.attack;
+        this.dieSrc = base.die;
+        this.element.src = (this.state === 'EATING') ? base.attack : base.walk;
+        if (base.h) { this.element.style.height = base.h + 'px'; this.element.style.width = 'auto'; }
+        else { this.element.style.height = ''; this.element.style.width = ''; }
+        this.yOffset = (next === 'gargantuar') ? -58 : (this.yOffset === undefined ? -30 : (this.type === 'gargantuar' ? -58 : this.yOffset));
+        this.hp = this.maxHp = (Zombie.EVOLVE_BASE_HP || {})[next] || this.hp;
+        this.armorHp = this.hp; // 破甲基准同步
+        this.speed = Math.min(35, this.speed + 5);
+        this.damage = Math.min(100, this.damage + 10);
+        // 升级闪光
+        if (this.element) {
+            this.element.style.filter = 'brightness(2.4) saturate(1.8)';
+            setTimeout(() => { if (this.element) this.element.style.filter = ''; }, 450);
+        }
+        if (this.game._zombieFloatText) {
+            const nm = this.game.zombieName ? this.game.zombieName(next) : next;
+            this.game._zombieFloatText('💥 进化：' + nm + '！', '#c8a2ff', this.x, this.y - 55);
+        }
+        if (this.game.audioManager && this.game.audioManager.play) this.game.audioManager.play('plant');
+        if (this.game.showAnnouncement) this.game.showAnnouncement('⚡ 僵尸进化：' + (this.game.zombieName ? this.game.zombieName(next) : next) + '！', '#c8a2ff');
     }
     
     // 植物头僵尸：把一颗基础植物顶在头上（独立 DOM 层，随僵尸同步移动）

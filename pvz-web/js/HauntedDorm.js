@@ -819,49 +819,133 @@ class HauntedDorm {
 
     generateMap() {
         this.rooms = [];
-        const makeGrid = (w, h) => Array.from({length: h}, () => Array(w).fill(1));
-        // v4.0.50：中间庭院 8×8 房间——中间缺 2×2 但四面用墙围成封闭庭院（房间外墙闭合、内部为环形走廊），
-        // 不再是 v4.0.49 的"漏风地洞"（用户实报：中间扣一个洞=未封闭图形）
-        const notchGrid = () => {
-            const g = makeGrid(8, 8);
-            g[3][3] = g[3][4] = g[4][3] = g[4][4] = 0;
-            return g;
+        const makeGrid = (w, h) => Array.from({ length: h }, () => Array(w).fill(1));
+        // v4.0.125：随机房间生成器——每局 10 个房间全部随机（形状/大小/门向/床位/落点），
+        // 组成：1 双人间（双床）＋ 1~2 梯形 ＋ 1 特别小(4~8格) ＋ 1 特别大(15~25格) ＋ 其余正常(9~14格)。
+        // 全部格子对齐生成、墙面平直、形状闭合，不存在"半个方块"或未封闭缺口。
+        const genRoomShape = (kind) => {
+            const sizes = {
+                small: [[2, 2], [2, 3], [3, 2], [2, 4], [4, 2]],              // 4~8 格
+                big:   [[5, 5], [4, 6], [6, 4], [4, 5], [5, 4], [3, 6], [6, 3], [3, 7], [7, 3], [4, 4]], // 15~25 格
+                normal:[[3, 3], [3, 4], [4, 3], [2, 5], [5, 2], [4, 4]]
+            };
+            const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+            const g = (w, h) => makeGrid(w, h);
+            if (kind === 'small' || kind === 'big' || kind === 'normal') {
+                const [w, h] = pick(sizes[kind]);
+                return { w, h, grid: g(w, h), name: kind };
+            }
+            if (kind === 'trap') {
+                // 梯形：每行宽度 ±1 线性变化（封闭凸多边形，格对齐，墙面平直）。
+                // 面积约束在 9~14 格（正常档位，不与"特别大 15~25 格"重复）
+                const narrow = Math.random() < 0.5 ? 2 : 3;
+                const rows = narrow === 2 ? (3 + Math.floor(Math.random() * 2)) : 3; // 2 窄→3~4 行(9/14格)；3 窄→3 行(12格)
+                const dir = Math.random() < 0.5 ? 1 : -1; // 1=上窄下宽
+                const wide = narrow + rows - 1;
+                const grid = [];
+                for (let r = 0; r < rows; r++) {
+                    const w = dir === 1 ? narrow + r : wide - r;
+                    grid.push(Array(w).fill(1));
+                }
+                const h = rows, w = wide;
+                const full = Array.from({ length: h }, () => Array(w).fill(0));
+                grid.forEach((line, r) => {
+                    const off = Math.floor((w - line.length) / 2);
+                    line.forEach((v, c) => { full[r][off + c] = v; });
+                });
+                return { w, h, grid: full, name: 'trap' };
+            }
+            // L 形（缺右上角，封闭凹形）——只用于正常房档位（9~14 格）
+            const [w, h] = pick([[4, 4], [5, 3], [6, 3]]);
+            const gg = g(w, h);
+            const cutR = Math.floor(h / 2);
+            for (let r = 0; r < cutR; r++) for (let c = Math.ceil(w / 2); c < w; c++) gg[r][c] = 0;
+            return { w, h, grid: gg, name: 'l' };
         };
-        // v4.0.49：L 形 8×8 房间（缺右上 4×4）
-        const lGrid = () => {
-            const g = makeGrid(8, 8);
-            for (let r = 0; r < 4; r++) for (let c = 4; c < 8; c++) g[r][c] = 0;
-            return g;
+        // 选门：形状边界上任选一实心格，门开在该格外侧（桥建在屋外一格）
+        const pickDoor = (shape) => {
+            const { grid, w, h } = shape;
+            const edges = [];
+            for (let r = 0; r < h; r++) {
+                for (let c = 0; c < w; c++) {
+                    if (grid[r][c] !== 1) continue;
+                    if (r === 0 || r === h - 1 || c === 0 || c === w - 1) edges.push({ r, c });
+                }
+            }
+            const e = edges[Math.floor(Math.random() * edges.length)];
+            if (e.r === 0) return { r: -1, c: e.c };
+            if (e.r === h - 1) return { r: h, c: e.c };
+            if (e.c === 0) return { r: e.r, c: -1 };
+            return { r: e.r, c: w };
         };
-
-        // v4.0.49：房屋布局多样化——大小不一（8×8 / 6×6 / 8×6 / 6×8）、形状各异（正方/中间庭院/L形），
-        // 门不再全部两两相对：仅上排左侧 A-B 一对门对门，其余全部单独立户（门朝上/下/左/右各不相同）。
-        // 全部网格对齐生成，不存在“半个方块”。
-        const roomsDef = [
-            // —— 上排左组（唯一一对门对门）——
-            { x: 4,  y: 6,  w: 8, h: 8, grid: makeGrid(8,8), door: {r: 4, c: 8},  beds: [{r: 4, c: 2}] },  // A 大正方·门朝右
-            { x: 16, y: 6,  w: 8, h: 8, grid: makeGrid(8,8), door: {r: 4, c: -1}, beds: [{r: 4, c: 5}] }, // B 大正方·门朝左（与 A 对门）
-            // —— 上排右组（独立户）——
-            { x: 38, y: 6,  w: 8, h: 8, grid: makeGrid(8,8), door: {r: 8, c: 4},  beds: [{r: 4, c: 2}] },  // C 大正方·门朝下
-            { x: 50, y: 6,  w: 6, h: 6, grid: makeGrid(6,6), door: {r: 6, c: 3},  beds: [{r: 3, c: 1}] },  // D 小正方·门朝下
-            // —— 中排（独立户）——
-            { x: 14, y: 16, w: 8, h: 8, grid: notchGrid(), door: {r: 8, c: 4},  beds: [{r: 1, c: 1}] },    // E 中间庭院（墙围·封闭）·门朝下
-            { x: 32, y: 16, w: 6, h: 8, grid: makeGrid(6,8), door: {r: 8, c: 3},  beds: [{r: 4, c: 1}] },  // F 高房·门朝下（远离地图中心玩家出生点）
-            { x: 42, y: 18, w: 8, h: 8, grid: lGrid(),      door: {r: 4, c: 8},  beds: [{r: 4, c: 1}] },   // G L形·门朝右
-            // —— 下排（独立户，门都朝上）——
-            { x: 6,  y: 30, w: 8, h: 8, grid: makeGrid(8,8), door: {r: -1, c: 4}, beds: [{r: 4, c: 2}] },  // H 大正方·门朝上
-            { x: 24, y: 30, w: 8, h: 6, grid: makeGrid(8,6), door: {r: -1, c: 4}, beds: [{r: 3, c: 2}] },  // I 宽房·门朝上
-            { x: 44, y: 30, w: 8, h: 8, grid: makeGrid(8,8), door: {r: -1, c: 4}, beds: [{r: 4, c: 5}] }   // J 大正方·门朝上
-        ];
-
-        // 随机给一户加第二张床（两人合住一房），床必须落在实心地板上
-        if (Math.random() < 0.4) {
-            const idx = Math.floor(Math.random() * roomsDef.length);
-            const b = roomsDef[idx].beds[0];
-            const up = (b.r - 2 >= 0 && roomsDef[idx].grid[b.r - 2][b.c] === 1);
-            const down = (b.r + 2 < roomsDef[idx].h && roomsDef[idx].grid[b.r + 2][b.c] === 1);
-            if (up) roomsDef[idx].beds.push({ r: b.r - 2, c: b.c });
-            else if (down) roomsDef[idx].beds.push({ r: b.r + 2, c: b.c });
+        // 床位：实心格内随机（避开边界格与门邻格，保证可达）
+        const pickBed = (shape, door, count) => {
+            const { grid, w, h } = shape;
+            const cands = [];
+            for (let r = 0; r < h; r++) {
+                for (let c = 0; c < w; c++) {
+                    if (grid[r][c] !== 1) continue;
+                    if (r === 0 || r === h - 1 || c === 0 || c === w - 1) continue;
+                    if (Math.abs(r - door.r) + Math.abs(c - door.c) <= 1) continue;
+                    cands.push({ r, c });
+                }
+            }
+            if (!cands.length) cands.push({ r: Math.floor(h / 2), c: Math.floor(w / 2) });
+            const beds = [];
+            const used = new Set();
+            while (beds.length < count && cands.length) {
+                const i = Math.floor(Math.random() * cands.length);
+                const b = cands.splice(i, 1)[0];
+                if (used.has(b.r * 100 + b.c)) continue;
+                used.add(b.r * 100 + b.c);
+                beds.push(b);
+            }
+            return beds;
+        };
+        // 10 个房间的类型组合（梯形数随机 1~2）
+        const trapCount = 1 + Math.floor(Math.random() * 2);
+        const kinds = ['small', 'big'];
+        for (let i = 0; i < trapCount; i++) kinds.push('trap');
+        while (kinds.length < 10) kinds.push(Math.random() < 0.25 ? 'l' : 'normal');
+        // 洗牌
+        for (let i = kinds.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [kinds[i], kinds[j]] = [kinds[j], kinds[i]];
+        }
+        // 贪心放置：随机落点、与已放房间留 ≥2 格间距、避开世界中心玩家出生区
+        const placed = [];
+        const cx0 = Math.round(this.cols / 2), cy0 = Math.round(this.rows / 2);
+        const overlaps = (x, y, w, h) => {
+            if (Math.abs((x + w / 2) - cx0) < 7 && Math.abs((y + h / 2) - cy0) < 7) return true; // 出生区留空
+            for (const p of placed) {
+                if (x < p.x + p.w + 2 && x + w + 2 > p.x && y < p.y + p.h + 2 && y + h + 2 > p.y) return true;
+            }
+            return false;
+        };
+        const roomsDef = [];
+        for (const kind of kinds) {
+            let shape = null, attempts = 0;
+            while (attempts++ < 160) {
+                const s = genRoomShape(kind);
+                const x = 1 + Math.floor(Math.random() * (this.cols - s.w - 3));
+                const y = 1 + Math.floor(Math.random() * (this.rows - s.h - 3));
+                if (overlaps(x, y, s.w, s.h)) continue;
+                placed.push({ x, y, w: s.w, h: s.h });
+                shape = { x, y, w: s.w, h: s.h, grid: s.grid };
+                break;
+            }
+            if (!shape) continue; // 极罕见兜底：该房跳过（下一局重试即可）
+            const door = pickDoor(shape);
+            shape.door = door;
+            roomsDef.push(shape);
+        }
+        // 床位：双人间（随机一个非小房）2 床，其余 1 床
+        const nonSmall = roomsDef.map((d, i) => ({ d, i })).filter(o => o.d.name !== 'small');
+        const doubleRoom = nonSmall.length ? nonSmall[Math.floor(Math.random() * nonSmall.length)] : null;
+        for (const d of roomsDef) {
+            const beds = pickBed(d, d.door, (doubleRoom && doubleRoom.d === d) ? 2 : 1);
+            if (!beds.length) beds.push({ r: Math.floor(d.h / 2), c: Math.floor(d.w / 2) });
+            d.beds = beds;
         }
         for (const d of roomsDef) {
             this.rooms.push({ x: d.x, y: d.y, w: d.w, h: d.h, tpl: { grid: d.grid, door: d.door, beds: d.beds } });
