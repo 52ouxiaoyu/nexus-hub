@@ -587,12 +587,16 @@
         if (!titleEl) return;
         const btn = document.createElement('button');
         btn.id = 'btn-help-guide';
-        btn.innerHTML = '<span class="hg-ico">📜</span>操作与道具说明';
-        // v4.0.123：主菜单改成「顶部工具行 + 独立标题」——按钮挂到右上角的 #menu-actions 里，
-        // 标题行只留中文 logo（用户：标题要在按钮下方、两条英文副标题取消）
-        const actions = document.querySelector('#start-menu #menu-actions');
-        if (actions) actions.appendChild(btn);
-        else titleEl.parentNode.insertBefore(btn, titleEl.nextSibling);
+        btn.innerHTML = '<span class="hg-ico">📜</span>操作与说明';
+        // v4.0.95：操作与说明做成窄卡，紧跟「我是僵尸」卡（用户：放在我是僵尸与成就之间）；
+        // 右上角 #menu-actions 只留成就按钮。旧版挂在 #menu-actions（v4.0.123 顶部条）作兜底。
+        const zombieBtn = document.querySelector('#start-menu #btn-zombie');
+        if (zombieBtn) zombieBtn.parentNode.insertBefore(btn, zombieBtn.nextSibling);
+        else {
+            const actions = document.querySelector('#start-menu #menu-actions');
+            if (actions) actions.appendChild(btn);
+            else titleEl.parentNode.insertBefore(btn, titleEl.nextSibling);
+        }
 
         // 弹窗骨架（含 v3.40.0 详情卡覆盖层）
         const modal = document.createElement('div');

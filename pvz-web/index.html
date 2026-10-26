@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1792751289">
-    <link rel="stylesheet" href="css/haunted-dorm.css?v=1792751289">
+    <link rel="stylesheet" href="css/style.css?v=1793024628">
+    <link rel="stylesheet" href="css/haunted-dorm.css?v=1793024628">
 </head>
 <body>
     <div id="game-container">
@@ -92,61 +92,66 @@
                 content: ''; position: absolute; inset: 0; pointer-events: none;
                 background: linear-gradient(180deg, rgba(120,190,255,0.28) 0%, rgba(120,190,255,0.05) 34%, transparent 50%);
             }
-            /* ===== v4.0.123 顶部条：左上角「玩家名 + 返回」，右上角「操作与道具说明 / 成就」 =====
-               改前 玩家名与返回键压在「双人对战」卡片左下角（footer 绝对定位叠在卡片上），
-               标题 + 两个按钮挤在同一行、下面还挂着一条英文副标题。现在：顶部单独一条工具行，
-               标题（植物大战僵尸）单独居中，正好落在「融合进化 / 砸罐子」两卡的正上方。 */
+            /* ===== v4.0.95 顶部条：左上角「玩家名 + 返回」放大、右上角只留「成就」，
+               操作与说明移到「我是僵尸」卡右侧（用户：放在我是僵尸与成就之间）；
+               标题区域空间扩大一倍（上移 + 字号加大） =====
+               v4.0.123 起布局：顶部单独一条工具行，标题（植物大战僵尸）单独居中，
+               正好落在「融合进化 / 砸罐子」两卡的正上方。 */
             .menu-topbar {
                 position: absolute; top: 0; left: 0; right: 0; z-index: 6;
                 display: flex; align-items: flex-start; justify-content: space-between;
-                padding: 12px 16px 0; pointer-events: none;
+                padding: 18px 24px 0; pointer-events: none;
             }
             .menu-topbar > * { pointer-events: auto; }
-            .menu-corner { display: flex; align-items: center; gap: 10px; }
-            .menu-actions { display: flex; align-items: center; gap: 10px; }
-            /* ===== 标题 ===== */
-            .menu-title { position: relative; z-index: 2; margin-top: 62px; text-align: center; }
+            .menu-corner { display: flex; align-items: center; gap: 14px; }
+            .menu-actions { display: flex; align-items: center; gap: 12px; }
+            /* ===== 标题：v4.0.95 空间扩大一倍（margin-top 62→118px，字号 46→58px） ===== */
+            .menu-title { position: relative; z-index: 2; margin-top: 118px; text-align: center; }
             .menu-title .game-title {
                 font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif;
-                font-size: 46px; font-weight: 900; letter-spacing: 5px; line-height: 1.1;
+                font-size: 58px; font-weight: 900; letter-spacing: 8px; line-height: 1.1;
                 color: #f7ffc4;
                 text-shadow: 3px 3px 0 #2e6b1e, -2px 2px 0 #2e6b1e, 2px -2px 0 #2e6b1e, -2px -2px 0 #2e6b1e,
                              0 6px 14px rgba(0,0,0,0.45);
             }
             .menu-title .game-title .pz { color: #9dff5e; }
             /* ===== 模式卡（种子包样式）：v3.7.0 起 4 卡一行 ===== */
-            .menu-cards { position: relative; z-index: 2; display: flex; gap: 20px; margin-top: 16px; flex-wrap: wrap; justify-content: center; max-width: 900px; }
+            .menu-cards { position: relative; z-index: 2; display: flex; gap: 20px; margin-top: 16px; flex-wrap: wrap; justify-content: center; max-width: 1100px; }
             /* ===== v3.81.1 双人对战：第五张模式卡（与四卡同款种子包样式）=====
                宽 = 砸罐子卡 + 间距 + 我是僵尸卡（208+18+208=434px）；
                高 = 第一行卡片下方的剩余空间（flex:1 撑满）；矮宽卡用左图右文横排
                v3.81.3：位置改到「砸罐子+我是僵尸」两列正下方——#vs-row 与卡片行同宽(886px)居中
                v3.86.0：#vs-row 一行两张宽卡（双人对战 + 猛鬼宿舍），两端对齐与其他卡行同宽对齐 */
+            /* v4.0.95：vs-row 两张宽卡宽度收紧（419→310px），不再占满屏幕；
+               flex: 0 0 auto + justify-content: center 保证行居中、卡不收缩 */
             #vs-row {
                 position: relative; z-index: 2;
-                display: flex; justify-content: space-between; align-items: stretch; gap: 18px;
-                width: 856px; max-width: 100%;
-                flex: 1 1 0; min-height: 0;
+                display: flex; justify-content: center; align-items: stretch; gap: 18px;
+                width: 638px; max-width: 100%;
+                margin-top: 12px;
+                flex: 0 0 auto; min-height: 0;
             }
             /* v3.86.0：猛鬼宿舍宽卡与双人对战完全同款（同尺寸/同横排布局），仅配色不同 */
             #btn-vs, #btn-dorm {
-                width: 419px; flex: 0 0 419px; height: auto; min-height: 104px;
+                width: 310px; flex: 0 0 auto; height: auto; min-height: 104px;
                 margin-top: 0px; margin-bottom: 10px;
                 position: relative; z-index: 3;
                 padding: 9px 14px;
                 flex-direction: row; align-items: center; gap: 14px;
             }
-            #btn-vs .pkt-art, #btn-dorm .pkt-art { flex: 0 0 150px; width: 150px; height: auto; align-self: stretch; }
-            #btn-vs .pkt-art img, #btn-dorm .pkt-art img { height: 56px; }
-            #btn-vs .vs-duel, #btn-dorm .vs-duel { display: flex; align-items: center; gap: 8px; }
+            /* v4.0.95：宽度收紧后内部元素等比缩小（艺术区 150→104px、文字/配图同步调小） */
+            #btn-vs .pkt-art, #btn-dorm .pkt-art { flex: 0 0 104px; width: 104px; height: auto; align-self: stretch; }
+            #btn-vs .pkt-art img, #btn-dorm .pkt-art img { height: 46px; }
+            #btn-vs .vs-duel, #btn-dorm .vs-duel { display: flex; align-items: center; gap: 6px; }
             #btn-vs .vs-badge {
-                font-family: Impact, 'Arial Black', sans-serif; font-size: 24px; font-weight: 900;
+                font-family: Impact, 'Arial Black', sans-serif; font-size: 20px; font-weight: 900;
                 color: #c0211e; text-shadow: 2px 2px 0 #fff, 3px 3px 0 rgba(0,0,0,0.3);
                 transform: rotate(-6deg); animation: vs-pulse 1.6s ease-in-out infinite;
             }
             #btn-vs .vs-text, #btn-dorm .vs-text { flex: 1; display: flex; flex-direction: column; align-items: center; }
-            #btn-vs .pkt-name, #btn-dorm .pkt-name { font-size: 23px; letter-spacing: 6px; margin-top: 0; }
-            #btn-vs .pkt-tag, #btn-dorm .pkt-tag { font-size: 11px; margin-top: 3px; letter-spacing: 3px; padding: 1px 8px; }
-            #btn-vs .pkt-sub, #btn-dorm .pkt-sub { font-size: 12px; margin-top: 5px; line-height: 1.5; }
+            #btn-vs .pkt-name, #btn-dorm .pkt-name { font-size: 20px; letter-spacing: 5px; margin-top: 0; }
+            #btn-vs .pkt-tag, #btn-dorm .pkt-tag { font-size: 10px; margin-top: 2px; letter-spacing: 2px; padding: 1px 6px; }
+            #btn-vs .pkt-sub, #btn-dorm .pkt-sub { font-size: 10.5px; margin-top: 3px; line-height: 1.45; }
             /* v3.87.0：猛鬼宿舍不再使用专属配色，文字与其他模式卡完全一致 */
             /* ===== v4.0.112 守屋卡片封面重做：远小近大三段景深 + 原版投影/阳光 =====
                改前：三只植物 flex 横排、尺寸 100/62/62 → 总宽 193px 挤在 158px 画布里，
@@ -293,14 +298,15 @@
             }
             .pkt-sub b { color: #3f6e1f; }
             /* 底部信息行 */
+            /* v4.0.95：左上角玩家名放大（15→22px，PLAYER 小标同步放大） */
             .menu-corner .player {
-                font-family: 'Kaiti SC', serif; font-size: 15px; line-height: 1.15; text-align: left;
+                font-family: 'Kaiti SC', serif; font-size: 22px; line-height: 1.15; text-align: left;
                 color: #f5e6c8; white-space: nowrap;
                 text-shadow: 1px 1px 0 #3a2410, 0 2px 6px rgba(0,0,0,0.6);
             }
             .menu-corner .player small {
-                display: block; font-family: monospace; font-size: 10px;
-                color: rgba(255,255,255,0.75); letter-spacing: 1px;
+                display: block; font-family: monospace; font-size: 13px;
+                color: rgba(255,255,255,0.75); letter-spacing: 2px;
             }
             /* 版本徽标：右下角小号芯片（v4.0.123 起只显示 v4.0.x，完整说明进 title） */
             .ver {
@@ -310,19 +316,35 @@
                 border-radius: 10px; padding: 3px 9px; pointer-events: auto;
                 text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
             }
-            /* v3.73.0 返回 Game Center：小号黑底白字按钮（用户：一格大小/去图标只写"返回"/黑底白字） */
+            /* v3.73.0 返回 Game Center：v4.0.95 放大（padding/字号加大），黑底白字不变 */
             #btn-back-gc {
                 display: inline-flex; align-items: center; white-space: nowrap;
-                margin-left: 12px; pointer-events: auto;
-                padding: 4px 14px;
+                margin-left: 14px; pointer-events: auto;
+                padding: 8px 26px;
                 font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif;
-                font-size: 14px; font-weight: 700; letter-spacing: 2px;
+                font-size: 20px; font-weight: 700; letter-spacing: 4px;
                 color: #fff; cursor: pointer;
                 background: #000;
-                border: 1px solid rgba(255,255,255,0.45); border-radius: 8px;
+                border: 2px solid rgba(255,255,255,0.55); border-radius: 10px;
                 transition: transform .12s ease, filter .12s ease;
             }
             #btn-back-gc:hover { transform: translateY(-2px); filter: brightness(1.35); }
+            /* v4.0.95：操作与说明做成窄版入口卡，紧跟「我是僵尸」卡（用户：放在我是僵尸与成就之间，
+               右上角只留成就按钮）——同模式卡木牌质感，图标在上文字在下 */
+            #btn-help-guide {
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                width: 176px; flex: 0 0 176px; min-height: 104px;
+                padding: 8px 6px; cursor: pointer;
+                font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif;
+                font-size: 20px; font-weight: 900; letter-spacing: 4px; text-align: center;
+                color: #f7e9c0; text-shadow: 1px 1px 0 #2a1c0c;
+                background: linear-gradient(180deg,#7a5a33 0%,#5d4223 60%,#4a331b 100%);
+                border: 3px solid #3a2812; border-radius: 14px;
+                box-shadow: inset 0 2px 0 rgba(255,235,180,.25), 0 5px 12px rgba(0,0,0,.45);
+                transition: transform .12s ease, filter .12s ease;
+            }
+            #btn-help-guide:hover { transform: translateY(-2px); filter: brightness(1.12); }
+            #btn-help-guide .hg-ico { font-size: 26px; margin-bottom: 3px; line-height: 1; }
         </style>
         <div id="start-menu">
             <div class="menu-scene">
@@ -957,19 +979,19 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1792751289"></script>
-    <script src="js/Board.js?v=1792751289"></script>
-    <script src="js/entities/Entity.js?v=1792751289"></script>
-    <script src="js/entities/Plant.js?v=1792751289"></script>
-    <script src="js/entities/Zombie.js?v=1792751289"></script>
-    <script src="js/entities/Projectile.js?v=1792751289"></script>
-    <script src="js/entities/Sun.js?v=1792751289"></script>
-    <script src="js/managers/WaveManager.js?v=1792751289"></script>
-    <script src="js/managers/CollisionManager.js?v=1792751289"></script>
-    <script src="js/managers/EventManager.js?v=1792751289"></script>
-    <script src="js/GameLoop.js?v=1792751289"></script>
-    <script src="js/HelpGuide.js?v=1792751289"></script>
-    <script src="js/Achievements.js?v=1792751289"></script>
-    <script src="js/HauntedDorm.js?v=1792751289"></script>
+    <script src="js/InputManager.js?v=1793024628"></script>
+    <script src="js/Board.js?v=1793024628"></script>
+    <script src="js/entities/Entity.js?v=1793024628"></script>
+    <script src="js/entities/Plant.js?v=1793024628"></script>
+    <script src="js/entities/Zombie.js?v=1793024628"></script>
+    <script src="js/entities/Projectile.js?v=1793024628"></script>
+    <script src="js/entities/Sun.js?v=1793024628"></script>
+    <script src="js/managers/WaveManager.js?v=1793024628"></script>
+    <script src="js/managers/CollisionManager.js?v=1793024628"></script>
+    <script src="js/managers/EventManager.js?v=1793024628"></script>
+    <script src="js/GameLoop.js?v=1793024628"></script>
+    <script src="js/HelpGuide.js?v=1793024628"></script>
+    <script src="js/Achievements.js?v=1793024628"></script>
+    <script src="js/HauntedDorm.js?v=1793024628"></script>
 </body>
 </html>
