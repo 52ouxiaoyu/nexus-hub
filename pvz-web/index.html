@@ -364,14 +364,14 @@
                 100% { transform: translate(0, 0); }
             }
             /* ===== v4.0.126 主页惊喜 ② 彩蛋猫（动态游走·每次打开位置都不同）=====
-               v4.0.130：猫缩小 0.65 并提到卡片前景层（z-index 5）——v4.0.129 主菜单
-               4 列网格把底部空间占满，猫改在卡片前景自由游走，更生动不挡操作 */
-            .menu-cat-wrap { position: absolute; bottom: 2.5%; z-index: 5; pointer-events: none;
+               v4.0.131：缩到 0.45 并压到画布最底部那条 30px 地面带（卡片到 570 结束）——
+               原来的 0.65 + bottom 2.5% 会让猫横穿「双人对战 / 守屋」卡片、压住副标题文字。 */
+            .menu-cat-wrap { position: absolute; bottom: 0; z-index: 5; pointer-events: none;
                              transition: transform 0.22s ease; }
             .menu-cat { position: relative; width: 86px; height: 66px; pointer-events: auto; cursor: pointer;
-                        transform: scale(0.65); }
+                        transform: scale(0.45); }
             .menu-cat.jump { animation: catjump .7s ease; }
-            @keyframes catjump { 0%, 100% { transform: scale(0.65) translateY(0); } 42% { transform: scale(0.65) translateY(-36px); } }
+            @keyframes catjump { 0%, 100% { transform: scale(0.45) translateY(0); } 42% { transform: scale(0.45) translateY(-26px); } }
             .cat-body { position: absolute; left: 10px; top: 18px; width: 58px; height: 34px;
                 background: linear-gradient(180deg, #ffb25e, #e88a2e); border-radius: 26px 34px 26px 26px; }
             .cat-stripe1, .cat-stripe2 { position: absolute; top: 5px; width: 10px; height: 5px;
@@ -550,12 +550,12 @@
             <style>
                 /* v4.0.129 小游戏占位提示（不弹窗、不挡操作，2.2 秒自动消失） */
                 #mg-toast {
-                    position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%);
+                    position: absolute; left: 50%; bottom: 3px; transform: translateX(-50%);
                     z-index: 9; display: none; white-space: nowrap;
-                    padding: 9px 22px; border-radius: 12px;
+                    padding: 4px 16px; border-radius: 10px;
                     background: rgba(38,24,10,0.9); border: 2px solid #caa95f;
                     color: #f7e9c0; font-family: 'Kaiti SC','STKaiti','KaiTi',serif;
-                    font-size: 16px; letter-spacing: 1px;
+                    font-size: 13.5px; letter-spacing: 1px;
                     box-shadow: 0 8px 20px rgba(0,0,0,0.5); pointer-events: none;
                 }
             </style>
