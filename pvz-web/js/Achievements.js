@@ -3459,15 +3459,10 @@
             btn.onmouseleave = () => { btn.style.transform = ''; btn.style.filter = ''; };
             btn.innerHTML = '<span style="font-size:18px;">🏆</span>成就';
             btn.addEventListener('click', openPanel);
-            // v4.0.95：成就按钮固定在右上角 #menu-actions（操作与说明已移到「我是僵尸」卡右侧窄卡）
-            const actions = document.querySelector('#start-menu #menu-actions');
-            if (actions) actions.appendChild(btn);
-            else {
-                // 兜底：排在「操作与道具说明」按钮正右边（同排同尺寸）
-                const helpBtn = document.getElementById('btn-help-guide');
-                if (helpBtn) helpBtn.parentNode.insertBefore(btn, helpBtn.nextSibling);
-                else titleEl.parentNode.insertBefore(btn, titleEl.nextSibling);
-            }
+            // v4.0.128：排在「操作与道具说明」按钮正右边（同排同尺寸）
+            const helpBtn = document.getElementById('btn-help-guide');
+            if (helpBtn) helpBtn.parentNode.insertBefore(btn, helpBtn.nextSibling);
+            else titleEl.parentNode.insertBefore(btn, titleEl.nextSibling);
         } catch (e) { /* 无主菜单（如守屋页）不挂按钮 */ }
     }
 

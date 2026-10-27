@@ -587,16 +587,13 @@
         if (!titleEl) return;
         const btn = document.createElement('button');
         btn.id = 'btn-help-guide';
-        btn.innerHTML = '<span class="hg-ico">📜</span>操作与说明';
-        // v4.0.95：操作与说明做成窄卡，紧跟「我是僵尸」卡（用户：放在我是僵尸与成就之间）；
-        // 右上角 #menu-actions 只留成就按钮。旧版挂在 #menu-actions（v4.0.123 顶部条）作兜底。
-        const zombieBtn = document.querySelector('#start-menu #btn-zombie');
-        if (zombieBtn) zombieBtn.parentNode.insertBefore(btn, zombieBtn.nextSibling);
-        else {
-            const actions = document.querySelector('#start-menu #menu-actions');
-            if (actions) actions.appendChild(btn);
-            else titleEl.parentNode.insertBefore(btn, titleEl.nextSibling);
-        }
+        btn.innerHTML = '<span class="hg-ico">📜</span>操作与道具说明';
+        // v4.0.128：恢复 v4.0.123 的位置——右上角顶部工具行 #menu-actions。
+        // 用户要「标题在说明下方、卡片在标题下方」，说明必须是顶部按钮，不能挤进卡片行
+        // （v4.0.125 把它做成第 5 张卡后，一行塞 5 张 → 卡片被压扁、封面图变小变残）。
+        const actions = document.querySelector('#start-menu #menu-actions');
+        if (actions) actions.appendChild(btn);
+        else titleEl.parentNode.insertBefore(btn, titleEl.nextSibling);
 
         // 弹窗骨架（含 v3.40.0 详情卡覆盖层）
         const modal = document.createElement('div');

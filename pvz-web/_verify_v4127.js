@@ -18,7 +18,10 @@ function ok(cond, msg) {
 (async () => {
     console.log('[A] 源码不再有 1.5 倍上限');
     const html = fs.readFileSync('/Users/clawbox/nexus-hub/pvz-web/index.html', 'utf8');
-    ok(!/Math\.min\(\s*scaleX\s*,\s*scaleY\s*,\s*1\.5\s*\)/.test(html), 'resizeGame() 里没有 `, 1.5` 硬上限');
+    // v4.0.128：只检查「真代码」——注释里会出现 `Math.min(scaleX, scaleY, 1.5)` 这段历史说明，
+    // 直接 grep 源码会命中注释而假失败（本脚本自己就踩过）。
+    const codeOnly = html.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+    ok(!/Math\.min\(\s*scaleX\s*,\s*scaleY\s*,\s*1\.5\s*\)/.test(codeOnly), 'resizeGame() 里没有 `, 1.5` 硬上限（已剔除注释）');
     ok(/const scale = Math\.min\(scaleX, scaleY\);/.test(html), 'scale = Math.min(scaleX, scaleY)（纯等比）');
 
     const browser = await puppeteer.launch({

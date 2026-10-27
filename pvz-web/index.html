@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1793026238">
-    <link rel="stylesheet" href="css/haunted-dorm.css?v=1793026238">
+    <link rel="stylesheet" href="css/style.css?v=1793107876">
+    <link rel="stylesheet" href="css/haunted-dorm.css?v=1793107876">
 </head>
 <body>
     <div id="game-container">
@@ -92,72 +92,61 @@
                 content: ''; position: absolute; inset: 0; pointer-events: none;
                 background: linear-gradient(180deg, rgba(120,190,255,0.28) 0%, rgba(120,190,255,0.05) 34%, transparent 50%);
             }
-            /* ===== v4.0.95 顶部条：左上角「玩家名 + 返回」放大、右上角只留「成就」，
-               操作与说明移到「我是僵尸」卡右侧（用户：放在我是僵尸与成就之间）；
-               标题区域空间扩大一倍（上移 + 字号加大） =====
-               v4.0.123 起布局：顶部单独一条工具行，标题（植物大战僵尸）单独居中，
-               正好落在「融合进化 / 砸罐子」两卡的正上方。 */
+            /* ===== v4.0.123 顶部条：左上角「玩家名 + 返回」，右上角「操作与道具说明 / 成就」 =====
+               改前 玩家名与返回键压在「双人对战」卡片左下角（footer 绝对定位叠在卡片上），
+               标题 + 两个按钮挤在同一行、下面还挂着一条英文副标题。现在：顶部单独一条工具行，
+               标题（植物大战僵尸）单独居中，正好落在「融合进化 / 砸罐子」两卡的正上方。 */
             .menu-topbar {
                 position: absolute; top: 0; left: 0; right: 0; z-index: 6;
                 display: flex; align-items: flex-start; justify-content: space-between;
-                padding: 18px 24px 0; pointer-events: none;
+                padding: 12px 16px 0; pointer-events: none;
             }
             .menu-topbar > * { pointer-events: auto; }
-            .menu-corner { display: flex; align-items: center; gap: 14px; }
-            .menu-actions { display: flex; align-items: center; gap: 12px; }
-            /* ===== 标题：v4.0.95 空间扩大一倍（margin-top 62→118px，字号 46→58px） ===== */
-            .menu-title { position: relative; z-index: 2; margin-top: 78px; text-align: center; }
+            .menu-corner { display: flex; align-items: center; gap: 10px; }
+            .menu-actions { display: flex; align-items: center; gap: 10px; }
+            /* ===== 标题 ===== */
+            .menu-title { position: relative; z-index: 2; margin-top: 62px; text-align: center; }
             .menu-title .game-title {
                 font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif;
-                font-size: 58px; font-weight: 900; letter-spacing: 8px; line-height: 1.1;
+                font-size: 46px; font-weight: 900; letter-spacing: 5px; line-height: 1.1;
                 color: #f7ffc4;
                 text-shadow: 3px 3px 0 #2e6b1e, -2px 2px 0 #2e6b1e, 2px -2px 0 #2e6b1e, -2px -2px 0 #2e6b1e,
                              0 6px 14px rgba(0,0,0,0.45);
             }
             .menu-title .game-title .pz { color: #9dff5e; }
             /* ===== 模式卡（种子包样式）：v3.7.0 起 4 卡一行 ===== */
-            /* v4.0.125：flex-wrap: nowrap——5 张卡（4 模式卡+操作与说明）永远一行，
-               小窗口由 flex-shrink 等比例收紧（min-width 保护可读性），不再把说明卡挤到第二行 */
-            .menu-cards { position: relative; z-index: 2; display: flex; gap: 14px; margin-top: 8px; flex-wrap: nowrap; justify-content: center; max-width: 900px; }
-            .menu-cards .mode-card { min-width: 150px; }
+            .menu-cards { position: relative; z-index: 2; display: flex; gap: 20px; margin-top: 16px; flex-wrap: wrap; justify-content: center; max-width: 900px; }
             /* ===== v3.81.1 双人对战：第五张模式卡（与四卡同款种子包样式）=====
                宽 = 砸罐子卡 + 间距 + 我是僵尸卡（208+18+208=434px）；
                高 = 第一行卡片下方的剩余空间（flex:1 撑满）；矮宽卡用左图右文横排
                v3.81.3：位置改到「砸罐子+我是僵尸」两列正下方——#vs-row 与卡片行同宽(886px)居中
                v3.86.0：#vs-row 一行两张宽卡（双人对战 + 猛鬼宿舍），两端对齐与其他卡行同宽对齐 */
-            /* v4.0.95：vs-row 两张宽卡宽度收紧（419→310px），不再占满屏幕；
-               flex: 0 0 auto + justify-content: center 保证行居中、卡不收缩 */
             #vs-row {
                 position: relative; z-index: 2;
-                display: flex; justify-content: center; align-items: stretch; gap: 18px;
-                width: 638px; max-width: 100%;
-                margin-top: 8px;
-                flex: 0 0 auto; min-height: 0;
+                display: flex; justify-content: space-between; align-items: stretch; gap: 18px;
+                width: 856px; max-width: 100%;
+                flex: 1 1 0; min-height: 0;
             }
-            /* v3.86.0：猛鬼宿舍宽卡与双人对战完全同款；v4.0.125 改竖排——
-               与 4 张模式卡同构（顶部绿色插图区 + 下方文字），绿色区面积与模式卡统一相等 */
+            /* v3.86.0：猛鬼宿舍宽卡与双人对战完全同款（同尺寸/同横排布局），仅配色不同 */
             #btn-vs, #btn-dorm {
-                width: 310px; flex: 0 0 auto; height: auto; min-height: 104px;
+                width: 419px; flex: 0 0 419px; height: auto; min-height: 104px;
                 margin-top: 0px; margin-bottom: 10px;
                 position: relative; z-index: 3;
                 padding: 9px 14px;
-                flex-direction: column; align-items: center; gap: 8px;
+                flex-direction: row; align-items: center; gap: 14px;
             }
-            /* v4.0.125：所有卡片绿色插图区统一为 176×110（面积相等，不再一高一矮） */
-            #btn-vs .pkt-art, #btn-dorm .pkt-art { flex: 0 0 100px; width: 176px; height: 100px; align-self: center; }
-            /* v4.0.125：修复双人对战卡豌豆射手/僵尸图被 object-fit:fill 46×46 拉伸裁切（图不完整、脚缺失）——
-               改为等比 contain + 52px 高，完整显示 */
-            #btn-vs .pkt-art img, #btn-dorm .pkt-art img { height: 52px; width: auto; object-fit: contain; }
-            #btn-vs .vs-duel, #btn-dorm .vs-duel { display: flex; align-items: center; justify-content: center; gap: 8px; }
+            #btn-vs .pkt-art, #btn-dorm .pkt-art { flex: 0 0 150px; width: 150px; height: auto; align-self: stretch; }
+            #btn-vs .pkt-art img, #btn-dorm .pkt-art img { height: 56px; }
+            #btn-vs .vs-duel, #btn-dorm .vs-duel { display: flex; align-items: center; gap: 8px; }
             #btn-vs .vs-badge {
-                font-family: Impact, 'Arial Black', sans-serif; font-size: 20px; font-weight: 900;
+                font-family: Impact, 'Arial Black', sans-serif; font-size: 24px; font-weight: 900;
                 color: #c0211e; text-shadow: 2px 2px 0 #fff, 3px 3px 0 rgba(0,0,0,0.3);
                 transform: rotate(-6deg); animation: vs-pulse 1.6s ease-in-out infinite;
             }
             #btn-vs .vs-text, #btn-dorm .vs-text { flex: 1; display: flex; flex-direction: column; align-items: center; }
-            #btn-vs .pkt-name, #btn-dorm .pkt-name { font-size: 20px; letter-spacing: 5px; margin-top: 0; }
-            #btn-vs .pkt-tag, #btn-dorm .pkt-tag { font-size: 10px; margin-top: 2px; letter-spacing: 2px; padding: 1px 6px; }
-            #btn-vs .pkt-sub, #btn-dorm .pkt-sub { font-size: 10.5px; margin-top: 3px; line-height: 1.45; }
+            #btn-vs .pkt-name, #btn-dorm .pkt-name { font-size: 23px; letter-spacing: 6px; margin-top: 0; }
+            #btn-vs .pkt-tag, #btn-dorm .pkt-tag { font-size: 11px; margin-top: 3px; letter-spacing: 3px; padding: 1px 8px; }
+            #btn-vs .pkt-sub, #btn-dorm .pkt-sub { font-size: 12px; margin-top: 5px; line-height: 1.5; }
             /* v3.87.0：猛鬼宿舍不再使用专属配色，文字与其他模式卡完全一致 */
             /* ===== v4.0.112 守屋卡片封面重做：远小近大三段景深 + 原版投影/阳光 =====
                改前：三只植物 flex 横排、尺寸 100/62/62 → 总宽 193px 挤在 158px 画布里，
@@ -189,36 +178,35 @@
             #btn-dorm .pkt-art.dorm .dorm-sun { position: absolute; transform: none; }
             /* v4.0.123 重新排位（用户：高坚果放最右、豌豆移到中间并换双发）：
                向日葵 左（远/小） → 双发豌豆 中（主景） → 高坚果 右（近/最厚）。
-               v4.0.125：插图区加宽到 176px（与模式卡同面积），三景深整体右移居中 */
+               双发与高坚果之间留 6px 空隙，炮口不会被盾牌压住。 */
             #btn-dorm .pkt-art.dorm .dorm-hero {
-                height: 66px; left: 53px; bottom: 9px; z-index: 4;
+                height: 66px; left: 30px; bottom: 9px; z-index: 4;
                 filter: drop-shadow(0 4px 5px rgba(30,60,10,0.5));
             }
-            #btn-dorm .pkt-art.dorm .dorm-side-l { height: 38px; left: 26px; bottom: 17px; z-index: 2; }
-            #btn-dorm .pkt-art.dorm .dorm-side-r { height: 84px; right: 24px; bottom: 5px; z-index: 5; }
+            #btn-dorm .pkt-art.dorm .dorm-side-l { height: 38px; left: 3px; bottom: 17px; z-index: 2; }
+            #btn-dorm .pkt-art.dorm .dorm-side-r { height: 84px; right: 1px; bottom: 5px; z-index: 5; }
             /* 贴地投影（原版 plantshadow32.png，压在草台阶之上、植物之下） */
             #btn-dorm .pkt-art.dorm .dorm-sh {
                 position: absolute; z-index: 1;
                 background: url('assets/images/interface/plantshadow32.png') center/100% 100% no-repeat;
                 pointer-events: none;
             }
-            #btn-dorm .pkt-art.dorm .dorm-sh-l { width: 30px; height: 9px; left: 28px; bottom: 15px; }
-            #btn-dorm .pkt-art.dorm .dorm-sh-c { width: 46px; height: 13px; left: 59px; bottom: 6px; }
-            #btn-dorm .pkt-art.dorm .dorm-sh-r { width: 42px; height: 12px; right: 27px; bottom: 3px; }
+            #btn-dorm .pkt-art.dorm .dorm-sh-l { width: 30px; height: 9px; left: 5px; bottom: 15px; }
+            #btn-dorm .pkt-art.dorm .dorm-sh-c { width: 46px; height: 13px; left: 36px; bottom: 6px; }
+            #btn-dorm .pkt-art.dorm .dorm-sh-r { width: 42px; height: 12px; right: 4px; bottom: 3px; }
             /* v4.0.123：阳光原来只上下浮 6px（几乎看不出来）——改成在上方空白区缓慢游走一圈，
-               11 秒一轮、纯位移不缩放，不会抢植物的视觉重心。
-               v4.0.125：放大到 38px（≈向日葵高度），游走范围同步略增。 */
+               11 秒一轮、纯位移不缩放，不会抢植物的视觉重心。 */
             #btn-dorm .pkt-art.dorm .dorm-sun {
-                left: 10px; top: 6px; width: 38px; height: 38px; z-index: 6; opacity: .95;
+                left: 8px; top: 7px; width: 24px; height: 24px; z-index: 6; opacity: .95;
                 filter: drop-shadow(0 0 9px rgba(255,231,110,1));
                 animation: dorm-sun-float 11s ease-in-out infinite;
             }
             @keyframes dorm-sun-float {
                 0%   { transform: translate(0, 0) rotate(0deg); }
-                20%  { transform: translate(28px, 10px) rotate(10deg); }
-                42%  { transform: translate(62px, 4px) rotate(2deg); }
-                62%  { transform: translate(78px, -7px) rotate(-8deg); }
-                80%  { transform: translate(34px, -9px) rotate(-4deg); }
+                20%  { transform: translate(22px, 9px) rotate(10deg); }
+                42%  { transform: translate(48px, 3px) rotate(2deg); }
+                62%  { transform: translate(58px, -6px) rotate(-8deg); }
+                80%  { transform: translate(26px, -8px) rotate(-4deg); }
                 100% { transform: translate(0, 0) rotate(0deg); }
             }
             /* v3.87.0 猛鬼宿舍阵营弹窗：按钮名文字统一为同一颜色（不再绿/红区分），僵尸阵营按钮也用米黄底 */
@@ -240,14 +228,14 @@
             .vz-card.picked { border-color: #9dff5e; background: rgba(157,255,94,0.16); filter: brightness(1.15); }
             .vz-card:hover { background: rgba(255,255,255,0.18); }
             .mode-card {
-                width: 158px; height: 200px;
+                width: 196px; height: 258px;
                 background: linear-gradient(180deg, #fdf3d0 0%, #f3e2ab 78%, #e6cf8c 100%);
                 border: 6px solid #6b4a22;
                 border-radius: 18px;
                 box-shadow: inset 0 0 0 2px #caa95f, inset 0 0 24px rgba(120,80,20,0.18),
                             0 12px 26px rgba(0,0,0,0.45);
                 cursor: pointer;
-                padding: 8px 8px 10px;
+                padding: 10px 10px 12px;
                 display: flex; flex-direction: column; align-items: center;
                 font-family: inherit;
                 transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
@@ -262,7 +250,7 @@
             .mode-card:active { transform: translateY(-2px) scale(0.99); }
             /* 卡头插图区 */
             .pkt-art {
-                width: 100%; height: 82px; flex: 0 0 82px; border-radius: 12px;
+                width: 100%; height: 104px; flex: 0 0 104px; border-radius: 12px;
                 background: linear-gradient(180deg, #bfe89a 0%, #a4d87a 100%);
                 border: 3px solid #55703a;
                 box-shadow: inset 0 -10px 18px rgba(40,80,20,0.25);
@@ -270,88 +258,71 @@
                 overflow: hidden;
                 position: relative;
             }
-            .pkt-art img { height: 72px; width: auto; image-rendering: pixelated; }
+            .pkt-art img { height: 96px; width: auto; image-rendering: pixelated; }
             /* 融合卡：公式排版（两行：植物+植物  / = ？）*/
-            .pkt-art.formula { flex-direction: column; gap: 2px; font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif; color: #3a2a10; }
+            .pkt-art.formula { flex-direction: column; gap: 6px; font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif; color: #3a2a10; }
             .pkt-art.formula .row { display: flex; align-items: center; justify-content: center; }
             .pkt-art.formula .row.plants { gap: 8px; }
-            .pkt-art.formula .row.plants img { height: 42px; width: auto; image-rendering: pixelated; display: block; }
+            .pkt-art.formula .row.plants img { height: 58px; width: auto; image-rendering: pixelated; display: block; }
             .pkt-art.formula .row.plants .img-a { transform: translateY(2px); }
             /* v3.13.0：封面改用静止态樱桃炸弹（倭瓜是竖长图，压到 58px 后太窄显小） */
-            .pkt-art.formula .row.plants .img-b { height: 42px; transform: translateY(2px); }
-            .pkt-art.formula .row.result  { gap: 4px; margin-top: -6px; }
-            .pkt-art.formula .formula-op   { font-size: 16px; font-weight: 900; color: #a14b18; line-height: 1; }
-            .pkt-art.formula .formula-eq   { font-size: 20px; font-weight: 900; color: #4a3414; line-height: 1; }
-            .pkt-art.formula .formula-q    { font-size: 22px; font-weight: 900; color: #c0211e;
+            .pkt-art.formula .row.plants .img-b { height: 58px; transform: translateY(2px); }
+            .pkt-art.formula .row.result  { gap: 4px; margin-top: -2px; }
+            .pkt-art.formula .formula-op   { font-size: 22px; font-weight: 900; color: #a14b18; line-height: 1; }
+            .pkt-art.formula .formula-eq   { font-size: 26px; font-weight: 900; color: #4a3414; line-height: 1; }
+            .pkt-art.formula .formula-q    { font-size: 30px; font-weight: 900; color: #c0211e;
                 text-shadow: 1px 1px 0 #fff, 2px 2px 0 rgba(0,0,0,0.25);
                 animation: q-pulse 2.2s ease-in-out infinite;
                 display: inline-block; transform-origin: center; }
             @keyframes q-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
             .pkt-name {
-                margin-top: 6px;
+                margin-top: 8px;
                 font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif;
-                font-size: 21px; font-weight: 900; letter-spacing: 4px; color: #4a3414;
+                font-size: 24px; font-weight: 900; letter-spacing: 4px; color: #4a3414;
                 text-shadow: 1px 1px 0 rgba(255,255,255,0.7);
             }
             .pkt-tag {
-                margin-top: 2px; font-family: monospace; font-size: 11px; font-weight: bold;
+                margin-top: 3px; font-family: monospace; font-size: 12px; font-weight: bold;
                 letter-spacing: 2px; color: #7a5c22;
                 background: rgba(255,255,255,0.35); border-radius: 9px; padding: 2px 9px;
             }
             .pkt-sub {
                 margin-top: 5px; text-align: center;
                 font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
-                font-size: 10.5px; line-height: 1.42; color: #6d5626;
+                font-size: 11.5px; line-height: 1.5; color: #6d5626;
             }
             .pkt-sub b { color: #3f6e1f; }
             /* 底部信息行 */
-            /* v4.0.95：左上角玩家名放大（15→22px，PLAYER 小标同步放大） */
             .menu-corner .player {
-                font-family: 'Kaiti SC', serif; font-size: 22px; line-height: 1.15; text-align: left;
+                font-family: 'Kaiti SC', serif; font-size: 15px; line-height: 1.15; text-align: left;
                 color: #f5e6c8; white-space: nowrap;
                 text-shadow: 1px 1px 0 #3a2410, 0 2px 6px rgba(0,0,0,0.6);
             }
             .menu-corner .player small {
-                display: block; font-family: monospace; font-size: 13px;
-                color: rgba(255,255,255,0.75); letter-spacing: 2px;
+                display: block; font-family: monospace; font-size: 10px;
+                color: rgba(255,255,255,0.75); letter-spacing: 1px;
             }
             /* 版本徽标：右下角小号芯片（v4.0.123 起只显示 v4.0.x，完整说明进 title） */
             .ver {
-                position: absolute; right: 10px; bottom: 6px; z-index: 6;
-                font-family: monospace; font-size: 10px; color: rgba(255,255,255,0.85);
+                position: absolute; right: 14px; bottom: 10px; z-index: 6;
+                font-family: monospace; font-size: 11px; color: rgba(255,255,255,0.85);
                 background: rgba(20,40,20,0.62); border: 1px solid rgba(255,255,255,0.22);
-                border-radius: 10px; padding: 2px 8px; pointer-events: auto;
+                border-radius: 10px; padding: 3px 9px; pointer-events: auto;
                 text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
             }
-            /* v3.73.0 返回 Game Center：v4.0.95 放大（padding/字号加大），黑底白字不变 */
+            /* v3.73.0 返回 Game Center：小号黑底白字按钮（用户：一格大小/去图标只写"返回"/黑底白字） */
             #btn-back-gc {
                 display: inline-flex; align-items: center; white-space: nowrap;
-                margin-left: 14px; pointer-events: auto;
-                padding: 8px 26px;
+                margin-left: 12px; pointer-events: auto;
+                padding: 4px 14px;
                 font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif;
-                font-size: 20px; font-weight: 700; letter-spacing: 4px;
+                font-size: 14px; font-weight: 700; letter-spacing: 2px;
                 color: #fff; cursor: pointer;
                 background: #000;
-                border: 2px solid rgba(255,255,255,0.55); border-radius: 10px;
+                border: 1px solid rgba(255,255,255,0.45); border-radius: 8px;
                 transition: transform .12s ease, filter .12s ease;
             }
             #btn-back-gc:hover { transform: translateY(-2px); filter: brightness(1.35); }
-            /* v4.0.95：操作与说明做成窄版入口卡，紧跟「我是僵尸」卡（用户：放在我是僵尸与成就之间，
-               右上角只留成就按钮）——同模式卡木牌质感，图标在上文字在下 */
-            #btn-help-guide {
-                display: flex; flex-direction: column; align-items: center; justify-content: center;
-                width: 140px; flex: 0 0 140px; min-width: 120px; min-height: 96px;
-                padding: 8px 5px; cursor: pointer;
-                font-family: 'Kaiti SC','STKaiti','KaiTi','楷体',serif;
-                font-size: 17px; font-weight: 900; letter-spacing: 2px; text-align: center;
-                color: #f7e9c0; text-shadow: 1px 1px 0 #2a1c0c;
-                background: linear-gradient(180deg,#7a5a33 0%,#5d4223 60%,#4a331b 100%);
-                border: 3px solid #3a2812; border-radius: 14px;
-                box-shadow: inset 0 2px 0 rgba(255,235,180,.25), 0 5px 12px rgba(0,0,0,.45);
-                transition: transform .12s ease, filter .12s ease;
-            }
-            #btn-help-guide:hover { transform: translateY(-2px); filter: brightness(1.12); }
-            #btn-help-guide .hg-ico { font-size: 22px; margin-bottom: 2px; line-height: 1; }
         </style>
         <div id="start-menu">
             <div class="menu-scene">
@@ -374,7 +345,7 @@
                         </div>
                         <div class="pkt-name">经典冒险</div>
                         <div class="pkt-tag">ADVENTURE</div>
-                        <div class="pkt-sub">原汁原味的防线塔防<br>白昼草地 · 经典植物</div>
+                        <div class="pkt-sub">原汁原味的防线塔防<br>白昼草地 · 经典植物 · 波次攻防</div>
                     </button>
 
                     <button id="btn-fusion" class="mode-card">
@@ -391,25 +362,25 @@
                         </div>
                         <div class="pkt-name">融合进化</div>
                         <div class="pkt-tag">FUSION</div>
-                        <div class="pkt-sub">两种植物合二为一<br>手套融合 · 55+ 秘密配方</div>
+                        <div class="pkt-sub">两种植物合二为一 · 进化新形态<br>手套融合 · 探索 55+ 秘密配方</div>
                     </button>
 
                     <button id="btn-vase" class="mode-card">
                         <div class="pkt-art vase">
-                            <img src="assets/images/Vase/Vase_Question.png" alt="问号罐子" class="vase-hero" style="height: 78px; width: auto; image-rendering: pixelated;">
+                            <img src="assets/images/Vase/Vase_Question.png" alt="问号罐子" class="vase-hero" style="height: 100px; width: auto; image-rendering: pixelated;">
                         </div>
                         <div class="pkt-name">砸罐子</div>
                         <div class="pkt-tag">VASEBREAKER</div>
-                        <div class="pkt-sub">锤开罐子 · 是敌是友？<br>植物罐稳赚 · 僵尸罐提防</div>
+                        <div class="pkt-sub">锤开罐子 · 里面是植物还是僵尸？<br>植物罐稳赚 · 僵尸罐提防</div>
                     </button>
 
                     <button id="btn-zombie" class="mode-card">
                         <div class="pkt-art zombie">
-                            <img src="assets/images/Zombies/Zombie/0.gif" alt="我是僵尸" style="height: 74px; width: auto; image-rendering: pixelated; transform: translateY(2px);">
+                            <img src="assets/images/Zombies/Zombie/0.gif" alt="我是僵尸" style="height: 96px; width: auto; image-rendering: pixelated; transform: translateY(2px);">
                         </div>
                         <div class="pkt-name">我是僵尸</div>
                         <div class="pkt-tag">I, ZOMBIE</div>
-                        <div class="pkt-sub">这次你当僵尸 · 指挥大军<br>啃穿防线 · 吃掉脑子通关</div>
+                        <div class="pkt-sub">这次换你当僵尸 · 指挥僵尸大军<br>啃穿植物防线 · 吃掉脑子即可通关</div>
                     </button>
                 </div>
 
@@ -845,10 +816,9 @@
             const container = document.getElementById('game-container');
             const scaleX = window.innerWidth / 900;
             const scaleY = window.innerHeight / 600;
-            // v4.0.127：撤掉 v4.0.125 的 1.5 倍上限——那行 `, 1.5` 会让 1350×900 以上的屏幕
-            // 不再放大，1920×1080 下画布只有 1350×900、四周一圈黑边，整个游戏缩在中间。
-            // 当初加上限是为了「菜单卡片被挤出第一行」，而 v4.0.126 已把菜单收口进 900×600 设计面
-            // （行宽 828、左右各留 36px），放大只是等比拉伸，不会再溢出。故恢复纯等比铺满。
+            // v4.0.128：画布永远按 900×600 设计面纯等比铺满，**不要**再加 `, 1.5` 之类的屏幕上限。
+            // v4.0.125 曾加过 `Math.min(scaleX, scaleY, 1.5)`，结果 1920×1080 只有 1350×900、
+            // 四周一圈黑边、整个游戏缩在中间。上限若确实需要，必须换算到设计面坐标再判断。
             const scale = Math.min(scaleX, scaleY);
             container.style.transform = `scale(${scale})`;
             container.style.transformOrigin = 'center center';
@@ -977,7 +947,7 @@
                         // 原样输出会把底部拉成一整行长条（视口窄时会盖住卡片）。完整说明放进 title。
                         const m = String(v.version).match(/v\d+\.\d+\.\d+/);
                         const shortVer = m ? m[0] : String(v.version);
-                        // v4.0.126：只显示版本号（带 build 时宽 252px，会压住守屋卡右下角）；build 放进 tooltip
+                        // v4.0.128：只显示版本号（带 build 时宽 252px，会压住守屋卡右下角）；build 放进 tooltip
                         const label = 'pvz-web ' + shortVer;
                         if (sv) { sv.textContent = label; sv.title = 'build ' + (v.build || '?') + '\n' + String(v.version) + '\n' + (v.feature || ''); }
                         if (el) { el.textContent = label; el.title = (v.feature || '') + '\nasset version: ' + (v.assetVersion || '?'); }
@@ -991,19 +961,19 @@
                 });
         })();
     </script>
-    <script src="js/InputManager.js?v=1793026238"></script>
-    <script src="js/Board.js?v=1793026238"></script>
-    <script src="js/entities/Entity.js?v=1793026238"></script>
-    <script src="js/entities/Plant.js?v=1793026238"></script>
-    <script src="js/entities/Zombie.js?v=1793026238"></script>
-    <script src="js/entities/Projectile.js?v=1793026238"></script>
-    <script src="js/entities/Sun.js?v=1793026238"></script>
-    <script src="js/managers/WaveManager.js?v=1793026238"></script>
-    <script src="js/managers/CollisionManager.js?v=1793026238"></script>
-    <script src="js/managers/EventManager.js?v=1793026238"></script>
-    <script src="js/GameLoop.js?v=1793026238"></script>
-    <script src="js/HelpGuide.js?v=1793026238"></script>
-    <script src="js/Achievements.js?v=1793026238"></script>
-    <script src="js/HauntedDorm.js?v=1793026238"></script>
+    <script src="js/InputManager.js?v=1793107876"></script>
+    <script src="js/Board.js?v=1793107876"></script>
+    <script src="js/entities/Entity.js?v=1793107876"></script>
+    <script src="js/entities/Plant.js?v=1793107876"></script>
+    <script src="js/entities/Zombie.js?v=1793107876"></script>
+    <script src="js/entities/Projectile.js?v=1793107876"></script>
+    <script src="js/entities/Sun.js?v=1793107876"></script>
+    <script src="js/managers/WaveManager.js?v=1793107876"></script>
+    <script src="js/managers/CollisionManager.js?v=1793107876"></script>
+    <script src="js/managers/EventManager.js?v=1793107876"></script>
+    <script src="js/GameLoop.js?v=1793107876"></script>
+    <script src="js/HelpGuide.js?v=1793107876"></script>
+    <script src="js/Achievements.js?v=1793107876"></script>
+    <script src="js/HauntedDorm.js?v=1793107876"></script>
 </body>
 </html>
