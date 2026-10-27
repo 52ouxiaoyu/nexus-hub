@@ -364,14 +364,22 @@
                 100% { transform: translate(0, 0); }
             }
             /* ===== v4.0.126 主页惊喜 ② 彩蛋猫（动态游走·每次打开位置都不同）=====
-               v4.0.131：缩到 0.45 并压到画布最底部那条 30px 地面带（卡片到 570 结束）——
-               原来的 0.65 + bottom 2.5% 会让猫横穿「双人对战 / 守屋」卡片、压住副标题文字。 */
-            .menu-cat-wrap { position: absolute; bottom: 0; z-index: 5; pointer-events: none;
-                             transition: transform 0.22s ease; }
+               v4.0.132：用户要求 ① 放大到原来一倍 0.45 → 0.9（视觉 77.4×59.4）② 在整屏自由走动，
+               不再局促在底部 30px 地面带。落脚点分两类：
+                 · 安全点（久坐/跳）：标题上方天空带、标题左侧空地、底部草地 —— 都不压按钮
+                 · 路过点（全屏随机，含卡片正上方，停 0.26s 就走）—— 所以能看到它横穿卡片
+               翻转用 .menu-cat 上的 --cat-face 变量做（不再翻 wrap），气泡/阳光因此不会被镜像。 */
+            .menu-cat-wrap { position: absolute; left: 0; top: 0; z-index: 5; pointer-events: none;
+                             will-change: left, top; }
             .menu-cat { position: relative; width: 86px; height: 66px; pointer-events: auto; cursor: pointer;
-                        transform: scale(0.45); }
+                        transform: scale(0.9) scaleX(var(--cat-face, 1)); }
+            /* 走路时让出点击：猫从「开始游戏」按钮上掠过时不能吃掉用户的点击，站定才可交互 */
+            .menu-cat.walking { pointer-events: none; }
             .menu-cat.jump { animation: catjump .7s ease; }
-            @keyframes catjump { 0%, 100% { transform: scale(0.45) translateY(0); } 42% { transform: scale(0.45) translateY(-26px); } }
+            @keyframes catjump {
+                0%, 100% { transform: scale(0.9) scaleX(var(--cat-face, 1)) translateY(0); }
+                42%      { transform: scale(0.9) scaleX(var(--cat-face, 1)) translateY(-26px); }
+            }
             .cat-body { position: absolute; left: 10px; top: 18px; width: 58px; height: 34px;
                 background: linear-gradient(180deg, #ffb25e, #e88a2e); border-radius: 26px 34px 26px 26px; }
             .cat-stripe1, .cat-stripe2 { position: absolute; top: 5px; width: 10px; height: 5px;
@@ -407,6 +415,10 @@
             .cat-bubble::after { content: ''; position: absolute; bottom: -7px; left: 24px;
                 border-left: 7px solid transparent; border-right: 7px solid transparent;
                 border-top: 8px solid #8a6a2f; }
+            /* 猫跑到屏幕上方（天空带）时气泡翻到脚下，否则头顶气泡会被画布裁掉 */
+            .cat-bubble.below { bottom: auto; top: 68px; }
+            .cat-bubble.below::after { bottom: auto; top: -7px; left: 30px;
+                border-top: none; border-bottom: 8px solid #8a6a2f; }
             .cat-sun { position: absolute; bottom: 58px; left: 8px; display: none; font-size: 24px;
                 color: #ffe45c; text-shadow: 0 0 8px #ffd54f; animation: sunpop 1.4s ease forwards; }
             @keyframes sunpop {
@@ -1149,30 +1161,65 @@
             }
             flyEl.innerHTML = f;
         }
-        /* ② 彩蛋猫：每次打开位置随机，自动游走/跳跃/坐下，点击互动 */
+        /* ② 彩蛋猫 v4.0.132：放大一倍 + 整屏游走（安全点久坐、路过点即走），点击互动 */
         var wrap = document.getElementById('menu-cat-wrap');
         var cat = document.getElementById('menu-cat');
         var bubble = document.getElementById('cat-bubble');
         var sun = document.getElementById('cat-sun');
         if (!wrap || !cat) return;
         var LINES = ['今天也要种向日葵哦', '喵～记得浇水！', '僵尸来了叫我一声', '嘘…我在埋伏僵尸', '好困…zzz', '你的阳光我承包了喵'];
+        var DESIGN_W = 900, DESIGN_H = 600;   // 设计面（#game-container 恒为 900×600）
+        var SPEED = 118;                      // 走路速度 px/s ≈ 1.5 个身长每秒（不飘、不快）
         var facing = 1;
-        /* 活动区：底部前景自由游走（0.5%~11% 设计面），猫在卡片前方穿过更生动 */
-        wrap.style.left = (0.5 + Math.random() * 10) + '%';
-        wrap.style.transition = 'left 1.15s ease, transform 0.22s ease';
-        cat.classList.add('sit');
+        /* 安全落脚点：坐标是 wrap 的 left/top（wrap 86×66，猫 scale0.9 后视觉 77.4×59.4 居中，
+           即上下各空 3.3px、左右各空 4.3px，视觉框 = [left+4.3, left+81.7] × [top+3.3, top+62.7]）。
+           实测卡片文字位置（设计面 900×600）：
+             行1 卡片 128.6~364.6｜插图 144.6~248.6｜标题 256.6~289.6｜英标 292.6~310.6｜说明 ~315~355
+             行2 卡片 378.6~570.6｜插图 392.6~474.6｜标题 480.6~510.6｜英标 512.6~526.6｜说明 530.6~546
+           所以「猫底 62.7 < 256.6」或「猫顶 3.3 > 355」才不压行1 文字；行2 同理。
+           三组落脚点：
+             · 顶部天空带 top=-6 → 猫 3.3~56.7，标题 62 起，完全不压
+             · 标题左侧   top=60 → 猫 63.3~122.7、x 至多 253.7，标题从 x297 起，也不压
+             · 底部草地   top=537 → 脚踩画布底边，只擦到行2 说明字下缘约 5px（草地仅 30px 高，无解但仍最轻） */
+        var REST = [
+            { left: 280, top: -6 }, { left: 400, top: -7 }, { left: 500, top: -6 },
+            { left: 52, top: 60 }, { left: 172, top: 61 },
+            { left: 0, top: 537 }, { left: 160, top: 538 }, { left: 320, top: 537 },
+            { left: 480, top: 538 }, { left: 640, top: 537 }
+        ];
         var busy = false;
         function setFacing(dir) {
-            if (dir === facing || busy) return;
+            if (dir === facing) return;
             facing = dir;
-            wrap.style.transform = 'scaleX(' + dir + ')';
+            cat.style.setProperty('--cat-face', dir);
+        }
+        function pickTarget() {
+            if (Math.random() < 0.58) {          // 多数时候回安全点待着
+                var p = REST[Math.floor(Math.random() * REST.length)];
+                return { left: p.left, top: p.top, rest: true };
+            }
+            /* 路过点：横向整屏随机（24~790），纵向只走两条实测出来的「安全带」——
+               A: top 0~193   → 猫 3.3~255.7，顶部天空条 + 第1行插图区（压的是植物图边角，行1 标题 256.6 起）
+               B: top 352~417 → 猫 355.3~479.7，行1 说明之下 + 两行缝隙 + 行2 插图上半（行2 标题 480.6 起）
+               这样它停在卡片上 0.26s 也不会把「融合进化」「FUSION」这类字盖住。 */
+            var yBand = Math.random() < 0.55
+                ? Math.random() * 193          // A：0~193
+                : 352 + Math.random() * 65;    // B：352~417
+            return { left: 24 + Math.random() * (DESIGN_W - 48 - 86), top: yBand, rest: false };
         }
         function wander() {
             if (busy) return;
-            var nx = 0.5 + Math.random() * 10;
-            var cur = parseFloat(wrap.style.left) || 0.5;
-            setFacing(nx >= cur ? 1 : -1);
-            wrap.style.left = nx + '%';
+            if (wrap.offsetParent === null) { setTimeout(wander, 2500); return; }  // 菜单已隐藏（进游戏）就别空转
+            var curL = parseFloat(wrap.style.left) || 0;
+            var curT = parseFloat(wrap.style.top) || 0;
+            var t = pickTarget();
+            var dist = Math.sqrt(Math.pow(t.left - curL, 2) + Math.pow(t.top - curT, 2));
+            if (dist < 80) { t = pickTarget(); dist = Math.sqrt(Math.pow(t.left - curL, 2) + Math.pow(t.top - curT, 2)); }
+            setFacing(t.left >= curL ? 1 : -1);
+            var dur = Math.min(6.2, Math.max(0.6, dist / SPEED));
+            wrap.style.transition = 'left ' + dur.toFixed(2) + 's linear, top ' + dur.toFixed(2) + 's linear';
+            wrap.style.left = t.left + 'px';
+            wrap.style.top = t.top + 'px';
             cat.classList.remove('sit');
             cat.classList.add('walking');
             busy = true;
@@ -1180,20 +1227,33 @@
                 cat.classList.remove('walking');
                 cat.classList.add('sit');
                 busy = false;
-                setTimeout(act, 700 + Math.random() * 1500);
-            }, 1400);
+                /* 安全点：坐一坐 / 跳一跳；路过点：0.26s 立刻走，绝不在卡片上赖着 */
+                if (t.rest) setTimeout(act, 900 + Math.random() * 2200);
+                else setTimeout(wander, 260);
+            }, dur * 1000);
         }
         function act() {
-            var r = Math.random();
-            if (r < 0.7) {
+            if (Math.random() < 0.7) {
                 cat.classList.remove('sit');
                 cat.classList.add('jump');
                 setTimeout(function () { cat.classList.remove('jump'); cat.classList.add('sit'); }, 700);
             }
-            setTimeout(wander, 900 + Math.random() * 2000);
+            setTimeout(wander, 700 + Math.random() * 1400);
         }
-        /* 点击互动：台词气泡 + 吐一颗阳光 */
+        /* 开场：随机落在底部草地上，先坐一会儿卖个萌，再开始溜达 */
+        (function () {
+            var p = REST[5 + Math.floor(Math.random() * 5)];
+            wrap.style.left = p.left + 'px';
+            wrap.style.top = p.top + 'px';
+            cat.classList.add('sit');
+        })();
+        /* 点击互动：台词气泡 + 吐一颗阳光。
+           气泡按猫当前所在位置自动贴边（猫在最右时不向右溢出）、自动翻到脚下（猫在天空带时不向上出画） */
         cat.addEventListener('click', function () {
+            var l = parseFloat(wrap.style.left) || 0;
+            var t = parseFloat(wrap.style.top) || 0;
+            bubble.style.left = l < 20 ? '0px' : (l > 740 ? '-74px' : '-14px');
+            if (t < 78) bubble.classList.add('below'); else bubble.classList.remove('below');
             bubble.textContent = LINES[Math.floor(Math.random() * LINES.length)];
             bubble.style.display = 'block';
             sun.style.display = 'block';
@@ -1202,7 +1262,7 @@
             sun.style.animation = '';
             setTimeout(function () { bubble.style.display = 'none'; sun.style.display = 'none'; }, 1600);
         });
-        setTimeout(wander, 1600);  // 开场先坐下卖个萌，再开始溜达
+        setTimeout(wander, 1600);
     })();
     </script>
 </body>
