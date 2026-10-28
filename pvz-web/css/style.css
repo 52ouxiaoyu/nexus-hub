@@ -109,6 +109,25 @@ body {
     gap: 4px;
     align-self: center;
 }
+/* v4.0.135 我是僵尸·融合手套：阳光上方的 🧤（同植物融合手套的交互入口） */
+#zfuse-glove {
+    width: 40px; height: 36px;
+    margin: 0 auto;
+    background: rgba(20,16,30,0.82);
+    border: 2px solid #ff9a3c;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.6), inset 0 0 8px rgba(0,0,0,0.4);
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+#zfuse-glove:hover { transform: translateY(-2px); filter: brightness(1.15); }
+#zfuse-glove.zf-active {
+    background: rgba(255,154,60,0.55);
+    box-shadow: 0 0 12px rgba(255,154,60,.9), inset 0 0 10px rgba(255,154,60,.5);
+}
 
 #seed-bank {
     display: flex;
