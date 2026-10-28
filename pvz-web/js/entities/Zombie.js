@@ -34,6 +34,58 @@ class Zombie extends Entity {
         football:   { walk: 'assets/images/Zombies/FootballZombie/FootballZombie.gif', attack: 'assets/images/Zombies/FootballZombie/Attack.gif', die: 'assets/images/Zombies/FootballZombie/Die.gif', h: 0 },
         gargantuar: { walk: 'assets/images/Zombies/Gargantuar/0.png',            attack: 'assets/images/Zombies/Gargantuar/0.png', die: 'assets/images/Zombies/Zombie/ZombieDie.gif', h: 200 }
     };
+    // ===== v4.0.131 融合僵尸（僵尸+僵尸 20 种）=====
+    // 《我是僵尸》专属：僵尸卡带"融合炉"选两只基础僵尸 → 扣（两要价+融合费）→ 合成一只融合僵尸。
+    // 配方为无序对（a+b / b+a 皆可）；ironcone/madpaper 复用 v3.74.0 已有类型（双盔/疯狂读报），
+    // thrower 复用巨人行为（抛娃），因此新实现 18 个类型（twins..titan）。
+    static ZFUSE = {
+        'normal+normal': 'twins', 'normal+newspaper': 'ragefresh',
+        'conehead+polevaulting': 'vaultcone', 'nuthead+nuthead': 'dblnut',
+        'buckethead+conehead': 'ironcone', 'screendoor+buckethead': 'fortress',
+        'screendoor+newspaper': 'shieldpaper', 'buckethead+newspaper': 'ragebucket',
+        'snowpeahead+conehead': 'frostcone', 'newspaper+polevaulting': 'madpaper',
+        'polevaulting+screendoor': 'vaultdoor', 'football+buckethead': 'bucketfoot',
+        'newspaper+dancing': 'discopaper', 'dancing+dancing': 'danceking',
+        'zomboni+football': 'icecharge', 'jalapenohead+zomboni': 'jalacar',
+        'sunhead+sunhead': 'sunking', 'mysterybox+mysterybox': 'megabox',
+        'gargantuar+imp': 'thrower', 'gargantuar+zomboni': 'titan'
+    };
+    // 融合费档位（= 两只要价之和 + 该档费用；终极最贵）
+    static ZFUSE_TIER = {
+        twins: 'basic', ragefresh: 'basic', vaultcone: 'basic', dblnut: 'basic',
+        ironcone: 'adv', fortress: 'adv', shieldpaper: 'adv', ragebucket: 'adv',
+        frostcone: 'adv', vaultdoor: 'adv', bucketfoot: 'adv', madpaper: 'adv',
+        discopaper: 'high', danceking: 'high', icecharge: 'high', jalacar: 'high',
+        sunking: 'high', megabox: 'high', thrower: 'ult', titan: 'ult'
+    };
+    static ZFUSE_FEE = { basic: 50, adv: 100, high: 150, ult: 250 };
+    static ZFUSE_NAMES = {
+        twins: '双子僵尸', ragefresh: '愤怒新人', vaultcone: '撑杆路障', dblnut: '双层坚果头',
+        ironcone: '铁甲路障', fortress: '堡垒僵尸', shieldpaper: '铁门报社', ragebucket: '狂暴铁桶',
+        frostcone: '霜冻路障', vaultdoor: '护盾撑杆', bucketfoot: '铁桶橄榄', madpaper: '跳跃读报',
+        discopaper: '迪斯科读报', danceking: '舞王·双人秀', icecharge: '冰球冲刺', jalacar: '辣椒战车',
+        sunking: '太阳僵尸', megabox: '究极盲盒', thrower: '抛娃巨人', titan: '泰坦冰车'
+    };
+    // 融合卡主僵尸底图（合成卡/预览用）
+    static ZFUSE_BODY = {
+        twins: 'Zombies/Zombie/Zombie.gif', ragefresh: 'Zombies/Zombie/Zombie.gif', vaultcone: 'Zombies/ConeheadZombie/ConeheadZombie.gif',
+        dblnut: 'Zombies/Zombie/Zombie.gif', ironcone: 'Zombies/BucketheadZombie/BucketheadZombie.gif', fortress: 'Zombies/ScreenDoorZombie/ScreenDoorZombie.gif',
+        shieldpaper: 'Zombies/ScreenDoorZombie/ScreenDoorZombie.gif', ragebucket: 'Zombies/BucketheadZombie/BucketheadZombie.gif',
+        frostcone: 'Zombies/ConeheadZombie/ConeheadZombie.gif', vaultdoor: 'Zombies/ScreenDoorZombie/ScreenDoorZombie.gif',
+        bucketfoot: 'Zombies/FootballZombie/FootballZombie.gif', madpaper: 'Zombies/NewspaperZombie/LostNewspaper.gif',
+        discopaper: 'Zombies/NewspaperZombie/HeadWalk1.gif', danceking: 'Zombies/DancingZombie/DancingZombie.gif',
+        icecharge: 'Zombies/Zomboni/1.gif', jalacar: 'Zombies/Zomboni/1.gif', sunking: 'Zombies/Zombie/Zombie.gif',
+        megabox: 'Zombies/Zombie/Zombie.gif', thrower: 'Zombies/Gargantuar/0.png', titan: 'Zombies/Gargantuar/0.png'
+    };
+    // 融合卡预览色相（与战场外观一致）
+    static ZFUSE_HUE = {
+        twins: 'hue-rotate(12deg)', ragefresh: 'hue-rotate(200deg)', vaultcone: 'hue-rotate(40deg)',
+        dblnut: 'hue-rotate(160deg)', ironcone: '', fortress: 'hue-rotate(270deg)', shieldpaper: 'hue-rotate(300deg)',
+        ragebucket: 'hue-rotate(330deg)', frostcone: 'hue-rotate(180deg)', vaultdoor: 'hue-rotate(90deg)',
+        bucketfoot: 'hue-rotate(60deg)', madpaper: '', discopaper: 'hue-rotate(120deg)', danceking: 'hue-rotate(140deg)',
+        icecharge: 'hue-rotate(210deg)', jalacar: 'hue-rotate(30deg)', sunking: 'hue-rotate(55deg)',
+        megabox: 'hue-rotate(350deg)', thrower: '', titan: 'hue-rotate(250deg)'
+    };
     constructor(game, row, type = 'normal') {
         const x = 950;
         const y = game.board.offsetY + row * game.board.cellHeight + game.board.cellHeight / 2 - 20;
@@ -75,6 +127,7 @@ class Zombie extends Entity {
         this._flameEl = null;
         this._accEl = null;   // 融合僵尸防具/手持物挂件（双盔铁桶/火把/大蒜）
         this._garlicHits = 0; // 大蒜僵尸：被打 4 次辣得换行
+        this._fuseHue = '';   // v4.0.131 融合僵尸色相（状态滤镜清除后恢复）
         
         if (type === 'normal') {
             this.hp = 200; this.maxHp = 200;
@@ -323,6 +376,199 @@ class Zombie extends Entity {
             this.attackSrc = 'assets/images/Zombies/Gargantuar/0.png';
             this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif'; // v4.0.82：普通死亡倒地（被炸死走 BoomDie）
             this.yOffset = -58;
+        } else if (type === 'twins') {
+            // ===== v4.0.131 融合僵尸① 双子僵尸（普通+普通）=====
+            // 被击倒时分裂成 2 只小鬼继续啃（见 DYING 分支）
+            this.hp = 500; this.maxHp = 500;
+            this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this._fuseHue = 'hue-rotate(12deg) saturate(1.25)';
+        } else if (type === 'ragefresh') {
+            // ===== v4.0.131 融合僵尸② 愤怒新人（普通+读报）=====
+            // 啃死 1 株植物后进入狂暴（加速+伤害翻倍，见 EATING/狂暴接线）
+            this.hp = 320; this.maxHp = 320;
+            this._rageOnFirstKill = true;
+            this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this._fuseHue = 'hue-rotate(200deg) saturate(1.25)';
+        } else if (type === 'vaultcone') {
+            // ===== v4.0.131 融合僵尸③ 撑杆路障（路障+撑杆）=====
+            // 高速冲刺跳过第一株植物 + 头盔抗打
+            this.hp = 900; this.maxHp = 900;
+            this.speed = 45; this.hasVaulted = false;
+            this.element.src = 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif';
+            this.walkSrc = 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif';
+            this.attackSrc = 'assets/images/Zombies/ConeheadZombie/ConeheadZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this.yOffset = -50;
+            this._fuseHue = 'hue-rotate(40deg) saturate(1.25)';
+        } else if (type === 'dblnut') {
+            // ===== v4.0.131 融合僵尸④ 双层坚果头（坚果头+坚果头）=====
+            // 究极肉盾：血池 = 1.5 只坚果头（超高耐久，无其它技能）
+            this.hp = 3900; this.maxHp = 3900;
+            this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this.createPlantHead(Zombie.PLANT_HEAD_CFG.nuthead);
+            this._fuseHue = 'hue-rotate(160deg) saturate(1.3)';
+        } else if (type === 'fortress') {
+            // ===== v4.0.131 融合僵尸⑥ 堡垒僵尸（铁门+铁桶）=====
+            // 双防：正面免疫单体弹（门盾结构）+ 门后高血本体
+            this.hp = 1450; this.maxHp = this.hp;
+            this._bodyHp = 900; this._bodyMax = 900;
+            this.element.src = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombie.gif';
+            this.walkSrc = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombie.gif';
+            this.attackSrc = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this._fuseHue = 'hue-rotate(270deg) saturate(1.25)';
+        } else if (type === 'shieldpaper') {
+            // ===== v4.0.131 融合僵尸⑦ 铁门报社（铁门+读报）=====
+            // 护盾 + 狂暴双形态（门掉落后进入狂暴高速）
+            this.hp = 1450; this.maxHp = this.hp;
+            this._bodyHp = 320; this._bodyMax = 320;
+            this.hasLostNewspaper = false;
+            this.element.src = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombie.gif';
+            this.walkSrc = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombie.gif';
+            this.attackSrc = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this._fuseHue = 'hue-rotate(300deg) saturate(1.25)';
+        } else if (type === 'ragebucket') {
+            // ===== v4.0.131 融合僵尸⑧ 狂暴铁桶（铁桶+读报）=====
+            // 铁桶防具 + 血线狂暴（桶碎后进入高速狂暴）
+            this.hp = 1300; this.maxHp = 1300;
+            this.hasLostNewspaper = false;
+            this.element.src = 'assets/images/Zombies/BucketheadZombie/BucketheadZombie.gif';
+            this.walkSrc = 'assets/images/Zombies/BucketheadZombie/BucketheadZombie.gif';
+            this.attackSrc = 'assets/images/Zombies/BucketheadZombie/BucketheadZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this._fuseHue = 'hue-rotate(330deg) saturate(1.25)';
+        } else if (type === 'frostcone') {
+            // ===== v4.0.131 融合僵尸⑨ 霜冻路障（寒冰头+路障）=====
+            // 啃咬减速植物 + 头盔抗打
+            this.hp = 900; this.maxHp = 900;
+            this.element.src = 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif';
+            this.walkSrc = 'assets/images/Zombies/ConeheadZombie/ConeheadZombie.gif';
+            this.attackSrc = 'assets/images/Zombies/ConeheadZombie/ConeheadZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this._fuseHue = 'hue-rotate(180deg) saturate(1.3)';
+        } else if (type === 'vaultdoor') {
+            // ===== v4.0.131 融合僵尸⑪ 护盾撑杆（撑杆+铁门）=====
+            // 跳 1 格 + 门盾免疫单体弹
+            this.hp = 1450; this.maxHp = this.hp;
+            this._bodyHp = 500; this._bodyMax = 500;
+            this.speed = 45; this.hasVaulted = false;
+            this.element.src = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombie.gif';
+            this.walkSrc = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombie.gif';
+            this.attackSrc = 'assets/images/Zombies/ScreenDoorZombie/ScreenDoorZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this.yOffset = -50;
+            this._fuseHue = 'hue-rotate(90deg) saturate(1.25)';
+        } else if (type === 'bucketfoot') {
+            // ===== v4.0.131 融合僵尸⑫ 铁桶橄榄（橄榄球+铁桶）=====
+            // 高速冲撞 + 桶防具
+            this.hp = 1600; this.maxHp = 1600;
+            this.speed = 40;
+            this.element.src = 'assets/images/Zombies/FootballZombie/FootballZombie.gif';
+            this.walkSrc = 'assets/images/Zombies/FootballZombie/FootballZombie.gif';
+            this.attackSrc = 'assets/images/Zombies/FootballZombie/Attack.gif';
+            this.dieSrc = 'assets/images/Zombies/FootballZombie/Die.gif';
+            this._fuseHue = 'hue-rotate(60deg) saturate(1.25)';
+        } else if (type === 'discopaper') {
+            // ===== v4.0.131 融合僵尸⑬ 迪斯科读报（读报+舞王）=====
+            // 狂暴 + 每 15 秒召 1 只伴舞
+            this.hp = 400; this.maxHp = 400;
+            this.hasLostNewspaper = false;
+            this._summonTimer2 = 10;
+            this.element.src = 'assets/images/Zombies/NewspaperZombie/HeadWalk1.gif';
+            this.walkSrc = 'assets/images/Zombies/NewspaperZombie/HeadWalk1.gif';
+            this.attackSrc = 'assets/images/Zombies/NewspaperZombie/HeadAttack1.gif';
+            this.dieSrc = 'assets/images/Zombies/NewspaperZombie/Die.gif';
+            this._fuseHue = 'hue-rotate(120deg) saturate(1.25)';
+        } else if (type === 'danceking') {
+            // ===== v4.0.131 融合僵尸⑭ 舞王·双人秀（舞王+舞王）=====
+            // 每 20 秒一次召唤 4 只伴舞（四角）
+            this.hp = 700; this.maxHp = 700;
+            this._summonTimer2 = 6;
+            this._danceKing = true;
+            this.element.src = 'assets/images/Zombies/DancingZombie/DancingZombie.gif';
+            this.walkSrc = 'assets/images/Zombies/DancingZombie/DancingZombie.gif';
+            this.attackSrc = 'assets/images/Zombies/DancingZombie/Attack.gif';
+            this.dieSrc = 'assets/images/Zombies/DancingZombie/Die.gif';
+            this.yOffset = -40;
+            this._fuseHue = 'hue-rotate(140deg) saturate(1.3)';
+        } else if (type === 'icecharge') {
+            // ===== v4.0.131 融合僵尸⑮ 冰球冲刺（冰车+橄榄球）=====
+            // 高速碾压 + 碾过的植物减速 8 秒
+            this.hp = 1600; this.maxHp = 1600;
+            this.speed = 32;
+            this.element.src = 'assets/images/Zombies/Zomboni/1.gif';
+            this.walkSrc = 'assets/images/Zombies/Zomboni/1.gif';
+            this.attackSrc = 'assets/images/Zombies/Zomboni/1.gif';
+            this.dieSrc = 'assets/images/Zombies/Zomboni/0.gif';
+            this._iceCharge = true;
+            this._fuseHue = 'hue-rotate(210deg) saturate(1.3)';
+        } else if (type === 'jalacar') {
+            // ===== v4.0.131 融合僵尸⑯ 辣椒战车（辣椒头+冰车）=====
+            // 碾压一路 + 死亡时爆炸 3×3（见 DYING 分支）
+            this.hp = 1300; this.maxHp = 1300;
+            this.speed = 15;
+            this.element.src = 'assets/images/Zombies/Zomboni/1.gif';
+            this.walkSrc = 'assets/images/Zombies/Zomboni/1.gif';
+            this.attackSrc = 'assets/images/Zombies/Zomboni/1.gif';
+            this.dieSrc = 'assets/images/Zombies/Zomboni/0.gif';
+            this._fuseHue = 'hue-rotate(30deg) saturate(1.35)';
+        } else if (type === 'sunking') {
+            // ===== v4.0.131 融合僵尸⑰ 太阳僵尸（阳光头+阳光头）=====
+            // 每 8 秒为僵尸方产 100 阳光（我是僵尸经济核心）
+            this.hp = 420; this.maxHp = 420;
+            this._sunTimer = 4;
+            this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this.createPlantHead(Zombie.PLANT_HEAD_CFG.sunhead);
+            this._fuseHue = 'hue-rotate(55deg) saturate(1.3)';
+        } else if (type === 'megabox') {
+            // ===== v4.0.131 融合僵尸⑱ 究极盲盒（盲盒+盲盒）=====
+            // 被打死时开出一只随机融合僵尸（见 _openFuseBox）
+            this.hp = 300; this.maxHp = 300;
+            this.element.src = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
+            this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this.createPlantHead(Zombie.PLANT_HEAD_CFG.mysterybox);
+            this._fuseHue = 'hue-rotate(350deg) saturate(1.3)';
+        } else if (type === 'thrower') {
+            // ===== v4.0.131 融合僵尸⑲ 抛娃巨人（巨人+小鬼）=====
+            // 同巨人：半血抛 1 只小鬼砸植物 + 秒杀锤（巨人行为）
+            this.hp = 4000; this.maxHp = 4000;
+            this.speed = 10; this.hasThrownImps = false;
+            this.element.src = 'assets/images/Zombies/Gargantuar/0.png';
+            this.element.style.height = '200px';
+            this.element.style.width = 'auto';
+            this.walkSrc = 'assets/images/Zombies/Gargantuar/0.png';
+            this.attackSrc = 'assets/images/Zombies/Gargantuar/0.png';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this.yOffset = -58;
+        } else if (type === 'titan') {
+            // ===== v4.0.131 融合僵尸⑳ 泰坦冰车（巨人+冰车）=====
+            // 终极：超高血量 + 碾压 + 半血抛小鬼（巨人抛娃接入）
+            this.hp = 8000; this.maxHp = 8000;
+            this.speed = 12; this.hasThrownImps = false;
+            this.element.src = 'assets/images/Zombies/Gargantuar/0.png';
+            this.element.style.height = '200px';
+            this.element.style.width = 'auto';
+            this.walkSrc = 'assets/images/Zombies/Gargantuar/0.png';
+            this.attackSrc = 'assets/images/Zombies/Gargantuar/0.png';
+            this.dieSrc = 'assets/images/Zombies/Zombie/ZombieDie.gif';
+            this.yOffset = -58;
+            this._titan = true;
+            this._fuseHue = 'hue-rotate(250deg) saturate(1.25)';
         }
 
         // ===== 我是僵尸模式（v3.7.2）：进攻方整体强化 =====
@@ -442,6 +688,20 @@ class Zombie extends Entity {
         if (this.game.showAnnouncement) {
             const name = this.game._zombieZhName ? this.game._zombieZhName(type) : type;
             this.game.showAnnouncement(`🎁 盲盒开出：${name}！`, '#c8a2ff');
+        }
+    }
+
+    // v4.0.131：究极盲盒（盲盒+盲盒 融合）死亡开箱——随机开一只融合僵尸（基础~终极）
+    _openFuseBox() {
+        const type = Object.keys(Zombie.ZFUSE)[Math.floor(Math.random() * Object.keys(Zombie.ZFUSE).length)];
+        const z = new Zombie(this.game, this.row, type);
+        z.x = Math.max(60, this.x);
+        if (this._playerZombie) z._playerZombie = true;
+        this.game.entities.push(z);
+        if (this.game.audioManager && this.game.audioManager.playFx) this.game.audioManager.playFx('box_open');
+        if (this.game.showAnnouncement) {
+            const name = Zombie.ZFUSE_NAMES[type] || type;
+            this.game.showAnnouncement(`🎁 究极盲盒开出：${name}！`, '#c8a2ff');
         }
     }
 
@@ -799,6 +1059,32 @@ class Zombie extends Entity {
         }
     }
 
+    // v4.0.131：融合召唤组单只/多只伴舞（迪斯科读报 1 只、舞王·双人秀 4 只）
+    _summonDancer(count) {
+        if (this.hypnotized || this.state === 'DYING') return;
+        const spawned = this._danceSpawnedTotal || 0;
+        if (spawned >= 12) return;
+        const positions = [
+            { r: this.row - 1, dx: -80 }, { r: this.row - 1, dx: 80 },
+            { r: this.row + 1, dx: -80 }, { r: this.row + 1, dx: 80 },
+        ];
+        let made = 0;
+        for (const pos of positions) {
+            if (made >= count || this._danceSpawnedTotal >= 12) break;
+            if (pos.r >= 0 && pos.r < this.game.board.rows) {
+                const zombieY = this.game.board.offsetY + pos.r * this.game.board.cellHeight + this.game.board.cellHeight / 2 - 20;
+                const backup = new Zombie(this.game, pos.r, 'backup');
+                backup.x = Math.max(40, this.x + pos.dx);
+                backup.y = zombieY;
+                backup._danceOwner = this;
+                if (this._playerZombie) backup._playerZombie = true;
+                this.game.entities.push(backup);
+                this._danceSpawnedTotal = (this._danceSpawnedTotal || 0) + 1;
+                made++;
+            }
+        }
+    }
+
     // 伴舞阵亡回报（含魅惑后走出右侧离场）：本波死满 3 只且场上无存活伴舞 → 补新一波；
     // 还剩伴舞活着（哪怕只剩 1 只）不补
     _onBackupDeath() {
@@ -847,7 +1133,7 @@ class Zombie extends Entity {
         }
         if (this.isSlowed || this.butterTimer > 0 || this._tintedByStatus) {
             const f = this._statusFilter();
-            this.element.style.filter = f;
+            this.element.style.filter = f || (this._fuseHue || '');
             if (this.headEl) this.headEl.style.filter = f;
             this._tintedByStatus = !!f;
         }
@@ -863,7 +1149,7 @@ class Zombie extends Entity {
                 this._removeIceSpike();
                 // 解冻当帧重算滤镜（若仍被减速则回到冰蓝减速色）
                 const f = this._statusFilter();
-                this.element.style.filter = f;
+                this.element.style.filter = f || (this._fuseHue || '');
                 if (this.headEl) this.headEl.style.filter = f;
                 this._tintedByStatus = !!f;
             } else if (this.state !== 'DYING' && this.hp > 0) {
@@ -913,12 +1199,13 @@ class Zombie extends Entity {
             }
         }
 
-        // Handle newspaper falling off（v3.74.0：疯狂读报僵尸同享报纸狂暴）
-        if ((this.type === 'newspaper' || this.type === 'madpaper') && this.armorHp <= 150 * armorMul && !this.hasLostNewspaper && this.state !== 'DYING') {
+        // Handle newspaper falling off（v3.74.0：疯狂读报僵尸同享报纸狂暴；v4.0.131 融合组扩展）
+        const rageGroup = ['newspaper', 'madpaper', 'shieldpaper', 'ragebucket', 'discopaper'];
+        if (rageGroup.includes(this.type) && this.armorHp <= 200 * armorMul && !this.hasLostNewspaper && this.state !== 'DYING') {
             this.hasLostNewspaper = true;
             this.speed = 45; // Gets very angry and fast
             // v3.79.0：疯狂读报出场就是无报纸狂暴相，不换装（换回报纸外观反而画蛇添足）
-            if (this.type === 'newspaper') {
+            if (this.type === 'newspaper' || this.type === 'ragebucket' || this.type === 'discopaper') {
                 this.walkSrc = 'assets/images/Zombies/NewspaperZombie/HeadWalk0.gif';
                 this.attackSrc = 'assets/images/Zombies/NewspaperZombie/HeadAttack0.gif';
                 this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
@@ -927,12 +1214,15 @@ class Zombie extends Entity {
 
         // 植物头僵尸的头顶植物是纯外观：不提供装甲/不掉落，随僵尸一起行动直到死亡。
 
-        // Handle screendoor falling off
-        if (this.type === 'screendoor' && this.armorHp <= 200 * armorMul && this.state !== 'DYING') {
+        // Handle screendoor falling off（v4.0.131 融合门僵尸：fortress/shieldpaper/vaultdoor）
+        const doorGroup = ['screendoor', 'fortress', 'shieldpaper', 'vaultdoor'];
+        if (doorGroup.includes(this.type) && this.armorHp <= 200 * armorMul && this.state !== 'DYING') {
+            const wasVaultDoor = this.type === 'vaultdoor';
             this.type = 'normal';
             this.walkSrc = 'assets/images/Zombies/Zombie/Zombie.gif';
             this.attackSrc = 'assets/images/Zombies/Zombie/ZombieAttack.gif';
             this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
+            if (wasVaultDoor) this.speed = 20; // 门掉后失去冲速
         }
 
         // Handle jack-in-the-box explosion
@@ -964,6 +1254,14 @@ class Zombie extends Entity {
                 if (this.summonTimer <= 0) this._summonBackupWave();
             }
         }
+        // v4.0.131：融合召唤组——迪斯科读报每 15s 召 1 伴舞；舞王·双人秀每 20s 召 4 伴舞
+        if ((this.type === 'discopaper' || this.type === 'danceking') && this.state !== 'DYING' && !this.hypnotized) {
+            this._summonTimer2 = (this._summonTimer2 === undefined ? 10 : this._summonTimer2) - deltaTime;
+            if (this._summonTimer2 <= 0) {
+                this._summonTimer2 = this.type === 'discopaper' ? 15 : 20;
+                this._summonDancer(this.type === 'discopaper' ? 1 : 4);
+            }
+        }
         
         if (this.hp <= 0 && this.state !== 'DYING') {
             this.state = 'DYING';
@@ -987,6 +1285,26 @@ class Zombie extends Entity {
             }
             // v3.23.0：盲盒僵尸被击杀 → 开出一只随机僵尸
             if (this.type === 'mysterybox' && !this.hypnotized) this._openMysteryBox();
+            // v4.0.131：双子僵尸被击杀 → 分裂成 2 只小鬼继续啃
+            if (this.type === 'twins' && !this.hypnotized) {
+                for (let i = 0; i < 2; i++) {
+                    const imp = new Zombie(this.game, this.row, 'imp');
+                    imp.x = Math.max(80, this.x - 40 + i * 50);
+                    if (this._playerZombie) imp._playerZombie = true;
+                    this.game.entities.push(imp);
+                }
+                if (this.game.showAnnouncement) this.game.showAnnouncement('👯 双子分裂出小鬼！', '#ff9ed2');
+            }
+            // v4.0.131：辣椒战车被击杀 → 爆炸 3×3 清植物
+            if (this.type === 'jalacar' && !this.hypnotized) {
+                const plants = this.game.entities.filter(e => e instanceof Plant && !e.isDead);
+                for (const p of plants) {
+                    if (Math.abs(p.row - this.row) <= 1 && Math.abs(p.x - this.x) < 120) p.hp = 0;
+                }
+                this.element.src = 'assets/images/Zombies/Zomboni/0.gif';
+            }
+            // v4.0.131：究极盲盒被击杀 → 开出一只随机融合僵尸
+            if (this.type === 'megabox' && !this.hypnotized) this._openFuseBox();
             // v3.74.0 防具掉落 —— v3.80.3 整体删除（用户：掉落物太难看）
             setTimeout(() => { this.isDead = true; }, 2000); 
         }
@@ -1013,13 +1331,28 @@ class Zombie extends Entity {
             return;
         }
         
-        // Gargantuar throw imps logic
-        if (this.type === 'gargantuar' && this.hp < 2000 && !this.hasThrownImps) {
+        // Gargantuar throw imps logic（v4.0.131：抛娃巨人/泰坦冰车同享抛娃）
+        if ((this.type === 'gargantuar' || this.type === 'thrower' || this.type === 'titan') && this.hp < (this.maxHp * 0.4) && !this.hasThrownImps) {
             this.hasThrownImps = true;
             for (let i = 0; i < 2; i++) {
                 let imp = new Zombie(this.game, this.row, 'imp');
                 imp.x = Math.max(100, this.x - 150 - (i * 40));
+                if (this._playerZombie) imp._playerZombie = true;
                 this.game.entities.push(imp);
+            }
+        }
+
+        // v4.0.131：太阳僵尸——每 8 秒为僵尸方产 100 阳光（我是僵尸经济核心）
+        if (this.type === 'sunking' && !this.hypnotized && this.state !== 'DYING') {
+            this._sunTimer = (this._sunTimer === undefined ? 4 : this._sunTimer) - deltaTime;
+            if (this._sunTimer <= 0) {
+                this._sunTimer = 8;
+                if (this.game.zombieMode && this.game.sunCount !== undefined) {
+                    this.game.sunCount += 100;
+                    if (this.game._syncZombieSunUI) this.game._syncZombieSunUI();
+                    if (this.game.audioManager && this.game.audioManager.play) this.game.audioManager.play('sun');
+                    if (this.game._zombieFloatText) this.game._zombieFloatText('+100 阳光', '#ffd54a', this.x, this.y - 70);
+                }
             }
         }
 
@@ -1099,7 +1432,8 @@ class Zombie extends Entity {
             // 车头/头前端一碰植物就立即结算。
             // v3.40.0：冰车驶过留下冰道——每跨入一个新列就给该格铺冰
             // v3.48.0：火焰地刺镇守的行不结冰（用户：火烤着呢，冰车驶过不留冰轨）
-            if (this.type === 'zomboni' && !this.isDead && this.hp > 0) {
+            // v4.0.131：冰球冲刺/泰坦冰车同铺冰道（冰系碾压）
+            if ((this.type === 'zomboni' || this.type === 'icecharge' || this.type === 'titan') && !this.isDead && this.hp > 0) {
                 const iceCol = Math.floor((this.x - this.game.board.offsetX) / this.game.board.cellWidth);
                 if (iceCol !== this._lastIceCol) {
                     this._lastIceCol = iceCol;
@@ -1109,7 +1443,8 @@ class Zombie extends Entity {
                 }
             }
 
-            const bigZ = (this.type === 'zomboni' || this.type === 'gargantuar' || this.type === 'lgboss');
+            const bigZ = (this.type === 'zomboni' || this.type === 'gargantuar' || this.type === 'lgboss' ||
+                this.type === 'icecharge' || this.type === 'jalacar' || this.type === 'titan' || this.type === 'thrower');
             const plant = this._dormRetreating ? null : this.game.entities.find(e =>
                 e instanceof Plant &&
                 // v3.14.0：地刺/钢地刺都不可啃 —— 所有僵尸直接从上面走过
@@ -1124,7 +1459,8 @@ class Zombie extends Entity {
             
             // v3.14.0：冰车碾地刺 —— 碰地刺同归于尽（冰车被扎爆）；钢地刺可扛 3 辆冰车，
             // 第 3 辆碾过才毁；其余僵尸对两种地刺照旧直接走过（不可啃、撑杆跳也不跳）
-            if (this.type === 'zomboni') {
+            // v4.0.131：冰球冲刺/辣椒战车同吃地刺；泰坦冰车为终极单位免疫扎爆
+            if (this.type === 'zomboni' || this.type === 'icecharge' || this.type === 'jalacar') {
                 // v3.28.0：冰车同样"车头碰到就结算"（扎爆判定与啃食判定同半径）
                 const spike = this.game.entities.find(e => e instanceof Plant && !e.isDead &&
                     e.row === this.row && e.x <= this.x + 10 && this.x - e.x < 85 &&
@@ -1151,7 +1487,8 @@ class Zombie extends Entity {
 
             if (plant) {
                 // Ignore plants with ladders (except gargantuar and zomboni who smash it)
-                if (plant.hasLadder && this.type !== 'gargantuar' && this.type !== 'zomboni') {
+                if (plant.hasLadder && this.type !== 'gargantuar' && this.type !== 'zomboni' &&
+                    this.type !== 'thrower' && this.type !== 'titan' && this.type !== 'icecharge' && this.type !== 'jalacar') {
                     // Just walk past it!
                 } else if (this.type === 'pogo') {
                     // Pogo jumps over all plants directly!
@@ -1177,8 +1514,8 @@ class Zombie extends Entity {
                     plant.element.parentNode.appendChild(ladderImg);
                     plant.ladderOverlay = ladderImg; // keep reference to clean up on death
                     
-                } else if ((this.type === 'polevaulting' || this.type === 'madpaper') && !this.hasVaulted && (!plant.hasTrait || !plant.hasTrait('tallnut'))) {
-                    // Jump over it!（v3.74.0：疯狂读报僵尸也带撑杆，跳过第一株植物）
+                } else if ((this.type === 'polevaulting' || this.type === 'madpaper' || this.type === 'vaultcone' || this.type === 'vaultdoor') && !this.hasVaulted && (!plant.hasTrait || !plant.hasTrait('tallnut'))) {
+                    // Jump over it!（v3.74.0：疯狂读报僵尸也带撑杆，跳过第一株植物；v4.0.131：撑杆路障/护盾撑杆同享）
                     this.hasVaulted = true;
                     this.state = 'JUMPING';
                     this.jumpTimer = 1.0; 
@@ -1186,10 +1523,10 @@ class Zombie extends Entity {
                     this.jumpStartX = this.x;
                     this.element.src = 'assets/images/Zombies/PoleVaultingZombie/PoleVaultingZombieJump.gif';
                     this.jumpTargetX = Math.max(40, plant.x - 80); 
-                } else if (this.type === 'zomboni' || this.type === 'gargantuar') {
+                } else if (this.type === 'zomboni' || this.type === 'gargantuar' || this.type === 'icecharge' || this.type === 'jalacar' || this.type === 'titan' || this.type === 'thrower') {
                     // Crush it! (Gargantuar smashes instantly when entering eating, let's just make it stop and eat, but it instantly kills in EATING logic)
-                    if (this.type === 'zomboni') {
-                        plant.hp = 0;
+                    if (this.type === 'zomboni' || this.type === 'icecharge' || this.type === 'jalacar' || this.type === 'titan') {
+                        plant.hp = 0; // 碾压秒杀（冰车/冰球冲刺/辣椒战车/泰坦）；冰球与泰坦驶过另铺冰道（见冰道分支）
                     } else {
                         this.state = 'EATING';
                         this.eatTarget = plant;
@@ -1397,9 +1734,21 @@ class Zombie extends Entity {
                         // 按原始 50/s 连一株豌豆射手都要啃 6s（还没啃完就被身后的射手打死）→ 啃食 ×3。
                         // 其它模式维持原速，不影响玩家用植物防守的手感。
                         const eatMul = this.game.zombieMode ? 3 : 1;
+                        // v4.0.131：霜冻路障——寒冰之咬，啃食伤害 ×1.5
+                        if (this.type === 'frostcone') currentDamage *= 1.5;
                         this.eatTarget.hp -= currentDamage * eatMul * deltaTime;
                         // v3.74.0：火把僵尸——嘴里的火把烤着植物，每秒额外烧 40
                         if (this.type === 'torchzombie') this.eatTarget.hp -= 40 * deltaTime;
+                        // v4.0.131：愤怒新人——啃死 1 株植物后进入狂暴（加速+伤害翻倍，一次性）
+                        if (this.type === 'ragefresh' && this.eatTarget.hp <= 0 && !this._rageDone) {
+                            this._rageDone = true;
+                            this.speed = 45;
+                            this.damage = 100;
+                            this.walkSrc = 'assets/images/Zombies/NewspaperZombie/HeadWalk0.gif';
+                            this.attackSrc = 'assets/images/Zombies/NewspaperZombie/HeadAttack0.gif';
+                            this.element.src = this.state === 'EATING' ? this.attackSrc : this.walkSrc;
+                            if (this.game.showAnnouncement) this.game.showAnnouncement('😡 愤怒新人狂暴了！', '#ff7f27');
+                        }
                         // v3.74.0：魅惑向日葵（重做）——僵尸把它的总血量吃光后：
                         // ① 它最后生产一大批阳光（5×25 围着植株落下）；② 吃掉它的僵尸被策反成魅惑状态。
                         if (this.eatTarget.type === 'fusion_hypnoshroom_sunflower' &&

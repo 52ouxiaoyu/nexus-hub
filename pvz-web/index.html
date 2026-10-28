@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1793109684">
-    <link rel="stylesheet" href="css/haunted-dorm.css?v=1793109684">
+    <link rel="stylesheet" href="css/style.css?v=1793181362">
+    <link rel="stylesheet" href="css/haunted-dorm.css?v=1793181362">
 </head>
 <body>
     <div id="game-container">
@@ -527,7 +527,7 @@
                         </div>
                         <div class="pkt-name">小游戏</div>
                         <div class="pkt-tag">MINI GAMES</div>
-                        <div class="pkt-sub">筹备中 10 个玩法 · 豌豆方块 / 僵尸地鼠 / 花园 2048</div>
+                        <div class="pkt-sub">10 个玩法已上线 · 豌豆方块 / 僵尸地鼠 / 花园 2048</div>
                     </button>
                 </div>
             </div>
@@ -1108,33 +1108,31 @@
         })();
     </script>
     <script>
-    // v4.0.129：小游戏卡先给个明确反馈（占位，不接假功能）
+    // v4.0.134：小游戏卡 → 小游戏厅（10 个玩法真能玩了）
     (function () {
         var btn = document.getElementById('btn-minigame');
-        var toast = document.getElementById('mg-toast');
-        if (!btn || !toast) return;
-        var timer = null;
-        btn.addEventListener('click', function () {
-            toast.style.display = 'block';
-            clearTimeout(timer);
-            timer = setTimeout(function () { toast.style.display = 'none'; }, 2200);
+        if (!btn) return;
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            if (window.MiniGames) window.MiniGames.openLobby();
         });
     })();
     </script>
-    <script src="js/InputManager.js?v=1793109684"></script>
-    <script src="js/Board.js?v=1793109684"></script>
-    <script src="js/entities/Entity.js?v=1793109684"></script>
-    <script src="js/entities/Plant.js?v=1793109684"></script>
-    <script src="js/entities/Zombie.js?v=1793109684"></script>
-    <script src="js/entities/Projectile.js?v=1793109684"></script>
-    <script src="js/entities/Sun.js?v=1793109684"></script>
-    <script src="js/managers/WaveManager.js?v=1793109684"></script>
-    <script src="js/managers/CollisionManager.js?v=1793109684"></script>
-    <script src="js/managers/EventManager.js?v=1793109684"></script>
-    <script src="js/GameLoop.js?v=1793109684"></script>
-    <script src="js/HelpGuide.js?v=1793109684"></script>
-    <script src="js/Achievements.js?v=1793109684"></script>
-    <script src="js/HauntedDorm.js?v=1793109684"></script>
+    <script src="js/InputManager.js?v=1793181362"></script>
+    <script src="js/Board.js?v=1793181362"></script>
+    <script src="js/entities/Entity.js?v=1793181362"></script>
+    <script src="js/entities/Plant.js?v=1793181362"></script>
+    <script src="js/entities/Zombie.js?v=1793181362"></script>
+    <script src="js/entities/Projectile.js?v=1793181362"></script>
+    <script src="js/entities/Sun.js?v=1793181362"></script>
+    <script src="js/managers/WaveManager.js?v=1793181362"></script>
+    <script src="js/managers/CollisionManager.js?v=1793181362"></script>
+    <script src="js/managers/EventManager.js?v=1793181362"></script>
+    <script src="js/GameLoop.js?v=1793181362"></script>
+    <script src="js/HelpGuide.js?v=1793181362"></script>
+    <script src="js/Achievements.js?v=1793181362"></script>
+    <script src="js/HauntedDorm.js?v=1793181362"></script>
+    <script src="js/MiniGames.js?v=1793181362"></script>
     <script>
     /* ===== v4.0.126 主页惊喜：时间皮肤 + 动态彩蛋猫 ===== */
     (function () {
