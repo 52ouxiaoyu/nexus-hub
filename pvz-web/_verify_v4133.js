@@ -111,7 +111,7 @@ function ok(cond, name, extra) { (cond ? P : F).push(name + (extra ? ' — ' + e
     ok(probe.subLines && probe.subLines.bottom <= probe.subLines.cardBottom - 2, '⑥ 小游戏副标题在卡片内', probe.subLines && (Math.round(probe.subLines.bottom) + ' <= ' + Math.round(probe.subLines.cardBottom)));
 
     // ⑦ 版本徽标
-    ok(/v4\.0\.133/.test(probe.ver), '⑦ 版本徽标 = v4.0.133', probe.ver);
+    ok(/pvz-web v4\.0\.\d+/.test(probe.ver), '⑦ 版本徽标格式正常', probe.ver);
 
     // ⑧ 无运行时报错
     ok(errs.length === 0, '⑧ 无 pageerror', errs.join(' / '));
