@@ -62,7 +62,8 @@
             '阵容推荐：橄榄球/铁门是推线坦，小鬼便宜快速，撑杆一路跳过植物，舞王成群召唤。',
             '敌阵陷阱：对面草坪有地刺（扎脚）、土豆雷（炸）、忧郁菇（绞肉），还有伪装的毁灭菇陷阱——踩上去全屏湮灭，量着血量上。',
             '可解性保底：每一行的射手火力都有上限封顶——不存在"预算花光也推不动"的死路行，不用铲子也能通关。',
-            '卡带选择：从底部僵尸卡带买僵尸拖到场地上；铁门/橄榄球/冰车按模式概率出现。' ] },
+            '卡带选择：从底部僵尸卡带买僵尸拖到场地上；铁门/橄榄球/冰车按模式概率出现。',
+            '融合炉（20 种）：阳光上方的融合手套 → 依次点两只基础僵尸 → 付「两只价 + 融合费」合成一只融合僵尸（基础 +50 / 进阶 +100 / 高阶 +150 / 终极 +250，再点一次手套可取消）。例：普通+普通=双子僵尸、铁桶+路障=铁甲路障、铁门+铁桶=堡垒僵尸、橄榄球+铁桶=铁桶橄榄、冰车+橄榄球=冰球冲刺、巨人+冰车=泰坦冰车（8000 血）。全部配方与数值见僵尸图鉴「融合僵尸」组。' ] },
         { icon: '⚔️', emoji: '⚔️', title: '双人对战', items: [
             '同屏 1v1：一人指挥植物、一人指挥僵尸。主菜单第五张卡「双人对战」进入，可选普通（无融合）或融合（植物方局内有手套+融合图鉴）。玩法弹窗正下方有木牌「返回主菜单」随时退出。右下角「投降」：植物方点按钮=僵尸方直接获胜；僵尸方按键盘 0=植物方直接获胜。',
             '选卡：植物方选 8 个植物（普通玩法全部植物可选；融合玩法只开放 18 张基础牌——融合出来的成品要局内用手套合，不能直接选），僵尸方从全部 25 种僵尸里选 8 只；双方的产阳光/产脑子单位都最多只能带 1 个。',
@@ -194,7 +195,6 @@
     // img=贴图 h=显示高度（按真实体型比例：普通僵尸=70） head=头顶植物 accNote=护甲说明
     const Z_GROUPS = [
         { title: '经典冒险', list: [
-            { n: '巨人僵尸王', img: ZB + 'Gargantuar/0.png', h: 90, hp: 1000, t: '极后期（15 分钟后）才罕见登场，外貌同巨人僵尸；血量不厚，当它是个稀客就好' },
             { n: '巨人僵尸', img: ZB + 'Gargantuar/0.png', h: 90, hp: 4000, t: '健壮巨人，重锤砸扁植物，过半血掷出小鬼' },
             { n: '冰车僵尸', img: ZB + 'Zomboni/1.gif', h: 90, ice: true, hp: 1300, t: '体型巨大的冰车，碾压植物不留啃痕，驶过之处留下冰道（冰面无法种植，30 秒融化，火爆辣椒可烧毁）；只有地刺能扎爆它' },
             { n: '橄榄球僵尸', img: ZB + 'FootballZombie/FootballZombie.gif', h: 72, hp: 2240, t: '速度 40 的重装骑兵，头盔 1400 护甲；v3.56.0 血量按 4 倍路障上调' },
@@ -228,21 +228,65 @@
             { n: '普通僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, hp: 200, t: '紫罐/问号罐：最普通的僵尸，啃食植物缓慢前进' },
         ]},
         { title: '融合僵尸', list: [
-            // v3.74.0 用户点名新增：两两融合而来，难度温和；禁用巨人/冰车/橄榄球/舞王/Boss 系
+            // v3.74.0 用户点名新增：僵尸+植物/僵尸+僵尸 两两融合而来，难度温和；禁用冰车/橄榄球/舞王/Boss 系本体
             // v3.79.0 外观重做：双盔=铁桶上再叠一顶铁桶；疯狂读报=出场即无报纸狂暴相；
             // 火把=拿在手上；大蒜=改植物头式（与植物头家族一致）
-            { n: '双盔僵尸', img: ZB + 'BucketheadZombie/BucketheadZombie.gif', h: 70,
+            // v4.0.137：补齐《我是僵尸》融合炉的 20 种（Zombie.ZFUSE，僵尸+僵尸）——
+            //   其中 ironcone / madpaper 与砸罐子的双盔 / 疯狂读报是同一种类型，合并成一条不重复列。
+            //   血量一律写「基础值」；《我是僵尸》实战里全场 ×3 血、×1.5 速（见 Zombie 构造函数末尾）。
+            //   排序与其它组一致：按厉害程度（血量/威胁）从高到低。
+            { n: '泰坦冰车', img: ZB + 'Gargantuar/0.png', h: 90, hp: 8000, hue: 'hue-rotate(250deg) saturate(1.25)',
+              t: '巨人+冰车 融合（融合炉·终极档）：8000 血，一路碾压推进 + 巨锤秒杀植物，半血照旧掷出小鬼；走得极慢，但没有一株植物能耗得过它' },
+            { n: '抛娃巨人', img: ZB + 'Gargantuar/0.png', h: 90, hp: 4000,
+              t: '巨人+小鬼 融合（融合炉·终极档）：与巨人僵尸同款，4000 血、重锤砸扁植物，过半血掷出小鬼' },
+            { n: '双层坚果头', img: ZB + 'Zombie/Zombie.gif', h: 70, hp: 3900,
+              head: { src: PL + 'WallNut/WallNut.gif', cw: 65, ch: 73, keepTop: 1.0, w: 42, y: 3, ox: 10 },
+              hue: 'hue-rotate(160deg) saturate(1.3)',
+              t: '坚果头+坚果头 融合（融合炉·进阶档）：纯血池，3900 血（≈1.5 只坚果头），没有任何技能——就用火力硬磨' },
+            { n: '铁桶橄榄', img: ZB + 'FootballZombie/FootballZombie.gif', h: 72, hp: 1600, hue: 'hue-rotate(60deg) saturate(1.25)',
+              t: '橄榄球+铁桶 融合（融合炉·进阶档）：速度 40 的重装冲刺，1600 血 + 铁桶防具，顶着一路火力往前撞' },
+            { n: '冰球冲刺', img: ZB + 'Zomboni/1.gif', h: 90, hp: 1600, hue: 'hue-rotate(210deg) saturate(1.3)',
+              t: '冰车+橄榄球 融合（融合炉·高阶档）：速度 32 的高速冰车，碾过的植物减速 8 秒；照样只有地刺能扎爆' },
+            { n: '铁甲路障', img: ZB + 'BucketheadZombie/BucketheadZombie.gif', h: 70,
               acc: { src: ZB + 'BucketheadZombie/BucketheadZombie.gif', cw: 166, ch: 144, x1: 52, y1: 2, x2: 104, y2: 52, w: 24, ox: -2.5, by: 58, flip: true },
-              hp: 1500, t: '路障+铁桶 融合（紫罐困难/地狱低频·金罐）：一只铁桶僵尸，头上再倒扣一顶铁桶——两顶帽子重叠。外层桶先打掉露出里层桶，再打掉才变普通僵尸' },
-            { n: '疯狂读报僵尸', img: ZB + 'NewspaperZombie/LostNewspaper.gif', h: 70, hp: 340,
-              t: '读报+撑杆 融合（紫罐困难/地狱低频·金罐）：出场就是怒目举拳的疯狂相（没有报纸），高速冲来跳过遇到的第一株植物；被打到狂暴线还会再度加速' },
+              hp: 1500, t: '铁桶+路障 融合（融合炉·进阶档；砸罐子里叫「双盔僵尸」）：1500 血，头上倒扣着第二顶铁桶——外层桶先打掉露出里层桶，两顶都掉才变普通僵尸' },
+            { n: '堡垒僵尸', img: ZB + 'ScreenDoorZombie/ScreenDoorZombie.gif', h: 70, hp: 1450, hue: 'hue-rotate(270deg) saturate(1.25)',
+              t: '铁门+铁桶 融合（融合炉·进阶档）：双层防御——铁门挡正面直射（投手/孢子类破甲无视），门后还有 900 血本体' },
+            { n: '铁门报社', img: ZB + 'ScreenDoorZombie/ScreenDoorZombie.gif', h: 70, hp: 1450, hue: 'hue-rotate(300deg) saturate(1.25)',
+              t: '铁门+读报 融合（融合炉·进阶档）：铁门挡正面，门一破立刻进入狂暴高速（本体只有 320 血，破门前后是两种威胁）' },
+            { n: '护盾撑杆', img: ZB + 'ScreenDoorZombie/ScreenDoorZombie.gif', h: 70, hp: 1450, hue: 'hue-rotate(90deg) saturate(1.25)',
+              t: '撑杆+铁门 融合（融合炉·进阶档）：速度 45 冲来，跳过遇到的第一株植物，同时铁门免疫正面单体弹' },
+            { n: '狂暴铁桶', img: ZB + 'BucketheadZombie/BucketheadZombie.gif', h: 70, hp: 1300, hue: 'hue-rotate(330deg) saturate(1.25)',
+              t: '铁桶+读报 融合（融合炉·进阶档）：1300 血带铁桶，桶一碎就进入高速狂暴——不能只打掉桶就放松' },
+            { n: '辣椒战车', img: ZB + 'Zomboni/1.gif', h: 90, hp: 1300, hue: 'hue-rotate(30deg) saturate(1.35)',
+              t: '辣椒头+冰车 融合（融合炉·高阶档）：1300 血的战车碾压一路，被击毁时原地 3×3 爆炸，收尾要留出空档' },
+            { n: '撑杆路障', img: ZB + 'ConeheadZombie/ConeheadZombie.gif', h: 70, hp: 900, hue: 'hue-rotate(40deg) saturate(1.25)',
+              t: '路障+撑杆 融合（融合炉·基础档）：速度 45，头盔抗打 + 跳过遇到的第一株植物（只有高坚果拦得住那一跳）' },
+            { n: '霜冻路障', img: ZB + 'ConeheadZombie/ConeheadZombie.gif', h: 70, hp: 900, hue: 'hue-rotate(180deg) saturate(1.3)',
+              t: '寒冰头+路障 融合（融合炉·进阶档）：900 血带路障，啃咬过的植物被冻慢（产阳光/射击周期都拉长）' },
+            { n: '舞王·双人秀', img: ZB + 'DancingZombie/DancingZombie.gif', h: 72, hp: 700, hue: 'hue-rotate(140deg) saturate(1.3)',
+              t: '舞王+舞王 融合（融合炉·高阶档）：700 血，每 20 秒一次从四个角同时召出 4 只伴舞——不清干净会越滚越多' },
+            { n: '双子僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, hp: 500, hue: 'hue-rotate(12deg) saturate(1.25)',
+              t: '普通+普通 融合（融合炉·基础档）：500 血，被击倒时分裂成 2 只小鬼继续啃——别以为打完就结束了' },
+            { n: '太阳僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, hp: 420,
+              head: { src: PL + 'SunFlower/SunFlower1.gif', cw: 73, ch: 74, keepTop: 0.58, w: 38, y: 5, ox: 12 },
+              hue: 'hue-rotate(55deg) saturate(1.3)',
+              t: '阳光头+阳光头 融合（融合炉·高阶档）：420 血，每 8 秒给僵尸方产 100 阳光——《我是僵尸》里的经济核心，护好它' },
+            { n: '迪斯科读报', img: ZB + 'NewspaperZombie/HeadWalk1.gif', h: 70, hp: 400, hue: 'hue-rotate(120deg) saturate(1.25)',
+              t: '读报+舞王 融合（融合炉·高阶档）：400 血，狂暴相冲 + 每 15 秒召 1 只伴舞，一边推进一边添丁' },
             { n: '火把僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70,
               acc: { src: PL + 'Torchwood/Torchwood.gif', cw: 73, ch: 87, x1: 0, y1: 0, x2: 73, y2: 87, w: 15, ox: -4, by: 14 },
               hp: 400, t: '僵尸+火炬树桩 融合（紫罐困难/地狱低频·金罐）：手里举着燃烧的火把，啃植物时每秒额外烧 40——防线被它啃得特别快' },
+            { n: '疯狂读报', img: ZB + 'NewspaperZombie/LostNewspaper.gif', h: 70, hp: 340,
+              t: '读报+撑杆 融合（融合炉·进阶档；砸罐子里叫「疯狂读报僵尸」）：出场就是怒目举拳的疯狂相（没有报纸），高速冲来跳过第一株植物，打到狂暴线还会再度加速' },
+            { n: '愤怒新人', img: ZB + 'Zombie/Zombie.gif', h: 70, hp: 320, hue: 'hue-rotate(200deg) saturate(1.25)',
+              t: '普通+读报 融合（融合炉·基础档）：320 血，啃死第 1 株植物后立刻狂暴——加速 + 啃食伤害翻倍，前排放它进来很危险' },
+            { n: '究极盲盒', img: ZB + 'Zombie/Zombie.gif', h: 70, hp: 300, gift: true, hue: 'hue-rotate(350deg) saturate(1.3)',
+              t: '盲盒+盲盒 融合（融合炉·高阶档）：只有 300 血，但被打死时会开出一只随机融合僵尸——用便宜火力点掉它反而更麻烦' },
             { n: '大蒜僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70,
               head: { src: PL + 'Garlic/Garlic.gif', cw: 60, ch: 59, keepTop: 1.0, w: 38, y: 2, ox: 10 },
               hp: 300, t: '僵尸+大蒜 融合（紫罐困难/地狱低频·金罐）：和植物头僵尸同款融合相——完整僵尸头顶着一颗大蒜头；每被打 4 次就被辣得跳到相邻一行，火力要重新瞄准' },
-        ]},
+        ], tip: '※ 以上 22 种里，前 19 条是《我是僵尸》「融合炉」的配方产物（掌套图标 → 依次点两只基础僵尸 → 付「两只价 + 融合费」合成，费用档 基础 +50 / 进阶 +100 / 高阶 +150 / 终极 +250）；最后 3 条（火把 / 疯狂读报 / 大蒜）在砸罐子紫罐·金罐里出现。血量均为基础值，实战《我是僵尸》全场 ×3 血、×1.5 速。' },
         { title: '植物头 · 金罐特殊僵尸', list: [
             { n: '高坚果头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 74, head: { src: PL + 'TallNut/TallNut.gif', cw: 83, ch: 119, keepTop: 1.0, w: 40, y: 0, ox: 10 }, hp: 5200, t: '高坚果罩在身上，全游戏最厚血量之一' },
             { n: '坚果头僵尸', img: ZB + 'Zombie/Zombie.gif', h: 70, head: { src: PL + 'WallNut/WallNut.gif', cw: 65, ch: 73, keepTop: 1.0, w: 42, y: 3, ox: 10 }, hp: 2600, t: '坚果墙盖在身上，普通输出打不动' },
@@ -443,7 +487,7 @@
         let art = '';
         if (z.ice) art += '<img class="hg-zice" src="' + ZB + 'Zomboni/ice.png' + V + '" style="width:' + Math.round(52 * s) + 'px;">';
         art += '<img class="hg-zbody" src="' + z.img + V + '" style="height:' + h + 'px;' +
-            (z.dark ? 'filter:brightness(.72) contrast(1.25);' : '') + '">';
+            (z.dark ? 'filter:brightness(.72) contrast(1.25);' : (z.hue ? 'filter:' + z.hue + ';' : '')) + '">';
         if (z.head) {
             const c = z.head;
             const w = c.w * (h / 70);
@@ -580,7 +624,8 @@
                     const key = (isProp ? 'a' : 'z') + i + '_' + j;
                     DETAILS[key] = isProp ? propDetail(z) : zombieDetail(z, g.title);
                     return isProp ? propTile(z, key) : zombieTile(z, key);
-                }).join('') + '</div>';
+                }).join('') + '</div>' +
+                (g.tip ? '<div class="hg-tip">' + g.tip + '</div>' : '');
         }).join('');
     }
 
