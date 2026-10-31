@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>语文专项学习 · 高考语文“死磕通关”数字化作战系统</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%9A%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .cb-ver {
+      display: inline-block;
+      flex: 0 0 auto;
+      align-self: center;
+      white-space: nowrap;
+      margin-left: 4px;
+      padding: 1px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      border-radius: 20px;
+      color: #ffd9a3;
+      background: rgba(255, 210, 150, 0.16);
+      border: 1px solid rgba(255, 210, 150, 0.4);
+    }
+    .cb-offline-tip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 12px 24px 0;
+      padding: 8px 14px;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #5a5040;
+      background: #fbf7ee;
+      border: 1px dashed #d9cbb0;
+      border-radius: 8px;
+    }
+    .cb-offline-tip strong { color: #8a5a00; }
+    .cb-offline-tip button {
+      margin-left: auto;
+      padding: 3px 10px;
+      font-size: 11.5px;
+      color: #8a1f14;
+      background: #fff;
+      border: 1px solid #e3c4bf;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+    .cb-offline-tip button:hover { background: #fdf2f0; }
+    @media print { .cb-offline-tip { display: none !important; } }
+  </style>
+</head>
+<body>
+
+  <!-- 顶部全局指挥栏 -->
+  <header class="top-header no-print">
+    <div class="brand-box">
+      <div class="brand-seal">死磕</div>
+      <div class="brand-title">
+        <h1>高考语文“死磕通关”数字化作战系统</h1>
+        <p id="header-student-info">吴悠（好大儿） · 杭州学军中学 2026级高一(18)班 · 基准 82分 ➔ 靶向 130+分</p>
+      </div>
+      <span class="cb-ver">v1.0.0</span>
+    </div>
+
+    <div class="header-pills">
+      <div class="status-pill target-lock" id="header-locked-target">
+        🎯 当前唯一锁定靶心：加载中...
+      </div>
+      <div class="status-pill book-thickness" id="header-book-thickness">
+        📒 活页本当前厚度：-- 张（已红笔划掉 -- 张）
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <a href="../learning.html" class="btn btn-sm btn-outline" style="background:rgba(255,255,255,0.12);color:#fff;border-color:rgba(255,255,255,0.28);text-decoration:none;white-space:nowrap;">⬅ 学习天地</a>
+      <button class="btn btn-sm btn-jade" onclick="openNightReplayModal()">🌙 睡前5分钟过电影</button>
+      <button class="btn btn-sm btn-outline" style="background:rgba(255,255,255,0.12);color:#fff;border-color:rgba(255,255,255,0.28);" onclick="openExamModal()">➕ 录入新考试/ABC对账</button>
+    </div>
+  </header>
+
+  <div class="cb-offline-tip no-print">
+    <span>📦 <strong>纯静态离线版</strong>：全部算法在浏览器本机运行，学习进度保存在当前设备（换设备 / 清缓存会回到初始快照）。</span>
+    <button onclick="cbConfirmReset()">重置为初始数据</button>
+  </div>
+
+  <!-- 主体双栏工作台 -->
+  <div class="app-layout">
+    <!-- 左侧战术导航栏 -->
+    <aside class="sidebar no-print">
+      <div>
+        <div class="nav-group-label">一、战略诊断与靶心死磕</div>
+        <button class="nav-btn active" data-tab="tab-dashboard" onclick="switchTab('tab-dashboard', this)">
+          <span>📊 成绩病历本 & 靶心决策</span>
+          <span class="nav-badge" id="nav-badge-exam">3场</span>
+        </button>
+        <button class="nav-btn" data-tab="tab-blitz" onclick="switchTab('tab-blitz', this)">
+          <span>🎯 单点爆破沉浸训练舱</span>
+          <span class="nav-badge" id="nav-badge-questions">12题</span>
+        </button>
+        <button class="nav-btn" data-tab="tab-progress" onclick="switchTab('tab-progress', this)">
+          <span>📒 会“变薄”的活页进步本</span>
+          <span class="nav-badge" id="nav-badge-due">待复盘</span>
+        </button>
+
+        <div class="nav-group-label" style="margin-top:12px;">二、四大高ROI专项工作台</div>
+        <button class="nav-btn" data-tab="tab-classical" onclick="switchTab('tab-classical', this)">
+          <span>🏛️ 文言文考频通关地图</span>
+          <span class="nav-badge">120词</span>
+        </button>
+        <button class="nav-btn" data-tab="tab-poetry" onclick="switchTab('tab-poetry', this)">
+          <span>🌙 古诗鉴赏“十把钥匙”</span>
+          <span class="nav-badge">表+深</span>
+        </button>
+        <button class="nav-btn" data-tab="tab-modern" onclick="switchTab('tab-modern', this)">
+          <span>📖 现代文精读沙盒</span>
+          <span class="nav-badge">9阱+11元</span>
+        </button>
+        <button class="nav-btn" data-tab="tab-essay" onclick="switchTab('tab-essay', this)">
+          <span>✍️ 作文“心中有人”微格舱</span>
+          <span class="nav-badge">叙议3:7</span>
+        </button>
+
+        <div class="nav-group-label" style="margin-top:12px;">三、考场风控与纸质闭环</div>
+        <button class="nav-btn" data-tab="tab-print" onclick="switchTab('tab-print', this)">
+          <span>🖨️ 时间账本 & A4打印中心</span>
+          <span class="nav-badge">3模板</span>
+        </button>
+      </div>
+
+      <div class="sidebar-quote">
+        <strong>《正心集》铁律：</strong><br/>
+        1. 拒绝用战术上的勤奋（罚抄整页原文）掩盖战略上的懒惰（不剖析思维断点）。<br/>
+        2. 同一时期<strong>只死磕一个得分率最低模块</strong>，刷透20套母题再移师下一城。<br/>
+        3. 世界上没有“粗心”，只有概念边界不清与审题未圈钥匙词。
+      </div>
+    </aside>
+
+    <!-- 右侧主工作区 -->
+    <main class="main-workspace">
+
+      <!-- =================================================================
+           模块 1: 📊 成绩病历本 & 靶心决策中心 (tab-dashboard)
+           ================================================================= -->
+      <section id="tab-dashboard" class="workspace-pane active">
+        <div class="section-header">
+          <div>
+            <h2>📊 成绩病历本（CT诊断）与“单点爆破”靶心决策中心</h2>
+            <p>基于 7 大板块得分率、失分体量与提分性价比（ROI），自动计算唯一锁定靶心，严防“胡子眉毛一把抓”。</p>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <label style="font-size:12.5px;font-weight:600;">切换查看考试：</label>
+            <select id="exam-selector" style="width:280px;" onchange="onSelectExamChange()"></select>
+          </div>
+        </div>
+
+        <!-- 顶部 4 大核心 KPI -->
+        <div class="grid-4" style="margin-bottom:18px;" id="dashboard-kpi-row"></div>
+
+        <div class="grid-2">
+          <!-- 左：七大模块得分率与 ROI 靶心排序表 -->
+          <div class="card">
+            <div class="card-title">
+              <span>🎯 七大板块得分率排行与 ROI 靶心优先级</span>
+              <span class="badge badge-red">得分率最低者优先锁定</span>
+            </div>
+            <div id="module-roi-table-container"></div>
+          </div>
+
+          <!-- 右：单点爆破战役状态机 + 考后 ABC 三层失分对账 -->
+          <div>
+            <div class="card">
+              <div class="card-title">
+                <span>🔥 单点爆破战役锁（同一周期仅允许激活 1 个主靶心）</span>
+                <span class="badge badge-gold">四步闭环：学透➔解剖➔限时20套➔复盘</span>
+              </div>
+              <div id="campaigns-list-container"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">
+                <span>⚖️ 考后 ABC 三层失分复盘对账（拒绝“粗心”借口）</span>
+                <span class="badge badge-indigo">满分 - 得分 = A + B + C</span>
+              </div>
+              <div id="abc-loss-breakdown-container"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 历次考试提分轨迹对比 -->
+        <div class="card">
+          <div class="card-title">
+            <span>📈 历次大考总分与板块得分率演进轨迹（高一上）</span>
+            <span class="badge badge-jade">目标：期末突破 112 分 · 高三冲击 130+ 分</span>
+          </div>
+          <div id="exam-trajectory-container"></div>
+        </div>
+      </section>
+
+      <!-- =================================================================
+           模块 2: 🎯 单点爆破沉浸式训练舱 (tab-blitz)
+           ================================================================= -->
+      <section id="tab-blitz" class="workspace-pane">
+        <div class="section-header">
+          <div>
+            <h2>🎯 单点爆破沉浸式训练舱（限时解题 + 三维采分点解剖）</h2>
+            <p>第三步“限时训练20套”与第四步“三维复盘（找漏点 / 找错点 / 术语升级）”一体化闭环。</p>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <select id="blitz-module-filter" style="width:210px;" onchange="loadBlitzQuestions()">
+              <option value="ALL">全部专项题库（12道精选母题）</option>
+              <option value="INFO_READ">信息类阅读（9大设误陷阱）</option>
+              <option value="DICTATION">名篇名句默写（情境防错字）</option>
+              <option value="POETRY">古代诗歌鉴赏（十把钥匙）</option>
+              <option value="LIT_READ">文学类阅读（表-中-深三层）</option>
+              <option value="LANG_USE">语言文字运用（成语/病句/补写）</option>
+              <option value="CLASSICAL">文言文阅读（断句/实词/翻译）</option>
+            </select>
+            <select id="blitz-question-selector" style="width:320px;" onchange="renderCurrentBlitzQuestion()"></select>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <!-- 左侧：原文阅读区与限时计时器 -->
+          <div class="card">
+            <div class="card-title">
+              <span id="blitz-q-header">📄 原文材料与题干审题区</span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="badge badge-red" id="blitz-timer-display">⏱️ 00:00</span>
+                <button class="btn btn-sm btn-outline" onclick="resetBlitzTimer()">重置计时</button>
+              </div>
+            </div>
+            <div id="blitz-passage-box" style="background:#faf8f3;border:1px solid #e3ddd0;border-radius:8px;padding:14px 16px;max-height:460px;overflow-y:auto;line-height:1.8;font-size:14px;"></div>
+            <div id="blitz-stem-box" style="margin-top:14px;padding:12px 14px;background:#f0f4fc;border-left:4px solid var(--accent-indigo);border-radius:6px;font-weight:600;"></div>
+          </div>
+
+          <!-- 右侧：学生作答区 + 三维采分点解剖台 + 一键转进步本 -->
+          <div>
+            <div class="card">
+              <div class="card-title">
+                <span>✍️ 考场实战作答区（主观题请强制分 ①②③ 点作答）</span>
+                <span class="badge badge-indigo" id="blitz-q-score-badge">满分 -- 分</span>
+              </div>
+              <div id="blitz-options-container" style="margin-bottom:12px;"></div>
+              <textarea id="blitz-student-answer" rows="5" placeholder="在此输入你的选项（如 B）或主观题分点答案（如 ①表层：……；②中层：……；③深层：……）"></textarea>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
+                <span style="font-size:12px;color:var(--text-muted);">提示：提交后系统将按高考阅卷采分词进行【找漏点·找错点·术语升级】三维解剖</span>
+                <button class="btn btn-primary" onclick="submitBlitzAnswer()">⚡ 提交并启动三维采分对标</button>
+              </div>
+            </div>
+
+            <!-- 三维解剖结果容器 -->
+            <div class="card" id="blitz-3d-result-card" style="display:none;">
+              <div class="card-title">
+                <span>🔬 高考阅卷三维解剖报告（找漏点 / 找错点 / 术语升级）</span>
+                <span id="blitz-earned-badge" class="badge badge-jade">得分：--</span>
+              </div>
+              <div id="blitz-3d-result-body"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================
+           模块 3: 📒 会“变薄”的活页进步本 & 坑库雷达 (tab-progress)
+           ================================================================= -->
+      <section id="tab-progress" class="workspace-pane">
+        <div class="section-header">
+          <div>
+            <h2>📒 会“变薄”的九栏活页进步本 & 1-2-7-15 遮罩抗遗忘复盘舱</h2>
+            <p>不抄大段原文、不原样照抄标答、严禁写“粗心”；经过第1、2、7、15天四轮遮罩重做全对后，<strong>红笔划掉，本子越读越薄！</strong></p>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-sm btn-primary" onclick="toggleNewCardDrawer()">➕ 新建九栏活页进步卡</button>
+            <select id="progress-stage-filter" style="width:210px;" onchange="loadProgressCards()">
+              <option value="ALL">全部活页卡片</option>
+              <option value="DUE">🔔 今日到期必须遮罩复盘</option>
+              <option value="ACTIVE">📘 尚未划掉的活跃卡片</option>
+              <option value="STRUCK_OUT">🖍️ 已红笔划掉（变薄成果）</option>
+              <option value="RED_ALERT">🚨 红牌认知预警（失败≥3次）</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 活页本“变薄”厚度仪表盘 -->
+        <div class="grid-4" style="margin-bottom:18px;" id="progress-book-kpi-row"></div>
+
+        <!-- 新建九栏活页进步卡抽屉（带认知反思门禁） -->
+        <div class="card" id="new-card-drawer" style="display:none;border:2px solid var(--accent-red);">
+          <div class="card-title">
+            <span>📝 录入九栏活页进步卡（内置【认知反思门禁】与【防罚抄检测】）</span>
+            <button class="btn btn-sm btn-outline" onclick="toggleNewCardDrawer()">收起</button>
+          </div>
+          <div id="gate-error-alert" style="display:none;margin-bottom:12px;"></div>
+          <div class="grid-3" style="margin-bottom:12px;">
+            <div>
+              <label class="form-label">1. 所属模块</label>
+              <select id="nc-module">
+                <option value="INFO_READ|信息类阅读">信息类阅读</option>
+                <option value="DICTATION|名句默写">名句默写</option>
+                <option value="POETRY|古代诗歌鉴赏">古代诗歌鉴赏</option>
+                <option value="LIT_READ|文学类阅读">文学类阅读</option>
+                <option value="LANG_USE|语言文字运用">语言文字运用</option>
+                <option value="CLASSICAL|文言文阅读">文言文阅读</option>
+                <option value="ESSAY|作文(含书写)">作文(含书写)</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">2. 试卷来源与题号</label>
+              <input type="text" id="nc-source" value="26级西溪+文渊高一月考 · 第3题" />
+            </div>
+            <div>
+              <label class="form-label">3. 失分层级（ABC分类）与分值</label>
+              <div style="display:flex;gap:6px;">
+                <select id="nc-loss-cat" style="width:65%;">
+                  <option value="A">A类：基础必拿分（默写/实词/文化常识）</option>
+                  <option value="B" selected>B类：高频题型套路（选择题设误/主观漏点）</option>
+                  <option value="C">C类：高阶素养拉锯（深层意蕴/作文思辨）</option>
+                </select>
+                <input type="number" id="nc-max-score" value="3" placeholder="满分" style="width:35%;" />
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-bottom:12px;">
+            <div>
+              <label class="form-label">4. 关键题干摘要（严禁抄整篇原文，仅摘设问词+陷阱句 ≤90字）</label>
+              <textarea id="nc-stem" rows="2" placeholder="例：[T3选择] C项：虽然不能用它研究历史，但可提供文学想象"></textarea>
+            </div>
+            <div>
+              <label class="form-label">5. 我的错答 vs 6. 标准答案采分点</label>
+              <div class="grid-2" style="gap:8px;">
+                <textarea id="nc-wrong" rows="2" placeholder="我的错答（如：误选B / 漏答深层家国情怀）"></textarea>
+                <textarea id="nc-right" rows="2" placeholder="标答采分点（如：选C。原文为“对研究历史有参考价值”，C项曲解文意）"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-3" style="margin-bottom:12px;">
+            <div>
+              <label class="form-label" style="color:var(--accent-red);">7. 错因深度反思（🚨禁写“粗心/马虎/没看清”）</label>
+              <textarea id="nc-reflection" rows="3" placeholder="必须写清思维断点：如“被B项前半句原词迷惑，漏看原文‘并不意味着完全不能’双重否定限定词”"></textarea>
+            </div>
+            <div>
+              <label class="form-label">8. 核心知识点总结与同类印证（🚨禁原样照抄标答）</label>
+              <textarea id="nc-summary" rows="3" placeholder="用自己的话浓缩≤35字规律：如“转折连词‘虽然…但’前半句常藏曲解文意暗雷，须逐字核对是非判断词”"></textarea>
+            </div>
+            <div>
+              <label class="form-label" style="color:var(--accent-jade);">9. 下次考场警戒指令（必须含“只要看到…先圈…”触发词）</label>
+              <textarea id="nc-warning" rows="3" placeholder="例：只要看到选项含“虽然/诚然/固然”，先圈前半句让步分句回原文核对是非极性！"></textarea>
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <label style="font-size:12.5px;display:flex;align-items:center;gap:6px;">
+              <input type="checkbox" id="nc-sync-excel" checked />
+              同步追加至本地《01_好大儿_高考/错题汇总分科.xlsx》
+            </label>
+            <button class="btn btn-primary" onclick="submitNewProgressCard()">🛡️ 过认知门禁并存入活页本</button>
+          </div>
+        </div>
+
+        <div class="grid-2" style="grid-template-columns: 1.55fr 1fr;">
+          <!-- 左：九栏活页进步卡列表（含遮罩重做与红笔划掉） -->
+          <div>
+            <div id="progress-cards-container"></div>
+          </div>
+
+          <!-- 右：专属“坑库雷达”与考前15分钟警戒指令排行 -->
+          <div>
+            <div class="card">
+              <div class="card-title">
+                <span>📡 专属“坑库雷达”（按历史踩坑频次排序）</span>
+                <span class="badge badge-red">考前15分钟必看</span>
+              </div>
+              <p style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">
+                把散落在各次月考里的同类错题浓缩成条件反射指令。每次在模考中再次踩中，点击“+1 踩坑”置顶强化！
+              </p>
+              <div id="trap-radar-list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================
+           模块 4: 🏛️ 文言文“考频通关地图”工作台 (tab-classical)
+           ================================================================= -->
+      <section id="tab-classical" class="workspace-pane">
+        <div class="section-header">
+          <div>
+            <h2>🏛️ 文言文“考频通关地图”工作台（120实词 · 18虚词 · 古今异义）</h2>
+            <p>紧扣《高考文言文考频通关地图》：“每日 5 新词 + 20 旧词”遮罩闪卡抽测 + 翻译“留替调补删贯”六字诀 + 实词推断七把刀。</p>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <select id="classical-type-filter" style="width:240px;" onchange="renderClassicalWords()">
+              <option value="ALL">全部高频词条（24核心母词）</option>
+              <option value="REAL_WORD">高频多义实词（T0级）</option>
+              <option value="FUNC_WORD">考纲核心虚词</option>
+              <option value="ANCIENT_MODERN">高频古今异义双音词</option>
+            </select>
+            <button class="btn btn-sm btn-indigo" onclick="toggleClassicalMaskAll()">👁️ 一键切换全员遮罩自测</button>
+          </div>
+        </div>
+
+        <div class="grid-2" style="grid-template-columns: 1.45fr 1fr;">
+          <!-- 左：实词/虚词多义枝干遮罩闪卡网格 -->
+          <div>
+            <div id="classical-words-grid" class="grid-2"></div>
+          </div>
+
+          <!-- 右：翻译六字诀 + 实词推断七把刀脚手架 -->
+          <div>
+            <div class="card">
+              <div class="card-title">
+                <span>🗡️ 考场陌生实词“七把推断飞刀”</span>
+                <span class="badge badge-indigo">85%源自课内母句迁移</span>
+              </div>
+              <div id="classical-seven-methods"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">
+                <span>📜 文言文翻译主观题“留替调补删贯”六字赋分法</span>
+                <span class="badge badge-gold">漏译省略主语必扣1分</span>
+              </div>
+              <div id="classical-six-chars"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================
+           模块 5: 🌙 古诗鉴赏“十把钥匙开锁”工作台 (tab-poetry)
+           ================================================================= -->
+      <section id="tab-poetry" class="workspace-pane">
+        <div class="section-header">
+          <div>
+            <h2>🌙 古代诗歌鉴赏“十把钥匙开锁”与“表深双层”强制答题台</h2>
+            <p>根治“读不懂古诗、只答表层字面意思漏掉深层家国情思”顽疾：先用四层十把钥匙拆锁，再填双层答题框。</p>
+          </div>
+          <div>
+            <select id="poetry-question-selector" style="width:340px;" onchange="renderPoetryWorkspace()"></select>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <!-- 左：古诗原文 + 十把钥匙交互拆解面板 -->
+          <div class="card">
+            <div class="card-title">
+              <span id="poetry-title-bar">🌙 诗歌原文与“四层十把钥匙”全息拆解</span>
+              <span class="badge badge-indigo">先开锁·后落笔</span>
+            </div>
+            <div id="poetry-poem-display" style="background:#faf8f3;border:1px solid #e2dccd;border-radius:8px;padding:16px;margin-bottom:14px;text-align:center;font-size:15px;line-height:1.9;"></div>
+            <h4 style="margin-bottom:8px;font-size:13.5px;color:var(--accent-indigo);">🔑 本诗“十把钥匙”破译向导（点击任意钥匙展开线索）：</h4>
+            <div id="poetry-10keys-container" class="ten-keys-grid"></div>
+          </div>
+
+          <!-- 右：表层+深层双框强制答题器 -->
+          <div class="card">
+            <div class="card-title">
+              <span>✍️ 古诗主观题“表层景事 + 深层情理”双轨强制答题台</span>
+              <span class="badge badge-red">只写表层最多拿一半分！</span>
+            </div>
+            <div id="poetry-stem-display" style="padding:10px 12px;background:#f0f4fc;border-left:4px solid var(--accent-indigo);border-radius:6px;font-weight:600;margin-bottom:14px;"></div>
+
+            <div style="margin-bottom:12px;">
+              <label class="form-label">【第一轨：表层意涵（点手法 + 描画面/括字面事）】</label>
+              <textarea id="poetry-layer-surface" rows="3" placeholder="例：①表层：运用比喻/对比手法，描绘了诗人深夜在书斋中听风雪、翻阅史书的孤寂画面……"></textarea>
+            </div>
+
+            <div style="margin-bottom:12px;">
+              <label class="form-label" style="color:var(--accent-red);">【第二轨：深层意蕴（析孤愤/家国情怀/历史兴亡哲思 —— 必答赋分点！）】</label>
+              <textarea id="poetry-layer-deep" rows="3" placeholder="例：②深层：借此抒发了诗人虽遭贬谪却仍心系朝廷的赤诚忠君之情，以及壮志难酬的深沉悲慨……"></textarea>
+            </div>
+
+            <button class="btn btn-primary" style="width:100%;" onclick="evaluatePoetryDualAnswer()">🔍 合成双轨答案并与高考阅卷标答比对</button>
+
+            <div id="poetry-eval-result" style="display:none;margin-top:14px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================
+           模块 6: 📖 现代文阅读精读沙盒 (tab-modern)
+           ================================================================= -->
+      <section id="tab-modern" class="workspace-pane">
+        <div class="section-header">
+          <div>
+            <h2>📖 现代文阅读精读沙盒（信息类“9大设误陷阱” + 文学类“表-中-深 & 北大11大元素”）</h2>
+            <p>融合《B.冲刺版》信息类选择题比对大法与《26新高考II卷138分北大社会学学霸笔记》文学类 11 大高阶文本元素库。</p>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <!-- 左：信息类阅读 9 大设误陷阱矩阵 -->
+          <div class="card">
+            <div class="card-title">
+              <span>🕵️‍♂️ 信息类阅读选择题“9大命题设误陷阱”拆雷矩阵</span>
+              <span class="badge badge-red">吴悠月考得分率最低项(44.4%)</span>
+            </div>
+            <p style="font-size:12.5px;color:var(--text-secondary);margin-bottom:12px;">
+              做题铁律：<strong>先圈题干（选正确/不正确）➔ 圈选项逻辑词（全部/已经/因此/只要）➔ 回原文定位比对！</strong>
+            </p>
+            <div id="modern-info-9traps-list"></div>
+          </div>
+
+          <!-- 右：文学类阅读“表-中-深”三层脚手架 + 北大11大高阶文本元素 -->
+          <div>
+            <div class="card">
+              <div class="card-title">
+                <span>🏛️ 北大138分学霸笔记：文学类阅读“11大高阶文本元素”速查与套用</span>
+                <span class="badge badge-gold">点击元素一键填入下方三层沙盒</span>
+              </div>
+              <div id="modern-lit-11elements-list" style="max-height:330px;overflow-y:auto;"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">
+                <span>📐 文学类主观题“表-中-深”三层立体答题演练框</span>
+                <span class="badge badge-jade">拒绝单维度大白话</span>
+              </div>
+              <div id="modern-3layer-sandbox">
+                <div style="margin-bottom:8px;">
+                  <label class="form-label">① 表层（情节脉络 / 物象外在特征 / 结构呼应）</label>
+                  <textarea id="mod-sandbox-l1" rows="2">在情节与结构上，以特定物象/场景串联起人物的往事与当下，使叙事脉络紧凑连贯。</textarea>
+                </div>
+                <div style="margin-bottom:8px;">
+                  <label class="form-label">② 中层（人物心理蜕变 / 叙事视角与延缓手法）</label>
+                  <textarea id="mod-sandbox-l2" rows="2">在人物与手法上，采用有限视角与细节白描，细腻外化了主人公从拘谨羞怯到纯粹崇高的精神风貌。</textarea>
+                </div>
+                <div style="margin-bottom:10px;">
+                  <label class="form-label">③ 深层（时代历史纵深 / 诗化审美意蕴 / 冰山留白）</label>
+                  <textarea id="mod-sandbox-l3" rows="2">在主旨与审美上，以克制留白的诗化笔法折射出战火岁月中的人性美与家国情怀，余味悠长。</textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================
+           模块 7: ✍️ 高考作文“心中有人·微格训练”工作台 (tab-essay)
+           ================================================================= -->
+      <section id="tab-essay" class="workspace-pane">
+        <div class="section-header">
+          <div>
+            <h2>✍️ 高考作文“心中有人·一材多用”素材库 & 200字主体段“四步法”微格训练舱</h2>
+            <p>根治“以叙代议、素材老套、缺乏思辨、史实硬伤”：用三层鲜活素材库 + 黄金叙议比（3:7）检测器，稳拿一类文 48~54 分！</p>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <select id="essay-material-filter" style="width:240px;" onchange="renderEssayMaterials()">
+              <option value="ALL">全部三层立体素材库（12组精选）</option>
+              <option value="ANCIENT">第一层：古代底蕴 · 千古文化脊梁人物卡</option>
+              <option value="MODERN">第二层：近现代纵深 · 家国与文脉（含浙江本土）</option>
+              <option value="CONTEMPORARY">第三层：当代视野 · 时代热点与凡人微光</option>
+              <option value="ONE_LINER">北大138分笔记 · 一句话群像排比</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid-2" style="grid-template-columns: 1.05fr 1.25fr;">
+          <!-- 左栏：三层素材库 + 万能思辨金句库 -->
+          <div>
+            <div class="card">
+              <div class="card-title">
+                <span>📚 “心中有人”三层立体素材卡片（点击“填入训练器”一键调用）</span>
+                <span class="badge badge-indigo">人物三要素：高光镜头+原声名言+多维立意</span>
+              </div>
+              <div id="essay-materials-container" style="max-height:430px;overflow-y:auto;"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">
+                <span>💎 万能思辨金句库（解决说理干瘪、单向度绝对化）</span>
+                <span class="badge badge-gold">点击金句自动追加至第3/4步</span>
+              </div>
+              <div id="essay-quotes-container" style="max-height:280px;overflow-y:auto;"></div>
+            </div>
+          </div>
+
+          <!-- 右栏：200字主体段“四步法”微格训练器（含实时叙议比 3:7 与史实排雷） -->
+          <div>
+            <div class="card">
+              <div class="card-title">
+                <span>🛠️ 200字议论文主体段“四步法”微格训练器（实时叙议比 3:7 监控）</span>
+                <span class="badge badge-jade" id="essay-score-badge">预估折算分：-- / 60</span>
+              </div>
+
+              <div style="margin-bottom:10px;">
+                <label class="form-label">🎯 训练作文母题 / 中心论点</label>
+                <input type="text" id="essay-topic-input" value="论“时间沉淀与快时代下的长期主义定力”" />
+              </div>
+
+              <div style="margin-bottom:10px;">
+                <label class="form-label">【第一步：亮观点（段首分论点句，建议 20~35 字，破题干脆）】</label>
+                <textarea id="essay-step1" rows="2" oninput="liveUpdateEssayRatio()">真正的传世之功，往往诞生于拒绝速成诱惑、甘坐冷板凳的漫长沉淀之中。</textarea>
+              </div>
+
+              <div style="margin-bottom:10px;">
+                <label class="form-label" style="color:#b45309;">【第二步：摆素材（高光镜头定格，建议 ≤55 字，🚨严禁写成长篇人物生平传记！）】</label>
+                <textarea id="essay-step2" rows="2" oninput="liveUpdateEssayRatio()">樊锦诗自北大毕业后毅然奔赴大漠敦煌，在风沙漫天的石窟中青丝变白发，潜心六十载构建“数字敦煌”。</textarea>
+              </div>
+
+              <div style="margin-bottom:10px;">
+                <label class="form-label" style="color:var(--accent-jade);">【第三步：扣题分析（核心思辨区，建议 90~130 字，多用“正因为…倘若…诚然…然而…”因果/假设句）】</label>
+                <textarea id="essay-step3" rows="4" oninput="liveUpdateEssayRatio()">正因为她深知文明的存续绝非朝夕之功，才会在寂寞的戈壁滩上抵御住繁华都市的喧嚣诱惑；倘若她也追求立竿见影的短平快政绩，千年莫高窟的斑斓壁画又岂能在数字苍穹下获得永生？诚然，快时代推崇效率与即时反馈，然而越是浮躁喧嚣，越唯有这种“择一事终一生”的慢定力，方能凿穿岁月的坚冰。</textarea>
+              </div>
+
+              <div style="margin-bottom:10px;">
+                <label class="form-label">【第四步：回扣升华（点题收束句，建议 25~40 字，金句收尾）】</label>
+                <textarea id="essay-step4" rows="2" oninput="liveUpdateEssayRatio()">故曰：风物长宜放眼量，唯有以长期主义的匠心对抗速朽，方能立起时代的精神丰碑。</textarea>
+              </div>
+
+              <!-- 实时叙议比双色仪表条 -->
+              <div style="background:#faf8f3;border:1px solid #e2dccd;border-radius:8px;padding:10px 14px;margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:600;">
+                  <span id="ratio-label-left" style="color:#b45309;">叙例占比（第2步）：--%（目标 ≤33%）</span>
+                  <span id="ratio-label-total">全段总字数：-- 字</span>
+                  <span id="ratio-label-right" style="color:var(--accent-jade);">议论说理占比（第1+3+4步）：--%（目标 ≥67%）</span>
+                </div>
+                <div class="ratio-meter">
+                  <div id="ratio-bar-narrative" class="ratio-narrative" style="width:25%;">叙 25%</div>
+                  <div id="ratio-bar-analysis" class="ratio-analysis" style="width:75%;">议 75%</div>
+                </div>
+              </div>
+
+              <div style="display:flex;gap:10px;">
+                <button class="btn btn-primary" style="flex:1;" onclick="runEssayLinter(true)">🔍 运行“七不要+史实排雷+叙议比”全维批改并保存</button>
+              </div>
+
+              <!-- 批改结果区 -->
+              <div id="essay-lint-result" style="margin-top:14px;"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================
+           模块 8: 🖨️ 考场时间账本 & A4 一键打印中心 (tab-print)
+           ================================================================= -->
+      <section id="tab-print" class="workspace-pane">
+        <div class="section-header no-print">
+          <div>
+            <h2>🖨️ 考场 150 分钟时间分配账本 & A4 纸质闭环打印中心</h2>
+            <p>护眼防沉迷设计：平时周末深度诊断录入，周中晚自习与考前 15 分钟直接打印 A4 纸质急救包，脱屏高效背诵！</p>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="print-template-selector" style="width:310px;" onchange="renderPrintSheet()">
+              <option value="TPL_1_STRATEGY">📄 模板一：《好大儿·语文错题改进策略单页背诵清单》</option>
+              <option value="TPL_2_EMERGENCY">⚡ 模板二：《考前15分钟·D-1天眼急救包（Top警戒令+名句+金句）》</option>
+              <option value="TPL_3_CLIPBOARD">✂️ 模板三：《单点爆破母题剪贴本（左题干原题 · 右留白三刷区）》</option>
+            </select>
+            <button class="btn btn-primary" onclick="window.print()">🖨️ 一键打印 A4 纸质版 / 导出 PDF</button>
+          </div>
+        </div>
+
+        <!-- 考场 150 分钟标准配速表（仅屏幕显示） -->
+        <div class="card no-print">
+          <div class="card-title">
+            <span>⏱️ 高考语文 150 分钟考场标准时间分配红线（严防“前松后紧导致作文烂尾”）</span>
+            <span class="badge badge-red">第 90 分钟必须启动作文审题！</span>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>题号与板块</th>
+                <th>分值</th>
+                <th>高考标准配速</th>
+                <th>吴悠月考实际耗时</th>
+                <th>考场控速铁律与止损红线</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>一、信息类阅读（T1~T5）</strong></td>
+                <td>18~19分</td>
+                <td><strong>18 分钟</strong></td>
+                <td>25 分钟（超时7分钟）</td>
+                <td>先看主观题干带问题读文；选择题单题卡壳超 2.5 分钟立即标记跳过，严禁恋战！</td>
+              </tr>
+              <tr>
+                <td><strong>二、文学类阅读（T6~T9）</strong></td>
+                <td>16~18分</td>
+                <td><strong>22 分钟</strong></td>
+                <td>24 分钟</td>
+                <td>速抓人物关系与核心物象；主观题直接按“①表层情节 ②中层人物手法 ③深层时代主旨”分点落笔。</td>
+              </tr>
+              <tr>
+                <td><strong>三、文言文阅读（T10~T14）</strong></td>
+                <td>20~23分</td>
+                <td><strong>20 分钟</strong></td>
+                <td>19 分钟（节奏良好）</td>
+                <td>先看最后一道文意概括题逆推人物生平；翻译题严格落实“留替调补删贯”，字字落实。</td>
+              </tr>
+              <tr>
+                <td><strong>四、古代诗歌鉴赏（T15~T16）</strong></td>
+                <td>9分</td>
+                <td><strong>10 分钟</strong></td>
+                <td>11 分钟</td>
+                <td>动笔前花 90 秒用“标题+作者+注释+意象色调”钥匙开锁，主观题强制写满表层+深层两段。</td>
+              </tr>
+              <tr>
+                <td><strong>五、名篇名句默写（T17）</strong></td>
+                <td>6分</td>
+                <td><strong>5 分钟</strong></td>
+                <td>6 分钟</td>
+                <td>写完立即逐字检查通假字、生僻字笔画（如“赢得仓皇北顾”之“仓皇”、“酾酒临江”之“酾”）。</td>
+              </tr>
+              <tr>
+                <td><strong>六、语言文字运用（T18~T22）</strong></td>
+                <td>18~20分</td>
+                <td><strong>15 分钟</strong></td>
+                <td>18 分钟</td>
+                <td>补写句子严看前后句主语一致性与标点暗示；病句题先提主干查搭配与成分残缺。</td>
+              </tr>
+              <tr style="background:#fdf2f0;">
+                <td><strong>七、写作（T23）</strong></td>
+                <td>60分</td>
+                <td><strong>55~60 分钟</strong></td>
+                <td>47 分钟（被迫压缩）</td>
+                <td><strong>开考第90分钟必须翻到作文页！</strong>前5分钟列“标题+中心论点+3个分论点人物卡”提纲，留足50分钟工整书写满850字。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- A4 打印预览画布 -->
+        <div id="print-sheet-container" class="print-sheet"></div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- =====================================================================
+       模态弹窗 1: 🌙 睡前 5 分钟“闭目过电影”闪回模式
+       ===================================================================== -->
+  <div id="night-replay-modal" class="modal-backdrop no-print">
+    <div class="modal-dialog" style="background:#16202a;color:#f0f4f8;border:2px solid var(--accent-gold);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:12px;">
+        <div>
+          <h3 style="font-size:18px;color:#ffd166;">🌙 睡前 5 分钟“闭目过电影”海马体固化模式</h3>
+          <p style="font-size:12.5px;color:#9fb3c8;">《E.正心集》心法：睡前不刷手机，用 5 分钟在脑海中闪回今日攻克的 3 条警戒指令、3 个文言实词与 1 张作文人物卡。</p>
+        </div>
+        <button class="btn btn-sm btn-outline" onclick="closeNightReplayModal()">关闭</button>
+      </div>
+      <div id="night-replay-body"></div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       模态弹窗 2: ➕ 录入新考试与考后 ABC 三层失分复盘对账
+       ===================================================================== -->
+  <div id="exam-create-modal" class="modal-backdrop no-print">
+    <div class="modal-dialog">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid var(--border-color);padding-bottom:10px;">
+        <div>
+          <h3 style="font-size:17px;">➕ 录入新考试病历单 & 考后 ABC 三层失分强制对账</h3>
+          <p style="font-size:12px;color:var(--text-secondary);">系统强制执行数学勾稽：七大模块总分=150，且 A类失分 + B类失分 + C类失分 = 总扣分。</p>
+        </div>
+        <button class="btn btn-sm btn-outline" onclick="closeExamModal()">关闭</button>
+      </div>
+      <div id="exam-create-error" style="display:none;margin-bottom:10px;"></div>
+      <div class="grid-3" style="margin-bottom:12px;">
+        <div>
+          <label class="form-label">考试名称</label>
+          <input type="text" id="ex-name" value="2026学年高一上期中联考" />
+        </div>
+        <div>
+          <label class="form-label">考试日期</label>
+          <input type="date" id="ex-date" value="2026-11-15" />
+        </div>
+        <div>
+          <label class="form-label">卷面总得分（满分150）</label>
+          <input type="number" id="ex-total-actual" value="103" readonly style="background:#f3f4f6;font-weight:700;" />
+        </div>
+      </div>
+
+      <h4 style="font-size:13px;margin-bottom:8px;">一、七大模块得分明细（修改得分后自动汇总）：</h4>
+      <div class="grid-4" style="margin-bottom:14px;" id="ex-modules-inputs">
+        <div>
+          <label class="form-label">信息类阅读 (满分18)</label>
+          <input type="number" class="ex-mod-input" data-code="MOD_INFO_READ" data-name="信息类阅读" data-max="18" data-plan="18" value="13" oninput="recalcExamModalTotals()" />
+        </div>
+        <div>
+          <label class="form-label">文学类阅读 (满分18)</label>
+          <input type="number" class="ex-mod-input" data-code="MOD_LIT_READ" data-name="文学类阅读" data-max="18" data-plan="22" value="12" oninput="recalcExamModalTotals()" />
+        </div>
+        <div>
+          <label class="form-label">文言文阅读 (满分23)</label>
+          <input type="number" class="ex-mod-input" data-code="MOD_CLASSICAL" data-name="文言文阅读" data-max="23" data-plan="20" value="18" oninput="recalcExamModalTotals()" />
+        </div>
+        <div>
+          <label class="form-label">古代诗歌鉴赏 (满分9)</label>
+          <input type="number" class="ex-mod-input" data-code="MOD_POETRY" data-name="古代诗歌鉴赏" data-max="9" data-plan="10" value="6" oninput="recalcExamModalTotals()" />
+        </div>
+        <div>
+          <label class="form-label">名句默写 (满分6)</label>
+          <input type="number" class="ex-mod-input" data-code="MOD_DICTATION" data-name="名句默写" data-max="6" data-plan="5" value="6" oninput="recalcExamModalTotals()" />
+        </div>
+        <div>
+          <label class="form-label">语言文字运用 (满分16)</label>
+          <input type="number" class="ex-mod-input" data-code="MOD_LANG_USE" data-name="语言文字运用" data-max="16" data-plan="15" value="11" oninput="recalcExamModalTotals()" />
+        </div>
+        <div>
+          <label class="form-label">作文含书写 (满分60)</label>
+          <input type="number" class="ex-mod-input" data-code="MOD_ESSAY" data-name="作文(含书写)" data-max="60" data-plan="55" value="37" oninput="recalcExamModalTotals()" />
+        </div>
+      </div>
+
+      <h4 style="font-size:13px;margin-bottom:8px;">二、ABC 三层失分归因对账（三项之和必须等于总扣分 <span id="ex-total-lost-span">47</span> 分）：</h4>
+      <div class="grid-3" style="margin-bottom:14px;">
+        <div>
+          <label class="form-label" style="color:var(--accent-red);">A类失分（本该稳拿的基础/审题失分）</label>
+          <input type="number" id="ex-loss-a" value="8" />
+        </div>
+        <div>
+          <label class="form-label" style="color:#b45309;">B类失分（高频题型套路与漏点失分）</label>
+          <input type="number" id="ex-loss-b" value="24" />
+        </div>
+        <div>
+          <label class="form-label" style="color:var(--accent-indigo);">C类失分（高阶审美与深度思辨拉锯）</label>
+          <input type="number" id="ex-loss-c" value="15" />
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label class="form-label">考后战略复盘小结</label>
+        <input type="text" id="ex-notes" value="信息类阅读与名句默写单点爆破显效，下一阶段主锁【古诗鉴赏+作文四步法主体段】。" />
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;">
+        <button class="btn btn-outline" onclick="closeExamModal()">取消</button>
+        <button class="btn btn-primary" onclick="submitNewExamRecord()">✅ 校验勾稽关系并存入病历本</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="data/seed.js"></script>
+  <script src="js/api-shim.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    function cbConfirmReset() {
+      if (confirm('确定要清空本机所有学习进度，恢复到初始语料快照吗？此操作不可撤销。')) {
+        window.cbResetAll();
+      }
+    }
+  </script>
+</body>
+</html>
