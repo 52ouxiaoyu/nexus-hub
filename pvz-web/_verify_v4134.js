@@ -18,7 +18,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     page.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
     page.on('response', r => { if (r.status() === 404) errs.push('404: ' + r.url()); });
     await page.setViewport({ width: 1280, height: 800 });
-    await page.goto('http://127.0.0.1:8899/pvz-web/index.html', { waitUntil: 'networkidle2' });
+    await page.goto('file://' + require('path').resolve('/Users/clawbox/nexus-hub/pvz-web/index.html'), { waitUntil: 'networkidle2' });
     await sleep(1500);
 
     // ---- 开局：点小游戏卡

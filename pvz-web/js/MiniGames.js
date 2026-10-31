@@ -1,7 +1,7 @@
 /*!
- * MiniGames.js — pvz-web 小游戏厅（v4.0.134）
+ * MiniGames.js — pvz-web 后院游乐场（v4.0.134）
  * 10 个独立玩法，全部运行在同一个 900×600 canvas 上：
- *   豌豆方块(俄罗斯方块) / 僵尸地鼠(打地鼠) / 花园2048 / 猫尾草泡泡龙(泡泡射击)
+ *   玉米方块(俄罗斯方块) / 僵尸地鼠(打地鼠) / 花园2048 / 猫尾草泡泡龙(泡泡射击)
  *   豌豆弹球(打砖块) / 植物消消乐(三消) / 寒冰推箱(推箱子) / 豌豆射击场(打飞靶)
  *   花园连连看(记忆配对) / 僵尸贪吃蛇(贪吃蛇)
  * ESC 逐层返回（游戏 → 大厅 → 主菜单）。
@@ -30,6 +30,8 @@
         cherry: PL + 'CherryBomb/0.gif',
         torchwood: PL + 'Torchwood/0.gif',
         kernel: PL + 'KernelPult/KernelPult.png',
+        cob: PL + 'CobCannon/Cob.png',            // v4.0.138：161x76 的玉米棒（原版玉米炮弹），比 96px 投石车清楚得多
+        doom: PL + 'DoomShroom/0.gif',
         puffshroom: PL + 'PuffShroom/0.gif',
         cattail: PL + 'Cattail/Cattail.gif',
         zombie: ZB + 'Zombie/0.gif',
@@ -67,10 +69,26 @@
         ctx.globalAlpha = 1;
         return true;
     }
+    // v4.0.138：宽优先等比——玉米棒 161x76 是横条，塞进方框会小得看不见，改成撑满可用宽度
+    function sprFitW(k, cx, cy, w, alpha) {
+        const im = _im[k];
+        if (!im || !im.complete || !im.naturalWidth) return false;
+        const h = w * im.naturalHeight / im.naturalWidth;
+        return spr(k, cx - w / 2, cy - h / 2, w, h, alpha);
+    }
     function sprH(k, x, y, h, alpha) {           // 按高度等比
         const im = _im[k];
         if (!im || !im.complete || !im.naturalWidth) return false;
         return spr(k, x, y, h * im.naturalWidth / im.naturalHeight, h, alpha);
+    }
+    // 等比 contain 居中：宽扁的素材（如玉米棒 161x76）放进方格/方框不拉伸
+    function sprFit(k, cx, cy, box, alpha) {
+        const im = _im[k];
+        if (!im || !im.complete || !im.naturalWidth) return false;
+        const r = im.naturalWidth / im.naturalHeight;
+        let w = box, h = box;
+        if (r > 1) h = box / r; else w = box * r;
+        return spr(k, cx - w / 2, cy - h / 2, w, h, alpha);
     }
     function bgGrass() {
         const g = ctx.createLinearGradient(0, 0, 0, H);
@@ -114,7 +132,7 @@
     }
 
     /* ================================================================
-     * 1. 豌豆方块（俄罗斯方块）
+     * 1. 玉米方块（俄罗斯方块）
      * ============================================================== */
     const TET_SHAPES = {
         I: [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]],
@@ -132,15 +150,19 @@
         L: { p: 'lilypad', c: '#4fa77c', n: '睡莲' },
         J: { p: 'spikeweed', c: '#8d9440', n: '地刺' },
         S: { p: 'cherry', c: '#cf4130', n: '樱桃' },
-        Z: { p: 'kernel', c: '#dfb13c', n: '玉米' }
+        Z: { p: 'cob', c: '#e0b83c', n: '玉米' }      // v4.0.138：换成 161x76 的玉米棒，比 96px 投石车清楚
     };
     class Tetris extends Base {
         setup() {
-            this.CO = 10; this.RO = 18; this.CELL = 28;
-            this.bx = 168; this.by = 62;
+            // v4.0.138：棋盘撑大（280x504 → 320x544），侧栏字号整体收小，主视觉交给棋盘
+            this.CO = 10; this.RO = 17; this.CELL = 32;
+            this.bx = 116; this.by = 30;
             this.board = Array.from({ length: this.RO }, () => new Array(this.CO).fill(null));
             this.bag = []; this.cur = null; this.next = this.pick();
             this.dropT = 0; this.dropIv = 620; this.lines = 0; this.score = 0; this.clearing = 0;
+            this.survT = 0;        // 存活秒数（时间积分来源）
+            this.boostT = 0;       // 加速窗口剩余秒数（期间时间积分翻倍）
+            this.timeScore = 0;    // 光是"活下来"赚到的分，和消行分分开显示
             this.spawn();
         }
         pick() {
@@ -193,6 +215,13 @@
         }
         update(dt) {
             if (this.over) return;
+            // v4.0.138：积分不只看消行——活着的每一秒都在涨；处于加速状态时按双倍结算
+            this.survT += dt;
+            const rate = this.boostT > 0 ? 6 : 3;        // 基础 3 分/秒（180/分），加速 6 分/秒（360/分）
+            if (this.boostT > 0) this.boostT -= dt;      // 先判档再倒计时，否则第一帧永远拿不到 2 倍
+            const gain = dt * rate;
+            this.timeScore += gain;
+            this.score += gain;
             this.dropT += dt * 1000;
             if (this.dropT >= this.dropIv) {
                 this.dropT = 0;
@@ -203,12 +232,13 @@
             if (!down || this.over) return;
             if (k === 'left') this.tryMove(-1, 0);
             else if (k === 'right') this.tryMove(1, 0);
-            else if (k === 'down') { if (this.tryMove(0, 1)) this.score += 1; }
+            else if (k === 'down') { this.boostT = Math.max(this.boostT, 0.5); if (this.tryMove(0, 1)) this.score += 1; }
             else if (k === 'up') {
                 const m = this.rotate(this.cur.m);
                 for (const dx of [0, -1, 1, -2, 2]) if (!this.hit(m, this.cur.x + dx, this.cur.y)) { this.cur.m = m; this.cur.x += dx; break; }
             } else if (k === 'space') {
                 let g = 0; while (this.tryMove(0, 1)) g++;
+                this.boostT = Math.max(this.boostT, 1.2);   // 硬降后 1.2 秒按加速结算
                 this.score += g * 2; this.lock();
             }
         }
@@ -221,13 +251,38 @@
             for (let c = 1; c < CO; c++) { ctx.beginPath(); ctx.moveTo(bx + c * CELL, by); ctx.lineTo(bx + c * CELL, by + RO * CELL); ctx.stroke(); }
             for (let r = 1; r < RO; r++) { ctx.beginPath(); ctx.moveTo(bx, by + r * CELL); ctx.lineTo(bx + CO * CELL, by + r * CELL); ctx.stroke(); }
             ctx.restore();
+            // v4.0.138：玉米块改成自绘——161x76 的玉米棒缩到 12px 高必然糊，
+            // 自绘圆角底 + 玉米粒阵在任何尺寸都是锐的
+            const cornCell = (x, y, a) => {
+                ctx.globalAlpha = a == null ? 1 : a;
+                const g0 = ctx.createLinearGradient(0, y, 0, y + CELL);
+                g0.addColorStop(0, '#f5d75a'); g0.addColorStop(1, '#d3a520');
+                ctx.fillStyle = g0; rr(x + 1, y + 1, CELL - 2, CELL - 2, 7); ctx.fill();
+                ctx.strokeStyle = 'rgba(120,80,10,0.55)'; ctx.lineWidth = 1.5;
+                rr(x + 1.5, y + 1.5, CELL - 3, CELL - 3, 7); ctx.stroke();
+                // 玉米粒：3x3 圆点，留边
+                const pad = CELL * 0.20, step = (CELL - pad * 2) / 2.6;
+                ctx.fillStyle = 'rgba(255,246,180,0.95)';
+                for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+                    const cx = x + pad + c * step, cy = y + pad + r * step;
+                    ctx.beginPath(); ctx.ellipse(cx, cy, CELL * 0.088, CELL * 0.076, 0, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.fillStyle = 'rgba(120,80,10,0.18)';
+                for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+                    const cx = x + pad + c * step, cy = y + pad + r * step;
+                    ctx.beginPath(); ctx.ellipse(cx, cy + CELL * 0.072, CELL * 0.082, CELL * 0.028, 0, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.globalAlpha = 1;
+            };
             const cell = (k, x, y, a) => {
+                if (k === 'Z') { cornCell(x, y, a); return; }
                 const s = TET_SKIN[k];
                 ctx.globalAlpha = a == null ? 1 : a;
-                ctx.fillStyle = s.c; rr(x + 1, y + 1, CELL - 2, CELL - 2, 6); ctx.fill();
-                ctx.fillStyle = 'rgba(255,255,255,0.22)'; rr(x + 3, y + 3, CELL - 6, 7, 3); ctx.fill();
+                ctx.fillStyle = s.c; rr(x + 1, y + 1, CELL - 2, CELL - 2, 7); ctx.fill();
+                ctx.fillStyle = 'rgba(255,255,255,0.20)'; rr(x + 3, y + 3, CELL - 6, 8, 4); ctx.fill();
                 ctx.globalAlpha = 1;
-                spr(s.p, x + 4, y + 4, CELL - 8, CELL - 8, a == null ? 1 : a);
+                const ca = a == null ? 1 : a;
+                spr(s.p, x + 5, y + 5, CELL - 10, CELL - 10, ca);
             };
             for (let r = 0; r < RO; r++) for (let c = 0; c < CO; c++) {
                 if (this.board[r][c]) cell(this.board[r][c], bx + c * CELL, by + r * CELL);
@@ -236,36 +291,63 @@
                 let gy = this.cur.y; while (!this.hit(this.cur.m, this.cur.x, gy + 1)) gy++;
                 for (let r = 0; r < this.cur.m.length; r++) for (let c = 0; c < this.cur.m[r].length; c++) {
                     if (!this.cur.m[r][c]) continue;
-                    if (gy !== this.cur.y) cell(this.cur.k, bx + (this.cur.x + c) * CELL, by + (gy + r) * CELL, 0.22);
+                    if (gy !== this.cur.y) cell(this.cur.k, bx + (this.cur.x + c) * CELL, by + (gy + r) * CELL, 0.13);
                 }
                 for (let r = 0; r < this.cur.m.length; r++) for (let c = 0; c < this.cur.m[r].length; c++) {
                     if (!this.cur.m[r][c]) continue;
                     if (this.cur.y + r >= 0) cell(this.cur.k, bx + (this.cur.x + c) * CELL, by + (this.cur.y + r) * CELL);
                 }
             }
-            // 右侧 HUD
-            const hx = 480;
-            txt('豌豆方块', hx, 86, 30, '#ffe9a8', 'left', 900);
-            txt('PLANT BLOCKS', hx, 116, 12, 'rgba(255,255,255,0.5)', 'left', 700);
-            panel(hx - 8, 140, 380, 118, 0.5);
-            txt('分数', hx + 8, 166, 15, 'rgba(255,255,255,0.65)');
-            txt(String(this.score), hx + 8, 200, 38, '#ffe066', 'left', 900);
-            txt('消行', hx + 190, 166, 15, 'rgba(255,255,255,0.65)');
-            txt(String(this.lines), hx + 190, 200, 38, '#9fe060', 'left', 900);
-            panel(hx - 8, 272, 190, 150, 0.5);
-            txt('下一个', hx + 8, 296, 15, 'rgba(255,255,255,0.65)');
+            // 右侧 HUD（v4.0.138：数字整体收小，把版面让给棋盘）
+            const hx = 500;
+            txt('玉米方块', hx, 66, 27, '#ffe9a8', 'left', 900);
+            txt('CORN BLOCKS', hx, 92, 11.5, 'rgba(255,255,255,0.5)', 'left', 700);
+
+            panel(hx - 10, 112, 372, 76, 0.5);
+            txt('分数', hx, 132, 13, 'rgba(255,255,255,0.62)');
+            txt(String(Math.floor(this.score)), hx, 162, 26, '#ffe066', 'left', 900);
+            txt('消行', hx + 200, 132, 13, 'rgba(255,255,255,0.62)');
+            txt(String(this.lines), hx + 200, 162, 26, '#9fe060', 'left', 900);
+
+            // 时间 / 加速：这两栏解释"分是怎么涨上来的"
+            panel(hx - 10, 198, 372, 62, 0.45);
+            txt('存活', hx, 218, 12.5, 'rgba(255,255,255,0.6)');
+            txt(this.survT.toFixed(0) + 's', hx + 40, 218, 17, '#cfe8b0', 'left', 800);
+            txt('时间分', hx + 120, 218, 12.5, 'rgba(255,255,255,0.6)');
+            txt('+' + Math.floor(this.timeScore), hx + 178, 218, 17, '#cfe8b0', 'left', 800);
+            const boosting = this.boostT > 0;
+            txt(boosting ? '加速中 ×2 积分' : '软降/直落触发加速', hx, 246, 13,
+                boosting ? '#ffe066' : 'rgba(255,255,255,0.45)', 'left', boosting ? 900 : 600);
+
+            panel(hx - 10, 270, 372, 106, 0.5);
+            txt('下一个', hx, 292, 13, 'rgba(255,255,255,0.6)');
+            txt(TET_SKIN[this.next].n, hx, 314, 15, '#dfe9c4');
             const nm = TET_SHAPES[this.next];
+            const ns = TET_SKIN[this.next];
+            const ncell = 24;
             for (let r = 0; r < nm.length; r++) for (let c = 0; c < nm[r].length; c++) {
                 if (!nm[r][c]) continue;
-                const s = TET_SKIN[this.next];
-                ctx.fillStyle = s.c; rr(hx + 14 + c * 26, 318 + r * 26, 24, 24, 5); ctx.fill();
-                spr(s.p, hx + 17 + c * 26, 321 + r * 26, 18, 18);
+                const x = hx + 210 + c * ncell, y = 300 + r * ncell;
+                if (this.next === 'Z') {
+                    const g2 = ctx.createLinearGradient(0, y, 0, y + ncell);
+                    g2.addColorStop(0, '#f5d75a'); g2.addColorStop(1, '#d3a520');
+                    ctx.fillStyle = g2; rr(x, y, ncell - 2, ncell - 2, 5); ctx.fill();
+                    ctx.fillStyle = 'rgba(255,246,180,0.95)';
+                    for (let i = 0; i < 4; i++) {
+                        ctx.beginPath(); ctx.arc(x + 5 + (i % 2) * 8, y + 6 + Math.floor(i / 2) * 8, 2.2, 0, Math.PI * 2); ctx.fill();
+                    }
+                } else {
+                    ctx.fillStyle = ns.c; rr(x, y, ncell - 2, ncell - 2, 5); ctx.fill();
+                    spr(ns.p, x + 2, y + 2, ncell - 6, ncell - 6);
+                }
             }
-            panel(hx - 8, 436, 380, 116, 0.5);
-            txt('← → 移动　↑ 旋转', hx + 8, 462, 15, '#dff0c4');
-            txt('↓ 软降　空格 直落', hx + 8, 488, 15, '#dff0c4');
-            txt('ESC 回大厅', hx + 8, 518, 14, 'rgba(255,255,255,0.5)');
-            if (this.over) this.overlay('被啃穿了！', '分数 ' + this.score + ' · 消行 ' + this.lines, '#ff8f6b');
+
+            panel(hx - 10, 386, 372, 108, 0.45);
+            txt('← → 移动　↑ 旋转', hx, 410, 14, '#dff0c4');
+            txt('↓ 软降　空格 直落', hx, 436, 14, '#dff0c4');
+            txt('活越久分越高 · 加速双倍', hx, 462, 13, 'rgba(255,255,255,0.55)');
+            txt('ESC 回大厅', hx, 482, 12.5, 'rgba(255,255,255,0.4)');
+            if (this.over) this.overlay('被啃穿了！', '分数 ' + Math.floor(this.score) + ' · 消行 ' + this.lines + ' · 存活 ' + this.survT.toFixed(0) + 's', '#ff8f6b');
         }
     }
 
@@ -404,14 +486,17 @@
         { p: 'gatling', n: '机枪', c: '#4a8c22' },
         { p: 'melon', n: '西瓜', c: '#3a7a44' },
         { p: 'wintermelon', n: '冰西瓜', c: '#2f6f9c' },
-        { p: 'cobcannon', n: '玉米炮', c: '#b8872c' }
+        { p: 'cobcannon', n: '玉米炮', c: '#b8872c' },
+        { p: 'doom', n: '毁灭菇', c: '#6a4090' }     // v4.0.138：目标抬到第 8 级，通关难度翻倍
     ];
+    const G2048_MAX = 8;
     class Garden2048 extends Base {
         setup() {
             this.N = 4; this.CELL = 104; this.GAP = 12;
             this.bx = 96; this.by = 118;
             this.g = Array.from({ length: 4 }, () => new Array(4).fill(0));
             this.pop = {};
+            this.won = false; this.winBanner = 0;   // v4.0.138：通关只提示一次，之后继续玩
             this.add(); this.add();
             this.best = this.best || 0;
         }
@@ -430,7 +515,7 @@
             const line = (arr) => {
                 let a = arr.filter(v => v);
                 for (let i = 0; i < a.length - 1; i++) {
-                    if (a[i] === a[i + 1] && a[i] < 7) {
+                    if (a[i] === a[i + 1] && a[i] < G2048_MAX) {
                         a[i]++; this.score += Math.pow(2, a[i]) * 2;
                         a.splice(i + 1, 1);
                     }
@@ -463,9 +548,11 @@
             }
         }
         checkEnd() {
+            // v4.0.138：通关只弹一次横幅，不锁操作；之后继续玩，塞满照样判负。
+            // 原实现 win 时直接 over=true，玩家一按键又把 win 清掉，导致此后永远卡在通关分支、输了没界面。
             let max = 0;
             for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) max = Math.max(max, this.g[r][c]);
-            if (max >= 7 && !this.win) { this.win = true; this.over = true; this.overT = 0; this.winShown = true; return; }
+            if (max >= G2048_MAX && !this.won) { this.won = true; this.winBanner = 3.2; }
             let can = false;
             for (let r = 0; r < 4 && !can; r++) for (let c = 0; c < 4; c++) {
                 if (!this.g[r][c]) { can = true; break; }
@@ -476,11 +563,11 @@
         }
         update(dt) {
             for (const k in this.pop) { this.pop[k] -= dt; if (this.pop[k] <= 0) delete this.pop[k]; }
+            if (this.winBanner > 0) this.winBanner -= dt;
         }
         onKey(down, k) {
             if (!down) return;
-            if (this.over && !this.win) return;
-            if (this.win) { this.win = false; this.over = false; }
+            if (this.over) return;
             if (k === 'left' || k === 'a') this.slide('left');
             else if (k === 'right' || k === 'd') this.slide('right');
             else if (k === 'up' || k === 'w') this.slide('up');
@@ -512,18 +599,36 @@
             panel(hx - 10, 186, 250, 96, 0.5);
             txt('分数', hx, 210, 14, 'rgba(255,255,255,0.65)');
             txt(String(this.score), hx, 246, 34, '#ffe066', 'left', 900);
-            panel(hx - 10, 296, 250, 210, 0.45);
-            txt('合成路线', hx, 320, 14, 'rgba(255,255,255,0.65)');
-            for (let i = 1; i <= 7; i++) {
+            panel(hx - 10, 296, 250, 240, 0.45);
+            txt('合成路线', hx, 318, 14, 'rgba(255,255,255,0.65)');
+            for (let i = 1; i <= G2048_MAX; i++) {
                 const d = G2048[i];
-                sprH(d.p, hx + 2 + (i - 1) * 34, 338, 26);
-                if (i < 7) txt('›', hx + (i - 1) * 34 + 30, 352, 12, 'rgba(255,255,255,0.3)', 'center');
+                const row = i <= 4 ? 0 : 1;
+                const col = row === 0 ? i - 1 : i - 5;
+                const gx2 = hx + 4 + col * 58, gy2 = 334 + row * 52;
+                // 深色的毁灭菇贴在深绿背景上几乎看不见 → 垫一层浅底
+                ctx.fillStyle = 'rgba(255,255,255,0.10)';
+                rr(gx2 - 3, gy2 - 3, 32, 32, 8); ctx.fill();
+                sprH(d.p, gx2, gy2, 26);
+                txt(d.n, gx2 + 13, gy2 + 36, 10.5, 'rgba(255,255,255,0.55)', 'center', 600);
+                if (col < 3) txt('›', gx2 + 40, gy2 + 13, 12, 'rgba(255,255,255,0.28)', 'center');
             }
-            txt('方向键 / WASD 滑动', hx, 396, 14, '#dff0c4');
-            txt('合出「玉米炮」即通关', hx, 424, 14, '#dff0c4');
-            txt('同种相邻会融合升级', hx, 452, 14, 'rgba(255,255,255,0.55)');
-            if (this.win && this.over) this.overlay('通关！玉米加农炮到手', '分数 ' + this.score + '（可继续刷分）', '#b7f06a');
-            else if (this.over) this.overlay('花园塞满了', '分数 ' + this.score, '#ff8f6b');
+            txt('方向键 / WASD 滑动', hx, 448, 14, '#dff0c4');
+            txt('合出「毁灭菇」即通关', hx, 474, 14, '#dff0c4');
+            txt('同种相邻会融合升级', hx, 500, 13, 'rgba(255,255,255,0.55)');
+            txt('通关后可以继续冲分', hx, 522, 12.5, 'rgba(255,255,255,0.42)');
+            // 通关横幅（不锁操作，只提示一次）
+            if (this.winBanner > 0) {
+                const a = Math.min(1, this.winBanner / 0.6);
+                ctx.save(); ctx.globalAlpha = a;
+                ctx.fillStyle = 'rgba(20,50,10,0.86)';
+                rr(this.bx - 6, this.by - 62, 4 * CELL + 3 * GAP + 12, 46, 12); ctx.fill();
+                txt('🌱 通关！毁灭菇到手 —— 还能继续冲分', this.bx + (4 * CELL + 3 * GAP) / 2, this.by - 39, 17, '#b7f06a', 'center', 900);
+                ctx.restore();
+            }
+            if (this.over) {
+                this.overlay('花园塞满了', '分数 ' + Math.floor(this.score) + (this.won ? ' · 已通关' : ''), '#ff8f6b');
+            }
         }
     }
 
@@ -542,15 +647,22 @@
             this.LEFT = 96;
             this.rows = 13;
             this.g = Array.from({ length: this.rows }, () => new Array(this.COLS).fill(-1));
-            for (let r = 0; r < 4; r++) for (let c = 0; c < this.COLS; c++) {
-                if (r === 3 && c % 3 === 0) continue;
+            // v4.0.138：起始 8 行（原 4 行）——原版开局只铺 4 行，下半屏全空，看着像没开始；
+            // 清空全场才算赢，行数够了才有推进感
+            for (let r = 0; r < 8; r++) for (let c = 0; c < this.colsIn(r); c++) {
+                if (r === 7 && c % 3 === 0) continue;
                 this.g[r][c] = (Math.random() * 4) | 0;
             }
             this.shooter = { x: this.LEFT + this.COLS * this.R, y: 556, ang: -Math.PI / 2 };
             this.ball = null; this.next = (Math.random() * 4) | 0; this.cur = (Math.random() * 4) | 0;
             this.pops = []; this.drops = [];
+            this.missStreak = 0;      // v4.0.138：连续几发没消掉任何东西
             this.deadline = this.yOf(this.rows - 2);
         }
+        // v4.0.138：奇数行整体右移半个球，最后一列会顶出右侧边框（中心 624 + R 22 > 右界 624），
+        // 球在墙上反弹永远够不到那一列 → 场上永远清不空，这就是「泡泡龙根本赢不了」的根因。
+        // 修法：奇数行少一列。
+        colsIn(r) { return r % 2 ? this.COLS - 1 : this.COLS; }
         cx(r, c) { return this.LEFT + this.R + c * this.R * 2 + (r % 2 ? this.R : 0); }
         yOf(r) { return this.TOP + r * this.ROWH + this.R; }
         neighbors(r, c) {
@@ -573,7 +685,7 @@
                 if (b.x > right - this.R) { b.x = right - this.R; b.vx = -Math.abs(b.vx); }
                 if (b.y < this.TOP + this.R * 0.55) { this.attach(b); return; }
                 // 命中已有泡泡
-                for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.COLS; c++) {
+                for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) {
                     if (this.g[r][c] < 0) continue;
                     const dx = b.x - this.cx(r, c), dy = b.y - this.yOf(r);
                     if (dx * dx + dy * dy < (this.R * 1.82) * (this.R * 1.82)) { this.attach(b); return; }
@@ -583,7 +695,7 @@
         }
         attach(b) {
             let best = null, bd = 1e9;
-            for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.COLS; c++) {
+            for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) {
                 if (this.g[r][c] >= 0) continue;
                 let touchTop = r === 0;
                 let touchSib = false;
@@ -599,7 +711,13 @@
             if (!best) { this.ball = null; this.nextBall(); return; }
             this.g[best[0]][best[1]] = b.col;
             this.ball = null;
+            const popBefore = this.pops.length;
             this.resolve(best[0], best[1]);
+            // 连续 8 发颗粒无收 → 顶部压一行下来（打得好的人永远压不到）
+            if (!this.over) {
+                if (this.pops.length > popBefore) this.missStreak = 0;
+                else if (++this.missStreak >= 8) { this.missStreak = 0; this.pushRow(); }
+            }
             this.nextBall();
         }
         resolve(r0, c0) {
@@ -609,7 +727,7 @@
             while (stack.length) {
                 const [r, c] = stack.pop();
                 for (const [nr, nc] of this.neighbors(r, c)) {
-                    if (nr < 0 || nr >= this.rows || nc < 0 || nc >= this.COLS) continue;
+                    if (nr < 0 || nr >= this.rows || nc < 0 || nc >= this.colsIn(nr)) continue;
                     if (this.g[nr][nc] !== col) continue;
                     const key = nr + ',' + nc;
                     if (seen.has(key)) continue;
@@ -626,18 +744,18 @@
                 // 掉落悬空
                 const keep = new Set();
                 const q = [];
-                for (let c = 0; c < this.COLS; c++) if (this.g[0][c] >= 0) { keep.add('0,' + c); q.push([0, c]); }
+                for (let c = 0; c < this.colsIn(0); c++) if (this.g[0][c] >= 0) { keep.add('0,' + c); q.push([0, c]); }
                 while (q.length) {
                     const [r, c] = q.pop();
                     for (const [nr, nc] of this.neighbors(r, c)) {
-                        if (nr < 0 || nr >= this.rows || nc < 0 || nc >= this.COLS) continue;
+                        if (nr < 0 || nr >= this.rows || nc < 0 || nc >= this.colsIn(nr)) continue;
                         if (this.g[nr][nc] < 0) continue;
                         const k = nr + ',' + nc;
                         if (keep.has(k)) continue;
                         keep.add(k); q.push([nr, nc]);
                     }
                 }
-                for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.COLS; c++) {
+                for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) {
                     if (this.g[r][c] >= 0 && !keep.has(r + ',' + c)) {
                         this.drops.push({ x: this.cx(r, c), y: this.yOf(r), v: 60, c: this.g[r][c] });
                         this.score += 15;
@@ -645,6 +763,10 @@
                     }
                 }
             }
+            // v4.0.138：清空全场 = 通关（原来只有输没有赢）
+            let any = 0;
+            for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) if (this.g[r][c] >= 0) any++;
+            if (!any) { this.score += 500; this.end(true); return; }
             // 判负
             for (let r = this.rows - 1; r >= 0; r--) {
                 if (this.g[r].some(v => v >= 0)) {
@@ -692,7 +814,7 @@
             ctx.strokeStyle = 'rgba(255,120,120,0.5)'; ctx.setLineDash([8, 8]); ctx.lineWidth = 2;
             ctx.beginPath(); ctx.moveTo(rx, this.shooter.y - 24); ctx.lineTo(rx + rw, this.shooter.y - 24); ctx.stroke();
             ctx.setLineDash([]);
-            for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.COLS; c++) {
+            for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) {
                 const v = this.g[r][c]; if (v < 0) continue;
                 this.bub(this.cx(r, c), this.yOf(r), v);
             }
@@ -708,7 +830,7 @@
             sprH('cattail', this.shooter.x - 34, this.shooter.y - 26, 62);
             ctx.save();
             ctx.translate(this.shooter.x, this.shooter.y - 20); ctx.rotate(this.shooter.ang + Math.PI / 2);
-            ctx.fillStyle = '#c9e08a'; rr(-7, -64, 14, 60, 7); ctx.fill();
+            ctx.fillStyle = '#c9e08a'; rr(-6, -46, 12, 42, 6); ctx.fill();
             ctx.restore();
             this.bub(this.shooter.x + Math.cos(this.shooter.ang) * 70, this.shooter.y - 20 + Math.sin(this.shooter.ang) * 70, this.cur, 0.75);
             // HUD
@@ -724,8 +846,40 @@
             txt(BUB_COLORS[this.next].n, hx + 66, 348, 15, '#dfe9f5');
             txt('鼠标瞄准 · 点击发射', hx, 428, 12.5, 'rgba(255,255,255,0.6)');
             txt('同色 ≥3 爆破', hx, 452, 12.5, 'rgba(255,255,255,0.6)');
-            txt('顶到红线就输', hx, 476, 12.5, 'rgba(255,255,255,0.6)');
-            if (this.over) this.overlay('泡泡堆到炮口了', '分数 ' + this.score, '#ff8f6b');
+            txt('清空全场即通关', hx, 476, 12.5, '#b7f06a');
+            txt('剩 ' + this.leftCount() + ' 颗 · 顶到红线就输', hx, 500, 12.5, 'rgba(255,255,255,0.6)');
+            txt('连续 8 发打空会压下一行', hx, 522, 12, 'rgba(255,255,255,0.38)');
+            if (this.over) {
+                if (this.win) this.overlay('全场清空！', '分数 ' + this.score + ' · 泡泡一个不剩', '#b7f06a');
+                else this.overlay('泡泡堆到炮口了', '分数 ' + this.score + ' · 剩 ' + this.leftCount() + ' 颗', '#ff8f6b');
+            }
+        }
+        // 整体下移一行、顶部补一行新球；超出该行列数的球滚落
+        pushRow() {
+            for (let r = this.rows - 1; r >= 1; r--) {
+                this.g[r] = this.g[r - 1].slice();
+                for (let c = this.colsIn(r); c < this.COLS; c++) {
+                    if (this.g[r][c] >= 0) {
+                        this.drops.push({ x: this.cx(r, c), y: this.yOf(r), v: 60, c: this.g[r][c] });
+                        this.g[r][c] = -1;
+                    }
+                }
+            }
+            this.g[0] = new Array(this.COLS).fill(-1);
+            for (let c = 0; c < this.colsIn(0); c++) this.g[0][c] = (Math.random() * 4) | 0;
+            this.downRows = (this.downRows || 0) + 1;
+            // 压到底直接判负
+            for (let r = this.rows - 1; r >= 0; r--) {
+                if (this.g[r].some(v => v >= 0)) {
+                    if (this.yOf(r) + this.R >= this.shooter.y - 24) this.end(false);
+                    break;
+                }
+            }
+        }
+        leftCount() {
+            let n = 0;
+            for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) if (this.g[r][c] >= 0) n++;
+            return n;
         }
         bub(x, y, col, a) {
             const c = BUB_COLORS[col];
@@ -1398,7 +1552,7 @@
 
     /* ================= 游戏注册表 ================= */
     const GAMES = [
-        { id: 'tetris', name: '豌豆方块', tag: 'TETRIS', icon: 'peashooter', tip: '落植物块，消一行就齐射一轮', cls: Tetris },
+        { id: 'tetris', name: '玉米方块', tag: 'TETRIS', icon: 'cob', tip: '落玉米块消一行齐射一轮，撑越久分越高', cls: Tetris },
         { id: 'whack', name: '僵尸地鼠', tag: 'WHACK', icon: 'zombie', tip: '僵尸探头就敲，别敲到向日葵', cls: Whack },
         { id: 'g2048', name: '花园 2048', tag: '2048', icon: 'melon', tip: '同种植物滑到一起就升级融合', cls: Garden2048 },
         { id: 'bubble', name: '猫尾草泡泡龙', tag: 'BUBBLE', icon: 'cattail', tip: '同色三个爆破，别让泡泡压线', cls: Bubble },
@@ -1440,7 +1594,7 @@
         '.mini-card:active{transform:translateY(-1px) scale(0.99);}',
         '.mini-card .ico{height:70px;width:100%;display:flex;align-items:center;justify-content:center;',
         'background:linear-gradient(180deg,#c7ea9d,#a6d377);border:2px solid #55703a;border-radius:10px;overflow:hidden;}',
-        '.mini-card .ico img{height:60px;width:auto;image-rendering:pixelated;filter:drop-shadow(0 2px 2px rgba(20,50,10,0.45));}',
+        '.mini-card .ico img{height:60px;width:auto;max-width:100%;object-fit:contain;image-rendering:auto;filter:drop-shadow(0 2px 2px rgba(20,50,10,0.45));}',
         '.mini-card h3{font-family:"Kaiti SC","STKaiti","KaiTi",serif;font-size:17px;color:#4a3414;margin-top:6px;',
         'letter-spacing:2px;font-weight:900;white-space:nowrap;}',
         '.mini-card .tg{font-size:9.5px;letter-spacing:1.5px;color:#7a5c22;background:rgba(255,255,255,0.5);',
@@ -1472,7 +1626,7 @@
         screen.innerHTML =
             '<div class="mini-lobby" id="mini-lobby">' +
             '<div class="mini-head"><button class="mb" id="mini-close">← 返回主菜单</button>' +
-            '<h2>小游戏厅</h2><span class="sub">10 个玩法 · 随时进来玩一局</span></div>' +
+            '<h2>后院游乐场</h2><span class="sub">10 个玩法 · 随时进来玩一局</span></div>' +
             '<div class="mini-grid" id="mini-grid"></div>' +
             '<div class="mini-foot">点卡片直接开玩 · ESC 回主菜单</div>' +
             '</div>' +

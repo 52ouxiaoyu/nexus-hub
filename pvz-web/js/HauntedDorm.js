@@ -1201,7 +1201,7 @@ class HauntedDorm {
         // v4.0.44：阵容播报——让玩家知道谁是老手谁是新手
         if (!this.isZombieFaction && this.ais.length >= 3) {
             const nStrong = this.ais.filter(a => a.isStrong).length;
-            this._announce(`🤖 幸存者阵容：${nStrong} 名老手 💪 · ${this.ais.length - nStrong} 名新手 🌱——关键时刻还得靠你！`);
+            // v4.0.138：删掉「幸存者阵容 N 老手 M 新手」——对本局决策毫无用处，纯占屏
         }
 
     }
@@ -1470,9 +1470,9 @@ class HauntedDorm {
                 const bdg = zb.el1.querySelector('.lv-badge');
                 if (bdg) bdg.innerText = 'Lv.' + this.ghostLevel;
             }
-            this._announce(`👻 僵尸升级为【${cfg.name}】！`, 'finalwave.mp3', true);
+            this._announce(`👻 僵尸升级为【${cfg.name}】！`, 'finalwave.mp3', true, 'always');
         } else {
-            this._announce(`👻 僵尸成长为【${cfg.name}】…`, 'finalwave.mp3', true);
+            this._announce(`👻 僵尸成长为【${cfg.name}】…`, 'finalwave.mp3', true, 'always');
         }
         this._updateGhostChip();
     }
@@ -1600,7 +1600,21 @@ class HauntedDorm {
         }
     }
 
-    _announce(text, sfx, priority = false) {
+    // 玩家是否已彻底出局（阵亡且没选天使/内鬼形态）→ 中央大字播报自动静音
+    // 注意：天使/内鬼/待选形态都还能操作，不算出局
+    _spectatorOut() {
+        const hs = [this.player, this.player2].filter(p => p && !p.isAi);
+        if (!hs.length) return false;
+        return hs.every(p => p.dead && !p.traitor && !p.angelic && !p.pendingFate);
+    }
+
+    // v4.0.138：播报分级——只把「玩家真需要知道的事」放到屏幕正中
+    //   audience='human'（默认）：仅当玩家还能操作时播；阵亡出局后自动静音
+    //   audience='always'：关键情报（内鬼诞生 / 空投礼盒 / 尸潮 / 结局）不受出局影响
+    //   audience='ai'：人机自己的事（放技能、升级、抢盒）——一律不播，避免刷屏
+    _announce(text, sfx, priority = false, audience = 'human') {
+        if (audience === 'ai') return;
+        if (audience === 'human' && this._spectatorOut()) return;
         if (!this.announceQueue) this.announceQueue = [];
         if (priority) {
             this.announceQueue.unshift({ text, sfx });
@@ -1618,7 +1632,8 @@ class HauntedDorm {
         
         const msg = document.createElement('div');
         msg.id = 'wave-announce';
-        msg.style = "position:absolute; top:38%; left:50%; transform:translate(-50%,-50%); color:#ff4b4b; font-size:44px; font-weight:bold; text-shadow:3px 3px 0 #000; z-index:9999; font-family:'Kaiti SC',serif; letter-spacing:6px; text-align:center; white-space:nowrap; pointer-events:none; transition: opacity 0.3s;";
+        // v4.0.138：长句原来 nowrap 会整条冲出画面 → 允许换行并限宽；字号 44→40、停留 2.2s→1.8s，不压太多视野
+        msg.style = "position:absolute; top:36%; left:50%; transform:translate(-50%,-50%); color:#ff4b4b; font-size:40px; font-weight:bold; text-shadow:3px 3px 0 #000; z-index:9999; font-family:'Kaiti SC',serif; letter-spacing:5px; text-align:center; white-space:normal; line-height:1.3; max-width:86vw; pointer-events:none; transition: opacity 0.3s;";
         msg.innerText = current.text;
         document.body.appendChild(msg);
         
@@ -1631,7 +1646,7 @@ class HauntedDorm {
                 this.isAnnouncing = false;
                 this._processAnnounceQueue();
             }, 300);
-        }, 2200);
+        }, 1800);
     }
 
     // ===== v4.0.101：2p 挂机托管（用户：双人模式中一人原地不动、屏幕上没行动痕迹 → 自动 AI 托管，实力≈普通人机）=====
@@ -1972,7 +1987,7 @@ class HauntedDorm {
             if (time >= this.ghostSpawnAt) {
                 this.ghostSpawned = true;
                 this._spawnGhost();
-                this._announce('👻 僵尸出笼！', 'evillaugh.mp3');
+                this._announce('👻 僵尸出笼！', 'evillaugh.mp3', false, 'always');
             }
             return;
         }
@@ -2326,6 +2341,8 @@ class HauntedDorm {
         }
         for (const p of this.allPlayers) this.setWatering(p, false); // v4.0.15：结算时关掉所有人的浇水标志
         document.getElementById('wave-announce')?.remove(); // 结算时移除残留的播报字
+        this.announceQueue = [];          // v4.0.138：队列里排着的也一并作废，结算后不再冒提示
+        this.isAnnouncing = false;
         this.playSfx(win ? 'winmusic.mp3' : 'losemusic.mp3', 0.6);
         this._closePopup();
         const secs = Math.floor((this.gameTime) / 1000);
@@ -2800,6 +2817,9 @@ class HauntedDorm {
         // v4.0.16：接收目标玩家——原实现忽略参数，2P 模式下 P2 按 /键 释放的技能加在了 P1 身上
         const p = target || this.player;
         if (p.skillCd > 0) return;
+        // v4.0.138：人机放技能只出战果，不在屏幕正中播报（用户：别的房间人机用技能的提示根本不需要出现）
+        const isHuman = !p.isAi;
+        const say = (t, sf, pr) => { if (isHuman) this._announce(t, sf, pr); };
         if (this._zombieFrozen()) return; // v4.0.30：开局 10 秒观察期内不可行动
         // v4.0.73 成就：释放技能累计（任意阵营）
         if (window.AchTracker) window.AchTracker.bump('dSkill', 1);
@@ -2807,7 +2827,7 @@ class HauntedDorm {
         if (this.isZombieFaction) {
             p.skillCd = 60;
             p.speedBuffT = 5; // 提速免疫
-            this._announce('🧟 技能激活：僵尸狂暴冲刺！', 'scream.mp3');
+            say('🧟 技能激活：僵尸狂暴冲刺！', 'scream.mp3');
             this._refreshHud();
             return;
         }
@@ -2818,15 +2838,15 @@ class HauntedDorm {
         if (r === 'sunflower') {
             p.skillCd = 60;
             p.sunBuffT = 10;
-            this._announce('🌻 技能激活：10秒内阳光产出翻倍！', 'points.mp3');
+            say('🌻 技能激活：10秒内阳光产出翻倍！', 'points.mp3');
         } else if (r === 'peashooter') {
             p.skillCd = 60;
             p.atkBuffT = 15;
-            this._announce('🌿 技能激活：15秒内植物攻击力翻倍！', 'points.mp3');
+            say('🌿 技能激活：15秒内植物攻击力翻倍！', 'points.mp3');
         } else if (r === 'wallnut') {
             const rms = this._ownedRooms(p);
             if (rms.length === 0) {
-                this._announce('❌ 你还没有绑定任何房间！', 'buzzer.mp3');
+                say('❌ 你还没有绑定任何房间！', 'buzzer.mp3');
                 return;
             }
             // 优先检测当前肉身所在/邻近的房间，否则扫描名下大门可升级的房间
@@ -2846,15 +2866,15 @@ class HauntedDorm {
                 p.skillCd = 60;
                 this._evolve(targetDoor, targetDoor.def.up.to);
                 const rmLabel = (targetRm === p.room2) ? '副房' : '主房';
-                this._announce(`🌰 技能激活：${rmLabel}大门免费升级完毕！`, 'points.mp3');
+                say(`🌰 技能激活：${rmLabel}大门免费升级完毕！`, 'points.mp3');
             } else {
-                this._announce('❌ 门不存在或无法再升级！', 'buzzer.mp3');
+                say('❌ 门不存在或无法再升级！', 'buzzer.mp3');
                 return;
             }
         } else if (r === 'chomper') {
             const hostiles = this._getHostileTargets().filter(z => !z.dead);
             if (hostiles.length === 0) {
-                this._announce('❌ 当前场上没有敌对僵尸！', 'buzzer.mp3');
+                say('❌ 当前场上没有敌对僵尸！', 'buzzer.mp3');
                 return;
             }
             // v4.0.49：大嘴花大招重做——不再单体重创（那是倭瓜的事），改为怒吼赶跑全场僵尸 10 秒：
@@ -2883,11 +2903,11 @@ class HauntedDorm {
                 this._flyText(z.x, z.y - 20, '🌸 吓跑了！', '#ff69b4');
                 if (z.hpBg) z.hpBg.style.display = 'block';
             }
-            this._announce('🌸 技能激活：大嘴花怒吼——僵尸全被赶跑10秒！', 'chomp.mp3');
+            say('🌸 技能激活：大嘴花怒吼——僵尸全被赶跑10秒！', 'chomp.mp3');
         } else if (r === 'squash') {
             const hostiles = this._getHostileTargets().filter(z => !z.dead);
             if (hostiles.length === 0) {
-                this._announce('❌ 当前场上没有敌对僵尸！', 'buzzer.mp3');
+                say('❌ 当前场上没有敌对僵尸！', 'buzzer.mp3');
                 return;
             }
             let targetZb = hostiles[0], bestScore = Infinity;
@@ -2903,7 +2923,7 @@ class HauntedDorm {
             if (targetZb.hpBg) targetZb.hpBg.style.display = 'block';
             this._flyText(targetZb.x, targetZb.y - 30, `-${dealt} 🎃倭瓜泰山压顶!`, '#ff9800');
             if (targetZb.hp <= 0) this._killZombie(targetZb, p);
-            this._announce('🎃 技能激活：倭瓜重创了敌人！', 'squash_hmm.mp3');
+            say('🎃 技能激活：倭瓜重创了敌人！', 'squash_hmm.mp3');
         }
         this._refreshHud();
     }
@@ -3511,7 +3531,7 @@ class HauntedDorm {
         // v4.0.86：只剩自己存活时不再抉择——人机已全灭=孤家寡人，无人可变天使帮忙/内鬼袭击，直接失败结算
         if (this.gameMode !== '2p' && !this.isZombieFaction && !this.playerAngelic && !this.playerTraitor && !this.over) {
             if (this._plantSideAlive() === 0) {
-                this._announce('💀 你是最后一位幸存者，也倒下了——全灭！', 'scream.mp3', true);
+                this._announce('💀 你是最后一位幸存者，也倒下了——全灭！', 'scream.mp3', true, 'always');
                 this.gameOver(false);
                 return;
             }
@@ -3520,7 +3540,7 @@ class HauntedDorm {
         }
         if (this.player.angelic) this._announce('😇 天使陨落！你被僵尸抓住了…', 'scream.mp3', true);
         if (!this._checkHumansOut()) {
-            this._announce('💀 P1 倒下了！P2 继续战斗！', 'scream.mp3', true);
+            this._announce('💀 P1 倒下了！P2 继续战斗！', 'scream.mp3', true, 'always');
         }
     }
 
@@ -3565,7 +3585,7 @@ class HauntedDorm {
             this.setHp(); // v4.0.122：P2 倒下必须把血条刷到 0（旧版不刷新 → 残格停在旧值，看着像"血回满了"）
             if (p.angelic) this._announce('😇 P2 的天使陨落！', 'scream.mp3', true);
             if (!this._checkHumansOut()) {
-                this._announce('💔 P2 倒下了！P1 继续战斗！', 'scream.mp3', true);
+                this._announce('💔 P2 倒下了！P1 继续战斗！', 'scream.mp3', true, 'always');
             }
         } else {
             p.dead = true;
@@ -3582,7 +3602,7 @@ class HauntedDorm {
             // v4.0.65：改为统一判定"植物方全灭"（含双人 P2 植物形态、AI 内鬼反水排除）——
             // 用户实报"只要场上都是僵尸和内鬼就直接宣布胜利"，此前人机全灭即判胜、漏判 P2 还在守屋的情况
             if (this._anyTraitor() && this._plantSideAlive() === 0) {
-                this._announce('😈 内鬼屠尽了所有幸存者——邪恶胜利！', 'evillaugh.mp3', true);
+                this._announce('😈 内鬼屠尽了所有幸存者——邪恶胜利！', 'evillaugh.mp3', true, 'always');
                 this.gameOver(true);
                 return;
             }
@@ -3728,7 +3748,7 @@ class HauntedDorm {
         // v4.0.65：变内鬼瞬间植物方已全灭（人机早在你倒下前被 AI 内鬼/尸潮肃清）→ 立即邪恶胜利，
         // 否则没有任何 AI 死亡事件会触发结算，游戏永远挂起（v4.0.61 同类问题的残留场景）
         if (this._plantSideAlive() === 0) {
-            this._announce('😈 内鬼屠尽了所有幸存者——邪恶胜利！', 'evillaugh.mp3', true);
+            this._announce('😈 内鬼屠尽了所有幸存者——邪恶胜利！', 'evillaugh.mp3', true, 'always');
             this.gameOver(true);
             return;
         }
@@ -3805,7 +3825,7 @@ class HauntedDorm {
         p.hp = Math.min(p.maxHp, p.hp + Math.round(p.maxHp * 0.25));
         this._flyText(p.x, p.y - 44, `😈 堕落值 +1（${c}/6）`, '#ff5252');
         if (c === 1 || c === 6) {
-            this._announce(c === 1 ? '😈 堕落值开启！拆门/咬杀幸存者持续变强（伤害+25%、血量+10%/层）！' : '😈 堕落值已满（6/6）！伤害+150%、血量+77%，无人能挡！', 'evillaugh.mp3');
+            this._announce(c === 1 ? '😈 堕落值 1/6：拆门与咬杀都会更强' : '😈 堕落值满 6/6：伤害 +150%', 'evillaugh.mp3', false, 'always');
         } else {
             this.playSfx('evillaugh.mp3', 0.25);
         }
@@ -3903,7 +3923,7 @@ class HauntedDorm {
             setTimeout(() => zb.el1.remove(), 480);
             this.playSfx('scream.mp3', 0.35);
             if (zb.isBoss) {
-                this._announce('🏆 巨人僵尸被击倒了！它洒落了一地阳光！', 'points.mp3', true);
+                this._announce('🏆 巨人僵尸被击倒了！它洒落了一地阳光！', 'points.mp3', true, 'always');
                 // v4.0.73 成就：击败机甲僵王
                 if (window.AchTracker) window.AchTracker.bump('dBoss', 1);
                 for (const p of this.allPlayers) if (!p.dead) this.addSun(100, p);
@@ -3932,7 +3952,7 @@ class HauntedDorm {
             const who = zb === this.player ? 'P1' : 'P2';
             const alive = this._humansAll().filter(h => h && !h.dead);
             if (alive.length === 0) {
-                this._announce('💀 两位僵尸玩家都被植物击败了…', 'scream.mp3', true);
+                this._announce('💀 两位僵尸玩家都被植物击败了…', 'scream.mp3', true, 'always');
                 if (this._gameOverTimer) clearTimeout(this._gameOverTimer);
                 this._gameOverTimer = setTimeout(() => this.gameOver(false), 3000);
             } else {
@@ -3944,7 +3964,7 @@ class HauntedDorm {
 
         // v4.0.44：内鬼模式下主僵尸被植物消灭 → 植物阵营胜利，内鬼计划失败
         if (this._anyTraitor() && !zb.isMinion && !zb.isBoss) {
-            this._announce('🎉 植物们守住了家园！内鬼计划失败…', 'losemusic.mp3', true);
+            this._announce('🎉 植物们守住了家园！内鬼计划失败…', 'losemusic.mp3', true, 'always');
             if (this._gameOverTimer) clearTimeout(this._gameOverTimer);
             this._gameOverTimer = setTimeout(() => this.gameOver(false), 3000);
             return;
@@ -3956,7 +3976,7 @@ class HauntedDorm {
         const remainingThreats = this.zombies.filter(z => !z.dead && (z.isBoss || z.isMinion));
         if (this.traitorRevealed && this.traitor && !this.traitor.dead) remainingThreats.push(this.traitor);
         if (remainingThreats.length > 0) {
-            this._announce('🏆 领主幽灵被击败！肃清剩余残部即可获胜！', 'points.mp3', true);
+            this._announce('🏆 领主幽灵被击败！肃清剩余残部即可获胜！', 'points.mp3', true, 'always');
             return;
         }
         if (this._gameOverTimer) clearTimeout(this._gameOverTimer);
@@ -4468,7 +4488,7 @@ class HauntedDorm {
             if (zb.hpBg) { zb.hpBg.style.display = 'block'; zb.hpFg.style.width = Math.max(0, zb.hp / zb.maxHp * 100) + '%'; }
             if (zb.hp <= 0) this._killZombie(zb, p);
         }
-        this._announce(`🥒 ${p.roleDef ? p.roleDef.name : p.name} 倭瓜技能：全场僵尸半血！`, 'explosion.mp3');
+        this._announce(`🥒 ${p.roleDef ? p.roleDef.name : p.name} 倭瓜技能：全场僵尸半血！`, 'explosion.mp3', false, p.isAi ? 'ai' : 'always');
         mySquash.el1.classList.add('shake');
         setTimeout(() => { if (mySquash && mySquash.el1) mySquash.el1.classList.remove('shake'); }, 300);
     }
@@ -5113,7 +5133,7 @@ class HauntedDorm {
                 + '<div style="font-size:15px; color:#ffd0d0; margin-top:6px; letter-spacing:1px; font-weight:normal;">AI 正在布防——观察期结束后才能移动和放技能</div>';
         } else {
             this.freezeEl.style.display = 'none';
-            this._announce('🧟 观察期结束，行动开始！', 'scream.mp3');
+            this._announce('🧟 观察期结束，行动开始！', 'scream.mp3', false, 'always');
         }
     }
 
@@ -5228,7 +5248,7 @@ class HauntedDorm {
                     if (zb.dead) continue;
                     if (Math.hypot(zb.x - mw.x, zb.y - mw.y) < 75) {
                         mw.active = true; mw.used = true;
-                        this._announce('🛒 小推车启动！', 'cherrybomb.mp3');
+                        this._announce('🛒 小推车启动！', 'cherrybomb.mp3', false, 'always');
                         break;
                     }
                 }
@@ -5461,9 +5481,9 @@ class HauntedDorm {
         this.dnNext = time + (this.isNight ? 90000 : 60000); // 白天 60s / 夜晚 90s
         if (this.dnTint) this.dnTint.style.background = this.isNight ? 'rgba(10, 14, 52, 0.45)' : 'transparent';
         if (this.isNight) {
-            this._announce('🌙 夜幕降临！向日葵们熄灯睡觉，蘑菇和路灯花开始上夜班（僵尸提速 15%）', 'evillaugh.mp3', true);
+            this._announce('🌙 夜幕降临！僵尸提速 15%', 'evillaugh.mp3', true, 'always');
         } else {
-            this._announce('☀ 天亮了！向日葵们醒来产阳光，蘑菇们睡觉去了，抓紧布防发育', 'points.mp3', true);
+            this._announce('☀ 天亮了！向日葵恢复产阳光', 'points.mp3', true, 'always');
         }
         for (const pl of this.plants) this._applySleepVisual(pl);
         this._updateGhostChip();
@@ -5485,7 +5505,7 @@ class HauntedDorm {
         if (!this.waveWarned && time >= this.waveAt - 10000) {
             this.waveWarned = true;
             const bossComing = (this.waveN + 1) % 5 === 0;
-            this._announce(bossComing ? '⚠️ 警报：一大波僵尸正在接近——地面在震动！' : '⚠️ 一大波僵尸正在接近！', 'finalwave.mp3', true);
+            this._announce(bossComing ? '⚠️ 一大波僵尸即将来临——含巨人！' : '⚠️ 一大波僵尸即将来临！', 'finalwave.mp3', true, 'always');
         }
         if (time < this.waveAt) return;
         // 开波
@@ -5497,9 +5517,9 @@ class HauntedDorm {
         for (let i = 0; i < n; i++) this._spawnMinion(false, i, n, base);
         if (this.waveN % 5 === 0) {
             this._spawnBoss();
-            this._announce(`🚨 第 ${this.waveN} 波尸潮来袭——巨人僵尸驾到！！`, 'scream.mp3', true);
+            this._announce(`🚨 第 ${this.waveN} 波尸潮——巨人驾到！`, 'scream.mp3', true, 'always');
         } else {
-            this._announce(`🧟 第 ${this.waveN} 波尸潮来袭！`, 'evillaugh.mp3', true);
+            this._announce(`🧟 第 ${this.waveN} 波尸潮来袭！`, 'evillaugh.mp3', true, 'always');
         }
         this._updateGhostChip();
     }
@@ -5586,7 +5606,7 @@ class HauntedDorm {
             // 揭露前 10 秒：气氛提示（不指名道姓，纯铺垫）
             if (!this.traitorHinted && this.gameTime >= this.traitorRevealAt - 10000) {
                 this.traitorHinted = true;
-                this._announce('🕯 气氛突然安静得可怕……幸存者中，混进了一个内鬼……', 'evillaugh.mp3');
+                this._announce('🕯 气氛突然安静……人群里混进了一个内鬼', 'evillaugh.mp3', false, 'always');
             }
             if (this.gameTime < this.traitorRevealAt) return;
             // 揭露：变红名、上血条、开始反水
@@ -5609,7 +5629,7 @@ class HauntedDorm {
             t.el1.appendChild(hb);
             t.trHpBg = hb;
             t.trHpFg = hb.firstChild;
-            this._announce(`😈 【${t.roleDef.name}】变成了内鬼！`, 'scream.mp3', true);
+            this._announce(`😈 【${t.roleDef.name}】变成了内鬼！`, 'scream.mp3', true, 'always');
             return;
         }
         // v4.0.121：反水后先做一次「嵌入检测」——内鬼是僵尸碰撞（checkCollision isZombie=true，
@@ -5768,7 +5788,7 @@ class HauntedDorm {
                     // v4.0.65：AI 内鬼肃清全部植物方成员 → 邪恶胜利（此前 AI 内鬼咬死人机后无任何结算，
                     // 玩家已死/变内鬼/变天使时游戏永远挂起；玩家植物形态还活着则不算全灭，游戏继续）
                     if (this._plantSideAlive() === 0) {
-                        this._announce('😈 内鬼屠尽了所有幸存者——邪恶胜利！', 'evillaugh.mp3', true);
+                        this._announce('😈 内鬼屠尽了所有幸存者——邪恶胜利！', 'evillaugh.mp3', true, 'always');
                         this.gameOver(true);
                     }
                 }
@@ -5849,7 +5869,7 @@ class HauntedDorm {
         t.dead = true;
         t.el1.classList.add('dead-slash');
         t.el1.style.filter = 'grayscale(1)';
-        this._announce('🎉 内鬼被击败了！全体幸存者 +200🦠 庆功！', 'points.mp3', true);
+        this._announce('🎉 内鬼被击败！全体幸存者 +200🦠', 'points.mp3', true, 'always');
         for (const p of this.allPlayers) {
             if (!p.dead && p !== t) this.addSpore(200, p);
         }
@@ -6474,7 +6494,7 @@ class HauntedDorm {
                 if (im) im.src = 'assets/images/' + cfg.img;
                 const bdg = zp.el1.querySelector('.lv-badge');
                 if (bdg) bdg.innerText = 'Lv.' + zp.level;
-                this._announce(`👻 你已进化为【${cfg.name}】！`, 'finalwave.mp3', true);
+                this._announce(`👻 你已进化为【${cfg.name}】！`, 'finalwave.mp3', true, 'always');
             }
             } // v4.0.44：end !playerTraitor（内鬼不走僵尸升级链）
             
@@ -6519,7 +6539,7 @@ class HauntedDorm {
                                 // v4.0.65：植物方全灭（人机 + 植物形态 P1/P2）才算僵尸/内鬼胜利——
                                 // 旧判定 victims.every（只含人机+P2、且 P2 无论阵营都算）会漏判/误判；统一走 _plantSideAlive
                                 if (this._plantSideAlive() === 0) {
-                                    this._announce('😈 所有植物方成员已被肃清——邪恶胜利！', 'evillaugh.mp3', true);
+                                    this._announce('😈 所有植物方成员已被肃清——邪恶胜利！', 'evillaugh.mp3', true, 'always');
                                     this.gameOver(true); // 僵尸赢了
                                 }
                             }
@@ -6573,8 +6593,8 @@ class HauntedDorm {
                     box.el = el;
                     if (!this.airdrops) this.airdrops = [];
                     this.airdrops.push(box);
-                    this._announce('🎁 神秘盲盒已空降过道！快出房抢！' +
-                        (box.looters.length ? `（${box.looters.length} 个人机也出门了）` : ''), 'readysetplant.mp3');
+                    this._announce('🎁 门外空投：' + (kindNames[box.kind] || '神秘礼盒') + ' 已落地！快出房抢' +
+                        (box.looters.length ? `（${box.looters.length} 个人机也出门）` : ''), 'readysetplant.mp3', false, 'always');
                 }
             }
         }
