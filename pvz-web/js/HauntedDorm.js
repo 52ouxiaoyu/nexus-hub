@@ -820,14 +820,19 @@ class HauntedDorm {
     generateMap() {
         this.rooms = [];
         const makeGrid = (w, h) => Array.from({ length: h }, () => Array(w).fill(1));
-        // v4.0.125：随机房间生成器——每局 10 个房间全部随机（形状/大小/门向/床位/落点），
-        // 组成：1 双人间（双床）＋ 1~2 梯形 ＋ 1 特别小(4~8格) ＋ 1 特别大(15~25格) ＋ 其余正常(9~14格)。
+        // v4.0.125：随机房间生成器——每局 10 个房间全部随机（形状/大小/门向/床位/落点）。
+        // v4.0.141：整体上调尺寸（用户：地图太小，部分房间扩到 50 格左右＝正常上限，小房要留但很少）
+        // 组成：1 双人间（双床）＋ 1~2 梯形(12~35格) ＋ 1 特别小(4~8格，每局只 1 间)
+        //       ＋ 1~2 特别大(40~50格) ＋ 其余中等(12~20格) / L 形(19~27格)。
         // 全部格子对齐生成、墙面平直、形状闭合，不存在"半个方块"或未封闭缺口。
         const genRoomShape = (kind) => {
             const sizes = {
-                small: [[2, 2], [2, 3], [3, 2], [2, 4], [4, 2]],              // 4~8 格
-                big:   [[5, 5], [4, 6], [6, 4], [4, 5], [5, 4], [3, 6], [6, 3], [3, 7], [7, 3], [4, 4]], // 15~25 格
-                normal:[[3, 3], [3, 4], [4, 3], [2, 5], [5, 2], [4, 4]]
+                // 特别小：4~8 格（每局只保留 1 间，"挤一挤小屋"的样本，但很少）
+                small: [[2, 2], [2, 3], [3, 2], [2, 4], [4, 2]],
+                // 特别大：40~50 格（7×7=49 / 6×8=48 / 5×10=50 / 9×5=45 / 8×5=40 …）——50 是正常上限
+                big:   [[7, 7], [6, 8], [8, 6], [5, 10], [10, 5], [6, 7], [7, 6], [5, 9], [9, 5]],
+                // 中等：12~20 格（原来是 9~14，整体上调一档）
+                normal:[[3, 4], [4, 3], [4, 4], [3, 5], [5, 3], [4, 5], [5, 4], [3, 6], [6, 3]]
             };
             const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
             const g = (w, h) => makeGrid(w, h);
@@ -837,9 +842,9 @@ class HauntedDorm {
             }
             if (kind === 'trap') {
                 // 梯形：每行宽度 ±1 线性变化（封闭凸多边形，格对齐，墙面平直）。
-                // 面积约束在 9~14 格（正常档位，不与"特别大 15~25 格"重复）
-                const narrow = Math.random() < 0.5 ? 2 : 3;
-                const rows = narrow === 2 ? (3 + Math.floor(Math.random() * 2)) : 3; // 2 窄→3~4 行(9/14格)；3 窄→3 行(12格)
+                // v4.0.141：面积上调到 12~35 格（原来 9~14），当"中大型房"用，不再和大房撞档
+                const narrow = 3 + Math.floor(Math.random() * 3);   // 窄边 3~5 格
+                const rows = 3 + Math.floor(Math.random() * 3);     // 3~5 行 → 12~35 格
                 const dir = Math.random() < 0.5 ? 1 : -1; // 1=上窄下宽
                 const wide = narrow + rows - 1;
                 const grid = [];
@@ -855,8 +860,8 @@ class HauntedDorm {
                 });
                 return { w, h, grid: full, name: 'trap' };
             }
-            // L 形（缺右上角，封闭凹形）——只用于正常房档位（9~14 格）
-            const [w, h] = pick([[4, 4], [5, 3], [6, 3]]);
+            // L 形（缺右上角，封闭凹形）——v4.0.141：上调到 19~27 格，当"中大房"用
+            const [w, h] = pick([[5, 5], [6, 5], [5, 6], [6, 6]]);
             const gg = g(w, h);
             const cutR = Math.floor(h / 2);
             for (let r = 0; r < cutR; r++) for (let c = Math.ceil(w / 2); c < w; c++) gg[r][c] = 0;
@@ -878,8 +883,8 @@ class HauntedDorm {
             if (e.c === 0) return { r: e.r, c: -1 };
             return { r: e.r, c: w };
         };
-        // 床位：实心格内随机（避开边界格与门邻格，保证可达）
-        const pickBed = (shape, door, count) => {
+        // 床位候选：实心格内、避开边界格与门邻格（保证可达）
+        const bedCands = (shape, door) => {
             const { grid, w, h } = shape;
             const cands = [];
             for (let r = 0; r < h; r++) {
@@ -890,6 +895,11 @@ class HauntedDorm {
                     cands.push({ r, c });
                 }
             }
+            return cands;
+        };
+        const pickBed = (shape, door, count) => {
+            const { h, w } = shape;
+            const cands = bedCands(shape, door).slice();
             if (!cands.length) cands.push({ r: Math.floor(h / 2), c: Math.floor(w / 2) });
             const beds = [];
             const used = new Set();
@@ -902,11 +912,13 @@ class HauntedDorm {
             }
             return beds;
         };
-        // 10 个房间的类型组合（梯形数随机 1~2）
+        // 10 个房间的类型组合
+        // v4.0.141：固定 1 间小房（不多给）＋ 1 间大房打底，约 1/3 的局再抽到第 2 间大房；梯形 1~2 间
         const trapCount = 1 + Math.floor(Math.random() * 2);
         const kinds = ['small', 'big'];
+        if (Math.random() < 0.35) kinds.push('big');
         for (let i = 0; i < trapCount; i++) kinds.push('trap');
-        while (kinds.length < 10) kinds.push(Math.random() < 0.25 ? 'l' : 'normal');
+        while (kinds.length < 10) kinds.push(Math.random() < 0.3 ? 'l' : 'normal');
         // 洗牌
         for (let i = kinds.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -925,8 +937,9 @@ class HauntedDorm {
         const roomsDef = [];
         for (const kind of kinds) {
             let shape = null, attempts = 0;
-            while (attempts++ < 160) {
-                const s = genRoomShape(kind);
+            // v4.0.141：大房（最大 10×5）更难塞，尝试次数 160→480；试到 320 次还放不下就降成中等房，保证 10 间都在
+            while (attempts++ < 480) {
+                const s = genRoomShape(attempts > 320 ? 'normal' : kind);
                 const x = 1 + Math.floor(Math.random() * (this.cols - s.w - 3));
                 const y = 1 + Math.floor(Math.random() * (this.rows - s.h - 3));
                 if (overlaps(x, y, s.w, s.h)) continue;
@@ -940,8 +953,12 @@ class HauntedDorm {
             roomsDef.push(shape);
         }
         // 床位：双人间（随机一个非小房）2 床，其余 1 床
+        // v4.0.141：原来随机挑非小房，运气不好会抽到只剩 1 个床位候选的形状（梯形窄边 3 格时中间行只有 2 格、
+        // 门又贴着其中一格）→ 双人间静默退化成单床。现在只从"候选 ≥2"的房里挑。
         const nonSmall = roomsDef.map((d, i) => ({ d, i })).filter(o => o.d.name !== 'small');
-        const doubleRoom = nonSmall.length ? nonSmall[Math.floor(Math.random() * nonSmall.length)] : null;
+        const pairCands = nonSmall.filter(o => bedCands(o.d, o.d.door).length >= 2);
+        const pool = pairCands.length ? pairCands : nonSmall;
+        const doubleRoom = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
         for (const d of roomsDef) {
             const beds = pickBed(d, d.door, (doubleRoom && doubleRoom.d === d) ? 2 : 1);
             if (!beds.length) beds.push({ r: Math.floor(d.h / 2), c: Math.floor(d.w / 2) });
@@ -1488,6 +1505,8 @@ class HauntedDorm {
             const y = scp.y + (Math.random() * 240 - 120);
             const c = Math.floor(x / this.gridSize), r = Math.floor(y / this.gridSize);
             if (x < 60 || y < 60 || x > this.worldWidth - 60 || y > this.worldHeight - 60) continue;
+            // v4.0.141：圆圈边上也算命中——只要落在任何房间内地板就不刷（避免僵尸直接出现在玩家屋里）
+            if (this._insideRoom(c, r)) continue;
             if (!this.walls.has(`${c},${r}`) && !this.checkCollision(x, y) && farFromPlayers(x, y)) return { x, y };
         }
         for (let tries = 0; tries < 40; tries++) {
@@ -2607,7 +2626,40 @@ class HauntedDorm {
         const maxX = Math.max(...topRooms.map(r => r.x + r.w));
         const minY = Math.min(...topRooms.map(r => r.y));
         const maxY = Math.max(...topRooms.map(r => r.y + r.h));
-        this.spawnCenter = { c: Math.round((minX + maxX) / 2), r: Math.round((minY + maxY) / 2) };
+        let cc = Math.round((minX + maxX) / 2), rr = Math.round((minY + maxY) / 2);
+        // v4.0.141：房间放大到 36~50 格后，最上排中心很容易被整个包进某间大屋的屋里。
+        // 出生/回血圆圈一旦落在房内地板（地板不是墙，原判重挡不住），僵尸会直接刷在玩家房间中央。
+        // 这里按半径逐圈外扩，取最近的「任何房间之外」的走廊格；扩到 12 格还没有就退回地图中心。
+        // 要求：自身 + 8 邻域都不在任何房间的包围盒里（圆圈 240px ≈ 3 格）。
+        // 注意用包围盒而不是 _insideRoom：L 形/梯形的缺口格虽然不算"屋内"，但圆圈压进去仍然难看，
+        // 僵尸还会贴着别人家的内墙出生。
+        const inAnyRoomBox = (c2, r2) => this.rooms.some(rm =>
+            c2 >= rm.x && c2 < rm.x + rm.w && r2 >= rm.y && r2 < rm.y + rm.h);
+        // 圆圈是 240px（3 格），半径 1.5 格——只留 1 格净空边缘还是会擦到房间外墙，所以留 2 格
+        const clearOf = (c2, r2) => {
+            for (let dr = -2; dr <= 2; dr++) {
+                for (let dc = -2; dc <= 2; dc++) {
+                    if (inAnyRoomBox(c2 + dc, r2 + dr)) return false;
+                }
+            }
+            return true;
+        };
+        if (!clearOf(cc, rr)) {
+            let found = null;
+            for (let rad = 1; rad <= 24 && !found; rad++) {
+                for (let dr = -rad; dr <= rad && !found; dr++) {
+                    for (let dc = -rad; dc <= rad && !found; dc++) {
+                        if (Math.max(Math.abs(dr), Math.abs(dc)) !== rad) continue; // 只取本圈
+                        const c2 = cc + dc, r2 = rr + dr;
+                        if (c2 < 2 || r2 < 2 || c2 > this.cols - 3 || r2 > this.rows - 3) continue;
+                        if (clearOf(c2, r2)) found = { c: c2, r: r2 };
+                    }
+                }
+            }
+            if (found) { cc = found.c; rr = found.r; }
+            else { cc = Math.round(this.cols / 2); rr = Math.round(this.rows / 2); }
+        }
+        this.spawnCenter = { c: cc, r: rr };
     }
     _spawnCenterPx() {
         const sc = this.spawnCenter || { c: Math.round(this.cols / 2), r: Math.round(this.rows / 2) };
