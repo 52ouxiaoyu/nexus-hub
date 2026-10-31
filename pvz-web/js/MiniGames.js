@@ -734,7 +734,9 @@
                     seen.add(key); stack.push([nr, nc]);
                 }
             }
-            if (seen.size >= 3) {
+            // v4.0.139：col < 0 说明点是空格（全场清空那一帧），不能再按 -1 做一次消除——
+            // 否则 pops 里会塞进 c=-1，draw 里 BUB_COLORS[-1].c 直接抛异常
+            if (col >= 0 && seen.size >= 3) {
                 seen.forEach(k => {
                     const [r, c] = k.split(',').map(Number);
                     this.pops.push({ x: this.cx(r, c), y: this.yOf(r), t: 0.32, c: col });
@@ -820,7 +822,7 @@
             }
             for (const p of this.pops) {
                 ctx.globalAlpha = Math.max(0, p.t / 0.32);
-                ctx.fillStyle = BUB_COLORS[p.c].c;
+                ctx.fillStyle = (BUB_COLORS[p.c] || BUB_COLORS[0]).c;
                 ctx.beginPath(); ctx.arc(p.x, p.y, this.R * (1.6 - p.t), 0, Math.PI * 2); ctx.fill();
                 ctx.globalAlpha = 1;
             }
@@ -882,7 +884,7 @@
             return n;
         }
         bub(x, y, col, a) {
-            const c = BUB_COLORS[col];
+            const c = BUB_COLORS[col] || BUB_COLORS[0];
             ctx.globalAlpha = a == null ? 1 : a;
             const g = ctx.createRadialGradient(x - 7, y - 9, 2, x, y, this.R);
             g.addColorStop(0, 'rgba(255,255,255,0.95)');
@@ -903,79 +905,148 @@
     class Breakout extends Base {
         setup() {
             this.px = 450; this.pw = 118; this.ph = 16; this.py = 546;
-            this.ball = { x: 450, y: 470, vx: 250, vy: -330, r: 9, stuck: true };
-            this.lives = 3; this.slow = 0; this.extra = 1;
+            this.baseSpeed = 415;
+            this.balls = [];
+            this.lives = 3; this.slow = 0; this.triPending = false;
+            this.spawnBall(450, this.py - 26, 250, -330, true);
             this.bricks = [];
             const cols = 8, bw = 84, bh = 26, gx = 4, gy = 6, x0 = 112, y0 = 118;
+            // v4.0.139：坚果砖原来是整排 8 块铺满 700px，球被关在下面来回弹（就是卡顿感的主要来源）。
+            // 改成散落的 3 块障碍，左右留出行车道，球能上去打上面的砖。
+            const NUT_AT = '1,4,6';
             for (let r = 0; r < 5; r++) for (let c = 0; c < cols; c++) {
-                const type = r === 4 ? 'nut' : (r <= 1 ? 'bucket' : 'grave');
+                const nut = r === 4 && NUT_AT.split(',').indexOf(String(c)) >= 0;
+                const type = nut ? 'nut' : (r <= 1 ? 'bucket' : 'grave');
                 this.bricks.push({
                     x: x0 + c * (bw + gx), y: y0 + r * (bh + gy), w: bw, h: bh,
                     type, hp: type === 'bucket' ? 3 : type === 'grave' ? 1 : Infinity
                 });
             }
             this.drops = [];
-            this.msg = '';
+            this.msg = ''; this.msgT = 0;
+            this.acc = 0;
+        }
+        get ball() { return this.balls[0] || null; }      // 兼容旧脚本里 active.ball.stuck
+        spawnBall(x, y, vx, vy, stuck) {
+            const b = { x: x, y: y, vx: vx, vy: vy, r: 9, stuck: !!stuck };
+            this.balls.push(b);
+            return b;
+        }
+        splitBalls() {
+            const b = this.balls[0];
+            if (!b) return;
+            const sp = Math.hypot(b.vx, b.vy) || this.baseSpeed;
+            const a0 = Math.atan2(b.vy, b.vx);
+            [-0.32, 0.32].forEach(off => {
+                if (this.balls.length >= 4) return;
+                this.spawnBall(b.x, b.y, Math.cos(a0 + off) * sp, Math.sin(a0 + off) * sp, false);
+            });
+        }
+        launch() {
+            let any = false;
+            for (const b of this.balls) if (b.stuck) { b.stuck = false; any = true; }
+            if (any && this.triPending) { this.triPending = false; this.splitBalls(); }
+            return any;
         }
         update(dt) {
             if (this.over) return;
             if (this.slow > 0) this.slow -= dt;
             if (this.msgT > 0) this.msgT -= dt;
-            const b = this.ball;
-            b.y -= 0;
+            // v4.0.139：固定步长推进。原来直接用 dt 推位移，掉一帧球就跳两倍距离 → 一顿一顿。
+            this.acc = Math.min(this.acc + dt, 0.12);
+            const STEP = 1 / 180;
+            while (this.acc >= STEP && !this.over) {
+                this.physics(STEP);
+                this.acc -= STEP;
+            }
+            if (this.over) return;
+            // 掉落道具
+            const keep = [];
+            for (const d of this.drops) {
+                d.v += 180 * dt; d.y += d.v * dt;
+                if (d.y > this.py - 16 && d.y < this.py + 18 && Math.abs(d.x - this.px) < this.pw / 2 + 14) { this.grab(d.t); continue; }
+                if (d.y < H + 30) keep.push(d);
+            }
+            this.drops = keep;
+            // 通关：可打破的砖清空
+            let alive = 0;
+            for (const k of this.bricks) if (k.hp > 0 && k.type !== 'nut') { alive++; break; }
+            if (!alive) this.end(true);
+        }
+        physics(h) {
             const sp = this.slow > 0 ? 0.55 : 1;
-            if (b.stuck) { b.x = this.px; b.y = this.py - 20; }
-            else {
-                const steps = Math.ceil(Math.hypot(b.vx, b.vy) * dt * sp / 5) || 1;
-                for (let i = 0; i < steps; i++) {
-                    b.x += b.vx * dt * sp / steps; b.y += b.vy * dt * sp / steps;
-                    if (b.x < 60 + b.r) { b.x = 60 + b.r; b.vx = Math.abs(b.vx); }
-                    if (b.x > 840 - b.r) { b.x = 840 - b.r; b.vx = -Math.abs(b.vx); }
-                    if (b.y < 86 + b.r) { b.y = 86 + b.r; b.vy = Math.abs(b.vy); }
-                    // 挡板
-                    if (b.y > this.py - b.r && b.y < this.py + this.ph && b.x > this.px - this.pw / 2 - 6 && b.x < this.px + this.pw / 2 + 6 && b.vy > 0) {
-                        const off = (b.x - this.px) / (this.pw / 2);
-                        const ang = off * 1.05;
-                        const speed = Math.min(620, Math.hypot(b.vx, b.vy) * 1.015);
-                        b.vx = Math.sin(ang) * speed; b.vy = -Math.abs(Math.cos(ang) * speed);
-                        b.y = this.py - b.r - 1;
-                    }
-                    // 砖块
-                    for (const k of this.bricks) {
-                        if (k.hp <= 0 || k.type === 'nut') {
-                            if (k.type === 'nut' && b.x > k.x - b.r && b.x < k.x + k.w + b.r && b.y > k.y - b.r && b.y < k.y + k.h + b.r) {
-                                if (b.vx > 0 && b.x < k.x) b.vx = -Math.abs(b.vx);
-                                else if (b.vx < 0 && b.x > k.x + k.w) b.vx = Math.abs(b.vx);
-                                else b.vy = -b.vy;
-                            }
-                            continue;
-                        }
-                        if (b.x > k.x - b.r && b.x < k.x + k.w + b.r && b.y > k.y - b.r && b.y < k.y + k.h + b.r) {
-                            // 判定从哪边撞
-                            const ox = Math.min(Math.abs(b.x - (k.x - b.r)), Math.abs(b.x - (k.x + k.w + b.r)));
-                            const oy = Math.min(Math.abs(b.y - (k.y - b.r)), Math.abs(b.y - (k.y + k.h + b.r)));
-                            if (ox < oy) b.vx = -b.vx; else b.vy = -b.vy;
-                            k.hp--;
-                            this.score += k.type === 'bucket' ? 30 : 10;
-                            if (k.hp <= 0 && Math.random() < 0.22) {
-                                const t = ['chili', 'ice', 'tri'][(Math.random() * 3) | 0];
-                                this.drops.push({ x: k.x + k.w / 2, y: k.y + k.h / 2, t, v: 120 });
-                            }
-                            break;
-                        }
-                    }
-                    if (b.y > H + 30) { this.loseLife(); return; }
+            const gone = [];
+            for (const b of this.balls) {
+                if (b.stuck) { b.x = this.px; b.y = this.py - 26; continue; }
+                b.x += b.vx * h * sp;
+                b.y += b.vy * h * sp;
+                this.wallHit(b);
+                this.paddleHit(b);
+                for (const k of this.bricks) {
+                    if (k.hp <= 0 && k.type !== 'nut') continue;
+                    if (this.brickHit(b, k)) break;        // 一步只处理一块，角落里不会来回反
+                }
+                if (b.y - b.r > H + 6) gone.push(b);
+            }
+            if (gone.length) {
+                this.balls = this.balls.filter(b => gone.indexOf(b) < 0);
+                if (!this.balls.length) this.loseLife();
+            }
+        }
+        wallHit(b) {
+            if (b.x < 60 + b.r) { b.x = 60 + b.r; b.vx = Math.abs(b.vx); }
+            if (b.x > 840 - b.r) { b.x = 840 - b.r; b.vx = -Math.abs(b.vx); }
+            if (b.y < 86 + b.r) { b.y = 86 + b.r; b.vy = Math.abs(b.vy); }
+        }
+        paddleHit(b) {
+            if (b.vy <= 0) return;
+            if (b.y + b.r < this.py || b.y - b.r > this.py + this.ph) return;
+            if (Math.abs(b.x - this.px) > this.pw / 2 + b.r) return;
+            const off = Math.max(-1, Math.min(1, (b.x - this.px) / (this.pw / 2)));
+            const ang = off * 1.05;
+            const speed = Math.min(660, Math.hypot(b.vx, b.vy) * 1.02);
+            b.vx = Math.sin(ang) * speed;
+            b.vy = -Math.abs(Math.cos(ang) * speed);
+            // 正中间回弹会变成纯垂直、在一列里反复弹 → 给一个最小的横向分量
+            if (Math.abs(b.vx) < speed * 0.26) {
+                const dir = off === 0 ? (Math.random() < 0.5 ? -1 : 1) : Math.sign(off);
+                b.vx = dir * speed * 0.26;
+                b.vy = -Math.sqrt(Math.max(0, speed * speed - b.vx * b.vx));
+            }
+            b.y = this.py - b.r - 0.5;          // 必须推出去，否则下一步还判命中
+        }
+        brickHit(b, k) {
+            const cx = Math.min(Math.max(b.x, k.x), k.x + k.w);
+            const cy = Math.min(Math.max(b.y, k.y), k.y + k.h);
+            const dx = b.x - cx, dy = b.y - cy;
+            const d2 = dx * dx + dy * dy;
+            if (d2 > b.r * b.r) return false;
+            if (d2 < 12) {
+                // 圆心已经陷进矩形：按最近的一条边推出去
+                const dl = b.x - k.x, dr = k.x + k.w - b.x;
+                const dtp = b.y - k.y, dbt = k.y + k.h - b.y;
+                const m = Math.min(dl, dr, dtp, dbt);
+                if (m === dl) { b.x = k.x - b.r; b.vx = -Math.abs(b.vx); }
+                else if (m === dr) { b.x = k.x + k.w + b.r; b.vx = Math.abs(b.vx); }
+                else if (m === dtp) { b.y = k.y - b.r; b.vy = -Math.abs(b.vy); }
+                else { b.y = k.y + k.h + b.r; b.vy = Math.abs(b.vy); }
+            } else {
+                const d = Math.sqrt(d2);
+                const nx = dx / d, ny = dy / d;
+                b.x = cx + nx * (b.r + 0.4);
+                b.y = cy + ny * (b.r + 0.4);
+                const dot = b.vx * nx + b.vy * ny;
+                if (dot < 0) { b.vx -= 2 * dot * nx; b.vy -= 2 * dot * ny; }
+            }
+            if (k.type !== 'nut') {
+                k.hp--;
+                this.score += k.type === 'bucket' ? 30 : 10;
+                if (k.hp <= 0 && Math.random() < 0.22) {
+                    const t = ['chili', 'ice', 'tri'][(Math.random() * 3) | 0];
+                    this.drops.push({ x: k.x + k.w / 2, y: k.y + k.h / 2, t: t, v: 120 });
                 }
             }
-            // 道具
-            this.drops = this.drops.filter(d => {
-                d.v += 180 * dt; d.y += d.v * dt;
-                if (d.y > this.py - 16 && d.y < this.py + 18 && Math.abs(d.x - this.px) < this.pw / 2 + 14) {
-                    this.grab(d.t); return false;
-                }
-                return d.y < H + 30;
-            });
-            if (this.bricks.filter(k => k.hp > 0 && k.type !== 'nut').length === 0) this.end(true);
+            return true;
         }
         grab(t) {
             if (t === 'chili') {
@@ -984,23 +1055,29 @@
                 this.score += n * 8; this.msg = '辣椒清屏 · +' + n * 8;
             } else if (t === 'ice') { this.slow = 6; this.msg = '寒冰减速 6 秒'; }
             else {
-                this.extra = Math.min(4, this.extra + 1);
-                this.msg = '三线射手 · 球数 +1';
+                // v4.0.139：原来只把 this.extra++ 就完事，根本没有第二颗球（假功能）
+                if (this.balls.length >= 4) { this.score += 60; this.msg = '三线射手 · 球已满 +60'; }
+                else if (this.balls.some(b => b.stuck)) { this.triPending = true; this.msg = '三线射手 · 发球后分三路'; }
+                else { this.splitBalls(); this.msg = '三线射手 · 球数 +2'; }
             }
             this.msgT = 1.4;
         }
         loseLife() {
             this.lives--;
             if (this.lives <= 0) { this.end(false); return; }
-            this.ball = { x: this.px, y: 470, vx: 250, vy: -330, r: 9, stuck: true };
+            this.balls = [];
+            this.triPending = false;
+            this.spawnBall(this.px, this.py - 26, 250, -330, true);
+            this.acc = 0;
+            this.msg = '还剩 ' + this.lives + ' 条命'; this.msgT = 1.3;
         }
-        onDown() { if (this.ball.stuck && !this.over) this.ball.stuck = false; }
+        onDown() { if (!this.over) this.launch(); }
         onMove(x) { this.px = Math.max(60 + this.pw / 2, Math.min(840 - this.pw / 2, x)); }
         onKey(down, k) {
             if (!down || this.over) return;
             if (k === 'left' || k === 'a') this.px = Math.max(60 + this.pw / 2, this.px - 46);
             if (k === 'right' || k === 'd') this.px = Math.min(840 - this.pw / 2, this.px + 46);
-            if (k === 'space' && this.ball.stuck) this.ball.stuck = false;
+            if (k === 'space') this.launch();
         }
         draw() {
             const g = ctx.createLinearGradient(0, 0, 0, H);
@@ -1022,14 +1099,13 @@
                     ctx.fillStyle = 'rgba(255,255,255,0.12)'; rr(k.x + 4, k.y + 4, k.w - 8, 8, 4); ctx.fill();
                 }
             }
-            // 挡板：睡莲叶
             spr('lilypad', this.px - this.pw / 2 - 10, this.py - 12, this.pw + 20, 40);
-            // 球
-            const b = this.ball;
-            ctx.fillStyle = '#9ce34a';
-            ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = 'rgba(255,255,255,0.7)';
-            ctx.beginPath(); ctx.arc(b.x - 3, b.y - 3, 3, 0, Math.PI * 2); ctx.fill();
+            for (const b of this.balls) {
+                ctx.fillStyle = '#9ce34a';
+                ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                ctx.beginPath(); ctx.arc(b.x - 3, b.y - 3, 3, 0, Math.PI * 2); ctx.fill();
+            }
             for (const d of this.drops) {
                 const col = d.t === 'chili' ? '#e04a2a' : d.t === 'ice' ? '#5ac8f0' : '#e8d24a';
                 ctx.fillStyle = col; ctx.beginPath(); ctx.arc(d.x, d.y, 11, 0, Math.PI * 2); ctx.fill();
@@ -1037,9 +1113,10 @@
             }
             txt('生命 ' + Math.max(0, this.lives), 78, 574, 17, '#ff8f6b', 'left', 800);
             txt('分数 ' + this.score, 450, 574, 17, '#ffe9a8', 'center', 700);
+            if (this.balls.length > 1) txt('球 ×' + this.balls.length, 340, 574, 15, '#9ce34a', 'center', 800);
             txt(this.slow > 0 ? '寒冰减速 ' + this.slow.toFixed(1) + 's' : '', 820, 574, 14, '#7fd8ff', 'right', 700);
             if (this.msgT > 0) txt(this.msg, 450, 500, 18, '#ffe066', 'center', 800);
-            if (this.ball.stuck && !this.over) txt('点击 / 空格 发球', 450, 500, 17, 'rgba(255,255,255,0.75)', 'center', 700);
+            if (this.balls.some(b => b.stuck) && !this.over) txt('点击 / 空格 发球', 450, 500, 17, 'rgba(255,255,255,0.75)', 'center', 700);
             if (this.over) this.overlay(this.lives <= 0 ? '防线被突破了' : '全部清空！', '分数 ' + this.score, this.lives <= 0 ? '#ff8f6b' : '#b7f06a');
         }
     }
@@ -1192,7 +1269,7 @@
         ['#######', '#     #', '# @$ .#', '#     #', '#######'],
         ['#########', '#       #', '# @$ .  #', '#       #', '#  $ .  #', '#       #', '#########'],
         ['##########', '#        #', '# @$ .$ .#', '#   ##   #', '#  $  .  #', '#        #', '##########'],
-        ['##########', '#        #', '#  .  $  #', '#  #  #  #', '#  $  .  #', '#        #', '##########'],
+        ['##########', '#        #', '#  .  $  #', '#  #  #  #', '#  $  .  #', '#   @    #', '##########'],
         ['##########', '#        #', '# $  . . #', '#  ##    #', '#  $  $  #', '#   @    #', '##########'],
         ['###########', '#         #', '#  $ . .  #', '#  # # #  #', '#  $ . $  #', '#    @    #', '###########']
     ];
@@ -1215,6 +1292,23 @@
                     this.target[r][c] = ch === '.' || ch === '*' || ch === '+';
                     this.box[r][c] = ch === '$' || ch === '*';
                     if (ch === '@' || ch === '+') { this.px = c; this.py = r; }
+                }
+            }
+            // v4.0.139：地图里没有 @（或者 @ 画在墙里）时，旧代码把 px/py 留在 (0,0) ——
+            // 那是左上角墙格，人物直接嵌在墙里一步都走不了（第 4 关就是这个毛病）。
+            // 兜底：从最下面一行往上找，挑最靠中间的空地放人。
+            if (this.wall[this.py][this.px]) {
+                for (let r = this.h - 2; r >= 1; r--) {
+                    const cand = [];
+                    for (let c = 1; c < this.w - 1; c++) {
+                        if (!this.wall[r][c] && !this.box[r][c]) cand.push(c);
+                    }
+                    if (cand.length) {
+                        const mid = this.w / 2;
+                        cand.sort((a, b) => Math.abs(a - mid) - Math.abs(b - mid));
+                        this.px = cand[0]; this.py = r;
+                        break;
+                    }
                 }
             }
             this.tile = Math.min(52, Math.floor(520 / this.w), Math.floor(440 / this.h));
@@ -1275,14 +1369,14 @@
                     ctx.strokeStyle = 'rgba(70,150,190,0.8)'; ctx.lineWidth = 2; rr(cx - s / 2, cy - s / 2, s, s, 8); ctx.stroke();
                 }
             }
-            // 豌豆射手当主角
-            sprH('peashooter', ox + this.px * t + t * 0.1, oy + this.py * t + t * 0.08, t * 0.84);
+            // v4.0.139：寒冰推箱的主角是寒冰射手（原来错用了普通豌豆射手）
+            sprH('snowpea', ox + this.px * t + t * 0.1, oy + this.py * t + t * 0.08, t * 0.84);
             // HUD
             txt('寒冰推箱', 60, 62, 24, '#ffe9a8', 'left', 900);
             txt('第 ' + (this.idx + 1) + ' / ' + LEVELS.length + ' 关', 60, 90, 14, 'rgba(255,255,255,0.6)');
             txt('步数 ' + this.steps, 60, 114, 14, 'rgba(255,255,255,0.6)');
             txt('分数 ' + this.score, 60, 138, 14, 'rgba(255,255,255,0.6)');
-            txt('方向键 / WASD 推冰块', 60, 512, 13, 'rgba(255,255,255,0.55)');
+            txt('方向键 / WASD 控制寒冰射手推冰块', 60, 512, 13, 'rgba(255,255,255,0.55)');
             txt('把每块冰推上绿圈', 60, 536, 13, 'rgba(255,255,255,0.55)');
             txt('R 重来本关 · ESC 回大厅', 60, 560, 13, 'rgba(255,255,255,0.4)');
             if (this.over && this.win) {
@@ -1725,10 +1819,10 @@
         if (active) {
             active.t += dt;
             if (active.over) active.overT += dt;
-            try { active.update(dt); } catch (err) { console.error('[mini]', err); active.end(false); }
+            try { active.update(dt); } catch (err) { console.error('[mini]', (err && err.stack) || err); active.end(false); }
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.clearRect(0, 0, W, H);
-            try { active.draw(); } catch (err) { console.error('[mini draw]', err); }
+            try { active.draw(); } catch (err) { console.error('[mini draw]', (err && err.stack) || err); }
         }
         raf = requestAnimationFrame(tick);
     }
@@ -1804,6 +1898,7 @@
         backToLobby: backToLobby,
         quit: quit,
         games: GAMES.map(g => ({ id: g.id, name: g.name })),
+        levelCount: LEVELS.length,          // v4.0.139：给验收脚本遍历推箱子关卡用
         get active() { return active; },
         get isOpen() { return !!(screen && screen.style.display === 'block'); }
     };
