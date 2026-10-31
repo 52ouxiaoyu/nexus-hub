@@ -3,7 +3,7 @@
  * 10 个独立玩法，全部运行在同一个 900×600 canvas 上：
  *   玉米方块(俄罗斯方块) / 僵尸地鼠(打地鼠) / 花园2048 / 猫尾草泡泡龙(泡泡射击)
  *   豌豆弹球(打砖块) / 植物消消乐(三消) / 寒冰推箱(推箱子) / 豌豆射击场(打飞靶)
- *   花园连连看(记忆配对) / 僵尸贪吃蛇(贪吃蛇)
+ *   花园连连看(记忆配对) / 植物贪吃蛇(贪吃蛇)
  * ESC 逐层返回（游戏 → 大厅 → 主菜单）。
  */
 (function () {
@@ -34,6 +34,8 @@
         doom: PL + 'DoomShroom/0.gif',
         puffshroom: PL + 'PuffShroom/0.gif',
         cattail: PL + 'Cattail/Cattail.gif',
+        garlic: PL + 'Garlic/0.gif',
+        pumpkin: PL + 'PumpkinHead/0.gif',
         zombie: ZB + 'Zombie/0.gif',
         cone: ZB + 'ConeheadZombie/0.gif',
         bucket: ZB + 'BucketheadZombie/0.gif',
@@ -1637,7 +1639,7 @@
                     rr(x + 3, y + 3, this.C - 6, this.C - 6, 8); ctx.fill();
                 }
             });
-            txt('僵尸贪吃蛇', 450, 56, 24, '#ffe9a8', 'center', 900);
+            txt('植物贪吃蛇', 450, 56, 24, '#ffe9a8', 'center', 900);
             txt('分数 ' + this.score + ' · 长度 ' + this.snake.length, 450, 552, 16, 'rgba(255,255,255,0.8)', 'center', 700);
             txt('吃阳光变长 · 撞坚果墙 / 自己 / 边界就结束', 450, 578, 13, 'rgba(255,255,255,0.5)', 'center', 600);
             if (this.over) this.overlay('蛇撞没了', '分数 ' + this.score + ' · 长度 ' + this.snake.length, '#ff8f6b');
@@ -1647,15 +1649,15 @@
     /* ================= 游戏注册表 ================= */
     const GAMES = [
         { id: 'tetris', name: '玉米方块', tag: 'TETRIS', icon: 'cob', tip: '落玉米块消一行齐射一轮，撑越久分越高', cls: Tetris },
-        { id: 'whack', name: '僵尸地鼠', tag: 'WHACK', icon: 'zombie', tip: '僵尸探头就敲，别敲到向日葵', cls: Whack },
-        { id: 'g2048', name: '花园 2048', tag: '2048', icon: 'melon', tip: '同种植物滑到一起就升级融合', cls: Garden2048 },
+        { id: 'whack', name: '僵尸地鼠', tag: 'WHACK', icon: 'bucket', tip: '僵尸探头就敲，别敲到向日葵', cls: Whack },
+        { id: 'g2048', name: '花园 2048', tag: '2048', icon: 'wintermelon', tip: '同种植物滑到一起就升级融合', cls: Garden2048 },
         { id: 'bubble', name: '猫尾草泡泡龙', tag: 'BUBBLE', icon: 'cattail', tip: '同色三个爆破，别让泡泡压线', cls: Bubble },
         { id: 'breakout', name: '豌豆弹球', tag: 'BRICK', icon: 'lilypad', tip: '豌豆弹球砸砖，接住就继续', cls: Breakout },
-        { id: 'match3', name: '植物消消乐', tag: 'MATCH3', icon: 'sunflower', tip: '交换相邻植物，三连即消', cls: Match3 },
+        { id: 'match3', name: '植物消消乐', tag: 'MATCH3', icon: 'tallnut', ih: 66, tip: '交换相邻植物，三连即消', cls: Match3 },
         { id: 'sokoban', name: '寒冰推箱', tag: 'PUSH', icon: 'snowpea', tip: '把每块冰推到绿圈里', cls: Sokoban },
-        { id: 'duck', name: '豌豆射击场', tag: 'SHOOT', icon: 'cherry', tip: '打飞气球僵尸，越高分越多', cls: DuckHunt },
+        { id: 'duck', name: '豌豆射击场', tag: 'SHOOT', icon: 'spikeweed', ih: 48, tip: '打飞气球僵尸，越高分越多', cls: DuckHunt },
         { id: 'memory', name: '花园连连看', tag: 'MEMORY', icon: 'cobcannon', tip: '翻牌配对同种植物', cls: Memory },
-        { id: 'snake', name: '僵尸贪吃蛇', tag: 'SNAKE', icon: 'wallnut', tip: '吃阳光变长，别撞坚果墙', cls: Snake }
+        { id: 'snake', name: '植物贪吃蛇', tag: 'SNAKE', icon: 'pumpkin', tip: '吃阳光变长，别撞坚果墙', cls: Snake }
     ];
 
     /* ================= 管理器 ================= */
@@ -1740,7 +1742,8 @@
         gridEl.innerHTML = GAMES.map((g, i) =>
             '<div class="mini-card" data-id="' + g.id + '">' +
             '<span class="no">' + (i + 1 < 10 ? '0' + (i + 1) : i + 1) + '</span>' +
-            '<div class="ico"><img src="' + SPR[g.icon] + '" alt="' + g.name + '"></div>' +
+            '<div class="ico"><img src="' + SPR[g.icon] + '" alt="' + g.name + '"' +
+            (g.ih ? ' style="height:' + g.ih + 'px"' : '') + '></div>' +
             '<h3>' + g.name + '</h3><div class="tg">' + g.tag + '</div>' +
             '<div class="tp">' + g.tip + '</div></div>'
         ).join('');
