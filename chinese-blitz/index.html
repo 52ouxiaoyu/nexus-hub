@@ -191,6 +191,43 @@
       display: flex; justify-content: space-between; align-items: center;
       gap: 12px; flex-wrap: wrap; margin-top: 16px;
     }
+    .cb-imp-examline {
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+      margin-bottom: 12px; padding: 10px 12px; background: #fbf8f1;
+      border: 1px solid var(--border-color); border-radius: 8px;
+    }
+    .cb-imp-examline label { font-size: 11.5px; font-weight: 700; color: #8a7a5e; }
+    .cb-imp-examline #cb-imp-exam-name { flex: 1; min-width: 180px; max-width: 340px; }
+    .cb-imp-src { font-size: 9px; color: var(--text-muted); margin-left: 1px; }
+    .cb-imp-big { font-size: 24px; font-weight: 800; line-height: 1.25; }
+    .cb-imp-big span { font-size: 12px; font-weight: 400; color: var(--text-secondary); }
+    .cb-imp-modrow { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .cb-imp-modname { flex: 0 0 88px; font-size: 12px; color: var(--text-secondary); }
+    .cb-imp-bar { flex: 1; height: 8px; background: #eee6d8; border-radius: 5px; overflow: hidden; }
+    .cb-imp-bar i { display: block; height: 100%; background: linear-gradient(90deg, #4c6ef5, #7c94ff); border-radius: 5px; }
+    .cb-imp-modsc { flex: 0 0 auto; font-size: 11.5px; font-weight: 700; color: #4a4438; }
+    .cb-imp-modsc em { font-style: normal; font-weight: 400; color: var(--text-muted); margin-left: 5px; }
+    .cb-imp-task {
+      display: flex; flex-direction: column; gap: 3px;
+      padding: 10px 12px; margin-bottom: 8px;
+      background: #f7f9fd; border-left: 3px solid var(--accent-indigo); border-radius: 6px;
+    }
+    .cb-imp-task b { font-size: 13px; }
+    .cb-imp-task span { font-size: 12px; color: var(--text-secondary); line-height: 1.75; }
+    .cb-imp-task em { font-style: normal; font-size: 11px; color: var(--accent-indigo); }
+
+    /* 今日任务：本卷补漏 */
+    .today-task {
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+      padding: 11px 13px; margin-bottom: 9px;
+      background: #fbf8f1; border: 1px solid var(--border-color); border-radius: 8px;
+    }
+    .today-task-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .today-task-main b { font-size: 13.5px; }
+    .today-task-main span { font-size: 12px; color: var(--text-secondary); line-height: 1.75; }
+    .today-task-main em { font-style: normal; font-size: 11px; color: var(--text-muted); }
+    .today-task-act { display: flex; gap: 6px; flex: 0 0 auto; }
+
     .cb-imp-toast {
       position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px);
       padding: 10px 20px; border-radius: 24px; font-size: 13px; font-weight: 600;
@@ -277,7 +314,7 @@
         <h1>高考语文“死磕通关”数字化作战系统</h1>
         <p id="header-student-info">备考者 · 某省重点中学 2026级高一 · 82 分 ➔ 目标 130+</p>
       </div>
-      <span class="cb-ver">v2.3.1</span>
+      <span class="cb-ver">v2.4.0</span>
     </div>
 
     <div class="header-pills">
@@ -344,7 +381,7 @@
         <button class="subnav-btn" data-sub="tab-dashboard" onclick="switchTab('tab-dashboard', this)">📊 诊断</button>
         <button class="subnav-btn" data-sub="tab-blitz" onclick="switchTab('tab-blitz', this)">🎯 做题</button>
         <button class="subnav-btn" data-sub="tab-progress" onclick="switchTab('tab-progress', this)">📒 进步本</button>
-        <button class="subnav-btn" data-sub="tab-import" onclick="switchTab('tab-import', this)">📥 导入试卷</button>
+        <button class="subnav-btn" data-sub="tab-import" onclick="switchTab('tab-import', this)">📥 录入一套卷</button>
       </div>
       <div class="subnav no-print" id="subnav-lib" style="display:none;">
         <span class="subnav-label">资料库</span>
@@ -365,7 +402,7 @@
         <div class="section-header">
           <div>
             <h2>☀️ 今日任务</h2>
-            <p>不用挑工作台。今天只有三件事，15 分钟做完就可以合上电脑。</p>
+            <p>不用挑工作台。今天只有三件事，15 分钟做完就可以合上电脑。上一套卷没补完的漏，会单独列在下面。</p>
           </div>
           <span class="badge badge-jade" id="today-progress-badge">0 / 3</span>
         </div>
@@ -400,6 +437,14 @@
               <button class="btn btn-primary" onclick="todayGo('quoteDone')">记住了</button>
             </div>
           </div>
+        </div>
+
+        <div class="card" id="today-card-fix" style="margin-bottom:18px;">
+          <div class="card-title">
+            <span>④ 上一套卷没补完的漏</span>
+            <span class="badge badge-jade" id="today-fix-count">无</span>
+          </div>
+          <div id="today-fix-list"></div>
         </div>
 
         <div class="card">
@@ -645,13 +690,13 @@
       </section>
 
       <!-- =================================================================
-           工作台: 📥 导入试卷（PDF -> AI 拆题 -> 校对 -> 入库）
+           工作台: 📥 录入一套卷（试题卷 + 已批改答题卷 -> 拆题 -> 批改分析 -> 入库 + 排任务）
            ================================================================= -->
       <section id="tab-import" class="workspace-pane">
         <div class="section-header">
           <div>
-            <h2>📥 导入试卷</h2>
-            <p>丢一份试题卷 PDF 进来，AI 逐题拆出题干、参考答案和采分点。结果先过你的眼，确认后才进题库。</p>
+            <h2>📥 录入一套卷</h2>
+            <p>把<strong>试题卷</strong>和<strong>老师批改过的答题卷</strong>一起传进来。系统拆出题目和采分点，对着你的答案判漏在哪、属于哪类失分，然后自己算分、写病历本、排训练任务。</p>
           </div>
           <button class="btn btn-sm btn-outline" onclick="cbImpOpenSettings()">⚙️ AI 设置</button>
         </div>

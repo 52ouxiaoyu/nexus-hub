@@ -1365,6 +1365,192 @@
     return { added, skipped };
   };
 
+  /* 对外：录入一整套卷（试题卷 + 已批改答题卷）—— 一次写齐题库 / 考试 / 模块分 / 失分卡 / 坑库。
+   *
+   * 为什么不用 apiCreateExam：那个把「七模块满分合计 = 150」写死在校验里，
+   * 而真实卷子结构各不相同（有的不考默写、作文 50 或 60），对账永远过不去。
+   * 这里的每个数字都由题目明细推出，天然自洽，只校验「模块得分和 = 总分」与「ABC = 扣分」。 */
+  window.cbImportExam = function (p) {
+    const items = Array.isArray(p && p.items) ? p.items : [];
+    if (!items.length) throw new Error("没有可入库的题目");
+
+    // 1) 题库：复用 cbImportQuestions（去重口径一致），再按题干前 60 字反查 id
+    const bank = window.cbImportQuestions(
+      items.map((it) => ({
+        module_code: it.module_code,
+        module_name: it.module_name,
+        question_no: it.question_no,
+        question_stem: it.question_stem,
+        question_type: it.question_type,
+        max_score: it.max_score,
+        standard_answer: it.standard_answer,
+        rubric: it.rubric,
+        trap: it.trap,
+        source_name: it.source_name || p.exam_name,
+      }))
+    );
+
+    const idByStem = {};
+    T("questions").forEach((q) => {
+      idByStem[String(q.question_stem || "").trim().slice(0, 60)] = q.id;
+    });
+
+    // 2) 按模块汇总 + ABC 归类。没填类型的失分归 B：B 是「套路/漏点」，
+    //    比硬塞 C（素养）更接近实情，也提醒用户回校对表补类型。
+    const mods = {};
+    const abc = { A: 0, B: 0, C: 0 };
+    let sumMax = 0;
+    let sumGot = 0;
+
+    items.forEach((it) => {
+      const code = it.module_code || "INFO_READ";
+      const max = num(it.max_score, 1);
+      const got = Math.min(max, Math.max(0, num(it.earned)));
+      if (!mods[code]) {
+        mods[code] = {
+          module_code: code,
+          module_name: it.module_name || code,
+          max_score: 0,
+          actual_score: 0,
+          count: 0,
+        };
+      }
+      mods[code].max_score += max;
+      mods[code].actual_score += got;
+      mods[code].count += 1;
+      sumMax += max;
+      sumGot += got;
+      const lost = max - got;
+      if (lost > 0.01) abc[["A", "B", "C"].includes(it.loss_type) ? it.loss_type : "B"] += lost;
+    });
+
+    sumMax = pyRound(sumMax, 1);
+    sumGot = pyRound(sumGot, 1);
+    abc.A = pyRound(abc.A, 1);
+    abc.B = pyRound(abc.B, 1);
+    abc.C = pyRound(abc.C, 1);
+
+    const sumModMax = pyRound(Object.values(mods).reduce((s, m) => s + m.max_score, 0), 1);
+    const sumModGot = pyRound(Object.values(mods).reduce((s, m) => s + m.actual_score, 0), 1);
+    const totalLost = pyRound(sumMax - sumGot, 1);
+    const sumAbc = pyRound(abc.A + abc.B + abc.C, 1);
+
+    if (Math.abs(sumModMax - sumMax) > 0.6 || Math.abs(sumModGot - sumGot) > 0.6) {
+      throw new Error(`模块汇总对不上：题目合计 ${sumMax}/${sumGot}，模块合计 ${sumModMax}/${sumModGot}`);
+    }
+    if (Math.abs(sumAbc - totalLost) > 0.6) {
+      throw new Error(`失分对不上：扣 ${totalLost} 分，但 A${abc.A}+B${abc.B}+C${abc.C}=${sumAbc} 分`);
+    }
+
+    // 3) 考试
+    const examId = nextId("exams");
+    T("exams").push({
+      id: examId,
+      exam_name: String(p.exam_name || "导入的卷子"),
+      exam_date: String(p.exam_date || todayStr()),
+      grade_stage: String(p.grade_stage || "高一上"),
+      paper_type: String(p.paper_type || "自主导入"),
+      total_max_score: sumMax,
+      total_actual_score: sumGot,
+      loss_type_a_score: abc.A,
+      loss_type_b_score: abc.B,
+      loss_type_c_score: abc.C,
+      source_pdf_path: null,
+      answer_pdf_path: null,
+      notes: String(p.notes || ""),
+      created_at: nowStamp(),
+    });
+
+    Object.values(mods).forEach((m) => {
+      const max = pyRound(m.max_score, 1);
+      const got = pyRound(m.actual_score, 1);
+      T("exam_module_scores").push({
+        id: nextId("exam_module_scores"),
+        exam_id: examId,
+        module_code: m.module_code,
+        module_name: m.module_name,
+        max_score: max,
+        actual_score: got,
+        score_rate: max > 0 ? pyRound((got / max) * 100, 1) : 0,
+        planned_minutes: 0,
+        actual_minutes: 0,
+        time_deviation_reason: "导入生成",
+      });
+    });
+
+    // 4) 失分卡：每题失分一张，九栏全部来自批改结果，不用二次手填
+    const today = todayStr();
+    let cards = 0;
+    items.forEach((it) => {
+      const max = num(it.max_score, 1);
+      const got = Math.min(max, Math.max(0, num(it.earned)));
+      const lost = pyRound(max - got, 1);
+      if (lost <= 0.01) return;
+
+      const cat = ["A", "B", "C"].includes(it.loss_type) ? it.loss_type : "B";
+      const stem = String(it.question_stem || "").trim();
+      const cardId = nextId("progress_cards");
+      const warning = String(it.warning || it.trap || "").trim();
+
+      T("progress_cards").push({
+        id: cardId,
+        question_id: idByStem[stem.slice(0, 60)] || null,
+        exam_id: examId,
+        module_code: it.module_code || "INFO_READ",
+        module_name: it.module_name || "",
+        card_date: today,
+        source_label: String(p.exam_name || "导入的卷子"),
+        question_no: String(it.question_no || ""),
+        max_score: max,
+        actual_score: got,
+        lost_score: lost,
+        key_stem_snippet: stem.slice(0, 60),
+        student_wrong_answer: String(it.student_answer || "").trim(),
+        standard_right_answer: String(it.standard_answer || "").trim(),
+        error_reason_reflection: String(it.reason || "").trim(),
+        knowledge_point_summary: String(it.knowledge || "").trim(),
+        similar_examples: "",
+        next_time_warning: warning,
+        loss_category: cat,
+        error_tags_json: JSON.stringify(
+          [`${cat}类失分`, it.module_name || ""].concat((it.misses || []).slice(0, 3)).filter(Boolean)
+        ),
+        review_stage: "1_REVIEW_DAY_1",
+        next_review_date: today,
+        fail_count: 0,
+        pass_count: 0,
+        created_at: nowStamp(),
+        updated_at: nowStamp(),
+      });
+
+      if (warning) {
+        T("trap_rules").push({
+          id: nextId("trap_rules"),
+          module_code: it.module_code || "INFO_READ",
+          module_name: it.module_name || "",
+          trap_category: `${cat}类高频失分点`,
+          warning_instruction: warning,
+          hit_count: 1,
+          is_system_preset: 0,
+          source_card_id: cardId,
+          created_at: nowStamp(),
+        });
+      }
+      cards += 1;
+    });
+
+    saveState();
+    return {
+      exam_id: examId,
+      added: bank.added,
+      skipped: bank.skipped,
+      cards,
+      sumMax,
+      sumGot,
+      modules: Object.keys(mods).length,
+    };
+  };
+
   window.__CB_DB__ = DB;
   window.__CB_ENGINE__ = {
     computeTextSimilarity,

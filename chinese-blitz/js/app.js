@@ -202,6 +202,7 @@ function todayPickQuestion() {
 
 function renderToday() {
   renderTodayBadge();
+  renderTodayTasks();
   const m = STATE.deckMetrics || {};
   const dueEl = document.getElementById("today-due-count");
   if (dueEl) dueEl.textContent = `${m.due_today || 0} 张`;
@@ -259,6 +260,136 @@ function renderToday() {
       <br/><span style="font-size:12px;">同一时期只死磕一个模块。上面那个更低的，先打完 20 道再说下一个。</span>
     </div>
   `;
+}
+
+// ---------------------------------------------------------------------------
+// 补漏任务：录完一套卷后由失分结构自动生成，只存在本机
+// （任务是一次性的动作清单，不是学业档案，没必要进 DB 让病历本变脏）
+// ---------------------------------------------------------------------------
+
+const TASKS_KEY = "chinese_blitz_tasks_v1";
+
+function escHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function loadTasks() {
+  try {
+    const list = JSON.parse(localStorage.getItem(TASKS_KEY) || "[]");
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveTasks(list) {
+  try {
+    localStorage.setItem(TASKS_KEY, JSON.stringify(list.slice(0, 60)));
+  } catch (e) {}
+}
+
+function cbAddTasks(tasks, examId, examName) {
+  const stamp = Date.now();
+  // 新任务整体排在前面，且保持生成时的顺序（主攻 → 副攻 → 复盘）。
+  // 逐条 unshift 会把顺序倒过来，主攻跑到最后，等于把靶心藏了。
+  const fresh = (tasks || []).map((t, i) => ({
+    id: "t" + stamp + "_" + i,
+    exam_id: examId || null,
+    exam_name: examName || "",
+    module_code: t.module_code,
+    module_name: t.module_name,
+    title: t.title,
+    detail: t.detail,
+    target: t.target,
+    done: false,
+    date: todayKey(),
+  }));
+  saveTasks(fresh.concat(loadTasks()));
+  renderTodayTasks();
+  renderNavCounts();
+  return (tasks || []).length;
+}
+
+function cbTaskToggle(id) {
+  const list = loadTasks();
+  const t = list.find((x) => x.id === id);
+  if (!t) return;
+  t.done = !t.done;
+  saveTasks(list);
+  renderTodayTasks();
+  renderNavCounts();
+}
+
+function cbTaskGo(id) {
+  const t = loadTasks().find((x) => x.id === id);
+  if (!t) return;
+  if (t.module_code === "ALL") {
+    switchTab("tab-progress");
+    const sel = document.getElementById("progress-stage-filter");
+    if (sel) {
+      sel.value = "DUE";
+      loadProgressCards();
+    }
+    return;
+  }
+  switchTab("tab-blitz");
+  const modSel = document.getElementById("blitz-module-filter");
+  if (modSel && t.module_code) {
+    modSel.value = t.module_code;
+    loadBlitzQuestions();
+  }
+}
+
+function cbTasksClear() {
+  const list = loadTasks().filter((t) => !t.done);
+  saveTasks(list);
+  renderTodayTasks();
+  renderNavCounts();
+}
+
+function renderTodayTasks() {
+  const box = document.getElementById("today-fix-list");
+  if (!box) return;
+  const all = loadTasks();
+  const todo = all.filter((t) => !t.done);
+  const badge = document.getElementById("today-fix-count");
+  if (badge) {
+    badge.textContent = all.length ? `${todo.length} / ${all.length}` : "无";
+    badge.className = `badge ${todo.length ? "badge-red" : "badge-jade"}`;
+  }
+  if (!all.length) {
+    box.innerHTML = `<p class="today-desc" style="margin:0;">还没有任务。去「训练舱 → 录入一套卷」把试题卷和已批改的答题卷一起传进来，系统会算出该补哪里，任务自动出现在这里。</p>`;
+    return;
+  }
+  if (!todo.length) {
+    box.innerHTML = `<p class="today-desc" style="margin:0;">本卷的补漏任务都做完了。别急着刷下一套——隔一天再回看失分卡，背得出才算过。
+      <button class="btn btn-sm btn-outline" style="margin-left:8px;" onclick="cbTasksClear()">清掉已完成的</button></p>`;
+    return;
+  }
+  box.innerHTML =
+    todo
+      .slice(0, 3)
+      .map(
+        (t) => `<div class="today-task">
+        <div class="today-task-main">
+          <b>${escHtml(t.title)}</b>
+          <span>${escHtml(t.detail)}</span>
+          <em>${escHtml(t.exam_name || "")}${t.target ? ` · 目标 ${t.target}` : ""}</em>
+        </div>
+        <div class="today-task-act">
+          <button class="btn btn-sm btn-primary" onclick="cbTaskGo('${t.id}')">去做</button>
+          <button class="btn btn-sm btn-outline" onclick="cbTaskToggle('${t.id}')">完成</button>
+        </div>
+      </div>`
+      )
+      .join("") +
+    (todo.length > 3
+      ? `<div class="today-desc" style="margin:8px 0 0;">还有 ${todo.length - 3} 项排在后面。做完眼前这三条再往下看。</div>`
+      : "");
 }
 
 function todayGo(kind) {
