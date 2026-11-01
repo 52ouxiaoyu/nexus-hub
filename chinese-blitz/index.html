@@ -7,6 +7,18 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%9A%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="css/styles.css" />
   <style>
+    /* 顶栏：品牌区不参与压缩，否则标题会被挤成两行 */
+    .top-header { padding-left: 16px; padding-right: 16px; }
+    .brand-box { flex: 0 0 auto; }
+    .brand-box > div:not(.brand-seal) { min-width: 0; }
+    .brand-box h1 { white-space: nowrap; }
+    #header-student-info { white-space: nowrap; }
+    @media (max-width: 1360px) {
+      .brand-box h1,
+      #header-student-info { white-space: normal; }
+      .brand-box { flex: 0 1 auto; }
+    }
+
     .cb-ver {
       display: inline-block;
       flex: 0 0 auto;
@@ -166,17 +178,17 @@
       <div class="brand-seal">死磕</div>
       <div class="brand-title">
         <h1>高考语文“死磕通关”数字化作战系统</h1>
-        <p id="header-student-info">吴悠（好大儿） · 杭州学军中学 2026级高一(18)班 · 基准 82分 ➔ 靶向 130+分</p>
+        <p id="header-student-info">备考者 · 某省重点中学 2026级高一 · 82 分 ➔ 目标 130+</p>
       </div>
-      <span class="cb-ver">v2.0.0</span>
+      <span class="cb-ver">v2.0.1</span>
     </div>
 
     <div class="header-pills">
       <div class="status-pill target-lock" id="header-locked-target">
-        🎯 当前唯一锁定靶心：加载中...
+        🎯 锁定靶心：加载中...
       </div>
       <div class="status-pill book-thickness" id="header-book-thickness">
-        📒 活页本当前厚度：-- 张（已红笔划掉 -- 张）
+        📒 活页本 -- 张 · 已划掉 -- · 今日待复盘 --
       </div>
     </div>
 
@@ -467,7 +479,7 @@
             </div>
             <div>
               <label class="form-label">2. 试卷来源与题号</label>
-              <input type="text" id="nc-source" value="26级西溪+文渊高一月考 · 第3题" />
+              <input type="text" id="nc-source" value="高一10月月考 · 第3题" />
             </div>
             <div>
               <label class="form-label">3. 失分层级（ABC分类）与分值</label>
@@ -648,7 +660,7 @@
           <div class="card">
             <div class="card-title">
               <span>🕵️‍♂️ 信息类阅读选择题“9大命题设误陷阱”拆雷矩阵</span>
-              <span class="badge badge-red">吴悠月考得分率最低项(44.4%)</span>
+              <span class="badge badge-red">考生月考得分率最低项(44.4%)</span>
             </div>
             <p style="font-size:12.5px;color:var(--text-secondary);margin-bottom:12px;">
               做题铁律：<strong>先圈题干（选正确/不正确）➔ 圈选项逻辑词（全部/已经/因此/只要）➔ 回原文定位比对！</strong>
@@ -798,7 +810,7 @@
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <select id="print-template-selector" style="width:310px;" onchange="renderPrintSheet()">
-              <option value="TPL_1_STRATEGY">📄 模板一：《好大儿·语文错题改进策略单页背诵清单》</option>
+              <option value="TPL_1_STRATEGY">📄 模板一：《语文错题改进策略单页背诵清单》</option>
               <option value="TPL_2_EMERGENCY">⚡ 模板二：《考前15分钟·D-1天眼急救包（Top警戒令+名句+金句）》</option>
               <option value="TPL_3_CLIPBOARD">✂️ 模板三：《单点爆破母题剪贴本（左题干原题 · 右留白三刷区）》</option>
             </select>
@@ -819,7 +831,7 @@
                 <th>题号与板块</th>
                 <th>分值</th>
                 <th>高考标准配速</th>
-                <th>吴悠月考实际耗时</th>
+                <th>考生月考实际耗时</th>
                 <th>考场控速铁律与止损红线</th>
               </tr>
             </thead>

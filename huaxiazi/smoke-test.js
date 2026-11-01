@@ -1,7 +1,19 @@
 /* 冒烟测试：在 jsdom 中真实运行话匣子页面 */
 const fs = require('fs');
 const path = require('path');
-const { JSDOM } = require('/Users/wujohn/.workbuddy/binaries/node/workspace/node_modules/jsdom');
+// jsdom 位置随机器而变，不再硬编码本地用户目录
+const { JSDOM } = (() => {
+  try {
+    return require('jsdom');
+  } catch (e) {
+    try {
+      return require(path.join(process.env.HOME || '', '.workbuddy/binaries/node/workspace/node_modules/jsdom'));
+    } catch (e2) {
+      console.error('需要 jsdom：请在仓库根目录 npm i jsdom');
+      process.exit(1);
+    }
+  }
+})();
 
 const dir = __dirname;
 const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');

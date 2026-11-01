@@ -80,7 +80,7 @@ async function refreshAllData() {
 
     // 默认选中真实10月月考（第2场，或最新一场）
     if (!STATE.selectedExamId && overview.exams && overview.exams.length > 0) {
-      const octExam = overview.exams.find((e) => e.exam_name.includes("西溪+文渊")) || overview.exams[overview.exams.length - 1];
+      const octExam = overview.exams.find((e) => e.exam_name.includes("10月月考")) || overview.exams[overview.exams.length - 1];
       STATE.selectedExamId = octExam.id;
     }
 
@@ -313,13 +313,13 @@ function renderTopHeader() {
   const activeCamp = ov.active_campaign;
   const lockEl = document.getElementById("header-locked-target");
   if (activeCamp) {
-    lockEl.innerHTML = `🎯 当前唯一锁定靶心：<strong>${activeCamp.module_name}</strong>（${activeCamp.completed_question_count}/${activeCamp.target_question_count}题 · 得分率 ${activeCamp.current_score_rate}% ➔ 目标 ${activeCamp.target_score_rate}%）`;
+    lockEl.innerHTML = `🎯 锁定靶心：<strong>${activeCamp.module_name}</strong> ${activeCamp.completed_question_count}/${activeCamp.target_question_count} 题 · ${activeCamp.current_score_rate}% → 目标 ${activeCamp.target_score_rate}%`;
   }
 
   const stats = ov.progress_book_stats;
   const bookEl = document.getElementById("header-book-thickness");
   if (stats) {
-    bookEl.innerHTML = `📒 活页本当前厚度：<strong>${stats.active_thickness} 张</strong>（已红笔划掉 <strong>${stats.struck_out_thinned} 张</strong> · 今日待遮罩复盘 ${stats.due_today_count} 张）`;
+    bookEl.innerHTML = `📒 活页本 <strong>${stats.active_thickness} 张</strong> · 已划掉 ${stats.struck_out_thinned} · 今日待复盘 ${stats.due_today_count}`;
   }
 
   const dueBadge = document.getElementById("nav-badge-due");
@@ -1451,8 +1451,8 @@ function renderPrintSheet() {
 
     container.innerHTML = `
       <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:14px;">
-        <h2 style="font-size:19px;">《好大儿（吴悠）· 高考语文错题改进策略单页背诵清单》</h2>
-        <p style="font-size:12px;color:#444;">班级：杭州学军中学 26级高一(18)班 | 生成时间：${bundle.generated_at} | 铁律：每周日遮罩复盘，连过4轮即用红笔划掉！</p>
+        <h2 style="font-size:19px;">《高考语文错题改进策略单页背诵清单》</h2>
+        <p style="font-size:12px;color:#444;">班级：某省重点中学 2026级高一 | 生成时间：${bundle.generated_at} | 铁律：每周日遮罩复盘，连过4轮即用红笔划掉！</p>
       </div>
       <table class="data-table" style="font-size:12px;">
         <thead>

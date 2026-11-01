@@ -4,7 +4,7 @@ window.__CB_SEED__ = {
   "exams": [
    {
     "id": 1,
-    "exam_name": "杭州学军中学26级高一入学摸底测",
+    "exam_name": "高一入学摸底测",
     "exam_date": "2026-09-12",
     "grade_stage": "高一上",
     "paper_type": "校内摸底卷",
@@ -20,26 +20,26 @@ window.__CB_SEED__ = {
    },
    {
     "id": 2,
-    "exam_name": "（26-1)26级西溪+文渊高一10月月考",
+    "exam_name": "高一10月月考",
     "exam_date": "2026-10-10",
     "grade_stage": "高一上",
-    "paper_type": "学军西溪+文渊联考",
+    "paper_type": "省重点校际联考",
     "total_max_score": 150.0,
     "total_actual_score": 82.0,
     "loss_type_a_score": 12.0,
     "loss_type_b_score": 43.0,
     "loss_type_c_score": 13.0,
-    "source_pdf_path": "01_好大儿_高考/试卷归档/分析完/（26-1)26级西溪+文渊高一月考-语文/（26-1)26级西溪+文渊高一月考-试题卷语文.pdf",
-    "answer_pdf_path": "01_好大儿_高考/试卷归档/分析完/（26-1)26级西溪+文渊高一月考-语文/（26-1)26级西溪+文渊高一月考-答题卷语文.pdf",
-    "notes": "【数学级对账闭环】满分150 - 实得82 = 扣分68 ✓。考生：吴悠（18班）。核心症结：①信息类阅读得分率仅44.4%（审题偏离设问角度）；②作文偏离AI时代背景（20/40）且卷面涂黑团扣10分（10/20）；③文学类《桃花蝴蝶》物象内涵题空喊套话得0/6分；④默写《师说》漏‘是’字整句0分。",
+    "source_pdf_path": null,
+    "answer_pdf_path": null,
+    "notes": "【数学级对账闭环】满分150 - 实得82 = 扣分68 ✓。考生：本人。核心症结：①信息类阅读得分率仅44.4%（审题偏离设问角度）；②作文偏离AI时代背景（20/40）且卷面涂黑团扣10分（10/20）；③文学类《桃花蝴蝶》物象内涵题空喊套话得0/6分；④默写《师说》漏‘是’字整句0分。",
     "created_at": "2026-10-30 01:52:14"
    },
    {
     "id": 3,
-    "exam_name": "2511学军中学高一期中模拟自测卷",
+    "exam_name": "高一期中模拟自测卷",
     "exam_date": "2026-10-25",
     "grade_stage": "高一上",
-    "paper_type": "学军期中模拟卷",
+    "paper_type": "期中模拟自测卷",
     "total_max_score": 150.0,
     "total_actual_score": 98.0,
     "loss_type_a_score": 9.0,
@@ -514,7 +514,7 @@ window.__CB_SEED__ = {
     "poetry_10keys_json": null,
     "trap_types_json": null,
     "recommended_minutes": 2,
-    "source_file_path": "/Users/wujohn/obsidian/00_错题系统/语文专项/【真题专项篇】2020-2024五年高考真题专项汇编（全国卷、地方卷）/名句名篇默写五年高考汇编.docx"
+    "source_file_path": null
    },
    {
     "id": 8,
@@ -536,7 +536,7 @@ window.__CB_SEED__ = {
     "poetry_10keys_json": null,
     "trap_types_json": null,
     "recommended_minutes": 2,
-    "source_file_path": "/Users/wujohn/obsidian/00_错题系统/语文专项/【真题专项篇】2020-2024五年高考真题专项汇编（全国卷、地方卷）/名句名篇默写五年高考汇编.docx"
+    "source_file_path": null
    },
    {
     "id": 9,
@@ -558,7 +558,7 @@ window.__CB_SEED__ = {
     "poetry_10keys_json": null,
     "trap_types_json": null,
     "recommended_minutes": 2,
-    "source_file_path": "/Users/wujohn/obsidian/00_错题系统/语文专项/【真题专项篇】2020-2024五年高考真题专项汇编（全国卷、地方卷）/名句名篇默写五年高考汇编.docx"
+    "source_file_path": null
    },
    {
     "id": 10,
@@ -580,7 +580,7 @@ window.__CB_SEED__ = {
     "poetry_10keys_json": null,
     "trap_types_json": null,
     "recommended_minutes": 2,
-    "source_file_path": "/Users/wujohn/obsidian/00_错题系统/语文专项/【真题专项篇】2020-2024五年高考真题专项汇编（全国卷、地方卷）/名句名篇默写五年高考汇编.docx"
+    "source_file_path": null
    },
    {
     "id": 11,
@@ -602,7 +602,7 @@ window.__CB_SEED__ = {
     "poetry_10keys_json": null,
     "trap_types_json": null,
     "recommended_minutes": 2,
-    "source_file_path": "/Users/wujohn/obsidian/00_错题系统/语文专项/【真题专项篇】2020-2024五年高考真题专项汇编（全国卷、地方卷）/名句名篇默写五年高考汇编.docx"
+    "source_file_path": null
    },
    {
     "id": 12,
@@ -624,7 +624,7 @@ window.__CB_SEED__ = {
     "poetry_10keys_json": null,
     "trap_types_json": null,
     "recommended_minutes": 2,
-    "source_file_path": "/Users/wujohn/obsidian/00_错题系统/语文专项/【真题专项篇】2020-2024五年高考真题专项汇编（全国卷、地方卷）/名句名篇默写五年高考汇编.docx"
+    "source_file_path": null
    }
   ],
   "progress_cards": [
@@ -635,7 +635,7 @@ window.__CB_SEED__ = {
     "module_code": "INFO_READ",
     "module_name": "信息类阅读",
     "card_date": "2026-10-12",
-    "source_label": "26级西溪+文渊高一月考·第1题",
+    "source_label": "高一10月月考·第1题",
     "question_no": "1",
     "max_score": 3.0,
     "actual_score": 0.0,
@@ -663,7 +663,7 @@ window.__CB_SEED__ = {
     "module_code": "INFO_READ",
     "module_name": "信息类阅读",
     "card_date": "2026-10-12",
-    "source_label": "26级西溪+文渊高一月考·第3题",
+    "source_label": "高一10月月考·第3题",
     "question_no": "3",
     "max_score": 2.0,
     "actual_score": 0.0,
@@ -691,7 +691,7 @@ window.__CB_SEED__ = {
     "module_code": "INFO_READ",
     "module_name": "信息类阅读",
     "card_date": "2026-10-12",
-    "source_label": "26级西溪+文渊高一月考·第4题",
+    "source_label": "高一10月月考·第4题",
     "question_no": "4",
     "max_score": 6.0,
     "actual_score": 3.0,
@@ -719,7 +719,7 @@ window.__CB_SEED__ = {
     "module_code": "INFO_READ",
     "module_name": "信息类阅读",
     "card_date": "2026-10-12",
-    "source_label": "26级西溪+文渊高一月考·第5题",
+    "source_label": "高一10月月考·第5题",
     "question_no": "5",
     "max_score": 4.0,
     "actual_score": 2.0,
@@ -747,7 +747,7 @@ window.__CB_SEED__ = {
     "module_code": "LIT_READ",
     "module_name": "文学类阅读",
     "card_date": "2026-10-13",
-    "source_label": "26级西溪+文渊高一月考·第8题",
+    "source_label": "高一10月月考·第8题",
     "question_no": "8",
     "max_score": 6.0,
     "actual_score": 0.0,
@@ -775,7 +775,7 @@ window.__CB_SEED__ = {
     "module_code": "LIT_READ",
     "module_name": "文学类阅读",
     "card_date": "2026-10-13",
-    "source_label": "26级西溪+文渊高一月考·第9题",
+    "source_label": "高一10月月考·第9题",
     "question_no": "9",
     "max_score": 6.0,
     "actual_score": 4.0,
@@ -803,7 +803,7 @@ window.__CB_SEED__ = {
     "module_code": "CLASSICAL",
     "module_name": "文言文阅读",
     "card_date": "2026-10-13",
-    "source_label": "26级西溪+文渊高一月考·第10题",
+    "source_label": "高一10月月考·第10题",
     "question_no": "10",
     "max_score": 3.0,
     "actual_score": 0.0,
@@ -831,7 +831,7 @@ window.__CB_SEED__ = {
     "module_code": "CLASSICAL",
     "module_name": "文言文阅读",
     "card_date": "2026-10-13",
-    "source_label": "26级西溪+文渊高一月考·第13题",
+    "source_label": "高一10月月考·第13题",
     "question_no": "13",
     "max_score": 9.0,
     "actual_score": 7.0,
@@ -859,7 +859,7 @@ window.__CB_SEED__ = {
     "module_code": "POETRY",
     "module_name": "古代诗歌鉴赏",
     "card_date": "2026-10-14",
-    "source_label": "26级西溪+文渊高一月考·第15-16题",
+    "source_label": "高一10月月考·第15-16题",
     "question_no": "15-16",
     "max_score": 9.0,
     "actual_score": 5.0,
@@ -887,7 +887,7 @@ window.__CB_SEED__ = {
     "module_code": "DICTATION",
     "module_name": "名句默写",
     "card_date": "2026-10-14",
-    "source_label": "26级西溪+文渊高一月考·第17(3)题",
+    "source_label": "高一10月月考·第17(3)题",
     "question_no": "17(3)",
     "max_score": 6.0,
     "actual_score": 3.0,
@@ -915,7 +915,7 @@ window.__CB_SEED__ = {
     "module_code": "LANG_USE",
     "module_name": "语言文字运用",
     "card_date": "2026-10-14",
-    "source_label": "26级西溪+文渊高一月考·第19-20题",
+    "source_label": "高一10月月考·第19-20题",
     "question_no": "19-20",
     "max_score": 9.0,
     "actual_score": 2.0,
@@ -943,7 +943,7 @@ window.__CB_SEED__ = {
     "module_code": "ESSAY",
     "module_name": "作文",
     "card_date": "2026-10-15",
-    "source_label": "26级西溪+文渊高一月考·第22题大作文",
+    "source_label": "高一10月月考·第22题大作文",
     "question_no": "22",
     "max_score": 60.0,
     "actual_score": 30.0,
@@ -1563,7 +1563,7 @@ window.__CB_SEED__ = {
     "classic_quote": "排万难，冒百死，以求真知。 / 诸位在校，有两个问题应该自己问问：第一，到浙大来做什么？第二，将来毕业后做什么样的人？",
     "core_angle_analysis": "在头顶日军轰炸、脚下颠沛流离的战火里，他们尚且拼死护住一张书桌——这就是对“任何时代为什么都要学习”最硬核的历史回答。",
     "model_paragraph": "八十多年前，当战火席卷江南，竺可桢校长带着浙大师生踏上了两千六百公里的西迁之路。在贵州湄潭阴暗的破庙里，在微弱的桐油灯下，苏步青、王淦昌们依然在推演公式、讲授真知。炮火连天的乱世尚且浇不灭求学的火种，身处算力丰沛、窗明几净的AI时代，我们又有什么理由因工具的便利而缴械思考、荒废学习？",
-    "fact_check_warning": "绍兴上虞人，完美契合杭州学军中学/目标浙大考生的家国情怀共鸣点。"
+    "fact_check_warning": "绍兴上虞人，家国情怀类题目的高频素材，适合做地域文化类作文。"
    },
    {
     "id": 6,
@@ -1753,7 +1753,7 @@ window.__CB_SEED__ = {
   "essay_drills": [
    {
     "id": 1,
-    "topic_prompt": "26级学军高一月考真题：在人工智能可以完成大部分工作的将来，现在是AI时代了，为什么还要学习？",
+    "topic_prompt": "高一10月月考真题：在人工智能可以完成大部分工作的将来，现在是AI时代了，为什么还要学习？",
     "step1_point_sentence": "AI可以瞬间给你标准答案，但唯有深度学习能赋予你提出真问题、突破未知边界的原创力。",
     "step2_material_sentence": "屠呦呦面对疟疾肆虐，从东晋葛洪《肘后备急方》“青蒿一握，以水二升渍，绞取汁”的记载中捕捉灵感，历经190次失败后终于用乙醚低温提取出青蒿素。",
     "step3_analysis_sentences": "试想，如果只有检索古籍的算力，而没有深厚的医药学功底与对“绞取汁”背后温度奥秘的敏锐洞察，那十五个古汉字不过是冷冰冰的字符。机器擅长在已有的海量数据里做排列组合，却无法替人类完成从0到1的直觉跃迁，更无法替人类咽下第191次实验试药的苦楚。可见，工具越是无所不能，驾驭工具的人越需要深不见底的学识底座。",

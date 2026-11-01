@@ -104,13 +104,49 @@
     return { tables: clone(SEED.tables), seq: clone(SEED.seq), savedAt: null };
   }
 
+  // v2.0.1 之前写进 localStorage 的存档里带着姓名/校名/本地路径。
+  // 已经在旧版打开过页面的人，存档还在浏览器里，所以读取时先做一次清洗再解析。
+  // 旧存档清洗表：规则用 \uXXXX 转义书写，避免真实姓名/校名以明文形式留在源码里
+  const LEGACY_SCRUB = [
+    [/\uff0826-1\)26\u7ea7\u897f\u6eaa\+\u6587\u6e0a\u9ad8\u4e0010\u6708\u6708\u8003/g, "\u9ad8\u4e0010\u6708\u6708\u8003"],
+    [/26\u7ea7\u897f\u6eaa\+\u6587\u6e0a\u9ad8\u4e00\u6708\u8003/g, "\u9ad8\u4e0010\u6708\u6708\u8003"],
+    [/26\u7ea7\u5b66\u519b\u9ad8\u4e00\u6708\u8003\u771f\u9898/g, "\u9ad8\u4e0010\u6708\u6708\u8003\u771f\u9898"],
+    [/2511\u5b66\u519b\u4e2d\u5b66\u9ad8\u4e00\u671f\u4e2d\u6a21\u62df\u81ea\u6d4b\u5377/g, "\u9ad8\u4e00\u671f\u4e2d\u6a21\u62df\u81ea\u6d4b\u5377"],
+    [/\u5b66\u519b\u897f\u6eaa\+\u6587\u6e0a\u8054\u8003/g, "\u7701\u91cd\u70b9\u6821\u9645\u8054\u8003"],
+    [/\u5b66\u519b\u671f\u4e2d\u6a21\u62df\u5377/g, "\u671f\u4e2d\u6a21\u62df\u81ea\u6d4b\u5377"],
+    [/\u676d\u5dde\u5b66\u519b\u4e2d\u5b6626\u7ea7\u9ad8\u4e00\u5165\u5b66\u6478\u5e95\u6d4b/g, "\u9ad8\u4e00\u5165\u5b66\u6478\u5e95\u6d4b"],
+    [/\u676d\u5dde\u5b66\u519b\u4e2d\u5b66/g, "\u67d0\u7701\u91cd\u70b9\u4e2d\u5b66"],
+    [/\uff08\u897f\u6eaa\/\u6587\u6e0a\u8054\u8003\uff09/g, ""],
+    [/\u897f\u6eaa\+\u6587\u6e0a/g, "10\u6708\u6708\u8003"],
+    [/\u5434\u60a0\uff08\u597d\u5927\u513f\uff09/g, "\u5907\u8003\u8005"],
+    [/\u597d\u5927\u513f\uff08\u5434\u60a0\uff09\u00b7 /g, ""],
+    [/\u597d\u5927\u513f\u00b7/g, ""],
+    [/\u8003\u751f\uff1a\u5434\u60a0\uff0818\u73ed\uff09\u3002/g, "\u8003\u751f\uff1a\u672c\u4eba\u3002"],
+    [/\u5434\u60a0/g, "\u8003\u751f"],
+    [/2026\u7ea7\u9ad8\u4e00\uff0818\uff09\u73ed/g, "2026\u7ea7\u9ad8\u4e00"],
+    [/2026\u7ea7\u9ad8\u4e00\(18\)\u73ed/g, "2026\u7ea7\u9ad8\u4e00"],
+    [/26\u7ea7\u9ad8\u4e00\(18\)\u73ed/g, "2026\u7ea7\u9ad8\u4e00"],
+    [/26\u7ea7\u9ad8\u4e0018\u73ed/g, "2026\u7ea7\u9ad8\u4e00"],
+    [/"(source_file_path|source_pdf_path|answer_pdf_path)":\s*"[^"]*"/g, '"$1": null'],
+  ];
+
+  function scrubLegacy(raw) {
+    let out = raw;
+    for (let i = 0; i < LEGACY_SCRUB.length; i += 1) {
+      out = out.replace(LEGACY_SCRUB[i][0], LEGACY_SCRUB[i][1]);
+    }
+    return out;
+  }
+
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw);
+        const clean = scrubLegacy(raw);
+        const parsed = JSON.parse(clean);
         if (parsed && parsed.tables && parsed.seq) {
           Object.assign(DB, parsed);
+          if (clean !== raw) saveState(); // 清洗过就立刻写回，别让旧姓名留在磁盘上
           return;
         }
       }
@@ -705,9 +741,9 @@
 
     return {
       student: {
-        name: "吴悠（好大儿）",
-        school: "杭州学军中学（西溪/文渊联考）",
-        grade_class: "2026级高一（18）班",
+        name: "备考者",
+        school: "某省重点中学",
+        grade_class: "2026级高一",
         baseline_score: 82.0,
         target_score_term: 112.0,
         target_score_gaokao: 130.0,
@@ -1111,7 +1147,7 @@
     const d = new Date();
     return {
       generated_at: `${todayStr()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`,
-      student_info: "吴悠（杭州学军中学 26级高一18班）",
+      student_info: "考生（某省重点中学 2026级高一）",
       top_traps: topTraps,
       active_cards: activeCards,
       dictation_cards: dictationCards,
