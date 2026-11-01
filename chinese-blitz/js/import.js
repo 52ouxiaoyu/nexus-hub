@@ -954,7 +954,7 @@
     if (st) {
       const viaProxy = AI.proxy !== false && canUseProxy();
       st.textContent = viaProxy
-        ? "通道：云端代理（Key 在服务器，网页里看不到；本机填的 Key 仅作备份）"
+        ? "通道：优先走云端代理（Key 藏在服务器，网页里扒不到）；代理不可用时自动回落到这里的 Key"
         : "通道：浏览器直连（Key 只存在这台设备）";
       st.className = "cb-ai-status";
     }
