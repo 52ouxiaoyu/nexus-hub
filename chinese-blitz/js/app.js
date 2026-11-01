@@ -860,7 +860,18 @@ function renderProgressBookSection() {
 
   const container = document.getElementById("progress-cards-container");
   if (!STATE.progressCards || STATE.progressCards.length === 0) {
-    container.innerHTML = `<div class="card">🎉 当前筛选条件下暂无卡片！</div>`;
+    const totalCards = (m.active_thickness || 0) + (m.struck_out_thinned || 0);
+    container.innerHTML =
+      totalCards === 0
+        ? `<div class="card" style="text-align:center;padding:36px 20px;">
+             <div style="font-size:15px;font-weight:700;margin-bottom:8px;">活页本还是空的</div>
+             <p style="font-size:13px;color:var(--text-secondary);line-height:1.9;margin-bottom:16px;">
+               错题卡不是抄答案。去训练舱做一题 → 对照参考答案自评 →<br/>
+               把「没答到的采分点」写进错因，卡片才会长出来。
+             </p>
+             <button class="btn btn-primary" onclick="switchTab('tab-blitz')">去训练舱做第一题</button>
+           </div>`
+        : `<div class="card">当前筛选条件下没有卡片，换个筛选试试。</div>`;
     return;
   }
 

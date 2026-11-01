@@ -138,6 +138,56 @@
     return out;
   }
 
+  // ---------------------------------------------------------------------------
+  // v2.1.0 数据校正：上游 demo 里有两场根本没考过的"试卷"，以及 12 张空壳错题卡。
+  // 老用户存档里同样有，进页面时一次性清掉（用完打标记，不会再跑第二遍）。
+  // ---------------------------------------------------------------------------
+  const DEMO_EXAM_NAMES = ["高一入学摸底测", "高一期中模拟自测卷"];
+  const MIGRATE_FLAG = "chinese_blitz_migrate_v210";
+
+  function isShellCard(c) {
+    return !String(c.question_stem || "").trim() && !String(c.error_reflection || "").trim();
+  }
+
+  function migratePruneDemo() {
+    let done = null;
+    try {
+      done = localStorage.getItem(MIGRATE_FLAG);
+    } catch (e) {}
+    if (done) return false;
+
+    const tables = DB.tables || {};
+    const exams = tables.exams || [];
+    const dropIds = exams
+      .filter((e) => DEMO_EXAM_NAMES.includes(String(e.exam_name || "").trim()))
+      .map((e) => e.id);
+
+    if (dropIds.length) {
+      tables.exams = exams.filter((e) => !dropIds.includes(e.id));
+      tables.exam_module_scores = (tables.exam_module_scores || []).filter(
+        (m) => !dropIds.includes(m.exam_id)
+      );
+    }
+
+    const cards = tables.progress_cards || [];
+    const realCards = cards.filter((c) => !isShellCard(c));
+    if (realCards.length !== cards.length) tables.progress_cards = realCards;
+
+    // 爆破战役的得分率改为真卷实测值
+    const rate = {};
+    (tables.exam_module_scores || []).forEach((m) => {
+      rate[m.module_code] = m.score_rate;
+    });
+    (tables.blitz_campaigns || []).forEach((c) => {
+      if (rate[c.module_code] !== undefined) c.current_score_rate = rate[c.module_code];
+    });
+
+    try {
+      localStorage.setItem(MIGRATE_FLAG, "1");
+    } catch (e) {}
+    return dropIds.length > 0 || realCards.length !== cards.length;
+  }
+
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -146,7 +196,8 @@
         const parsed = JSON.parse(clean);
         if (parsed && parsed.tables && parsed.seq) {
           Object.assign(DB, parsed);
-          if (clean !== raw) saveState(); // 清洗过就立刻写回，别让旧姓名留在磁盘上
+          const migrated = migratePruneDemo();
+          if (clean !== raw || migrated) saveState(); // 清洗/校正过就立刻写回
           return;
         }
       }
@@ -154,6 +205,7 @@
       console.warn("[语文专项] 读取本地存档失败，使用初始快照：", e);
     }
     Object.assign(DB, freshState());
+    migratePruneDemo();
   }
 
   let persistWarned = false;
