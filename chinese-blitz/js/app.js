@@ -92,6 +92,7 @@ async function refreshAllData() {
     renderClassicalSection();
     populatePoetryWorkspace();
     renderModernReadingSection();
+    renderWeakestModuleBadge();
     renderEssaySection();
     renderPrintSheet();
     renderToday();
@@ -1379,6 +1380,23 @@ async function evaluatePoetryDualAnswer() {
 // 模块 6: 📖 现代文阅读精读沙盒
 // ---------------------------------------------------------------------------
 
+/* 最弱模块徽标：原来这里写死「44.4%」，换个考试就永远停在旧数字上。
+ * 现在跟着当前选中的那场考试算，没有数据就整个藏起来，不占版面也不说假话。 */
+function renderWeakestModuleBadge() {
+  const el = document.getElementById("modern-weakest-badge");
+  if (!el) return;
+  const exams = (STATE.overview && STATE.overview.exams) || [];
+  const exam = exams.find((e) => e.id === STATE.selectedExamId) || exams[exams.length - 1];
+  const mods = (exam && exam.modules) || [];
+  const weak = mods.filter((m) => Number(m.max_score) > 0).sort((a, b) => a.score_rate - b.score_rate)[0];
+  if (!weak) {
+    el.style.display = "none";
+    return;
+  }
+  el.style.display = "";
+  el.textContent = `最弱项：${weak.module_name} ${weak.actual_score}/${weak.max_score}（${weak.score_rate}%）`;
+}
+
 function renderModernReadingSection() {
   const ref = STATE.modernReference;
   if (!ref) return;
@@ -1732,9 +1750,12 @@ async function submitNewExamRecord() {
       module_name: inp.getAttribute("data-name"),
       max_score: Number(inp.getAttribute("data-max")),
       actual_score: Number(inp.value || 0),
+      // 实际耗时不再拿「标准配速」冒充：原来这里把 data-plan 抄进 actual_minutes，
+      // 还写死一句「正常配速」，等于替考生编了一份没发生过的配速记录。
+      // 没真记过就是 0（界面按「未记录」处理），要填请自己填。
       planned_minutes: Number(inp.getAttribute("data-plan")),
-      actual_minutes: Number(inp.getAttribute("data-plan")),
-      time_deviation_reason: "正常配速",
+      actual_minutes: 0,
+      time_deviation_reason: "",
     });
   });
 

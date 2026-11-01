@@ -188,6 +188,33 @@
     return dropIds.length > 0 || realCards.length !== cards.length;
   }
 
+  // ---------------------------------------------------------------------------
+  // v2.4.2 数据校正：旧存档里每一行的「实际耗时」都是上游编的（19/18/16/9/2/16/50），
+  // 全项目从来没有哪个界面让用户填过这个数——它不该存在。实测值只能来自真实记录，
+  // 没有就是 0。这里一次性清零；将来真加「记时」功能，用户填的数不会被这条规则再碰。
+  // ---------------------------------------------------------------------------
+  const PACE_FLAG = "chinese_blitz_migrate_v242";
+
+  function migrateDropFakePace() {
+    let done = null;
+    try {
+      done = localStorage.getItem(PACE_FLAG);
+    } catch (e) {}
+    if (done) return false;
+
+    let changed = false;
+    ((DB.tables || {}).exam_module_scores || []).forEach((m) => {
+      if (num(m.actual_minutes) > 0) {
+        m.actual_minutes = 0;
+        changed = true;
+      }
+    });
+    try {
+      localStorage.setItem(PACE_FLAG, "1");
+    } catch (e) {}
+    return changed;
+  }
+
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -197,7 +224,8 @@
         if (parsed && parsed.tables && parsed.seq) {
           Object.assign(DB, parsed);
           const migrated = migratePruneDemo();
-          if (clean !== raw || migrated) saveState(); // 清洗/校正过就立刻写回
+          const paceFixed = migrateDropFakePace();
+          if (clean !== raw || migrated || paceFixed) saveState(); // 清洗/校正过就立刻写回
           return;
         }
       }
@@ -206,6 +234,7 @@
     }
     Object.assign(DB, freshState());
     migratePruneDemo();
+    migrateDropFakePace();
   }
 
   let persistWarned = false;
@@ -880,9 +909,11 @@
         max_score: num(m.max_score),
         actual_score: num(m.actual_score),
         score_rate: num(m.max_score) > 0 ? pyRound((num(m.actual_score) / num(m.max_score)) * 100, 1) : 0,
-        planned_minutes: num(m.planned_minutes, 15),
-        actual_minutes: num(m.actual_minutes, 15),
-        time_deviation_reason: m.time_deviation_reason || "正常节奏",
+        // 原本缺省给 15 分钟 + 「正常节奏」，等于凭空造一份配速记录。
+        // 时间这类主观数据没有就是没有，一律留 0 / 空，由用户自己填。
+        planned_minutes: num(m.planned_minutes, 0),
+        actual_minutes: num(m.actual_minutes, 0),
+        time_deviation_reason: m.time_deviation_reason || "",
       });
     }
 

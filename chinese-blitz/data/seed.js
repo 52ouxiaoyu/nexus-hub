@@ -29,7 +29,7 @@ window.__CB_SEED__ = {
     "actual_score": 8.0,
     "score_rate": 44.4,
     "planned_minutes": 15,
-    "actual_minutes": 19,
+    "actual_minutes": 0,
     "time_deviation_reason": "Q1未比对‘充分讨论后’时态；Q4把‘值得一驳的标准’答成‘什么话可信’"
    },
    {
@@ -41,7 +41,7 @@ window.__CB_SEED__ = {
     "actual_score": 10.0,
     "score_rate": 55.6,
     "planned_minutes": 15,
-    "actual_minutes": 18,
+    "actual_minutes": 0,
     "time_deviation_reason": "Q8《桃花蝴蝶》物象内涵流于空泛套话得0/6分；Q9诗化小说机制漏点"
    },
    {
@@ -53,7 +53,7 @@ window.__CB_SEED__ = {
     "actual_score": 17.0,
     "score_rate": 73.9,
     "planned_minutes": 15,
-    "actual_minutes": 16,
+    "actual_minutes": 0,
     "time_deviation_reason": "Q13翻译漏译‘今’（如今）、‘辄’（就），‘以为’结构不全；客观题涂鸦待确认扣3分"
    },
    {
@@ -65,7 +65,7 @@ window.__CB_SEED__ = {
     "actual_score": 5.0,
     "score_rate": 55.6,
     "planned_minutes": 8,
-    "actual_minutes": 9,
+    "actual_minutes": 0,
     "time_deviation_reason": "辛弃疾《念奴娇》Q15单选错(-3)；Q16‘波浪翻屋’只答深层收复失地、漏表层江景(-1)"
    },
    {
@@ -77,7 +77,7 @@ window.__CB_SEED__ = {
     "actual_score": 3.0,
     "score_rate": 50.0,
     "planned_minutes": 2,
-    "actual_minutes": 2,
+    "actual_minutes": 0,
     "time_deviation_reason": "《师说》‘是故弟子不必不如师’漏写‘是’字，整句3分全扣"
    },
    {
@@ -89,7 +89,7 @@ window.__CB_SEED__ = {
     "actual_score": 9.0,
     "score_rate": 56.2,
     "planned_minutes": 15,
-    "actual_minutes": 16,
+    "actual_minutes": 0,
     "time_deviation_reason": "Q20‘颗/棵’补写脱离横线逻辑缺口写成释义(-4)；客观题扣3分"
    },
    {
@@ -101,7 +101,7 @@ window.__CB_SEED__ = {
     "actual_score": 30.0,
     "score_rate": 50.0,
     "planned_minutes": 55,
-    "actual_minutes": 50,
+    "actual_minutes": 0,
     "time_deviation_reason": "《AI时代为什么还要学习》偏题只谈创新(20/40)，《史记》误写为编年体；卷面涂改扣10分(10/20)"
    }
   ],

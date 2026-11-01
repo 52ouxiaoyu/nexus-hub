@@ -314,7 +314,7 @@
         <h1>高考语文“死磕通关”数字化作战系统</h1>
         <p id="header-student-info">备考者 · 某省重点中学 2026级高一 · 82 分 ➔ 目标 130+</p>
       </div>
-      <span class="cb-ver">v2.4.1</span>
+      <span class="cb-ver">v2.4.2</span>
     </div>
 
     <div class="header-pills">
@@ -818,7 +818,7 @@
           <div class="card">
             <div class="card-title">
               <span>🕵️‍♂️ 信息类阅读选择题“9大命题设误陷阱”拆雷矩阵</span>
-              <span class="badge badge-red">考生月考得分率最低项(44.4%)</span>
+              <span class="badge badge-red" id="modern-weakest-badge" style="display:none;"></span>
             </div>
             <p style="font-size:12.5px;color:var(--text-secondary);margin-bottom:12px;">
               做题铁律：<strong>先圈题干（选正确/不正确）➔ 圈选项逻辑词（全部/已经/因此/只要）➔ 回原文定位比对！</strong>
@@ -981,6 +981,7 @@
           <summary style="cursor:pointer;padding:14px 18px;font-weight:700;font-size:13.5px;">
             ⏱️ 考场 150 分钟配速红线（点开看一眼即可，不必每天记）
             <span class="badge badge-red" style="margin-left:8px;">第 90 分钟必须启动作文</span>
+            <span class="badge" style="margin-left:8px;color:var(--text-muted);">通用标准 · 不含个人记录</span>
           </summary>
           <div style="padding:0 18px 16px;">
           <table class="data-table">
@@ -989,7 +990,6 @@
                 <th>题号与板块</th>
                 <th>分值</th>
                 <th>高考标准配速</th>
-                <th>考生月考实际耗时</th>
                 <th>考场控速铁律与止损红线</th>
               </tr>
             </thead>
@@ -998,49 +998,42 @@
                 <td><strong>一、信息类阅读（T1~T5）</strong></td>
                 <td>18~19分</td>
                 <td><strong>18 分钟</strong></td>
-                <td>25 分钟（超时7分钟）</td>
                 <td>先看主观题干带问题读文；选择题单题卡壳超 2.5 分钟立即标记跳过，严禁恋战！</td>
               </tr>
               <tr>
                 <td><strong>二、文学类阅读（T6~T9）</strong></td>
                 <td>16~18分</td>
                 <td><strong>22 分钟</strong></td>
-                <td>24 分钟</td>
                 <td>速抓人物关系与核心物象；主观题直接按“①表层情节 ②中层人物手法 ③深层时代主旨”分点落笔。</td>
               </tr>
               <tr>
                 <td><strong>三、文言文阅读（T10~T14）</strong></td>
                 <td>20~23分</td>
                 <td><strong>20 分钟</strong></td>
-                <td>19 分钟（节奏良好）</td>
                 <td>先看最后一道文意概括题逆推人物生平；翻译题严格落实“留替调补删贯”，字字落实。</td>
               </tr>
               <tr>
                 <td><strong>四、古代诗歌鉴赏（T15~T16）</strong></td>
                 <td>9分</td>
                 <td><strong>10 分钟</strong></td>
-                <td>11 分钟</td>
                 <td>动笔前花 90 秒用“标题+作者+注释+意象色调”钥匙开锁，主观题强制写满表层+深层两段。</td>
               </tr>
               <tr>
                 <td><strong>五、名篇名句默写（T17）</strong></td>
                 <td>6分</td>
                 <td><strong>5 分钟</strong></td>
-                <td>6 分钟</td>
                 <td>写完立即逐字检查通假字、生僻字笔画（如“赢得仓皇北顾”之“仓皇”、“酾酒临江”之“酾”）。</td>
               </tr>
               <tr>
                 <td><strong>六、语言文字运用（T18~T22）</strong></td>
                 <td>18~20分</td>
                 <td><strong>15 分钟</strong></td>
-                <td>18 分钟</td>
                 <td>补写句子严看前后句主语一致性与标点暗示；病句题先提主干查搭配与成分残缺。</td>
               </tr>
               <tr style="background:#fdf2f0;">
                 <td><strong>七、写作（T23）</strong></td>
                 <td>60分</td>
                 <td><strong>55~60 分钟</strong></td>
-                <td>47 分钟（被迫压缩）</td>
                 <td><strong>开考第90分钟必须翻到作文页！</strong>前5分钟列“标题+中心论点+3个分论点人物卡”提纲，留足50分钟工整书写满850字。</td>
               </tr>
             </tbody>
