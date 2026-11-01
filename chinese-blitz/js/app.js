@@ -509,7 +509,7 @@ function renderDashboard() {
     </div>
   `;
 
-  // 左：7 大模块得分率与 ROI 排序表
+  // 左：7 大模块得分率与「难在哪」说明（不再显示自拟系数的 ROI 指数）
   const modRows = (currentExam.modules || [])
     .map((m, idx) => {
       const barColor =
@@ -525,7 +525,7 @@ function renderDashboard() {
           <td style="width:170px;">
             <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">
               <strong>${m.score_rate}%</strong>
-              <span style="color:var(--text-muted);">ROI指数 ${m.roi_index}</span>
+              <span style="color:var(--text-muted);">失 ${m.lost_score} 分</span>
             </div>
             <div class="progress-track">
               <div class="progress-fill" style="width:${Math.min(100, m.score_rate)}%;background:${barColor};"></div>
@@ -546,8 +546,8 @@ function renderDashboard() {
         <tr>
           <th>板块名称</th>
           <th>得分 / 满分</th>
-          <th>得分率 & 提分ROI</th>
-          <th>死磕见效评级</th>
+          <th>得分率</th>
+          <th>这类题难在哪</th>
           <th>战术动作</th>
         </tr>
       </thead>
@@ -596,6 +596,8 @@ function renderDashboard() {
   const lossA = currentExam.loss_type_a_score || 0;
   const lossB = currentExam.loss_type_b_score || 0;
   const lossC = currentExam.loss_type_c_score || 0;
+  // 勾稽是不是真对得上，得算出来再说，不能无论如何都印一句「校验通过」
+  const abcOk = Math.abs(Number(lostTotal) - (lossA + lossB + lossC)) < 0.01;
   document.getElementById("abc-loss-breakdown-container").innerHTML = `
     <div class="grid-3" style="gap:10px;margin-bottom:10px;">
       <div style="background:#fdf2f0;border:1px solid #f5c2bc;border-radius:8px;padding:10px;">
@@ -611,11 +613,15 @@ function renderDashboard() {
       <div style="background:#f0f4fc;border:1px solid #c2d4f8;border-radius:8px;padding:10px;">
         <div style="font-size:12px;font-weight:700;color:var(--accent-indigo);">C类：高阶素养与审美失分</div>
         <div style="font-size:20px;font-weight:800;color:var(--accent-indigo);margin:3px 0;">-${lossC} 分</div>
-        <div style="font-size:11.5px;color:var(--text-secondary);">文学类深层哲思意蕴、作文深刻度与文采升华（靠北大11元素与思辨金句拔高）</div>
+        <div style="font-size:11.5px;color:var(--text-secondary);">文学类深层哲思意蕴、作文深刻度与文采升华（靠文学类11大元素与思辨金句拔高）</div>
       </div>
     </div>
-    <div style="font-size:12px;color:var(--text-secondary);">
-      ✅ <strong>数学勾稽校验通过：</strong>卷面满分(${currentExam.total_max_score}) - 实际得分(${currentExam.total_actual_score}) = <strong>${lostTotal}分</strong> == A类(${lossA}) + B类(${lossB}) + C类(${lossC})。
+    <div style="font-size:12px;color:${abcOk ? "var(--text-secondary)" : "var(--accent-red)"};">
+      ${
+        abcOk
+          ? `✅ <strong>数学勾稽校验通过：</strong>卷面满分(${currentExam.total_max_score}) - 实际得分(${currentExam.total_actual_score}) = <strong>${lostTotal}分</strong> == A类(${lossA}) + B类(${lossB}) + C类(${lossC})。`
+          : `⚠️ <strong>勾稽对不上：</strong>总扣分 ${lostTotal} 分，但 A+B+C = ${lossA + lossB + lossC} 分，差 ${(Number(lostTotal) - (lossA + lossB + lossC)).toFixed(1)} 分。请核对三大类失分明细。`
+      }
     </div>
   `;
 
@@ -1360,15 +1366,17 @@ async function evaluatePoetryDualAnswer() {
   const res = await apiPost("/api/blitz/submit", {
     question_id: q.id,
     student_answer: combined,
-    time_spent_seconds: 240,
+    time_spent_seconds: 0, // 从来没计过时，别替考生填一个「4 分钟」
   });
 
   const box = document.getElementById("poetry-eval-result");
   box.style.display = "block";
+  const pts = res.analysis.dim1_scoring_points || [];
+  const hitPts = pts.filter((x) => x.hit).length;
   box.innerHTML = `
     <div style="background:#eef8f3;border:1px solid #b7e4cf;padding:12px;border-radius:8px;">
       <div style="font-weight:700;color:var(--accent-jade);margin-bottom:6px;">
-        ✅ 双层答案合成完毕！模拟赋分：${res.analysis.earned_score} / ${res.analysis.max_score} 分
+        🔎 采分点关键词命中 ${hitPts} / ${pts.length} 个（机器按关键词比对，不是阅卷给分，最终以老师批改为准）
       </div>
       <div style="font-size:12.5px;margin-bottom:6px;"><strong>【你的合成答案】</strong><br/>${combined.replace(/\n/g, "<br/>")}</div>
       <div style="font-size:12.5px;background:#fff;padding:8px;border-radius:4px;"><strong>【高考阅卷标准答案】</strong><br/>${res.standard_answer}</div>
@@ -1442,7 +1450,7 @@ function applyLiteraryElementTemplate(elementId) {
   if (!ref) return;
   const found = (ref.literary_11_high_elements || []).find((e) => e.id === elementId);
   if (!found) return;
-  document.getElementById("mod-sandbox-l2").value = `【调用北大笔记·${found.element}】${found.answer_template}`;
+  document.getElementById("mod-sandbox-l2").value = `【套用11元素模板·${found.element}】${found.answer_template}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -1533,8 +1541,10 @@ function liveUpdateEssayRatio() {
   const s4 = (document.getElementById("essay-step4")?.value || "").trim();
 
   const total = Math.max(1, s1.length + s2.length + s3.length + s4.length);
-  const narRatio = ((s2.length / total) * 100).toFixed(1);
-  const anaRatio = (100 - Number(narRatio)).toFixed(1);
+  const blank = s1.length + s2.length + s3.length + s4.length === 0;
+  // 全空时别再显示「叙 0% / 议 100%」——那是在给一个不存在的段落打分
+  const narRatio = blank ? "--" : ((s2.length / total) * 100).toFixed(1);
+  const anaRatio = blank ? "--" : (100 - Number(narRatio)).toFixed(1);
 
   const leftLbl = document.getElementById("ratio-label-left");
   const rightLbl = document.getElementById("ratio-label-right");
@@ -1544,13 +1554,13 @@ function liveUpdateEssayRatio() {
 
   if (leftLbl) leftLbl.textContent = `叙例占比（第2步）：${narRatio}%（目标 ≤33%）`;
   if (rightLbl) rightLbl.textContent = `议论说理占比（第1+3+4步）：${anaRatio}%（目标 ≥67%）`;
-  if (totalLbl) totalLbl.textContent = `全段总字数：${total} 字（黄金区间 180~250 字）`;
+  if (totalLbl) totalLbl.textContent = blank ? "全段总字数：0 字（建议 200 字上下）" : `全段总字数：${total} 字`;
 
   if (barNar && barAna) {
-    barNar.style.width = `${narRatio}%`;
+    barNar.style.width = blank ? "0%" : `${narRatio}%`;
     barNar.textContent = `叙 ${narRatio}%`;
     barNar.style.background = Number(narRatio) > 38 ? "var(--accent-red)" : "#d97706";
-    barAna.style.width = `${anaRatio}%`;
+    barAna.style.width = blank ? "100%" : `${anaRatio}%`;
     barAna.textContent = `议 ${anaRatio}%`;
   }
 }
@@ -1570,7 +1580,9 @@ async function runEssayLinter(saveRecord = true) {
     const rep = res.report;
 
     const scoreBadge = document.getElementById("essay-score-badge");
-    scoreBadge.textContent = `预估折算分：${rep.estimated_score_60} / 60 分（一类文基准）`;
+    // v2.5.0：原来这里显示「预估折算分 x/60（一类文基准）」——那个分数是我按 46 分基准
+    // 加减出来的，二百字段落折算不出作文总分。现在只报机械自检过了几项。
+    scoreBadge.textContent = `机械自检：${rep.checks_passed}/${rep.checks_total} 项通过（不是作文评分）`;
 
     const critiquesHtml = (rep.critiques || []).map((c) => `<li style="margin-bottom:4px;">${c}</li>`).join("");
     const bannedHtml =
@@ -1639,7 +1651,11 @@ function renderPrintSheet() {
             <th style="width:33%;">核心浓缩规律 & 考场条件反射指令</th>
           </tr>
         </thead>
-        <tbody>${cardRows}</tbody>
+        <tbody>${
+          (bundle.active_cards || []).length
+            ? cardRows
+            : `<tr><td colspan="4" style="padding:18px;text-align:center;color:#666;">现在还没有错题卡，这张清单是空的。先去「训练舱」做几道题、把错因写进进步本，这里才会有内容。</td></tr>`
+        }</tbody>
       </table>
     `;
   } else if (tpl === "TPL_2_EMERGENCY") {
@@ -1686,7 +1702,7 @@ function renderPrintSheet() {
         6. 人生如梦，一<strong>尊</strong>还<strong>酹</strong>江月（勿写“樽”）
       </div>
 
-      <h3 style="font-size:14px;background:#eee;padding:4px 8px;margin-bottom:8px;">三、考场作文保底一类文核心人物卡 & 万能思辨金句</h3>
+      <h3 style="font-size:14px;background:#eee;padding:4px 8px;margin-bottom:8px;">三、考场作文核心人物卡 & 思辨金句</h3>
       <div style="margin-bottom:8px;">${zjHtml}</div>
       <div style="border-top:1px dashed #999;padding-top:6px;">${quotesHtml}</div>
     `;
@@ -1712,7 +1728,7 @@ function renderPrintSheet() {
     container.innerHTML = `
       <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:10px;">
         <h2 style="font-size:18px;">✂️《单点爆破母题剪贴本（左题右空 · 供纸上红笔三刷）》</h2>
-        <p style="font-size:12px;color:#444;">源于《2026全国卷I语文141分经验分享》剪贴本工作流 · 刷透一道胜过盲刷十套</p>
+        <p style="font-size:12px;color:#444;">按「单点爆破」自建剪贴本工作流 · 同一道题反复刷到不再错</p>
       </div>
       ${clipRows}
     `;

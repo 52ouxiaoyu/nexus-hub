@@ -215,6 +215,137 @@
     return changed;
   }
 
+  // ---------------------------------------------------------------------------
+  // v2.5.0 数据校正：老存档里还躺着上一版的编造内容（假默写答案、假出处、假战役进度）。
+  // 种子文件已经改对了，这里按「表 + 主键 + 字段」把这些字段同步成种子值，
+  // 只碰内容字段，不碰用户自己的学习进度（掌握状态、复习日期、笔记）。
+  // ---------------------------------------------------------------------------
+  const V250_FLAG = "chinese_blitz_migrate_v250";
+  const V250_COPY = {
+    questions: {
+      2: ["source_name", "passage_notes"],
+      3: [
+        "passage_content",
+        "passage_notes",
+        "question_stem",
+        "options_json",
+        "standard_answer",
+        "scoring_points_json",
+        "poetry_10keys_json",
+        "trap_types_json",
+      ],
+      4: ["source_name", "passage_notes"],
+      5: ["source_name", "passage_notes"],
+      6: ["source_name", "passage_title", "passage_author", "passage_notes"],
+      7: ["standard_answer"],
+      8: ["standard_answer"],
+      9: ["standard_answer"],
+      10: ["standard_answer"],
+      11: ["standard_answer"],
+      12: ["standard_answer"],
+    },
+    essay_materials: {
+      3: ["core_scene"],
+      8: ["core_scene"],
+      9: ["person_or_concept", "core_scene", "core_angle_analysis", "model_paragraph"],
+      12: ["sub_group", "core_scene", "classic_quote", "model_paragraph", "fact_check_warning"],
+    },
+    classical_words: {
+      1: ["inference_tip"],
+      5: ["inference_tip"],
+      9: ["source_lesson"],
+      10: ["source_lesson"],
+      11: ["inference_tip"],
+      12: ["source_lesson"],
+      13: ["meanings_json"],
+      17: ["inference_tip"],
+      20: ["meanings_json"],
+    },
+    trap_rules: {
+      7: ["trap_category"],
+      9: ["warning_instruction"],
+      13: ["warning_instruction"],
+      14: ["warning_instruction"],
+    },
+    essay_drills: {
+      1: ["step3_analysis_sentences", "ai_critique_and_upgrade"],
+    },
+    dialectical_quotes: {
+      1: ["author_or_source"],
+      2: ["author_or_source"],
+      3: ["author_or_source"],
+      4: ["author_or_source"],
+      5: ["author_or_source"],
+      8: ["author_or_source"],
+      9: ["author_or_source"],
+      10: ["author_or_source"],
+      11: ["author_or_source"],
+      12: ["author_or_source"],
+      13: ["author_or_source"],
+      14: ["author_or_source"],
+    },
+  };
+
+  function migrateV250() {
+    let done = null;
+    try {
+      done = localStorage.getItem(V250_FLAG);
+    } catch (e) {}
+    if (done) return false;
+
+    const seed = (typeof window !== "undefined" && window.__CB_SEED__) || null;
+    if (!seed || !seed.tables) return false;
+
+    let changed = false;
+    const tables = DB.tables || {};
+    Object.keys(V250_COPY).forEach((tbl) => {
+      const map = V250_COPY[tbl];
+      (tables[tbl] || []).forEach((row) => {
+        const fields = map[row.id];
+        if (!fields) return;
+        const src = (seed.tables[tbl] || []).find((r) => r.id === row.id);
+        if (!src) return;
+        fields.forEach((f) => {
+          if (JSON.stringify(row[f]) !== JSON.stringify(src[f])) {
+            row[f] = src[f];
+            changed = true;
+          }
+        });
+      });
+    });
+
+    // 尼采“不要停在平原…”与莫奈“画的立体来自于它的阴影”两条：查不到可靠原始出处，
+    // 留着就会被当成名言背进考场，直接下架。
+    const quotes = tables.dialectical_quotes || [];
+    const keptQuotes = quotes.filter((r) => r.id !== 6 && r.id !== 7);
+    if (keptQuotes.length !== quotes.length) {
+      tables.dialectical_quotes = keptQuotes;
+      changed = true;
+    }
+
+    // 战役进度：这几道题、这几天的连过记录都不存在，归零。
+    (tables.blitz_campaigns || []).forEach((c) => {
+      if (num(c.completed_question_count) !== 0 || num(c.consecutive_pass_days) !== 0) {
+        c.completed_question_count = 0;
+        c.consecutive_pass_days = 0;
+        changed = true;
+      }
+    });
+
+    // 作文练习里曾经存过的「预估分」，一并作废。
+    (tables.essay_drills || []).forEach((d) => {
+      if (d.total_score_estimate !== null && d.total_score_estimate !== undefined) {
+        d.total_score_estimate = null;
+        changed = true;
+      }
+    });
+
+    try {
+      localStorage.setItem(V250_FLAG, "1");
+    } catch (e) {}
+    return changed;
+  }
+
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -225,7 +356,8 @@
           Object.assign(DB, parsed);
           const migrated = migratePruneDemo();
           const paceFixed = migrateDropFakePace();
-          if (clean !== raw || migrated || paceFixed) saveState(); // 清洗/校正过就立刻写回
+          const v250Fixed = migrateV250();
+          if (clean !== raw || migrated || paceFixed || v250Fixed) saveState(); // 清洗/校正过就立刻写回
           return;
         }
       }
@@ -235,6 +367,7 @@
     Object.assign(DB, freshState());
     migratePruneDemo();
     migrateDropFakePace();
+    migrateV250();
   }
 
   let persistWarned = false;
@@ -374,7 +507,7 @@
 
   const INFO_READING_9_TRAPS = [
     { code: "T1", name: "偷换概念", trigger: "选项主语/宾语与原文核心词有1字之差", counter: "圈出选项主语与原文逐字比对，警惕代词指代移位" },
-    { code: "T2", name: "以偏概全", trigger: "原文为“部分/大多/有时”，选项变为“全部/所有/总是”", counter: "对范围词与频率词画双横线，绝对化表述90%有诈" },
+    { code: "T2", name: "以偏概全", trigger: "原文为“部分/大多/有时”，选项变为“全部/所有/总是”", counter: "对范围词与频率词画双横线，绝对化表述多是设误点" },
     { code: "T3", name: "或然变必然", trigger: "原文为“可能/或许/有望/趋势”，选项变为“必定/已经/势必”", counter: "把情态副词框起来，核对推断是否超前" },
     { code: "T4", name: "未然变已然", trigger: "原文为“将要/正在探索/尚待”，选项变为“已实现/已经完成”", counter: "严格区分时态助词（将、正、已、曾）" },
     { code: "T5", name: "强加因果/因果倒置", trigger: "选项出现“因此/之所以/导致/使得”", counter: "回原文定位前后分句，看原本是并列关系还是真因果" },
@@ -434,20 +567,23 @@
       { method: "2. 对称结构互文法", tip: "文言文好骈偶对仗，上下句相同位置的字往往同义或反义（如“亡国破家”：亡=破）" },
       { method: "3. 语法成分定位法", tip: "处于主宾位置必为名词/代词；处于谓语位置必为动词/形容词；紧贴动词前必为状语" },
       { method: "4. 成语联想迁移法", tip: "用熟知成语反推（如“势拔五岳掩赤城”联想“出类拔萃”，拔=超出）" },
-      { method: "5. 教材母句迁移法", tip: "高考课外文言实词 85% 源自课内必修篇目（如《劝学》《师说》《赤壁赋》《鸿门宴》）" },
+      { method: "5. 教材母句迁移法", tip: "课外实词的义项多数能在课内必修篇目（《劝学》《师说》《赤壁赋》《鸿门宴》）里找到母句" },
       { method: "6. 语境事理推断法", tip: "结合传主品行与前后因果推断褒贬与行为走向" },
       { method: "7. 通假音近推断法", tip: "本字按字面讲不通时，优先考虑同音或声旁相同的通假字" },
     ],
   };
 
-  const ROI_COEFFICIENTS = {
-    MOD_DICTATION: { roi_weight: 1.45, difficulty: "极易见效（死磕必拿满分）", recommended_days: 7 },
-    MOD_INFO_READ: { roi_weight: 1.38, difficulty: "高性价比（9大设误套路极固定）", recommended_days: 14 },
-    MOD_CLASSICAL: { roi_weight: 1.25, difficulty: "中高性价比（120实词+六字翻译法）", recommended_days: 14 },
-    MOD_LANG_USE: { roi_weight: 1.22, difficulty: "高性价比（成语/病句/补写题型固定）", recommended_days: 10 },
-    MOD_POETRY: { roi_weight: 1.18, difficulty: "中等（十把钥匙+表深双层答题）", recommended_days: 12 },
-    MOD_LIT_READ: { roi_weight: 1.10, difficulty: "中高（需掌握表-中-深三层与11大元素）", recommended_days: 14 },
-    MOD_ESSAY: { roi_weight: 1.30, difficulty: "保底48+见效快（卷面+四步法主体段）", recommended_days: 15 },
+  /* v2.5.0：原来这张表带着 roi_weight 系数，再乘出一个「提分 ROI 指数」显示成客观数据——
+   * 系数全是我自己拍的，没有任何来源，等于给主观判断披了层数学外衣。
+   * 现在只保留「这类题难在哪」的定性说明，不再算指数、不再预测能提多少分。 */
+  const MODULE_BLITZ_NOTES = {
+    MOD_DICTATION: "背诵精度活：错一字即该空零分，靠反复遮罩默写",
+    MOD_INFO_READ: "套路最固定：九大设误逐字比对，练的是眼力",
+    MOD_CLASSICAL: "底子在课内：120 实词 + 六字翻译法，靠积累",
+    MOD_LANG_USE: "题型固定：成语、病句、补写各有一套判断流程",
+    MOD_POETRY: "门槛在读不懂：十把钥匙 + 表深双层",
+    MOD_LIT_READ: "要会术语：表-中-深三层 + 11 大文本元素",
+    MOD_ESSAY: "先保底再拔高：卷面干净 + 四步法主体段",
   };
 
   // ---------------------------------------------------------------------------
@@ -703,7 +839,7 @@
     if (longClauses.length) {
       bannedHits.push({
         phrase: `超长分句（${longClauses[0].length}字未断句）`,
-        reason: `“${longClauses[0].slice(0, 18)}…”一口气超过28字不加标点，请遵循《D.进阶版》短句节奏原则，长短句交错！`,
+        reason: `“${longClauses[0].slice(0, 18)}…”一口气超过28字不加标点，议论文讲究长短句交错，该断就断。`,
       });
     }
 
@@ -715,39 +851,52 @@
     const dialecticalMarkers = ["正因为", "倘若", "诚然", "然而", "不仅", "更在", "非但", "反而", "固然", "实则", "绝非", "而是"];
     const usedMarkers = dialecticalMarkers.filter((m) => s3.includes(m) || s4.includes(m));
 
-    let score60 = 46.0;
+    /* v2.5.0：这一段原来从 46 分起算，按叙议比、句式、字数加减，最后吐出「预估折算分 /60」。
+     * 二百字的段落折算不出作文总分，那个 46 分基准也是我拍的，属于编造评分。
+     * 现在只做能力范围之内的事：四项数得出来的机械自检，通过就通过，不通过就说哪里不通过。 */
     const critiques = [];
+    const checks = [];
 
     if (narrativeRatio <= 33.0 && analysisRatio >= 67.0) {
-      score60 += 4.5;
-      critiques.push(`✅ 【黄金叙议比】叙例占 ${narrativeRatio}% / 议论占 ${analysisRatio}%，完美契合 3:7 黄金分割，绝无“以叙代议”之嫌！`);
+      checks.push({ name: "叙议比", pass: true, detail: `叙 ${narrativeRatio}% / 议 ${analysisRatio}%` });
+      critiques.push(`✅ 【叙议比达标】叙例占 ${narrativeRatio}% / 议论占 ${analysisRatio}%，叙事没有盖过说理。`);
     } else if (narrativeRatio <= 42.0) {
-      score60 += 1.5;
-      critiques.push(`⚠️ 【叙议比偏高】当前叙例占 ${narrativeRatio}%（目标 ≤30%），建议把第2步人物背景砍掉15字，扩充第3步因果/假设分析。`);
+      checks.push({ name: "叙议比", pass: false, detail: `叙 ${narrativeRatio}%（目标 ≤33%）` });
+      critiques.push(`⚠️ 【叙议比偏高】当前叙例占 ${narrativeRatio}%（目标 ≤33%），可以把第2步人物背景砍掉 15 字，改成第3步的因果/假设分析。`);
     } else {
-      score60 -= 5.0;
-      critiques.push(`🚨 【以叙代议警告】叙例占比高达 ${narrativeRatio}%！高考议论文忌讳把素材写成人物传记故事，请用一句话勾勒高光镜头即可。`);
+      checks.push({ name: "叙议比", pass: false, detail: `叙 ${narrativeRatio}%` });
+      critiques.push(`🚨 【以叙代议】叙例占比 ${narrativeRatio}%！议论文最忌把素材写成人物小传，一句话勾勒高光镜头即可。`);
     }
 
     if (usedMarkers.length >= 2) {
-      score60 += 3.5;
-      critiques.push(`✅ 【思辨链条严密】第3步熟练运用了“${usedMarkers.join(" / ")}”等因果/退一步辩证句式，说理极具穿透力。`);
+      checks.push({ name: "思辨句式", pass: true, detail: usedMarkers.join(" / ") });
+      critiques.push(`✅ 【思辨链条】第3步用了“${usedMarkers.join(" / ")}”等因果/退一步句式。`);
     } else {
-      critiques.push("💡 【说理升级建议】第3步扣题分析略显平铺直叙，建议加入“正因为……倘若当时……又岂能……”的正反假设对比。");
+      checks.push({ name: "思辨句式", pass: false, detail: `只出现 ${usedMarkers.length} 处` });
+      critiques.push("💡 【说理升级建议】第3步的扣题分析偏平铺直叙，可以加“正因为……倘若当时……又岂能……”的正反假设对比。");
     }
 
     if (totalLen >= 170 && totalLen <= 260) {
-      score60 += 2.0;
-      critiques.push(`✅ 【字数节奏极佳】全段共 ${totalLen} 字，符合高考考场主体段 200~240 字的最佳视觉块体量。`);
+      checks.push({ name: "段落字数", pass: true, detail: `${totalLen} 字` });
+      critiques.push(`✅ 【字数到位】全段 ${totalLen} 字，是一个完整主体段的体量。`);
     } else if (totalLen < 130) {
-      score60 -= 3.0;
-      critiques.push(`⚠️ 【论证单薄】全段仅 ${totalLen} 字，不足以支撑一个饱满的分论点段落（建议扩充至 200 字左右）。`);
+      checks.push({ name: "段落字数", pass: false, detail: `仅 ${totalLen} 字` });
+      critiques.push(`⚠️ 【论证单薄】全段仅 ${totalLen} 字，撑不起一个分论点（建议写到 200 字左右）。`);
+    } else {
+      checks.push({ name: "段落字数", pass: false, detail: `${totalLen} 字，偏长` });
+      critiques.push(`⚠️ 【偏长】全段 ${totalLen} 字，一个主体段通常 200 字上下，过长会挤掉其他分论点。`);
     }
 
-    if (bannedHits.length) score60 -= bannedHits.length * 2.0;
-    if (factErrors.length) score60 -= factErrors.length * 4.0;
-
-    score60 = Math.max(32.0, Math.min(58.0, pyRound(score60, 1)));
+    checks.push({
+      name: "套话检查",
+      pass: bannedHits.length === 0,
+      detail: bannedHits.length ? `命中 ${bannedHits.length} 处` : "未命中",
+    });
+    checks.push({
+      name: "史实检查",
+      pass: factErrors.length === 0,
+      detail: factErrors.length ? `命中 ${factErrors.length} 处` : "未命中",
+    });
 
     return {
       total_chars: totalLen,
@@ -764,7 +913,9 @@
       banned_phrases_hit: bannedHits,
       fact_errors: factErrors,
       critiques,
-      estimated_score_60: score60,
+      checks,
+      checks_passed: checks.filter((c) => c.pass).length,
+      checks_total: checks.length,
       combined_paragraph: fullText,
     };
   }
@@ -793,15 +944,12 @@
         [["score_rate", 1]]
       );
       for (const m of mods) {
-        // 数据里的 module_code 为裸编码（DICTATION），ROI 表键名带 MOD_ 前缀，两种都认
-        const meta =
-          ROI_COEFFICIENTS[m.module_code] ||
-          ROI_COEFFICIENTS["MOD_" + m.module_code] ||
-          { roi_weight: 1.0, difficulty: "常规", recommended_days: 14 };
-        const lost = pyRound(num(m.max_score) - num(m.actual_score), 1);
-        m.lost_score = lost;
-        m.roi_index = pyRound((100.0 - num(m.score_rate)) * meta.roi_weight * (lost / 10.0), 1);
-        m.roi_difficulty = meta.difficulty;
+        // 数据里的 module_code 为裸编码（DICTATION），说明表键名带 MOD_ 前缀，两种都认
+        m.lost_score = pyRound(num(m.max_score) - num(m.actual_score), 1);
+        m.roi_difficulty =
+          MODULE_BLITZ_NOTES[m.module_code] ||
+          MODULE_BLITZ_NOTES["MOD_" + m.module_code] ||
+          "常规板块";
       }
       ex.modules = mods;
     }
@@ -1226,7 +1374,7 @@
         banned_phrases_hit_json: JSON.stringify(report.banned_phrases_hit),
         fact_errors_json: JSON.stringify(report.fact_errors),
         ai_critique_and_upgrade: report.critiques.join("\n"),
-        total_score_estimate: report.estimated_score_60,
+        total_score_estimate: null, // 段落自检不产出分数，别把机械比对当作文评分存下来
         created_at: nowStamp(),
       });
       saveState();

@@ -314,7 +314,7 @@
         <h1>高考语文“死磕通关”数字化作战系统</h1>
         <p id="header-student-info">备考者 · 某省重点中学 2026级高一 · 82 分 ➔ 目标 130+</p>
       </div>
-      <span class="cb-ver">v2.4.2</span>
+      <span class="cb-ver">v2.5.0</span>
     </div>
 
     <div class="header-pills">
@@ -460,7 +460,7 @@
         <div class="section-header">
           <div>
             <h2>📊 成绩病历本（CT诊断）与“单点爆破”靶心决策中心</h2>
-            <p>基于 7 大板块得分率、失分体量与提分性价比（ROI），自动计算唯一锁定靶心，严防“胡子眉毛一把抓”。</p>
+            <p>按 7 大板块的得分率和失分体量排序，一次只锁一个靶心——顺序是排队，不是“提分预测”。</p>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
             <label style="font-size:12.5px;font-weight:600;">切换查看考试：</label>
@@ -472,10 +472,10 @@
         <div class="grid-4" style="margin-bottom:18px;" id="dashboard-kpi-row"></div>
 
         <div class="grid-2">
-          <!-- 左：七大模块得分率与 ROI 靶心排序表 -->
+          <!-- 左：七大模块得分率排序表（不显示自拟系数的 ROI 指数） -->
           <div class="card">
             <div class="card-title">
-              <span>🎯 七大板块得分率排行与 ROI 靶心优先级</span>
+              <span>🎯 七大板块得分率排行（低者优先，一次只打一个）</span>
               <span class="badge badge-red">得分率最低者优先锁定</span>
             </div>
             <div id="module-roi-table-container"></div>
@@ -622,7 +622,7 @@
             </div>
             <div>
               <label class="form-label">2. 试卷来源与题号</label>
-              <input type="text" id="nc-source" value="高一10月月考 · 第3题" />
+              <input type="text" id="nc-source" placeholder="例：高一10月月考 · 第3题" />
             </div>
             <div>
               <label class="form-label">3. 失分层级（ABC分类）与分值</label>
@@ -735,7 +735,7 @@
             <div class="card">
               <div class="card-title">
                 <span>🗡️ 考场陌生实词“七把推断飞刀”</span>
-                <span class="badge badge-indigo">85%源自课内母句迁移</span>
+                <span class="badge badge-indigo">课内母句迁移法</span>
               </div>
               <div id="classical-seven-methods"></div>
             </div>
@@ -743,7 +743,7 @@
             <div class="card">
               <div class="card-title">
                 <span>📜 文言文翻译主观题“留替调补删贯”六字赋分法</span>
-                <span class="badge badge-gold">漏译省略主语必扣1分</span>
+                <span class="badge badge-gold">省略成分必须补出</span>
               </div>
               <div id="classical-six-chars"></div>
             </div>
@@ -758,7 +758,7 @@
         <div class="section-header">
           <div>
             <h2>🌙 古代诗歌鉴赏“十把钥匙开锁”与“表深双层”强制答题台</h2>
-            <p>根治“读不懂古诗、只答表层字面意思漏掉深层家国情思”顽疾：先用四层十把钥匙拆锁，再填双层答题框。</p>
+            <p>针对“读不懂诗、只答表层漏掉深层”两个毛病：先用四层十把钥匙拆锁，再按“表层 + 深层”双轨写答案。</p>
           </div>
           <div>
             <select id="poetry-question-selector" style="width:340px;" onchange="renderPoetryWorkspace()"></select>
@@ -781,7 +781,7 @@
           <div class="card">
             <div class="card-title">
               <span>✍️ 古诗主观题“表层景事 + 深层情理”双轨强制答题台</span>
-              <span class="badge badge-red">只写表层最多拿一半分！</span>
+              <span class="badge badge-red">只答表层常丢深层分</span>
             </div>
             <div id="poetry-stem-display" style="padding:10px 12px;background:#f0f4fc;border-left:4px solid var(--accent-indigo);border-radius:6px;font-weight:600;margin-bottom:14px;"></div>
 
@@ -809,7 +809,7 @@
         <div class="section-header">
           <div>
             <h2>📖 现代文阅读精读沙盒（信息类“9大设误陷阱” + 文学类“表-中-深 + 五大核心元素”）</h2>
-            <p>融合《B.冲刺版》信息类选择题比对大法与《26新高考II卷138分北大社会学学霸笔记》文学类 11 大高阶文本元素库。</p>
+            <p>信息类用「九大设误逐字比对」，文学类用「表-中-深三层 + 11 大高阶文本元素」——两套都是可查的通用答题框架，不依赖任何私人笔记。</p>
           </div>
         </div>
 
@@ -826,11 +826,11 @@
             <div id="modern-info-9traps-list"></div>
           </div>
 
-          <!-- 右：文学类阅读“表-中-深”三层脚手架 + 北大11大高阶文本元素 -->
+          <!-- 右：文学类阅读“表-中-深”三层脚手架 + 11 大高阶文本元素 -->
           <div>
             <div class="card">
               <div class="card-title">
-                <span>🏛️ 北大138分学霸笔记：文学类阅读“11大高阶文本元素”速查与套用</span>
+                <span>🏛️ 文学类阅读“11大高阶文本元素”速查与套用</span>
                 <span class="badge badge-gold">点击元素一键填入下方三层沙盒</span>
               </div>
               <div id="modern-lit-11elements-list" style="max-height:330px;overflow-y:auto;"></div>
@@ -844,15 +844,15 @@
               <div id="modern-3layer-sandbox">
                 <div style="margin-bottom:8px;">
                   <label class="form-label">① 表层（情节脉络 / 物象外在特征 / 结构呼应）</label>
-                  <textarea id="mod-sandbox-l1" rows="2">在情节与结构上，以特定物象/场景串联起人物的往事与当下，使叙事脉络紧凑连贯。</textarea>
+                  <textarea id="mod-sandbox-l1" rows="2" placeholder="例：在情节与结构上，以特定物象/场景串联起人物的往事与当下，使叙事脉络紧凑连贯。"></textarea>
                 </div>
                 <div style="margin-bottom:8px;">
                   <label class="form-label">② 中层（人物心理蜕变 / 叙事视角与延缓手法）</label>
-                  <textarea id="mod-sandbox-l2" rows="2">在人物与手法上，采用有限视角与细节白描，细腻外化了主人公从拘谨羞怯到纯粹崇高的精神风貌。</textarea>
+                  <textarea id="mod-sandbox-l2" rows="2" placeholder="例：在人物与手法上，采用有限视角与细节白描，细腻外化了主人公从拘谨羞怯到纯粹崇高的精神风貌。"></textarea>
                 </div>
                 <div style="margin-bottom:10px;">
                   <label class="form-label">③ 深层（时代历史纵深 / 诗化审美意蕴 / 冰山留白）</label>
-                  <textarea id="mod-sandbox-l3" rows="2">在主旨与审美上，以克制留白的诗化笔法折射出战火岁月中的人性美与家国情怀，余味悠长。</textarea>
+                  <textarea id="mod-sandbox-l3" rows="2" placeholder="例：在主旨与审美上，以克制留白的诗化笔法折射出战火岁月中的人性美与家国情怀，余味悠长。"></textarea>
                 </div>
               </div>
             </div>
@@ -867,7 +867,7 @@
         <div class="section-header">
           <div>
             <h2>✍️ 高考作文“心中有人·一材多用”素材库 & 200字主体段“四步法”微格训练舱</h2>
-            <p>根治“以叙代议、素材老套、缺乏思辨、史实硬伤”：用三层鲜活素材库 + 黄金叙议比（3:7）检测器，稳拿一类文 48~54 分！</p>
+            <p>针对“以叙代议、素材老套、缺思辨、史实硬伤”四个毛病：三层素材库负责填内容，叙议比监控器负责拦“以叙代议”，史实雷达负责拦硬伤。检测器只管这几项机械指标，不预测分数。</p>
           </div>
           <div style="display:flex;gap:8px;">
             <select id="essay-material-filter" style="width:240px;" onchange="renderEssayMaterials()">
@@ -875,13 +875,13 @@
               <option value="ANCIENT">第一层：古代底蕴 · 千古文化脊梁人物卡</option>
               <option value="MODERN">第二层：近现代纵深 · 家国与文脉（含浙江本土）</option>
               <option value="CONTEMPORARY">第三层：当代视野 · 时代热点与凡人微光</option>
-              <option value="ONE_LINER">北大138分笔记 · 一句话群像排比</option>
+              <option value="ONE_LINER">一句话群像排比（自建素材）</option>
             </select>
           </div>
         </div>
 
         <div class="grid-2" style="grid-template-columns: 1.05fr 1.25fr;">
-          <!-- 左栏：三层素材库 + 万能思辨金句库 -->
+          <!-- 左栏：三层素材库 + 思辨金句库 -->
           <div>
             <div class="card">
               <div class="card-title">
@@ -893,7 +893,7 @@
 
             <div class="card">
               <div class="card-title">
-                <span>💎 万能思辨金句库（解决说理干瘪、单向度绝对化）</span>
+                <span>💎 思辨金句库（说理干瘪、单向度绝对化时来一句）</span>
                 <span class="badge badge-gold">点击金句自动追加至第3/4步</span>
               </div>
               <div id="essay-quotes-container" style="max-height:280px;overflow-y:auto;"></div>
@@ -905,32 +905,32 @@
             <div class="card">
               <div class="card-title">
                 <span>🛠️ 200字议论文主体段“四步法”微格训练器（实时叙议比 3:7 监控）</span>
-                <span class="badge badge-jade" id="essay-score-badge">预估折算分：-- / 60</span>
+                <span class="badge badge-jade" id="essay-score-badge">机械自检：--</span>
               </div>
 
               <div style="margin-bottom:10px;">
                 <label class="form-label">🎯 训练作文母题 / 中心论点</label>
-                <input type="text" id="essay-topic-input" value="论“时间沉淀与快时代下的长期主义定力”" />
+                <input type="text" id="essay-topic-input" placeholder="例：论“时间沉淀与快时代下的长期主义定力”" />
               </div>
 
               <div style="margin-bottom:10px;">
                 <label class="form-label">【第一步：亮观点（段首分论点句，建议 20~35 字，破题干脆）】</label>
-                <textarea id="essay-step1" rows="2" oninput="liveUpdateEssayRatio()">真正的传世之功，往往诞生于拒绝速成诱惑、甘坐冷板凳的漫长沉淀之中。</textarea>
+                <textarea id="essay-step1" rows="2" oninput="liveUpdateEssayRatio()" placeholder="例：真正的传世之功，往往诞生于拒绝速成诱惑、甘坐冷板凳的漫长沉淀之中。"></textarea>
               </div>
 
               <div style="margin-bottom:10px;">
                 <label class="form-label" style="color:#b45309;">【第二步：摆素材（高光镜头定格，建议 ≤55 字，🚨严禁写成长篇人物生平传记！）】</label>
-                <textarea id="essay-step2" rows="2" oninput="liveUpdateEssayRatio()">樊锦诗自北大毕业后毅然奔赴大漠敦煌，在风沙漫天的石窟中青丝变白发，潜心六十载构建“数字敦煌”。</textarea>
+                <textarea id="essay-step2" rows="2" oninput="liveUpdateEssayRatio()" placeholder="例：樊锦诗自北大毕业后奔赴敦煌，在风沙漫天的石窟中青丝变白发，六十载守着壁画。"></textarea>
               </div>
 
               <div style="margin-bottom:10px;">
                 <label class="form-label" style="color:var(--accent-jade);">【第三步：扣题分析（核心思辨区，建议 90~130 字，多用“正因为…倘若…诚然…然而…”因果/假设句）】</label>
-                <textarea id="essay-step3" rows="4" oninput="liveUpdateEssayRatio()">正因为她深知文明的存续绝非朝夕之功，才会在寂寞的戈壁滩上抵御住繁华都市的喧嚣诱惑；倘若她也追求立竿见影的短平快政绩，千年莫高窟的斑斓壁画又岂能在数字苍穹下获得永生？诚然，快时代推崇效率与即时反馈，然而越是浮躁喧嚣，越唯有这种“择一事终一生”的慢定力，方能凿穿岁月的坚冰。</textarea>
+                <textarea id="essay-step3" rows="4" oninput="liveUpdateEssayRatio()" placeholder="例：正因为她深知文明的存续绝非朝夕之功，才守得住戈壁滩的寂寞；倘若也追求立竿见影的政绩，千年壁画又岂能在数字世界永生？诚然，快时代推崇效率，然而越是浮躁，越需要这种“择一事终一生”的慢定力。"></textarea>
               </div>
 
               <div style="margin-bottom:10px;">
                 <label class="form-label">【第四步：回扣升华（点题收束句，建议 25~40 字，金句收尾）】</label>
-                <textarea id="essay-step4" rows="2" oninput="liveUpdateEssayRatio()">故曰：风物长宜放眼量，唯有以长期主义的匠心对抗速朽，方能立起时代的精神丰碑。</textarea>
+                <textarea id="essay-step4" rows="2" oninput="liveUpdateEssayRatio()" placeholder="例：故曰：风物长宜放眼量，唯有以长期主义的匠心对抗速朽，方能立起时代的精神丰碑。"></textarea>
               </div>
 
               <!-- 实时叙议比双色仪表条 -->
@@ -1064,15 +1064,15 @@
       <div class="grid-3" style="margin-bottom:12px;">
         <div>
           <label class="form-label">考试名称</label>
-          <input type="text" id="ex-name" value="2026学年高一上期中联考" />
+          <input type="text" id="ex-name" placeholder="例：高一10月月考" />
         </div>
         <div>
           <label class="form-label">考试日期</label>
-          <input type="date" id="ex-date" value="2026-11-15" />
+          <input type="date" id="ex-date" />
         </div>
         <div>
           <label class="form-label">卷面总得分（满分150）</label>
-          <input type="number" id="ex-total-actual" value="103" readonly style="background:#f3f4f6;font-weight:700;" />
+          <input type="number" id="ex-total-actual" value="0" readonly style="background:#f3f4f6;font-weight:700;" />
         </div>
       </div>
 
@@ -1080,53 +1080,53 @@
       <div class="grid-4" style="margin-bottom:14px;" id="ex-modules-inputs">
         <div>
           <label class="form-label">信息类阅读 (满分18)</label>
-          <input type="number" class="ex-mod-input" data-code="MOD_INFO_READ" data-name="信息类阅读" data-max="18" data-plan="18" value="13" oninput="recalcExamModalTotals()" />
+          <input type="number" class="ex-mod-input" data-code="MOD_INFO_READ" data-name="信息类阅读" data-max="18" data-plan="18" value="" placeholder="0" oninput="recalcExamModalTotals()" />
         </div>
         <div>
           <label class="form-label">文学类阅读 (满分18)</label>
-          <input type="number" class="ex-mod-input" data-code="MOD_LIT_READ" data-name="文学类阅读" data-max="18" data-plan="22" value="12" oninput="recalcExamModalTotals()" />
+          <input type="number" class="ex-mod-input" data-code="MOD_LIT_READ" data-name="文学类阅读" data-max="18" data-plan="22" value="" placeholder="0" oninput="recalcExamModalTotals()" />
         </div>
         <div>
           <label class="form-label">文言文阅读 (满分23)</label>
-          <input type="number" class="ex-mod-input" data-code="MOD_CLASSICAL" data-name="文言文阅读" data-max="23" data-plan="20" value="18" oninput="recalcExamModalTotals()" />
+          <input type="number" class="ex-mod-input" data-code="MOD_CLASSICAL" data-name="文言文阅读" data-max="23" data-plan="20" value="" placeholder="0" oninput="recalcExamModalTotals()" />
         </div>
         <div>
           <label class="form-label">古代诗歌鉴赏 (满分9)</label>
-          <input type="number" class="ex-mod-input" data-code="MOD_POETRY" data-name="古代诗歌鉴赏" data-max="9" data-plan="10" value="6" oninput="recalcExamModalTotals()" />
+          <input type="number" class="ex-mod-input" data-code="MOD_POETRY" data-name="古代诗歌鉴赏" data-max="9" data-plan="10" value="" placeholder="0" oninput="recalcExamModalTotals()" />
         </div>
         <div>
           <label class="form-label">名句默写 (满分6)</label>
-          <input type="number" class="ex-mod-input" data-code="MOD_DICTATION" data-name="名句默写" data-max="6" data-plan="5" value="6" oninput="recalcExamModalTotals()" />
+          <input type="number" class="ex-mod-input" data-code="MOD_DICTATION" data-name="名句默写" data-max="6" data-plan="5" value="" placeholder="0" oninput="recalcExamModalTotals()" />
         </div>
         <div>
           <label class="form-label">语言文字运用 (满分16)</label>
-          <input type="number" class="ex-mod-input" data-code="MOD_LANG_USE" data-name="语言文字运用" data-max="16" data-plan="15" value="11" oninput="recalcExamModalTotals()" />
+          <input type="number" class="ex-mod-input" data-code="MOD_LANG_USE" data-name="语言文字运用" data-max="16" data-plan="15" value="" placeholder="0" oninput="recalcExamModalTotals()" />
         </div>
         <div>
           <label class="form-label">作文含书写 (满分60)</label>
-          <input type="number" class="ex-mod-input" data-code="MOD_ESSAY" data-name="作文(含书写)" data-max="60" data-plan="55" value="37" oninput="recalcExamModalTotals()" />
+          <input type="number" class="ex-mod-input" data-code="MOD_ESSAY" data-name="作文(含书写)" data-max="60" data-plan="55" value="" placeholder="0" oninput="recalcExamModalTotals()" />
         </div>
       </div>
 
-      <h4 style="font-size:13px;margin-bottom:8px;">二、ABC 三层失分归因对账（三项之和必须等于总扣分 <span id="ex-total-lost-span">47</span> 分）：</h4>
+      <h4 style="font-size:13px;margin-bottom:8px;">二、ABC 三层失分归因对账（三项之和必须等于总扣分 <span id="ex-total-lost-span">--</span> 分）：</h4>
       <div class="grid-3" style="margin-bottom:14px;">
         <div>
           <label class="form-label" style="color:var(--accent-red);">A类失分（本该稳拿的基础/审题失分）</label>
-          <input type="number" id="ex-loss-a" value="8" />
+          <input type="number" id="ex-loss-a" value="" placeholder="0" />
         </div>
         <div>
           <label class="form-label" style="color:#b45309;">B类失分（高频题型套路与漏点失分）</label>
-          <input type="number" id="ex-loss-b" value="24" />
+          <input type="number" id="ex-loss-b" value="" placeholder="0" />
         </div>
         <div>
           <label class="form-label" style="color:var(--accent-indigo);">C类失分（高阶审美与深度思辨拉锯）</label>
-          <input type="number" id="ex-loss-c" value="15" />
+          <input type="number" id="ex-loss-c" value="" placeholder="0" />
         </div>
       </div>
 
       <div style="margin-bottom:14px;">
         <label class="form-label">考后战略复盘小结</label>
-        <input type="text" id="ex-notes" value="信息类阅读与名句默写单点爆破显效，下一阶段主锁【古诗鉴赏+作文四步法主体段】。" />
+        <input type="text" id="ex-notes" placeholder="这场考试最该记住的一条教训（不填也行，不填就不显示）" />
       </div>
 
       <div style="display:flex;justify-content:flex-end;gap:10px;">
