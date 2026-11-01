@@ -1105,6 +1105,21 @@
     return { status: "ok", rule: { ...rule } };
   }
 
+  /* 义项归一：上游数据写的是 meaning，早期前端读 gloss。
+   * 这里把常见别名都收一遍，并且丢掉空壳义项（没有释义、只剩一个例子的那种），
+   * 免得界面上出现「例：xxx」却不知道在解释什么。 */
+  function normalizeMeanings(list) {
+    if (!Array.isArray(list)) return [];
+    return list
+      .filter((m) => m && typeof m === "object")
+      .map((m) => ({
+        pos: String(m.pos || m.type || m.label || "").trim(),
+        gloss: String(m.gloss || m.meaning || m.def || m.definition || "").trim(),
+        example: String(m.example || m.example_text || "").trim(),
+      }))
+      .filter((m) => m.gloss);
+  }
+
   function apiClassicalWords(query) {
     const wordType = query.get("word_type");
     let rows = clone(T("classical_words"));
@@ -1112,7 +1127,10 @@
     rows = sortRows(rows, [["review_fail_count", -1], ["id", 1]]);
     const words = rows.map((d) => ({
       ...d,
-      meanings: safeJson(d.meanings_json, []) || [],
+      // 种子数据里义项字段叫 meaning（沿自上游），而渲染层早期按 gloss 取，
+      // 直接取值就成了「【义项】undefined」。这里统一规范一次：
+      // 对外只暴露 { pos, gloss, example }，渲染层和将来任何消费方都不会再踩。
+      meanings: normalizeMeanings(safeJson(d.meanings_json, [])),
       word_type_label: WORD_TYPE_LABELS[d.word_type] || d.word_type,
       freq_tier_label: FREQ_TIER_LABELS[d.freq_tier] || d.freq_tier,
     }));

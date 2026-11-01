@@ -1219,10 +1219,24 @@ function renderClassicalWords() {
           : `<span class="badge badge-red">重点死磕</span>`;
 
       const meaningsList = (w.meanings || [])
-        .map(
-          (m) =>
-            `<li style="margin-bottom:4px;"><strong>【${m.pos || "义项"}】${m.gloss}</strong><br/><span style="color:var(--text-secondary);font-size:12px;">例：${m.example}</span></li>`
-        )
+        .map((m) => {
+          // 双保险：即便后端漏做归一，也不许再把 undefined 印到卡片上
+          const gloss = String(m.gloss || m.meaning || m.def || "").trim();
+          if (!gloss) return "";
+          const pos = String(m.pos || "").trim();
+          // pos 缺失时不再硬塞「义项」：多数条目自己在正文标了【古义】【今义】，
+          // 再前缀一层就成了「【义项】【古义】…」这种叠字。
+          const label = pos || (/^【/.test(gloss) ? "" : "义项");
+          const ex = String(m.example || "").trim();
+          return `<li style="margin-bottom:4px;"><strong>${label ? `【${escHtml(label)}】` : ""}${escHtml(
+            gloss
+          )}</strong>${
+            ex
+              ? `<br/><span style="color:var(--text-secondary);font-size:12px;">例：${escHtml(ex)}</span>`
+              : ""
+          }</li>`;
+        })
+        .filter(Boolean)
         .join("");
 
       return `
