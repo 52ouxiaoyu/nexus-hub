@@ -49,6 +49,113 @@
     }
     .cb-offline-tip button:hover { background: #fdf2f0; }
     @media print { .cb-offline-tip { display: none !important; } }
+
+    /* v2：子导航 */
+    .subnav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+      padding: 6px;
+      background: #f6f2e9;
+      border: 1px solid #e2dccd;
+      border-radius: 10px;
+    }
+    .subnav-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #a08d6a;
+      padding: 0 8px 0 4px;
+    }
+    .subnav-btn {
+      padding: 5px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #5a5040;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .subnav-btn:hover { background: #fff; border-color: #e2dccd; }
+    .subnav-btn.active {
+      color: #fff;
+      background: var(--accent-indigo, #3d4a7a);
+      border-color: var(--accent-indigo, #3d4a7a);
+    }
+
+    /* v2：侧边栏副标题 */
+    .nav-sub {
+      padding: 1px 0 0 30px;
+      font-size: 10.5px;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, 0.42);
+      letter-spacing: 0.2px;
+    }
+
+    /* v2：今日任务卡 */
+    .today-card { display: flex; flex-direction: column; }
+    .today-card .today-desc {
+      flex: 1;
+      font-size: 13px;
+      line-height: 1.75;
+      color: var(--text-secondary);
+      margin: 4px 0 14px;
+    }
+    .today-card .btn { align-self: flex-start; }
+
+    .today-card.done {
+      border-color: #b9dfc9;
+      background: #f7fcf9;
+    }
+    .today-card.done .card-title span:first-child::after {
+      content: " ✅";
+      font-size: 12px;
+    }
+
+    /* v2：评分细则自评 */
+    .rubric-item {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 9px 12px;
+      margin-bottom: 7px;
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-left: 4px solid var(--accent-indigo);
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1.7;
+      cursor: pointer;
+    }
+    .rubric-item:hover { background: #fbf9f4; }
+    .rubric-item.checked {
+      background: #eef8f3;
+      border-left-color: var(--accent-jade);
+    }
+    .rubric-item input { margin-top: 4px; flex: 0 0 auto; }
+    .rubric-score {
+      flex: 0 0 auto;
+      font-weight: 700;
+      color: var(--accent-indigo);
+      font-size: 12px;
+    }
+    .self-eval-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      padding: 12px 14px;
+      background: #fbf7ee;
+      border: 1px dashed #d9cbb0;
+      border-radius: 8px;
+    }
+    .self-eval-score { font-size: 20px; font-weight: 800; color: var(--accent-indigo); }
   </style>
 </head>
 <body>
@@ -61,7 +168,7 @@
         <h1>高考语文“死磕通关”数字化作战系统</h1>
         <p id="header-student-info">吴悠（好大儿） · 杭州学军中学 2026级高一(18)班 · 基准 82分 ➔ 靶向 130+分</p>
       </div>
-      <span class="cb-ver">v1.0.0</span>
+      <span class="cb-ver">v2.0.0</span>
     </div>
 
     <div class="header-pills">
@@ -75,7 +182,6 @@
 
     <div class="header-actions">
       <a href="../learning.html" class="btn btn-sm btn-outline" style="background:rgba(255,255,255,0.12);color:#fff;border-color:rgba(255,255,255,0.28);text-decoration:none;white-space:nowrap;">⬅ 学习天地</a>
-      <button class="btn btn-sm btn-jade" onclick="openNightReplayModal()">🌙 睡前5分钟过电影</button>
       <button class="btn btn-sm btn-outline" style="background:rgba(255,255,255,0.12);color:#fff;border-color:rgba(255,255,255,0.28);" onclick="openExamModal()">➕ 录入新考试/ABC对账</button>
     </div>
   </header>
@@ -90,43 +196,26 @@
     <!-- 左侧战术导航栏 -->
     <aside class="sidebar no-print">
       <div>
-        <div class="nav-group-label">一、战略诊断与靶心死磕</div>
-        <button class="nav-btn active" data-tab="tab-dashboard" onclick="switchTab('tab-dashboard', this)">
-          <span>📊 成绩病历本 & 靶心决策</span>
-          <span class="nav-badge" id="nav-badge-exam">3场</span>
+        <div class="nav-group-label">今天</div>
+        <button class="nav-btn active" data-tab="tab-today" data-group="today" onclick="switchTab('tab-today', this)">
+          <span>☀️ 今日任务</span>
+          <span class="nav-badge" id="nav-badge-due">-- 张</span>
         </button>
-        <button class="nav-btn" data-tab="tab-blitz" onclick="switchTab('tab-blitz', this)">
-          <span>🎯 单点爆破沉浸训练舱</span>
-          <span class="nav-badge" id="nav-badge-questions">12题</span>
-        </button>
-        <button class="nav-btn" data-tab="tab-progress" onclick="switchTab('tab-progress', this)">
-          <span>📒 会“变薄”的活页进步本</span>
-          <span class="nav-badge" id="nav-badge-due">待复盘</span>
-        </button>
+        <div class="nav-sub">三件事，15 分钟</div>
 
-        <div class="nav-group-label" style="margin-top:12px;">二、四大高ROI专项工作台</div>
-        <button class="nav-btn" data-tab="tab-classical" onclick="switchTab('tab-classical', this)">
-          <span>🏛️ 文言文考频通关地图</span>
-          <span class="nav-badge">120词</span>
+        <div class="nav-group-label" style="margin-top:12px;">练</div>
+        <button class="nav-btn" data-tab="tab-blitz" data-group="train" onclick="switchTab('tab-blitz', this)">
+          <span>🎯 训练舱</span>
+          <span class="nav-badge" id="nav-badge-questions">-- 题</span>
         </button>
-        <button class="nav-btn" data-tab="tab-poetry" onclick="switchTab('tab-poetry', this)">
-          <span>🌙 古诗鉴赏“十把钥匙”</span>
-          <span class="nav-badge">表+深</span>
-        </button>
-        <button class="nav-btn" data-tab="tab-modern" onclick="switchTab('tab-modern', this)">
-          <span>📖 现代文精读沙盒</span>
-          <span class="nav-badge">9阱+11元</span>
-        </button>
-        <button class="nav-btn" data-tab="tab-essay" onclick="switchTab('tab-essay', this)">
-          <span>✍️ 作文“心中有人”微格舱</span>
-          <span class="nav-badge">叙议3:7</span>
-        </button>
+        <div class="nav-sub">诊断 · 做题 · 进步本</div>
 
-        <div class="nav-group-label" style="margin-top:12px;">三、考场风控与纸质闭环</div>
-        <button class="nav-btn" data-tab="tab-print" onclick="switchTab('tab-print', this)">
-          <span>🖨️ 时间账本 & A4打印中心</span>
-          <span class="nav-badge">3模板</span>
+        <div class="nav-group-label" style="margin-top:12px;">查</div>
+        <button class="nav-btn" data-tab="tab-classical" data-group="lib" onclick="switchTab('tab-classical', this)">
+          <span>📚 资料库</span>
+          <span class="nav-badge" id="nav-badge-words">-- 词</span>
         </button>
+        <div class="nav-sub">文言 · 古诗 · 现代文 · 作文 · 打印</div>
       </div>
 
       <div class="sidebar-quote">
@@ -140,10 +229,79 @@
     <!-- 右侧主工作区 -->
     <main class="main-workspace">
 
+      <!-- 子导航：同一工作台内的细分页 -->
+      <div class="subnav no-print" id="subnav-train" style="display:none;">
+        <span class="subnav-label">训练舱</span>
+        <button class="subnav-btn" data-sub="tab-dashboard" onclick="switchTab('tab-dashboard', this)">📊 诊断</button>
+        <button class="subnav-btn" data-sub="tab-blitz" onclick="switchTab('tab-blitz', this)">🎯 做题</button>
+        <button class="subnav-btn" data-sub="tab-progress" onclick="switchTab('tab-progress', this)">📒 进步本</button>
+      </div>
+      <div class="subnav no-print" id="subnav-lib" style="display:none;">
+        <span class="subnav-label">资料库</span>
+        <button class="subnav-btn" data-sub="tab-classical" onclick="switchTab('tab-classical', this)">文言</button>
+        <button class="subnav-btn" data-sub="tab-poetry" onclick="switchTab('tab-poetry', this)">古诗</button>
+        <button class="subnav-btn" data-sub="tab-modern" onclick="switchTab('tab-modern', this)">现代文</button>
+        <button class="subnav-btn" data-sub="tab-essay" onclick="switchTab('tab-essay', this)">作文</button>
+        <button class="subnav-btn" data-sub="tab-print" onclick="switchTab('tab-print', this)">打印</button>
+      </div>
+
       <!-- =================================================================
            模块 1: 📊 成绩病历本 & 靶心决策中心 (tab-dashboard)
            ================================================================= -->
-      <section id="tab-dashboard" class="workspace-pane active">
+      <!-- =================================================================
+           工作台 1: ☀️ 今日任务（默认首页，只回答"现在做什么"）
+           ================================================================= -->
+      <section id="tab-today" class="workspace-pane active">
+        <div class="section-header">
+          <div>
+            <h2>☀️ 今日任务</h2>
+            <p>不用挑工作台。今天只有三件事，15 分钟做完就可以合上电脑。</p>
+          </div>
+          <span class="badge badge-jade" id="today-progress-badge">0 / 3</span>
+        </div>
+
+        <div class="grid-3" style="margin-bottom:18px;">
+          <div class="card today-card" id="today-card-due">
+            <div class="card-title">
+              <span>① 复盘到期卡</span>
+              <span class="badge badge-gold" id="today-due-count">--</span>
+            </div>
+            <p class="today-desc">先遮住答案，口头背出采分点。背不出就回到第 1 天重刷，不许用眼睛"扫一遍"当过关。</p>
+            <button class="btn btn-primary" onclick="todayGo('due')">开始复盘</button>
+          </div>
+
+          <div class="card today-card" id="today-card-question">
+            <div class="card-title">
+              <span>② 限时一题</span>
+              <span class="badge badge-indigo" id="today-q-module">--</span>
+            </div>
+            <p class="today-desc" id="today-q-title">--</p>
+            <button class="btn btn-primary" onclick="todayGo('question')">去做这题</button>
+          </div>
+
+          <div class="card today-card" id="today-card-quote">
+            <div class="card-title">
+              <span>③ 记住一句</span>
+              <span class="badge badge-jade" id="today-quote-src">素材</span>
+            </div>
+            <p class="today-desc" id="today-quote">--</p>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-outline" onclick="todayGo('quote')">换一条</button>
+              <button class="btn btn-primary" onclick="todayGo('quoteDone')">记住了</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>📊 现在的位置（不必每天看，一周看一次就够）</span>
+            <button class="btn btn-sm btn-outline" onclick="switchTab('tab-dashboard')">查看完整诊断 →</button>
+          </div>
+          <div id="today-diagnosis"></div>
+        </div>
+      </section>
+
+      <section id="tab-dashboard" class="workspace-pane">
         <div class="section-header">
           <div>
             <h2>📊 成绩病历本（CT诊断）与“单点爆破”靶心决策中心</h2>
@@ -204,12 +362,12 @@
       <section id="tab-blitz" class="workspace-pane">
         <div class="section-header">
           <div>
-            <h2>🎯 单点爆破沉浸式训练舱（限时解题 + 三维采分点解剖）</h2>
-            <p>第三步“限时训练20套”与第四步“三维复盘（找漏点 / 找错点 / 术语升级）”一体化闭环。</p>
+            <h2>🎯 训练舱（限时做题 → 对照答案自评 → 存进进步本）</h2>
+            <p>一题走完就算一次训练。判分由你自己对照细则勾选，机器只给参考。</p>
           </div>
           <div style="display:flex;gap:10px;align-items:center;">
             <select id="blitz-module-filter" style="width:210px;" onchange="loadBlitzQuestions()">
-              <option value="ALL">全部专项题库（12道精选母题）</option>
+              <option value="ALL">全部专项题库</option>
               <option value="INFO_READ">信息类阅读（9大设误陷阱）</option>
               <option value="DICTATION">名篇名句默写（情境防错字）</option>
               <option value="POETRY">古代诗歌鉴赏（十把钥匙）</option>
@@ -239,21 +397,21 @@
           <div>
             <div class="card">
               <div class="card-title">
-                <span>✍️ 考场实战作答区（主观题请强制分 ①②③ 点作答）</span>
+                <span>✍️ 作答区（主观题请分 ①②③ 点作答）</span>
                 <span class="badge badge-indigo" id="blitz-q-score-badge">满分 -- 分</span>
               </div>
               <div id="blitz-options-container" style="margin-bottom:12px;"></div>
               <textarea id="blitz-student-answer" rows="5" placeholder="在此输入你的选项（如 B）或主观题分点答案（如 ①表层：……；②中层：……；③深层：……）"></textarea>
               <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
-                <span style="font-size:12px;color:var(--text-muted);">提示：提交后系统将按高考阅卷采分词进行【找漏点·找错点·术语升级】三维解剖</span>
-                <button class="btn btn-primary" onclick="submitBlitzAnswer()">⚡ 提交并启动三维采分对标</button>
+                <span style="font-size:12px;color:var(--text-muted);">提示：提交后你会看到参考答案和评分细则，由你逐条勾选"我答到了没有"</span>
+                <button class="btn btn-primary" onclick="submitBlitzAnswer()">⚡ 提交，对照答案自评</button>
               </div>
             </div>
 
             <!-- 三维解剖结果容器 -->
             <div class="card" id="blitz-3d-result-card" style="display:none;">
               <div class="card-title">
-                <span>🔬 高考阅卷三维解剖报告（找漏点 / 找错点 / 术语升级）</span>
+                <span>🔬 对照参考答案 · 逐条自评</span>
                 <span id="blitz-earned-badge" class="badge badge-jade">得分：--</span>
               </div>
               <div id="blitz-3d-result-body"></div>
@@ -268,11 +426,11 @@
       <section id="tab-progress" class="workspace-pane">
         <div class="section-header">
           <div>
-            <h2>📒 会“变薄”的九栏活页进步本 & 1-2-7-15 遮罩抗遗忘复盘舱</h2>
+            <h2>📒 会“变薄”的活页进步本 & 1-2-7-15 遮罩复盘</h2>
             <p>不抄大段原文、不原样照抄标答、严禁写“粗心”；经过第1、2、7、15天四轮遮罩重做全对后，<strong>红笔划掉，本子越读越薄！</strong></p>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-sm btn-primary" onclick="toggleNewCardDrawer()">➕ 新建九栏活页进步卡</button>
+            <button class="btn btn-sm btn-primary" onclick="toggleNewCardDrawer()">➕ 新建进步卡</button>
             <select id="progress-stage-filter" style="width:210px;" onchange="loadProgressCards()">
               <option value="ALL">全部活页卡片</option>
               <option value="DUE">🔔 今日到期必须遮罩复盘</option>
@@ -289,10 +447,11 @@
         <!-- 新建九栏活页进步卡抽屉（带认知反思门禁） -->
         <div class="card" id="new-card-drawer" style="display:none;border:2px solid var(--accent-red);">
           <div class="card-title">
-            <span>📝 录入九栏活页进步卡（内置【认知反思门禁】与【防罚抄检测】）</span>
+            <span>📝 新建进步卡（7 格，比原来少两格；只填真话，系统会拦住“粗心”）</span>
             <button class="btn btn-sm btn-outline" onclick="toggleNewCardDrawer()">收起</button>
           </div>
           <div id="gate-error-alert" style="display:none;margin-bottom:12px;"></div>
+          <div id="new-card-hint" style="display:none;margin-bottom:12px;padding:9px 13px;background:#f0f4fc;border-left:4px solid var(--accent-indigo);border-radius:6px;font-size:12.5px;line-height:1.8;color:#3d4a7a;"></div>
           <div class="grid-3" style="margin-bottom:12px;">
             <div>
               <label class="form-label">1. 所属模块</label>
@@ -329,7 +488,7 @@
               <textarea id="nc-stem" rows="2" placeholder="例：[T3选择] C项：虽然不能用它研究历史，但可提供文学想象"></textarea>
             </div>
             <div>
-              <label class="form-label">5. 我的错答 vs 6. 标准答案采分点</label>
+              <label class="form-label">5. 我的错答 ｜ 标准答案采分点</label>
               <div class="grid-2" style="gap:8px;">
                 <textarea id="nc-wrong" rows="2" placeholder="我的错答（如：误选B / 漏答深层家国情怀）"></textarea>
                 <textarea id="nc-right" rows="2" placeholder="标答采分点（如：选C。原文为“对研究历史有参考价值”，C项曲解文意）"></textarea>
@@ -337,26 +496,18 @@
             </div>
           </div>
 
-          <div class="grid-3" style="margin-bottom:12px;">
+          <div class="grid-2" style="margin-bottom:12px;">
             <div>
-              <label class="form-label" style="color:var(--accent-red);">7. 错因深度反思（🚨禁写“粗心/马虎/没看清”）</label>
+              <label class="form-label" style="color:var(--accent-red);">6. 错因深挖（🚨禁写“粗心/马虎/没看清”）</label>
               <textarea id="nc-reflection" rows="3" placeholder="必须写清思维断点：如“被B项前半句原词迷惑，漏看原文‘并不意味着完全不能’双重否定限定词”"></textarea>
             </div>
             <div>
-              <label class="form-label">8. 核心知识点总结与同类印证（🚨禁原样照抄标答）</label>
-              <textarea id="nc-summary" rows="3" placeholder="用自己的话浓缩≤35字规律：如“转折连词‘虽然…但’前半句常藏曲解文意暗雷，须逐字核对是非判断词”"></textarea>
-            </div>
-            <div>
-              <label class="form-label" style="color:var(--accent-jade);">9. 下次考场警戒指令（必须含“只要看到…先圈…”触发词）</label>
+              <label class="form-label" style="color:var(--accent-jade);">7. 下次考场警戒指令（必须含“只要看到…先圈…”）</label>
               <textarea id="nc-warning" rows="3" placeholder="例：只要看到选项含“虽然/诚然/固然”，先圈前半句让步分句回原文核对是非极性！"></textarea>
             </div>
           </div>
 
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <label style="font-size:12.5px;display:flex;align-items:center;gap:6px;">
-              <input type="checkbox" id="nc-sync-excel" checked />
-              同步追加至本地《01_好大儿_高考/错题汇总分科.xlsx》
-            </label>
+          <div style="display:flex;justify-content:flex-end;align-items:center;">
             <button class="btn btn-primary" onclick="submitNewProgressCard()">🛡️ 过认知门禁并存入活页本</button>
           </div>
         </div>
@@ -487,7 +638,7 @@
       <section id="tab-modern" class="workspace-pane">
         <div class="section-header">
           <div>
-            <h2>📖 现代文阅读精读沙盒（信息类“9大设误陷阱” + 文学类“表-中-深 & 北大11大元素”）</h2>
+            <h2>📖 现代文阅读精读沙盒（信息类“9大设误陷阱” + 文学类“表-中-深 + 五大核心元素”）</h2>
             <p>融合《B.冲刺版》信息类选择题比对大法与《26新高考II卷138分北大社会学学霸笔记》文学类 11 大高阶文本元素库。</p>
           </div>
         </div>
@@ -642,8 +793,8 @@
       <section id="tab-print" class="workspace-pane">
         <div class="section-header no-print">
           <div>
-            <h2>🖨️ 考场 150 分钟时间分配账本 & A4 纸质闭环打印中心</h2>
-            <p>护眼防沉迷设计：平时周末深度诊断录入，周中晚自习与考前 15 分钟直接打印 A4 纸质急救包，脱屏高效背诵！</p>
+            <h2>🖨️ A4 纸质闭环打印中心</h2>
+            <p>学生实际是在纸上写。把该背的印出来带走，比在屏幕上点一百次有用。</p>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <select id="print-template-selector" style="width:310px;" onchange="renderPrintSheet()">
@@ -655,12 +806,13 @@
           </div>
         </div>
 
-        <!-- 考场 150 分钟标准配速表（仅屏幕显示） -->
-        <div class="card no-print">
-          <div class="card-title">
-            <span>⏱️ 高考语文 150 分钟考场标准时间分配红线（严防“前松后紧导致作文烂尾”）</span>
-            <span class="badge badge-red">第 90 分钟必须启动作文审题！</span>
-          </div>
+        <!-- 考场配速表：默认折叠，不占版面 -->
+        <details class="card no-print" style="padding:0;">
+          <summary style="cursor:pointer;padding:14px 18px;font-weight:700;font-size:13.5px;">
+            ⏱️ 考场 150 分钟配速红线（点开看一眼即可，不必每天记）
+            <span class="badge badge-red" style="margin-left:8px;">第 90 分钟必须启动作文</span>
+          </summary>
+          <div style="padding:0 18px 16px;">
           <table class="data-table">
             <thead>
               <tr>
@@ -723,7 +875,8 @@
               </tr>
             </tbody>
           </table>
-        </div>
+          </div>
+        </details>
 
         <!-- A4 打印预览画布 -->
         <div id="print-sheet-container" class="print-sheet"></div>
@@ -732,23 +885,7 @@
     </main>
   </div>
 
-  <!-- =====================================================================
-       模态弹窗 1: 🌙 睡前 5 分钟“闭目过电影”闪回模式
-       ===================================================================== -->
-  <div id="night-replay-modal" class="modal-backdrop no-print">
-    <div class="modal-dialog" style="background:#16202a;color:#f0f4f8;border:2px solid var(--accent-gold);">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:12px;">
-        <div>
-          <h3 style="font-size:18px;color:#ffd166;">🌙 睡前 5 分钟“闭目过电影”海马体固化模式</h3>
-          <p style="font-size:12.5px;color:#9fb3c8;">《E.正心集》心法：睡前不刷手机，用 5 分钟在脑海中闪回今日攻克的 3 条警戒指令、3 个文言实词与 1 张作文人物卡。</p>
-        </div>
-        <button class="btn btn-sm btn-outline" onclick="closeNightReplayModal()">关闭</button>
-      </div>
-      <div id="night-replay-body"></div>
-    </div>
-  </div>
-
-  <!-- =====================================================================
+<!-- =====================================================================
        模态弹窗 2: ➕ 录入新考试与考后 ABC 三层失分复盘对账
        ===================================================================== -->
   <div id="exam-create-modal" class="modal-backdrop no-print">
@@ -837,6 +974,7 @@
   </div>
 
   <script src="data/seed.js"></script>
+  <script src="data/bank.js"></script>
   <script src="js/api-shim.js"></script>
   <script src="js/app.js"></script>
   <script>

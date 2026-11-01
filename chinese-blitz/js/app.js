@@ -94,6 +94,8 @@ async function refreshAllData() {
     renderModernReadingSection();
     renderEssaySection();
     renderPrintSheet();
+    renderToday();
+    renderNavCounts();
   } catch (err) {
     console.error("初始化数据失败:", err);
   }
@@ -103,19 +105,205 @@ async function refreshAllData() {
 // 顶部状态栏与左侧 Tab 切换
 // ---------------------------------------------------------------------------
 
-function switchTab(tabId, btnEl) {
+const TAB_GROUP = {
+  "tab-today": "today",
+  "tab-dashboard": "train",
+  "tab-blitz": "train",
+  "tab-progress": "train",
+  "tab-classical": "lib",
+  "tab-poetry": "lib",
+  "tab-modern": "lib",
+  "tab-essay": "lib",
+  "tab-print": "lib",
+};
+
+function switchTab(tabId) {
   document.querySelectorAll(".workspace-pane").forEach((el) => el.classList.remove("active"));
   const target = document.getElementById(tabId);
   if (target) target.classList.add("active");
 
-  if (btnEl) {
-    document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
-    btnEl.classList.add("active");
-  } else {
-    document.querySelectorAll(".nav-btn").forEach((b) => {
-      b.classList.toggle("active", b.getAttribute("data-tab") === tabId);
-    });
+  const group = TAB_GROUP[tabId] || "today";
+
+  document.querySelectorAll(".nav-btn").forEach((b) => {
+    b.classList.toggle("active", b.getAttribute("data-group") === group);
+  });
+
+  const trainNav = document.getElementById("subnav-train");
+  const libNav = document.getElementById("subnav-lib");
+  if (trainNav) trainNav.style.display = group === "train" ? "flex" : "none";
+  if (libNav) libNav.style.display = group === "lib" ? "flex" : "none";
+
+  document.querySelectorAll(".subnav-btn").forEach((b) => {
+    b.classList.toggle("active", b.getAttribute("data-sub") === tabId);
+  });
+
+  if (tabId === "tab-today") renderToday();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// ---------------------------------------------------------------------------
+// ☀️ 今日任务：只回答"现在做哪三件事"
+// ---------------------------------------------------------------------------
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+function todayHash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i += 1) h = (h * 31 + str.charCodeAt(i)) % 99991;
+  return h;
+}
+
+const TODAY_TASKS = ["due", "question", "quote"];
+
+function todayDoneKey() {
+  return "cb_today_" + todayKey();
+}
+
+function todayDone() {
+  try {
+    return JSON.parse(localStorage.getItem(todayDoneKey()) || "{}") || {};
+  } catch (e) {
+    return {};
   }
+}
+
+function todayMark(kind) {
+  const d = todayDone();
+  d[kind] = true;
+  try {
+    localStorage.setItem(todayDoneKey(), JSON.stringify(d));
+  } catch (e) {}
+  renderTodayBadge();
+}
+
+function renderTodayBadge() {
+  const d = todayDone();
+  const n = TODAY_TASKS.filter((k) => d[k]).length;
+  const el = document.getElementById("today-progress-badge");
+  if (!el) return;
+  el.textContent = n === 3 ? "✅ 今天三件事做完了" : `已完成 ${n} / 3`;
+  el.className = `badge ${n === 3 ? "badge-jade" : "badge-gold"}`;
+  TODAY_TASKS.forEach((k) => {
+    const card = document.getElementById("today-card-" + k);
+    if (card) card.classList.toggle("done", !!d[k]);
+  });
+}
+
+function todayPickQuestion() {
+  const list = STATE.questions || [];
+  if (!list.length) return null;
+  return list[todayHash(todayKey() + "q") % list.length];
+}
+
+function renderToday() {
+  renderTodayBadge();
+  const m = STATE.deckMetrics || {};
+  const dueEl = document.getElementById("today-due-count");
+  if (dueEl) dueEl.textContent = `${m.due_today || 0} 张`;
+
+  const q = todayPickQuestion();
+  const qMod = document.getElementById("today-q-module");
+  const qTitle = document.getElementById("today-q-title");
+  if (qMod && qTitle) {
+    if (q) {
+      qMod.textContent = q.module_name;
+      const stem = (q.question_stem || "").replace(/\s+/g, " ").slice(0, 68);
+      qTitle.textContent = `${q.source_name} · ${q.question_no}｜${stem}…`;
+      STATE.todayQuestion = q;
+    } else {
+      qMod.textContent = "--";
+      qTitle.textContent = "题库加载中…";
+    }
+  }
+
+  const quotes = STATE.essayWorkspace?.quotes || [];
+  const quoteEl = document.getElementById("today-quote");
+  const quoteSrc = document.getElementById("today-quote-src");
+  if (quoteEl && quotes.length) {
+    const idx = (todayHash(todayKey() + "s") + (STATE.todayQuoteOffset || 0)) % quotes.length;
+    const item = quotes[idx];
+    quoteEl.textContent = `“${item.quote_text}”　—— ${item.author_or_source || ""}`;
+    if (quoteSrc) quoteSrc.textContent = item.theme_category || "素材";
+  }
+
+  const overview = STATE.overview || {};
+  const exams = overview.exams || [];
+  const latest = exams.length ? exams[exams.length - 1] : null;
+  const box = document.getElementById("today-diagnosis");
+  if (!box) return;
+
+  if (!latest) {
+    box.innerHTML = `<p style="font-size:13px;color:var(--text-secondary);">还没有录入过考试。先去「训练舱 → 诊断」录入一次月考，系统才知道该往哪里使劲。</p>`;
+    return;
+  }
+  const mods = (latest.modules || []).slice().sort((a, b) => a.score_rate - b.score_rate);
+  const weakest = mods.slice(0, 2);
+  box.innerHTML = `
+    <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:baseline;">
+      <div><span style="font-size:12px;color:var(--text-secondary);">最近一次</span>
+        <div style="font-size:22px;font-weight:800;">${latest.total_actual_score ?? "--"}<span style="font-size:13px;font-weight:400;"> / ${latest.total_max_score ?? 150}</span></div></div>
+      <div><span style="font-size:12px;color:var(--text-secondary);">活页本未消化</span>
+        <div style="font-size:22px;font-weight:800;">${m.active_thickness || 0}<span style="font-size:13px;font-weight:400;"> 张</span></div></div>
+      <div><span style="font-size:12px;color:var(--text-secondary);">红牌预警</span>
+        <div style="font-size:22px;font-weight:800;color:var(--accent-red);">${m.red_alert || 0}<span style="font-size:13px;font-weight:400;"> 张</span></div></div>
+    </div>
+    <div style="margin-top:12px;font-size:13px;color:var(--text-secondary);">
+      当前最该动的是：${weakest
+        .map((x) => `<strong style="color:var(--accent-red);">${x.module_name}</strong>（得分率 ${x.score_rate}%）`)
+        .join("　")}
+      <br/><span style="font-size:12px;">同一时期只死磕一个模块。上面那个更低的，先打完 20 道再说下一个。</span>
+    </div>
+  `;
+}
+
+function todayGo(kind) {
+  if (kind === "due") {
+    switchTab("tab-progress");
+    const sel = document.getElementById("progress-stage-filter");
+    if (sel) {
+      sel.value = "DUE";
+      loadProgressCards();
+    }
+    return;
+  }
+  if (kind === "question") {
+    const q = STATE.todayQuestion || todayPickQuestion();
+    if (!q) return;
+    switchTab("tab-blitz");
+    const modSel = document.getElementById("blitz-module-filter");
+    if (modSel) modSel.value = q.module_code;
+    loadBlitzQuestions();
+    const qSel = document.getElementById("blitz-question-selector");
+    if (qSel) {
+      qSel.value = String(q.id);
+      renderCurrentBlitzQuestion();
+    }
+    document.getElementById("blitz-student-answer").value = "";
+    return;
+  }
+  if (kind === "quote") {
+    STATE.todayQuoteOffset = (STATE.todayQuoteOffset || 0) + 1;
+    renderToday();
+    return;
+  }
+  if (kind === "quoteDone") {
+    todayMark("quote");
+  }
+}
+
+// 侧边栏徽标用真实数字（不再写死 3场/12题/120词）
+function renderNavCounts() {
+  const stats = typeof window.cbBankStats === "function" ? window.cbBankStats() : null;
+  const m = STATE.deckMetrics || {};
+  const due = document.getElementById("nav-badge-due");
+  if (due) due.textContent = `${m.due_today || 0} 张`;
+  const qb = document.getElementById("nav-badge-questions");
+  if (qb) qb.textContent = `${stats ? stats.total : 0} 题`;
+  const wb = document.getElementById("nav-badge-words");
+  if (wb) wb.textContent = `${stats ? stats.words : 0} 词`;
 }
 
 function renderTopHeader() {
@@ -473,6 +661,7 @@ async function submitBlitzAnswer() {
     });
     STATE.lastBlitzResult = { question: q, student_answer: stuAns, result: res };
     renderBlitz3DResult(q, stuAns, res);
+    todayMark("question");
   } catch (err) {
     alert("判分失败：" + err.message);
   }
@@ -481,64 +670,111 @@ async function submitBlitzAnswer() {
 function renderBlitz3DResult(q, stuAns, res) {
   const card = document.getElementById("blitz-3d-result-card");
   card.style.display = "block";
-  const analysis = res.analysis;
 
-  const badge = document.getElementById("blitz-earned-badge");
-  badge.textContent = `评估得分：${analysis.earned_score} / ${analysis.max_score} 分（得分率 ${analysis.score_rate}%）`;
-  badge.className = `badge ${analysis.score_rate >= 75 ? "badge-jade" : "badge-red"}`;
+  const analysis = res.analysis || {};
+  const rubric =
+    res.rubric && res.rubric.length
+      ? res.rubric
+      : (analysis.dim1_scoring_points || []).map((p) => ({ point: p.point, score: p.score }));
+  STATE.lastRubric = rubric;
+  STATE.selfEval = null;
 
-  const pointsHtml = (analysis.dim1_scoring_points || [])
+  document.getElementById("blitz-earned-badge").textContent = `自评：0 / ${res.max_score || q.max_score} 分`;
+  document.getElementById("blitz-earned-badge").className = "badge badge-gold";
+
+  const rubricHtml = rubric
     .map(
-      (pt) => `
-      <div style="padding:8px 10px;border-left:4px solid ${pt.hit ? "var(--accent-jade)" : "var(--accent-red)"};background:${pt.hit ? "#eef8f3" : "#fdf2f0"};margin-bottom:6px;border-radius:4px;font-size:13px;">
-        <div><strong>${pt.hit ? "✅ 已命中" : "❌ 漏答/错选"}（${pt.score}分）：</strong>${pt.point}</div>
-        <div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">
-          ${
-            pt.matched_keywords && pt.matched_keywords.length > 0
-              ? `命中采分词：<span class="badge badge-jade">${pt.matched_keywords.join("、")}</span> `
-              : ""
-          }
-          ${
-            pt.missing_keywords && pt.missing_keywords.length > 0
-              ? `缺失核心采分词：<span class="badge badge-red">${pt.missing_keywords.join("、")}</span>`
-              : ""
-          }
-        </div>
-      </div>
-    `
+      (r, i) => `
+      <label class="rubric-item" id="rubric-item-${i}" for="rubric-cb-${i}">
+        <input type="checkbox" id="rubric-cb-${i}" class="rubric-cb" data-idx="${i}"
+               data-score="${r.score}" onchange="onRubricToggle()" />
+        <span style="flex:1;">
+          <strong style="color:var(--accent-indigo);">第 ${i + 1} 条</strong>
+          ${r.point}
+        </span>
+        <span class="rubric-score">${r.score} 分</span>
+      </label>`
     )
     .join("");
 
   const dirHtml =
     analysis.dim2_direction_warnings && analysis.dim2_direction_warnings.length > 0
       ? analysis.dim2_direction_warnings.map((w) => `<li>${w}</li>`).join("")
-      : "<li>作答结构与分点方向良好！</li>";
+      : "<li>作答结构与分点方向良好。</li>";
 
   const upgHtml = (analysis.dim3_term_upgrades || [])
     .map(
       (u) =>
-        `<li>将【${u.original}】升格为高考阅卷专业术语 ➔ <strong style="color:var(--accent-indigo);">${u.upgrade}</strong></li>`
+        `<li>将【${u.original}】改成阅卷更认的说法：<strong style="color:var(--accent-indigo);">${u.upgrade}</strong></li>`
     )
     .join("");
 
   document.getElementById("blitz-3d-result-body").innerHTML = `
-    <div style="background:#faf8f3;padding:10px 12px;border-radius:6px;margin-bottom:12px;font-size:13px;">
-      <strong>【高考标准答案】</strong><br/>${res.standard_answer}
+    <div style="background:#faf8f3;padding:10px 12px;border-radius:6px;margin-bottom:14px;font-size:13px;line-height:1.8;">
+      <strong>【参考答案】</strong><br/>${res.standard_answer}
     </div>
 
-    <h4 style="font-size:13.5px;margin-bottom:6px;color:var(--accent-red);">维度一：找漏点（逐点核对阅卷赋分词）</h4>
-    ${pointsHtml}
+    <div style="background:#f0f4fc;padding:8px 12px;border-radius:6px;margin-bottom:10px;font-size:12.5px;color:#3d4a7a;">
+      <strong>现在由你自己判分。</strong>对照参考答案，逐条勾选"这条我确实答到了"。
+      机器不会替你判断对错——它只会数关键词，数得准不准，你比我清楚。
+    </div>
 
-    <h4 style="font-size:13.5px;margin:10px 0 6px;color:#b45309;">维度二：找错点（思维方向与审题诊断）</h4>
-    <ul style="padding-left:18px;font-size:12.5px;margin-bottom:10px;">${dirHtml}</ul>
+    ${rubricHtml}
 
-    <h4 style="font-size:13.5px;margin:10px 0 6px;color:var(--accent-indigo);">维度三：术语升级（把大白话替换为高考母词）</h4>
-    <ul style="padding-left:18px;font-size:12.5px;margin-bottom:14px;">${upgHtml}</ul>
+    <div class="self-eval-bar">
+      <div>
+        <div style="font-size:12px;color:var(--text-secondary);">我这条答到了吗？勾完自动算分</div>
+        <div><span class="self-eval-score" id="self-eval-score">0</span>
+          <span style="font-size:13px;color:var(--text-secondary);"> / ${res.max_score || q.max_score} 分</span></div>
+      </div>
+      <button class="btn btn-primary" onclick="prefillProgressCardFromBlitz()">
+        📒 带着这个分数，存入进步本
+      </button>
+    </div>
 
-    <button class="btn btn-primary" style="width:100%;" onclick="prefillProgressCardFromBlitz()">
-      📒 一键将本题转入【九栏活页进步本】（强制填写错因反思与下次警戒指令）
-    </button>
+    <details style="margin-top:14px;">
+      <summary style="cursor:pointer;font-size:12.5px;color:var(--text-secondary);">
+        机器初判与提示（仅作参考，不计入你的得分）点开查看
+      </summary>
+      <div style="margin-top:10px;">
+        <h4 style="font-size:13px;margin-bottom:6px;color:#b45309;">形式自查</h4>
+        <ul style="padding-left:18px;font-size:12.5px;margin-bottom:10px;">${dirHtml}</ul>
+        ${
+          upgHtml
+            ? `<h4 style="font-size:13px;margin:8px 0 6px;color:var(--accent-indigo);">可换的术语</h4>
+               <ul style="padding-left:18px;font-size:12.5px;">${upgHtml}</ul>`
+            : ""
+        }
+      </div>
+    </details>
   `;
+}
+
+// 自评勾选：实时算分
+function onRubricToggle() {
+  const boxes = Array.from(document.querySelectorAll(".rubric-cb"));
+  let earned = 0;
+  boxes.forEach((cb, i) => {
+    const item = document.getElementById(`rubric-item-${i}`);
+    const on = cb.checked;
+    if (item) item.classList.toggle("checked", on);
+    if (on) earned += Number(cb.dataset.score || 0);
+  });
+  earned = Math.round(earned * 10) / 10;
+
+  const rubric = STATE.lastRubric || [];
+  const total = rubric.reduce((sum, r) => sum + Number(r.score || 0), 0);
+  const missing = rubric.filter((r, i) => !(boxes[i] && boxes[i].checked)).map((r) => r.point);
+
+  STATE.selfEval = { earned, total, missing };
+
+  const scoreEl = document.getElementById("self-eval-score");
+  if (scoreEl) scoreEl.textContent = earned;
+  const badge = document.getElementById("blitz-earned-badge");
+  if (badge) {
+    badge.textContent = `自评：${earned} / ${total} 分`;
+    badge.className = `badge ${total > 0 && earned / total >= 0.75 ? "badge-jade" : "badge-red"}`;
+  }
 }
 
 function prefillProgressCardFromBlitz() {
@@ -556,8 +792,21 @@ function prefillProgressCardFromBlitz() {
   document.getElementById("nc-wrong").value = student_answer;
   document.getElementById("nc-right").value = result.standard_answer;
   document.getElementById("nc-reflection").value = "";
-  document.getElementById("nc-summary").value = "";
   document.getElementById("nc-warning").value = "只要看到题干设问……，先圈……，必答表层+深层……";
+
+  // 自评未答到的条款写入题干摘要下方，提醒自己漏在哪
+  const hint = document.getElementById("new-card-hint");
+  if (hint) {
+    const self = STATE.selfEval;
+    if (self && self.missing && self.missing.length) {
+      hint.style.display = "block";
+      hint.innerHTML = `<strong>自评 ${self.earned} / ${self.total} 分。</strong>没答到的：${self.missing
+        .map((m) => "「" + String(m).slice(0, 26) + "」")
+        .join("　")}<br/>把这些写进下面的"错因深挖"里，不要写"粗心"。`;
+    } else {
+      hint.style.display = "none";
+    }
+  }
   document.getElementById("nc-reflection").focus();
 }
 
@@ -696,6 +945,7 @@ async function submitCardReview(cardId, isPassed) {
       student_recall_note: isPassed ? "遮罩口述采分点全部命中" : "部分采分词回忆不完整",
       time_spent_seconds: 40,
     });
+    todayMark("due");
     alert(res.transition.message);
     await refreshAllData();
   } catch (err) {
@@ -711,14 +961,16 @@ async function submitNewProgressCard() {
     source_label: document.getElementById("nc-source").value.trim(),
     loss_category: document.getElementById("nc-loss-cat").value,
     max_score: Number(document.getElementById("nc-max-score").value || 3),
-    actual_score: 0,
+    actual_score: STATE.selfEval ? Number(STATE.selfEval.earned || 0) : 0,
     key_stem_snippet: document.getElementById("nc-stem").value.trim(),
     student_wrong_answer: document.getElementById("nc-wrong").value.trim(),
     standard_right_answer: document.getElementById("nc-right").value.trim(),
     error_reason_reflection: document.getElementById("nc-reflection").value.trim(),
-    knowledge_point_summary: document.getElementById("nc-summary").value.trim(),
+    knowledge_point_summary: (STATE.selfEval && STATE.selfEval.missing && STATE.selfEval.missing.length)
+      ? "本题未答到的采分点：" + STATE.selfEval.missing.slice(0, 3).join("；")
+      : "",
     next_time_warning: document.getElementById("nc-warning").value.trim(),
-    sync_to_excel: document.getElementById("nc-sync-excel").checked,
+    sync_to_excel: false,
   };
 
   const errBox = document.getElementById("gate-error-alert");
@@ -912,26 +1164,25 @@ function renderPoetryWorkspace() {
 
   document.getElementById("poetry-stem-display").textContent = `【主观设问】${q.question_stem}（满分 ${q.max_score} 分）`;
 
-  const keysObj = q.poetry_10keys || {
-    "钥匙① 看标题": "交代时间、地点、友人、核心事件与体裁情感基调",
-    "钥匙② 看作者": "知人论世，结合诗人遭贬、抗金或隐逸生平",
-    "钥匙③ 看注释": "注释无闲笔！凡注贬谪地或历史典故，必对应深层孤愤或怀古伤今",
-    "钥匙④ 圈意象": "冷色调意象（孤月、寒江、落木）奠定凄清苍凉氛围",
-    "钥匙⑤ 审题干": "拆解问法：是问炼字、画面意境、手法还是复杂情感？",
-    "钥匙⑥ 定题材": "送别怀人 / 边塞征戍 / 咏史怀古 / 即事抒怀",
-    "钥匙⑦ 辨手法": "借景抒情、用典、虚实结合、以乐景衬哀情",
-    "钥匙⑧ 挖深情": "绝不止于表面景物，必挖深层家国情怀与人生际遇之叹",
-  };
+  // v2：十把钥匙收敛为四把——记不住的清单等于没有清单
+  const k = q.poetry_10keys || {};
+  const keys = [
+    ["① 看题与尾联", [k.key1_title, k.key3_tail], "题目定题材，尾联多是翻底牌的地方，先看它。"],
+    ["② 知人看注", [k.key2_author_bg, k.key6_style], "注释没有闲笔：贬谪地、典故、生卒，都要用上。"],
+    ["③ 圈意象辨冷暖", [k.key4_emotion_words, k.key5_cold_warm], "冷色（孤月、寒江、落木）定凄清，暖色定欢愉或反衬。"],
+    ["④ 定手法再落笔", [k.key7_relation, k.key8_route, k.key9_detail, k.key10_mood], "先问清问的是什么：炼字、意境、手法还是情感，别答偏。"],
+  ];
 
-  document.getElementById("poetry-10keys-container").innerHTML = Object.entries(keysObj)
-    .map(
-      ([k, v]) => `
+  document.getElementById("poetry-10keys-container").innerHTML = keys
+    .map(([title, details, fallback]) => {
+      const body = details.filter(Boolean).join(" ");
+      return `
       <div class="key-box">
-        <strong>🔑 ${k}</strong>
-        <span>${v}</span>
+        <strong>🔑 ${title}</strong>
+        <span>${body || fallback}</span>
       </div>
-    `
-    )
+    `;
+    })
     .join("");
 }
 
@@ -989,7 +1240,10 @@ function renderModernReadingSection() {
     )
     .join("");
 
-  document.getElementById("modern-lit-11elements-list").innerHTML = (ref.literary_11_high_elements || [])
+  const CORE_5 = ["叙述视角与人称转换", "物象/核心道具意蕴", "环境描写的四重张力", "留白艺术与冰山理论", "语言风格与语体杂糅"];
+  const coreElements = (ref.literary_11_high_elements || []).filter((el) => CORE_5.includes(el.element));
+
+  document.getElementById("modern-lit-11elements-list").innerHTML = coreElements
     .map(
       (el) => `
       <div style="padding:10px 12px;border:1px solid var(--border-color);border-radius:6px;margin-bottom:8px;background:#faf8f3;">
@@ -1287,61 +1541,6 @@ function renderPrintSheet() {
       ${clipRows}
     `;
   }
-}
-
-// ---------------------------------------------------------------------------
-// 模态弹窗 1: 🌙 睡前 5 分钟“闭目过电影”
-// ---------------------------------------------------------------------------
-
-function openNightReplayModal() {
-  const modal = document.getElementById("night-replay-modal");
-  modal.classList.add("open");
-
-  const traps = (STATE.trapRules || []).slice(0, 3);
-  const words = (STATE.classicalData?.words || []).slice(0, 3);
-  const mat = (STATE.essayWorkspace?.materials || [])[0];
-
-  document.getElementById("night-replay-body").innerHTML = `
-    <div style="margin-bottom:14px;">
-      <h4 style="color:#ff7a6b;margin-bottom:6px;">第一幕（90秒）：闭上眼，回想这 3 条考场保命警戒令</h4>
-      ${traps.map((t, i) => `<div style="padding:8px 12px;background:rgba(255,255,255,0.06);border-radius:6px;margin-bottom:6px;font-size:13.5px;">${i + 1}. <strong>[${t.module_name}]</strong> ${t.warning_instruction}</div>`).join("")}
-    </div>
-
-    <div style="margin-bottom:14px;">
-      <h4 style="color:#5cd6a5;margin-bottom:6px;">第二幕（90秒）：在脑海中默背这 3 个高频文言实词的全部义项</h4>
-      <div class="grid-3">
-        ${words
-          .map(
-            (w) => `
-          <div style="padding:10px;background:rgba(255,255,255,0.06);border-radius:6px;">
-            <div style="font-size:18px;font-weight:800;color:#ffd166;">${w.word}（${w.word_type}）</div>
-            <div style="font-size:12px;color:#cbd5e1;margin-top:4px;">${(w.meanings || []).map((m) => m.gloss).join(" / ")}</div>
-          </div>
-        `
-          )
-          .join("")}
-      </div>
-    </div>
-
-    ${
-      mat
-        ? `
-      <div>
-        <h4 style="color:#93c5fd;margin-bottom:6px;">第三幕（120秒）：在心中默诵这张作文王牌人物卡</h4>
-        <div style="padding:12px;background:rgba(255,255,255,0.06);border-radius:6px;font-size:13px;">
-          <div><strong>【人物】${mat.person_or_concept}</strong></div>
-          <div style="margin-top:4px;">🎬 镜头：${mat.core_scene}</div>
-          <div style="margin-top:4px;color:#ffd166;">💬 金句：${mat.classic_quote}</div>
-        </div>
-      </div>
-    `
-        : ""
-    }
-  `;
-}
-
-function closeNightReplayModal() {
-  document.getElementById("night-replay-modal").classList.remove("open");
 }
 
 // ---------------------------------------------------------------------------

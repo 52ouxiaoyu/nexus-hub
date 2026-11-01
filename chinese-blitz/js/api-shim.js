@@ -135,6 +135,54 @@
 
   const T = (name) => DB.tables[name] || (DB.tables[name] = []);
 
+  // ---------------------------------------------------------------------------
+  // 精编题库（data/bank.js）合并入 questions 表
+  // 幂等：按 id 去重；旧存档升级到新版时也会自动补齐，不需要清缓存
+  // ---------------------------------------------------------------------------
+  function bankToQuestion(b) {
+    return {
+      id: b.id,
+      source_name: b.source || "精编题库",
+      year: null,
+      module_code: b.module_code,
+      module_name: b.module_name,
+      sub_type: b.sub_type || "",
+      passage_title: b.passage_title || "",
+      passage_author: b.passage_author || "",
+      passage_content: b.passage_content || "",
+      passage_notes: b.passage_notes || "",
+      question_no: b.question_no || "",
+      question_stem: b.question_stem,
+      options_json: b.options && b.options.length ? JSON.stringify(b.options) : null,
+      max_score: b.max_score,
+      standard_answer: b.standard_answer,
+      scoring_points_json: JSON.stringify(b.rubric || []),
+      poetry_10keys_json: null,
+      trap_types_json: JSON.stringify(b.trap_types || []),
+      recommended_minutes: b.recommended_minutes || 5,
+      source_file_path: null,
+      is_bank: 1,
+    };
+  }
+
+  function mergeBank() {
+    const bank = window.__CB_BANK__ || [];
+    if (!bank.length) return;
+    const existing = new Set(T("questions").map((q) => q.id));
+    let added = 0;
+    let maxId = num(DB.seq.questions);
+    for (const b of bank) {
+      if (existing.has(b.id)) continue;
+      T("questions").push(bankToQuestion(b));
+      maxId = Math.max(maxId, b.id);
+      added += 1;
+    }
+    if (added) {
+      DB.seq.questions = maxId;
+      saveState();
+    }
+  }
+
   function nextId(name) {
     DB.seq[name] = (DB.seq[name] || 0) + 1;
     return DB.seq[name];
@@ -789,6 +837,10 @@
       question_no: q.question_no,
       source_name: q.source_name,
       standard_answer: q.standard_answer,
+      // 评分细则：前端据此让学生逐条自评（机器初判只作参考，不作评分依据）
+      rubric: safeJson(q.scoring_points_json, []) || [],
+      max_score: num(q.max_score),
+      self_eval_mode: !(safeJson(q.scoring_points_json, []) || []).some((sp) => sp.keywords && sp.keywords.length),
       time_spent_seconds: num(p.time_spent_seconds, 180),
       analysis: diff,
     };
@@ -1162,6 +1214,15 @@
   // ---------------------------------------------------------------------------
 
   loadState();
+  mergeBank();
+
+  // 对外：题库统计（前端徽标用真实数字，不再写死）
+  window.cbBankStats = function () {
+    const rows = T("questions");
+    const byModule = {};
+    for (const q of rows) byModule[q.module_code] = (byModule[q.module_code] || 0) + 1;
+    return { total: rows.length, byModule, words: T("classical_words").length };
+  };
 
   window.__CB_DB__ = DB;
   window.__CB_ENGINE__ = {
