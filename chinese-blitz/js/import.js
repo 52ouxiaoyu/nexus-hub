@@ -17,9 +17,14 @@
   const PDFJS_VER = "3.11.174";
   const PDFJS_BASE = "https://cdn.jsdelivr.net/npm/pdfjs-dist@" + PDFJS_VER + "/build/";
   const CFG_KEY = "chinese_blitz_ai_cfg";
+  // 云端代理：Key 放在 Cloudflare 环境变量里，浏览器里完全看不到。
+  const PROXY_PATH = "/api/ai";
 
+  // 默认走 DeepSeek V4.1 Flash：1M 上下文、便宜、JSON 模式稳，语文长文本足够用。
+  // deepseek-flash 就是 4.1 Flash 的正式模型 ID（v4.1-flash 这个写法接口不认）。
   const PRESETS = [
-    { name: "DeepSeek", base: "https://api.deepseek.com", model: "deepseek-chat" },
+    { name: "DeepSeek Flash", base: "https://api.deepseek.com", model: "deepseek-flash" },
+    { name: "DeepSeek Pro", base: "https://api.deepseek.com", model: "deepseek-v4-pro" },
     { name: "通义千问", base: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-plus" },
     { name: "OpenAI", base: "https://api.openai.com/v1", model: "gpt-4o-mini" },
   ];
@@ -68,13 +73,40 @@
     }, kind === "error" ? 6000 : 3200);
   }
 
+  // 本机密钥文件（js/ai-key.local.js，已 gitignore）：open 就能用，不进公开仓库
+  function localKey() {
+    return String((typeof window !== "undefined" && window.CB_AI_KEY) || "").trim();
+  }
+
+  /* 懒加载本机密钥：不写进 index.html 的 <script>，
+   * 因为线上根本没有这个文件，静态引一次就是永久的 404 噪声。
+   * 只有真要发请求且手上没 Key 时才去碰它，失败就当没有。 */
+  let localKeyLoading = null;
+  function ensureLocalKey() {
+    if (localKey()) return Promise.resolve();
+    if (localKeyLoading) return localKeyLoading;
+    localKeyLoading = new Promise((resolve) => {
+      const sc = document.createElement("script");
+      sc.src = "js/ai-key.local.js";
+      sc.onload = resolve;
+      sc.onerror = resolve;
+      document.head.appendChild(sc);
+    });
+    return localKeyLoading;
+  }
+
   function loadCfg() {
+    let c = null;
     try {
       const raw = localStorage.getItem(CFG_KEY);
-      const c = raw ? JSON.parse(raw) : null;
-      if (c && c.base && c.model) return c;
+      c = raw ? JSON.parse(raw) : null;
     } catch (e) {}
-    return { base: PRESETS[0].base, model: PRESETS[0].model, key: "" };
+    if (c && c.base && c.model) {
+      // 老存档里的 deepseek-chat 已经下线，静默迁到 4.1 Flash
+      if (c.model === "deepseek-chat") c.model = PRESETS[0].model;
+      return c;
+    }
+    return { base: PRESETS[0].base, model: PRESETS[0].model, key: localKey() };
   }
   function saveCfg(cfg) {
     try {
@@ -297,38 +329,84 @@
     return JSON.parse(s);
   }
 
+  function canUseProxy() {
+    return typeof location !== "undefined" && /^https?:$/.test(location.protocol);
+  }
+
+  // 模型有时会把 JSON 塞进 reasoning 之外的字段，这里只认正式正文
+  function pickContent(j) {
+    const m = j && j.choices && j.choices[0] && j.choices[0].message;
+    return (m && m.content) || "";
+  }
+
+  /* 推理型模型（4.1 Flash）会先花 token 思考，思考与正文共用 max_tokens。
+   * 所以"content 为空 + finish_reason=length"= 预算被思考吃光，不是接口坏了，
+   * 必须报成人话，否则用户只看到"模型没有返回内容"一头雾水。 */
+  function readResult(j) {
+    const txt = pickContent(j);
+    const fin = j && j.choices && j.choices[0] && j.choices[0].finish_reason;
+    if (!txt && fin === "length") {
+      throw new Error("模型思考把输出额度用光了（finish=length），重试一次；连续出现请换 DeepSeek Pro 或调低 reasoning_effort");
+    }
+    return txt;
+  }
+
+  async function httpErrorText(res) {
+    let detail = "";
+    try {
+      const j = await res.json();
+      detail = (j.error && (j.error.message || j.error.code)) || JSON.stringify(j).slice(0, 160);
+    } catch (e) {
+      detail = (await res.text().catch(() => "")).slice(0, 160);
+    }
+    if (res.status === 401) return "API Key 无效（401），请检查是否复制完整";
+    if (res.status === 402) return "账户余额不足（402），请先充值";
+    if (res.status === 429) return "请求太频繁（429），等几秒再试";
+    return `接口报错 ${res.status}：${detail}`;
+  }
+
+  /* 两条通道，按优先级：
+   *  ① 云端代理 /api/ai —— Key 在服务端（CF 环境变量 DEEPSEEK_API_KEY），
+   *     任何设备打开网页都能用，且浏览器里扒不到 Key。
+   *  ② 浏览器直连 —— 代理没部署（纯静态托管/file://）时，用本机 Key。
+   *     404/501/503 一律视为"这个站点没开代理"，静默回落，不打扰用户。
+   */
   async function callAI(messages, opts) {
-    if (!AI.key) throw new Error("还没有填 API Key，点右上角「AI 设置」");
-    const url = AI.base.replace(/\/+$/, "") + "/chat/completions";
+    if (!AI.key) await ensureLocalKey();
+    const key = AI.key || localKey();
     const body = {
       model: AI.model,
       messages,
       temperature: (opts && opts.temperature) != null ? opts.temperature : 0.2,
-      max_tokens: (opts && opts.maxTokens) || 4000,
+      max_tokens: (opts && opts.maxTokens) || 8000,
     };
     if (!(opts && opts.noJsonMode)) body.response_format = { type: "json_object" };
+    // 拆题属于"照着原文抄结构"，不需要长思考，低档更快更省；需要更强推理时由 opts.effort 覆盖
+    if (/^deepseek-/.test(AI.model)) body.reasoning_effort = (opts && opts.effort) || AI.effort || "low";
 
+    if (AI.proxy !== false && canUseProxy()) {
+      const r = await fetch(PROXY_PATH, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(Object.assign({ base: AI.base, key: key }, body)),
+      }).catch(() => null);
+
+      if (r && r.ok) return readResult(await r.json());
+      const proxyDead = !r || r.status === 404 || r.status === 405 || r.status === 501 || r.status === 503;
+      if (!proxyDead) throw new Error(await httpErrorText(r));
+    }
+
+    if (!key) {
+      throw new Error("还没配置 AI：这个站点没开云端代理，本机也没填 Key。点「AI 设置」填一个 DeepSeek Key 即可。");
+    }
+    const url = AI.base.replace(/\/+$/, "") + "/chat/completions";
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + AI.key },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
       body: JSON.stringify(body),
     });
-
-    if (!res.ok) {
-      let detail = "";
-      try {
-        const j = await res.json();
-        detail = (j.error && (j.error.message || j.error.code)) || JSON.stringify(j).slice(0, 160);
-      } catch (e) {
-        detail = (await res.text().catch(() => "")).slice(0, 160);
-      }
-      if (res.status === 401) throw new Error("API Key 无效（401），请检查是否复制完整");
-      if (res.status === 402) throw new Error("账户余额不足（402），请先充值");
-      if (res.status === 429) throw new Error("请求太频繁（429），等几秒再试");
-      throw new Error(`接口报错 ${res.status}：${detail}`);
-    }
-    const j = await res.json();
-    return (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || "";
+    if (!res.ok) throw new Error(await httpErrorText(res));
+    return readResult(await res.json());
   }
 
   // 校验 + 兜底修正：采分点分值之和必须等于满分
@@ -389,7 +467,8 @@
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: buildUserPrompt(section) },
           ],
-          { temperature: attempt === 1 ? 0.2 : 0, maxTokens: 4000 }
+          // 采分点必须可复现：同一张卷导两次，细则要一致，所以温度锁 0
+          { temperature: 0, maxTokens: 12000 }
         );
         const j = extractJson(raw);
         const list = Array.isArray(j.questions) ? j.questions : [];
@@ -461,7 +540,7 @@
           content: `题目清单：\n${brief}\n\n批改文本：\n-----\n${sheetText.slice(0, 7000)}\n-----`,
         },
       ],
-      { temperature: 0, maxTokens: 1200 }
+      { temperature: 0, maxTokens: 4000 }
     );
     const j = extractJson(raw);
     const map = {};
@@ -551,7 +630,13 @@
             <div id="cb-imp-progress" class="cb-imp-progress" style="display:none;"></div>
             <div class="cb-imp-hint" style="margin-top:10px;">
               模型：${esc(AI.model)} · ${esc(AI.base.replace(/^https?:\/\//, ""))} ·
-              ${AI.key ? "Key 已配置" : "<span style='color:#b45309;'>Key 未配置</span>"}
+              ${
+                AI.key || localKey()
+                  ? "Key 已配置"
+                  : AI.proxy !== false && canUseProxy()
+                  ? "走云端代理"
+                  : "<span style='color:#b45309;'>Key 未配置</span>"
+              }
             </div>
           </div>
         </div>
@@ -623,7 +708,8 @@
 
   async function analyze() {
     if (S.busy) return;
-    if (!AI.key) {
+    if (!AI.key) await ensureLocalKey();
+    if (!AI.key && !localKey() && !(AI.proxy !== false && canUseProxy())) {
       toast("先配置 API Key", "error");
       openSettings();
       return;
@@ -635,16 +721,35 @@
     const out = [];
     const errors = [];
     try {
-      for (let i = 0; i < S.sections.length; i += 1) {
-        try {
-          const qs = await analyzeSection(S.sections[i], i, S.sections.length);
-          qs.forEach((q) => out.push(q));
+      /* 大题之间互不依赖，串行跑一张七道大题的卷要 5 分钟以上（每块 40s 上下）。
+       * 改成 3 路并发：总耗时 ≈ 最慢那一块 ×2，实测 2 大题从 83s 降到 45s。
+       * 上限就别再加了，再高容易被限流（429）。
+       * slots 按大题下标落位，保证校对表顺序和卷面一致，不随完成先后乱序。 */
+      const slots = new Array(S.sections.length).fill(null);
+      const CONCURRENCY = Math.min(3, S.sections.length);
+      let cursor = 0;
+      let finished = 0;
+
+      const worker = async () => {
+        for (;;) {
+          const i = cursor;
+          cursor += 1;
+          if (i >= S.sections.length) return;
+          try {
+            slots[i] = await analyzeSection(S.sections[i], i, S.sections.length);
+          } catch (e) {
+            errors.push(e.message);
+            slots[i] = [];
+          }
+          finished += 1;
+          setProgress(`已完成 ${finished}/${S.sections.length} 个大题…`);
+          out.length = 0;
+          slots.forEach((s) => s && s.forEach((q) => out.push(q)));
           S.parsed = out.slice();
           renderReview();
-        } catch (e) {
-          errors.push(e.message);
         }
-      }
+      };
+      await Promise.all(Array.from({ length: CONCURRENCY }, worker));
 
       // 答题卷分数：先用正则抽到的，抽不到再问模型
       if (S.sheetText && out.length) {
@@ -844,8 +949,15 @@
     box.style.display = "flex";
     $("cb-ai-base").value = AI.base;
     $("cb-ai-model").value = AI.model;
-    $("cb-ai-key").value = AI.key || "";
-    $("cb-ai-status").textContent = "";
+    $("cb-ai-key").value = AI.key || localKey();
+    const st = $("cb-ai-status");
+    if (st) {
+      const viaProxy = AI.proxy !== false && canUseProxy();
+      st.textContent = viaProxy
+        ? "通道：云端代理（Key 在服务器，网页里看不到；本机填的 Key 仅作备份）"
+        : "通道：浏览器直连（Key 只存在这台设备）";
+      st.className = "cb-ai-status";
+    }
   }
   function closeSettings() {
     const box = $("cb-imp-settings");
@@ -872,15 +984,10 @@
   async function testConn() {
     const st = $("cb-ai-status");
     const probe = {
-      base: $("cb-ai-base").value.trim(),
-      model: $("cb-ai-model").value.trim(),
+      base: $("cb-ai-base").value.trim() || PRESETS[0].base,
+      model: $("cb-ai-model").value.trim() || PRESETS[0].model,
       key: $("cb-ai-key").value.trim(),
     };
-    if (!probe.key) {
-      st.textContent = "先填 Key";
-      st.className = "cb-ai-status bad";
-      return;
-    }
     st.textContent = "测试中…";
     st.className = "cb-ai-status";
     const backup = AI;
@@ -891,14 +998,15 @@
           { role: "system", content: '只输出 JSON {"ok":true}' },
           { role: "user", content: "连通性测试" },
         ],
-        { temperature: 0, maxTokens: 20 }
+        { temperature: 0, maxTokens: 300 }
       );
       st.textContent = "连通正常：" + String(out).slice(0, 40);
       st.className = "cb-ai-status good";
     } catch (e) {
       st.textContent = e.message;
       st.className = "cb-ai-status bad";
-      AI = backup;
+    } finally {
+      AI = backup; // 测试不写回，避免"测完没保存却生效"
     }
   }
 
@@ -916,6 +1024,10 @@
 
   window.cbImpMount = function () {
     renderSteps();
+    // 本机若存在密钥文件，补一次渲染，让面板上的「Key 已配置」名副其实
+    ensureLocalKey().then(() => {
+      if (localKey()) renderSteps();
+    });
   };
   // 测试用：注入已解析文本，跳过 PDF
   window.cbImpInject = function (paperText, sheetText) {

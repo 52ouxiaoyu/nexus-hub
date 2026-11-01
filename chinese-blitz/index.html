@@ -277,7 +277,7 @@
         <h1>高考语文“死磕通关”数字化作战系统</h1>
         <p id="header-student-info">备考者 · 某省重点中学 2026级高一 · 82 分 ➔ 目标 130+</p>
       </div>
-      <span class="cb-ver">v2.2.0</span>
+      <span class="cb-ver">v2.3.0</span>
     </div>
 
     <div class="header-pills">
@@ -1108,19 +1108,20 @@
       <div class="cb-imp-modal-body">
         <label class="form-label">服务商（点一下自动填地址和模型）</label>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
-          <button class="btn btn-sm btn-outline" onclick="cbImpApplyPreset('DeepSeek')">DeepSeek</button>
+          <button class="btn btn-sm btn-outline" onclick="cbImpApplyPreset('DeepSeek Flash')">DeepSeek 4.1 Flash</button>
+          <button class="btn btn-sm btn-outline" onclick="cbImpApplyPreset('DeepSeek Pro')">DeepSeek Pro</button>
           <button class="btn btn-sm btn-outline" onclick="cbImpApplyPreset('通义千问')">通义千问</button>
           <button class="btn btn-sm btn-outline" onclick="cbImpApplyPreset('OpenAI')">OpenAI</button>
         </div>
         <label class="form-label">接口地址 Base URL</label>
         <input type="text" id="cb-ai-base" placeholder="https://api.deepseek.com" />
         <label class="form-label">模型名</label>
-        <input type="text" id="cb-ai-model" placeholder="deepseek-chat" />
+        <input type="text" id="cb-ai-model" placeholder="deepseek-flash" />
         <label class="form-label">API Key</label>
         <input type="password" id="cb-ai-key" placeholder="sk-..." autocomplete="off" />
         <p class="cb-imp-hint" style="line-height:1.8;margin:8px 0 0;">
-          Key 只存在这台设备的浏览器本地，不会上传到任何服务器。<br/>
-          DeepSeek 在官网「API keys」页创建，充 10 元大约能分析 20~30 套卷。
+          默认 <strong>deepseek-flash（DeepSeek V4.1 Flash）</strong>，1M 上下文，拆一张语文卷约几分钱。<br/>
+          站点已部署云端代理时不用填 Key；纯本地打开则读本机密钥文件。Key 只存在这台设备，不会上传。
         </p>
         <div id="cb-ai-status" class="cb-ai-status"></div>
       </div>
