@@ -110,6 +110,7 @@ const TAB_GROUP = {
   "tab-dashboard": "train",
   "tab-blitz": "train",
   "tab-progress": "train",
+  "tab-import": "train",
   "tab-classical": "lib",
   "tab-poetry": "lib",
   "tab-modern": "lib",
@@ -138,6 +139,7 @@ function switchTab(tabId) {
   });
 
   if (tabId === "tab-today") renderToday();
+  if (tabId === "tab-import" && typeof window.cbImpMount === "function") window.cbImpMount();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 

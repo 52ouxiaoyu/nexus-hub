@@ -1312,6 +1312,59 @@
     return { total: rows.length, byModule, words: T("classical_words").length };
   };
 
+  // 对外：导入试卷写入题库
+  // 只做「写」，不做「判断该不该写」——质量把关在校对表那一关，由人负责。
+  window.cbImportQuestions = function (items) {
+    const rows = T("questions");
+    let maxId = num(DB.seq.questions);
+    const seen = new Set(rows.map((q) => String(q.question_stem || "").trim().slice(0, 60)));
+    let added = 0;
+    let skipped = 0;
+
+    (items || []).forEach((it) => {
+      const stem = String(it.question_stem || "").trim();
+      if (!stem) return;
+      const key = stem.slice(0, 60);
+      if (seen.has(key)) {
+        skipped += 1;
+        return;
+      }
+      maxId += 1;
+      rows.push({
+        id: maxId,
+        source_name: it.source_name || "导入试卷",
+        year: null,
+        module_code: it.module_code || "INFO_READ",
+        module_name: it.module_name || "",
+        sub_type: it.question_type || "",
+        passage_title: "",
+        passage_author: "",
+        passage_content: "",
+        passage_notes: "",
+        question_no: String(it.question_no || ""),
+        question_stem: stem,
+        options_json: null,
+        max_score: Number(it.max_score) || 1,
+        standard_answer: String(it.standard_answer || ""),
+        scoring_points_json: JSON.stringify(it.rubric || []),
+        poetry_10keys_json: null,
+        trap_types_json: JSON.stringify(it.trap ? [it.trap] : []),
+        recommended_minutes: 5,
+        source_file_path: null,
+        is_bank: 1,
+        is_imported: 1,
+      });
+      seen.add(key);
+      added += 1;
+    });
+
+    if (added) {
+      DB.seq.questions = maxId;
+      saveState();
+    }
+    return { added, skipped };
+  };
+
   window.__CB_DB__ = DB;
   window.__CB_ENGINE__ = {
     computeTextSimilarity,

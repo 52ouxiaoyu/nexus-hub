@@ -128,6 +128,103 @@
       font-size: 12px;
     }
 
+    /* v3：导入试卷 */
+    .cb-imp-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+      gap: 14px;
+    }
+    @media (max-width: 1100px) { .cb-imp-grid { grid-template-columns: 1fr; } }
+    .cb-imp-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+    .cb-imp-card { margin: 0; }
+    .cb-imp-drop {
+      border: 2px dashed #d9cbb0;
+      border-radius: 10px;
+      background: #fbf8f1;
+      padding: 22px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .cb-imp-drop:hover, .cb-imp-drop.over { border-color: var(--accent-indigo); background: #f3f5fb; }
+    .cb-imp-drop-inner { display: flex; flex-direction: column; gap: 6px; align-items: center; font-size: 13px; }
+    .cb-imp-hint { font-size: 11.5px; color: var(--text-muted); line-height: 1.7; }
+    .cb-imp-preview {
+      margin-top: 10px; padding: 9px 11px; max-height: 96px; overflow: auto;
+      background: #faf8f3; border: 1px solid var(--border-color); border-radius: 6px;
+      font-size: 11.5px; line-height: 1.8; color: #6b6257; white-space: pre-wrap;
+    }
+    .cb-imp-meta { margin-top: 8px; font-size: 11.5px; color: var(--text-secondary); line-height: 1.8; }
+    .cb-imp-progress {
+      margin-top: 12px; padding: 9px 12px; border-radius: 7px;
+      background: #f0f4fc; border-left: 4px solid var(--accent-indigo);
+      font-size: 12.5px; line-height: 1.7; color: #3d4a7a;
+    }
+    .cb-imp-progress.warn { background: #fdf6e8; border-left-color: #d99a2b; color: #8a5a00; }
+    .cb-imp-errors { font-size: 12px; color: #a2372c; line-height: 1.9; margin-bottom: 10px; }
+    .cb-imp-table-wrap { overflow-x: auto; }
+    .cb-imp-table { table-layout: fixed; }
+    .cb-imp-table td { vertical-align: top; font-size: 12.5px; word-break: break-word; }
+    .cb-imp-table summary { cursor: pointer; line-height: 1.7; color: #4a4438; }
+    .cb-imp-in {
+      width: 100%; padding: 4px 6px; font-size: 12px;
+      border: 1px solid var(--border-color); border-radius: 5px;
+      font-family: inherit; background: #fff;
+    }
+    textarea.cb-imp-in { margin: 4px 0 8px; line-height: 1.7; }
+    .cb-imp-detail { padding: 10px 0 4px; }
+    .cb-imp-detail label { display: block; font-size: 11px; font-weight: 700; color: #8a7a5e; margin-top: 4px; }
+    .cb-imp-rubric-row {
+      display: flex; gap: 8px; justify-content: space-between;
+      padding: 5px 8px; margin-bottom: 4px; background: #faf8f3; border-radius: 5px;
+    }
+    .cb-imp-pt { flex: 1; line-height: 1.7; }
+    .cb-imp-sc { flex: 0 0 auto; font-weight: 700; color: var(--accent-indigo); }
+    .cb-imp-trap { font-size: 11.5px; color: #a2372c; line-height: 1.7; }
+    .cb-imp-warn { font-size: 11px; color: #b45309; background: #fdf6e8; padding: 3px 7px; border-radius: 4px; margin-bottom: 5px; }
+    .cb-imp-del {
+      border: 1px solid #e3c4bf; background: #fff; color: #a2372c;
+      border-radius: 5px; cursor: pointer; padding: 2px 7px; font-size: 12px;
+    }
+    .cb-imp-del:hover { background: #fdf2f0; }
+    .cb-imp-actions {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; flex-wrap: wrap; margin-top: 16px;
+    }
+    .cb-imp-toast {
+      position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px);
+      padding: 10px 20px; border-radius: 24px; font-size: 13px; font-weight: 600;
+      background: #2f3a4a; color: #fff; opacity: 0; pointer-events: none;
+      transition: all .22s; z-index: 6000; max-width: 80vw;
+    }
+    .cb-imp-toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .cb-imp-toast.ok { background: #2d6a4f; }
+    .cb-imp-toast.warn { background: #9a6412; }
+    .cb-imp-toast.error { background: #9b2c1f; }
+
+    .cb-imp-modal {
+      position: fixed; inset: 0; z-index: 7000; display: flex;
+      align-items: center; justify-content: center;
+      background: rgba(20, 24, 30, .55); padding: 20px;
+    }
+    .cb-imp-modal-box {
+      width: min(460px, 100%); background: #fff; border-radius: 12px;
+      box-shadow: 0 18px 48px rgba(0,0,0,.28); overflow: hidden;
+    }
+    .cb-imp-modal-head {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 13px 18px; background: #243447; color: #fff; font-size: 14px;
+    }
+    .cb-imp-x { background: none; border: none; color: #cfd8e3; font-size: 15px; cursor: pointer; }
+    .cb-imp-modal-body { padding: 16px 18px 6px; }
+    .cb-imp-modal-foot {
+      display: flex; justify-content: flex-end; gap: 10px;
+      padding: 12px 18px 16px;
+    }
+    .cb-ai-status { margin: 10px 0 6px; font-size: 12px; min-height: 18px; line-height: 1.7; }
+    .cb-ai-status.good { color: #2d6a4f; }
+    .cb-ai-status.bad { color: #a2372c; }
+
     /* v2：评分细则自评 */
     .rubric-item {
       display: flex;
@@ -180,7 +277,7 @@
         <h1>高考语文“死磕通关”数字化作战系统</h1>
         <p id="header-student-info">备考者 · 某省重点中学 2026级高一 · 82 分 ➔ 目标 130+</p>
       </div>
-      <span class="cb-ver">v2.1.0</span>
+      <span class="cb-ver">v2.2.0</span>
     </div>
 
     <div class="header-pills">
@@ -247,6 +344,7 @@
         <button class="subnav-btn" data-sub="tab-dashboard" onclick="switchTab('tab-dashboard', this)">📊 诊断</button>
         <button class="subnav-btn" data-sub="tab-blitz" onclick="switchTab('tab-blitz', this)">🎯 做题</button>
         <button class="subnav-btn" data-sub="tab-progress" onclick="switchTab('tab-progress', this)">📒 进步本</button>
+        <button class="subnav-btn" data-sub="tab-import" onclick="switchTab('tab-import', this)">📥 导入试卷</button>
       </div>
       <div class="subnav no-print" id="subnav-lib" style="display:none;">
         <span class="subnav-label">资料库</span>
@@ -544,6 +642,21 @@
             </div>
           </div>
         </div>
+      </section>
+
+      <!-- =================================================================
+           工作台: 📥 导入试卷（PDF -> AI 拆题 -> 校对 -> 入库）
+           ================================================================= -->
+      <section id="tab-import" class="workspace-pane">
+        <div class="section-header">
+          <div>
+            <h2>📥 导入试卷</h2>
+            <p>丢一份试题卷 PDF 进来，AI 逐题拆出题干、参考答案和采分点。结果先过你的眼，确认后才进题库。</p>
+          </div>
+          <button class="btn btn-sm btn-outline" onclick="cbImpOpenSettings()">⚙️ AI 设置</button>
+        </div>
+        <div id="cb-imp-app"></div>
+        <div class="cb-imp-toast" id="cb-imp-toast"></div>
       </section>
 
       <!-- =================================================================
@@ -985,10 +1098,44 @@
     </div>
   </div>
 
+  <!-- AI 设置弹窗 -->
+  <div id="cb-imp-settings" class="cb-imp-modal" style="display:none;">
+    <div class="cb-imp-modal-box">
+      <div class="cb-imp-modal-head">
+        <strong>⚙️ AI 设置</strong>
+        <button class="cb-imp-x" onclick="cbImpCloseSettings()">✕</button>
+      </div>
+      <div class="cb-imp-modal-body">
+        <label class="form-label">服务商（点一下自动填地址和模型）</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+          <button class="btn btn-sm btn-outline" onclick="cbImpApplyPreset('DeepSeek')">DeepSeek</button>
+          <button class="btn btn-sm btn-outline" onclick="cbImpApplyPreset('通义千问')">通义千问</button>
+          <button class="btn btn-sm btn-outline" onclick="cbImpApplyPreset('OpenAI')">OpenAI</button>
+        </div>
+        <label class="form-label">接口地址 Base URL</label>
+        <input type="text" id="cb-ai-base" placeholder="https://api.deepseek.com" />
+        <label class="form-label">模型名</label>
+        <input type="text" id="cb-ai-model" placeholder="deepseek-chat" />
+        <label class="form-label">API Key</label>
+        <input type="password" id="cb-ai-key" placeholder="sk-..." autocomplete="off" />
+        <p class="cb-imp-hint" style="line-height:1.8;margin:8px 0 0;">
+          Key 只存在这台设备的浏览器本地，不会上传到任何服务器。<br/>
+          DeepSeek 在官网「API keys」页创建，充 10 元大约能分析 20~30 套卷。
+        </p>
+        <div id="cb-ai-status" class="cb-ai-status"></div>
+      </div>
+      <div class="cb-imp-modal-foot">
+        <button class="btn btn-outline" onclick="cbImpTestConn()">测试连通</button>
+        <button class="btn btn-primary" onclick="cbImpSaveSettings()">保存</button>
+      </div>
+    </div>
+  </div>
+
   <script src="data/seed.js"></script>
   <script src="data/bank.js"></script>
   <script src="js/api-shim.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/import.js"></script>
   <script>
     function cbConfirmReset() {
       if (confirm('确定要清空本机所有学习进度，恢复到初始语料快照吗？此操作不可撤销。')) {
