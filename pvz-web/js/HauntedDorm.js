@@ -635,7 +635,7 @@ class HauntedDorm {
             const p1Ctl = document.querySelector('#hud-p1 > div');
             if (p1Ctl) {
                 // v4.0.61：加入指挥键位说明（G 切换猎杀目标 / H 号令尸潮）
-                p1Ctl.innerHTML = '<div>【僵尸 控制】移动: W/A/S/D ｜ 靠近植物自动慢咬 ｜ 技能: M 狂暴冲刺</div>' +
+                p1Ctl.innerHTML = '<div>【僵尸 控制】移动: W/A/S/D ｜ 靠近植物自动慢咬 ｜ 碰到人机：一击必杀 ｜ 技能: M 狂暴冲刺</div>' +
                                   '<div>【指挥】G: 切换优先猎杀目标 ｜ H: 号令尸潮(击杀2人后解锁·60s) ｜ 最上排中心红圈自动回血 ｜ 啃破大门吃掉幸存者获胜</div>';
             }
             const p1Stats = document.querySelector('#hud-p1 > div:nth-child(2)');
@@ -1330,7 +1330,12 @@ class HauntedDorm {
         el1.style.top = (row * this.gridSize) + 'px';
 
         let scale = def.scale || 1.0;
-        if (isDoor) scale *= 0.85; // 门板缩小一号，门口通道视觉上更通透
+        if (isDoor) {
+            scale *= 0.85; // 门板缩小一号，门口通道视觉上更通透
+            // v4.0.143：门板一旦建成就把所属房间记为「建过门」——之后这块门被咬毁就永久失效（_claimRoom 不再补）
+            const doorRm = this.rooms.find(rm => rm && rm.doorCol === col && rm.doorRow === row);
+            if (doorRm) doorRm._doorSeen = true;
+        }
         const tint = def.tint ? `filter:${def.tint};` : '';
         const doorOpacity = isDoor ? 'opacity:0.85;' : '';
         // blend：白底融合素材（Fusions 系列）用 multiply 吃掉白底，避免草地上出现白色方块
@@ -1867,7 +1872,7 @@ class HauntedDorm {
                         }
                         if (!ai.newRoom) {
                             const cands = this.rooms.filter(r => r !== oldRm && (!r.owners || r.owners.length < (r.capacity || 1)) &&
-                                !this._roomReservedForHuman(r, ai));
+                                !this._aiRoomBad(ai, r) && !this._roomReservedForHuman(r, ai));
                             if (cands.length === 0) { ai.fleeing = false; ai.fled = false; ai.fleeFrom = null; continue; }
                             ai.newRoom = cands[Math.floor(Math.random() * cands.length)];
                             const p0 = this._pathToBed(ai.x, ai.y, ai.newRoom);
@@ -2696,6 +2701,18 @@ class HauntedDorm {
     // v4.0.105（用户实报：人机一进房间、碰一下阳光菇就直接出来了）
     // 「钉床」：入住者就地固定在自家床位的阳光菇格上，之后所有种植/升级都在原地远程完成，不再来回走动。
     // 解除条件：门危逃亡 / 抢盲盒（这两个是主动出门，由上面逻辑先把 pinned 清掉或绕过判定）/ 归还控制权。
+    // v4.0.143：破门标记同步——房间门板一旦被咬掉就永久记在 rm.doorBroken 上。
+    // 放在 _tick 顶部每帧跑一次（10 间房 × 一次数组查找，开销可忽略），
+    // 这样不管门是被僵尸 AI、僵尸玩家还是别的途径砍掉的，都不会漏标。
+    _syncRoomDoors() {
+        for (const rm of this.rooms) {
+            if (!rm) continue;
+            const has = !!this.getPlantAt(rm.doorCol * this.gridSize, rm.doorRow * this.gridSize);
+            if (has) rm._doorSeen = true;
+            else if (rm._doorSeen && !rm.doorBroken) rm.doorBroken = true;
+        }
+    }
+
     _pinToBed(p, rm) {
         if (!p || !rm || !rm.tpl || !rm.tpl.beds) return;
         // v4.0.121：内鬼不钉床——反水后它必须能离开房间去袭击幸存者
@@ -2710,6 +2727,35 @@ class HauntedDorm {
         if (p.el1) { p.el1.style.left = p.x + 'px'; p.el1.style.top = p.y + 'px'; }
         if (p.vx) p.vx = 0;
         if (p.vy) p.vy = 0;
+    }
+
+    // v4.0.143：人机选房黑名单——刚判定「进不去 / 满员 / 被玩家预留」的房间，
+    // 20 秒内不再当目标。原来的换房逻辑是「失败 → 在所有空房里随机/按顺序再挑一间」，
+    // 挑回同一间就会无限来回走（用户实报：有些人机不停在那里绕圈圈）。
+    _aiRoomKey(rm) { return rm ? (rm.x + ',' + rm.y) : ''; }
+    _aiRoomBad(ai, rm) {
+        if (!ai || !ai._badRoom || !rm) return false;
+        return (ai._badRoom[this._aiRoomKey(rm)] || 0) > this.gameTime;
+    }
+    _aiMarkBadRoom(ai, rm, ms = 20000) {
+        if (!ai || !rm) return;
+        if (!ai._badRoom) ai._badRoom = {};
+        ai._badRoom[this._aiRoomKey(rm)] = this.gameTime + ms;
+    }
+    // 离人机最近、且真的能住进去的空房（排除黑名单/玩家预留/玩家房）
+    _aiNearestClaimRoom(ai) {
+        let best = null, bestD = Infinity;
+        for (const rm of this.rooms) {
+            if (!rm || this._aiRoomBad(ai, rm)) continue;
+            if ((rm.owners || []).length >= (rm.capacity || 1)) continue;
+            if (rm === this.player.room || rm === this.player.room2) continue;
+            if (this.player2 && (rm === this.player2.room || rm === this.player2.room2)) continue;
+            if (this._roomReservedForHuman(rm, ai)) continue;
+            if ((rm.owners || []).some(o => (o === this.player || o === this.player2) && o !== ai)) continue;
+            const d = Math.hypot(rm.doorCol * this.gridSize + 40 - ai.x, rm.doorRow * this.gridSize + 40 - ai.y);
+            if (d < bestD) { bestD = d; best = rm; }
+        }
+        return best;
     }
 
     // v4.0.108：开局房屋预约——玩家出生在屋外，落点对应的空房是他要走进的那间。
@@ -2736,7 +2782,11 @@ class HauntedDorm {
         // v4.0.49：选定房间后，顶部控制框按房间左右位置显示（P1 在哪边框在哪边，上下住房自动 P1 左 P2 右）
         if (p === this.player || p === this.player2) this._positionPlayerHud(p);
         // 首个占领者自动在门口放一块坚果门板
-        if (rm.owners.length === 1 && !this.plants.some(x => x.c === rm.doorCol && x.r === rm.doorRow)) {
+        // v4.0.143：已被咬毁的门永久失效——用户实报「坚果没了之后人机还有几率把大门修回来」，
+        // 根因就在这里：门危逃亡/换房走 _claimRoom 认领旧房时，只要门口格空着就无条件补一块满血坚果。
+        // 判据用 rm._doorSeen（这间房历史上建过门没有）：建过 + 现在没有 = 被咬毁了，永不重建。
+        // 不能只靠 doorBroken（那是每帧同步出来的，同一帧内「先被咬毁、后有人认领」还会漏）；_doorSeen 在 spawnPlant 里落笔。
+        if (rm.owners.length === 1 && !rm._doorSeen && !rm.doorBroken && !this.plants.some(x => x.c === rm.doorCol && x.r === rm.doorRow)) {
             this.spawnPlant(rm.doorCol, rm.doorRow, 'wallnut', true);
             this.playSfx('plant.mp3', 0.5);
         }
@@ -5940,6 +5990,7 @@ class HauntedDorm {
     }
 
     _tick(dt, time) {
+        this._syncRoomDoors(); // v4.0.143：破门永久化（先同步再跑人机/僵尸逻辑）
         // v4.0.74：跳板抛物线飞行插值（0.9s 空中抛物线，先升后降落到出生点）
         for (const e of this.allPlayers.concat(this.ais)) {
             if (!e || !e._jumpFly) continue;
@@ -6110,6 +6161,43 @@ class HauntedDorm {
         for (const ai of aiMoveList) {
             if (ai.dead) continue;
             const isHosted = !ai.isAi && ai._afkHost; // v4.0.103：托管真人——宅家发育，禁一切主动出门行为
+
+            // v4.0.143：防「原地绕圈」兜底——每 3 秒采样一次净位移。
+            // 连续两轮（约 6 秒）明明有路点在走路、却几乎没挪窝，就判定为打转，就地安顿：
+            //   屋里有房 → 直接钉到床上发育；屋外 → 锁定最近能住的房并把当前失败的房拉黑；
+            //   彻底没房 → 停摆（站着发呆也比无限转圈强，至少玩家能看清它在哪）。
+            ai._spinRef = ai._spinRef || { x: ai.x, y: ai.y, t: 0, n: 0 };
+            ai._spinRef.t += dt;
+            if (ai._spinRef.t >= 3) {
+                const moved = Math.hypot(ai.x - ai._spinRef.x, ai.y - ai._spinRef.y);
+                const trying = !!(ai.path && ai.path.length > 0) && !ai.targetDrop && !ai._jumpFly;
+                if (trying && moved < this.gridSize * 1.2) ai._spinRef.n++;
+                else ai._spinRef.n = 0;
+                ai._spinRef.x = ai.x; ai._spinRef.y = ai.y; ai._spinRef.t = 0;
+                if (ai._spinRef.n >= 2) {
+                    ai._spinRef.n = 0;
+                    const here = this._insideRoom(Math.floor(ai.x / this.gridSize), Math.floor(ai.y / this.gridSize));
+                    const canStay = here && ((here.owners || []).includes(ai) || (here.owners || []).length < (here.capacity || 1));
+                    if (canStay) {
+                        if (!here.owners.includes(ai)) here.owners.push(ai);
+                        ai.room = here; ai.targetRoom = here;
+                        ai.speed = 200; ai.fleeing = false; ai.fled = false; ai.fleeFrom = null;
+                        this._aiMarkBadRoom(ai, here, 0);
+                        this._pinToBed(ai, here);
+                        continue;
+                    }
+                    const rm = this._aiNearestClaimRoom(ai);
+                    if (rm) {
+                        this._aiMarkBadRoom(ai, ai.targetRoom, 20000);
+                        ai.targetRoom = rm; ai.room = null; ai.speed = 200;
+                        ai.fleeing = false; ai.fled = false; ai.fleeFrom = null;
+                        const pSpin = this._pathToBed(ai.x, ai.y, rm);
+                        ai.path = (pSpin && pSpin.length > 0) ? pSpin : null;
+                    } else {
+                        ai.path = null; ai.targetRoom = null;
+                    }
+                }
+            }
             
             // 发现僵尸逻辑（v4.0.33：原只检测 zombies[0] 一只——其他僵尸贴脸也发现不了，AI 会撞进僵尸群里）
             let zombieNear = false;
@@ -6218,10 +6306,13 @@ class HauntedDorm {
                     ai.pinned = false; // v4.0.105：弃房逃亡，解除钉床
                     this._flyText(ai.x, ai.y, "门破了！快跑！", "#ff5252");
                     
+                    // v4.0.143：只挑「真的还能住进去」的房（旧过滤允许「满员但有门」的房，
+                    // 人机走到床边才发现进不去 → 再随机换一间 → 来回走 = 玩家看到的绕圈）
                     let candidateRooms = this.rooms.filter(r => {
                         if (r === oldRoom) return false;
-                        const hasDoor = this.getPlantAt(r.doorCol*80, r.doorRow*80);
-                        if (r.owners.length >= r.capacity && !hasDoor) return false; // 不去没门且被占的死胡同
+                        if (this._aiRoomBad(ai, r)) return false;
+                        if ((r.owners || []).length >= (r.capacity || 1)) return false;
+                        if (this._roomReservedForHuman(r, ai)) return false;
                         return true;
                     });
                     // v4.0.31：优先逃向门口 250px 内没有僵尸玩家的房间（不再往枪口上撞）
@@ -6309,10 +6400,13 @@ class HauntedDorm {
                     // Find a room where (current owners + AIs targeting it) < capacity
                     const emptyRooms = this.rooms.filter(r => {
                         if (isTaken(r)) return false;
+                        if (this._aiRoomBad(ai, r)) return false;              // v4.0.143
+                        if (this._roomReservedForHuman(r, ai)) return false;    // v4.0.143：别再挑玩家预留房
                         const incoming = this.ais.filter(a => a !== ai && a.targetRoom === r).length;
                         return (r.owners.length + incoming) < r.capacity;
                     });
                     if (emptyRooms.length > 0) {
+                        this._aiMarkBadRoom(ai, ai.targetRoom, 20000); // v4.0.143：刚被抢的这间先拉黑
                         ai.targetRoom = emptyRooms[Math.floor(Math.random() * emptyRooms.length)];
                         const p = this._pathToBed(ai.x, ai.y, ai.targetRoom);
                         // v4.0.49：寻路失败返回 null 时跳过（原代码 null.push 直接抛错中断整帧 AI 更新——
@@ -6367,20 +6461,19 @@ class HauntedDorm {
                             this._pinToBed(ai, ai.targetRoom);
                         } else {
                             // 如果到了床边发现玩家站在这里或满员了，触发重新寻路
-                            let foundNew = false;
-                            for (const rm of this.rooms) {
-                                if (rm.owners.length < rm.capacity && rm !== this.player.room && rm !== this.player.room2 &&
-                                    rm !== playerPhysicalRoom && rm !== p2PhysicalRoom) {
-                                    ai.targetRoom = rm;
-                                    const p = this._pathToBed(ai.x, ai.y, rm);
-                                    if (!p) continue; // v4.0.68：寻路失败跳过换房（多样化布局下门朝多向，偶发不可达会 null.push 崩溃整帧）
-                                    ai.path = p;
-                                    foundNew = true;
-                                    break;
-                                }
+                            // v4.0.143：把「刚才进不去的那间」拉黑，并优先挑最近的——旧实现按 rooms 数组顺序
+                            // 挑第一间有空位的，很容易又挑回同一间/玩家预留房，形成「走到床边 → 被拒 → 原路再走回来」的死循环
+                            this._aiMarkBadRoom(ai, ai.targetRoom, 20000);
+                            const nextRm = this._aiNearestClaimRoom(ai);
+                            if (nextRm) {
+                                ai.targetRoom = nextRm;
+                                const p = this._pathToBed(ai.x, ai.y, nextRm);
+                                if (p && p.length > 0) ai.path = p;
+                                else { ai.path = null; ai.targetRoom = null; }
+                            } else {
+                                ai.path = null; ai.targetRoom = null;
                             }
                             ai.pinned = false; // v4.0.105：这次不是住下（满员/玩家的房）→ 解除钉床，正常换房
-                            if (!foundNew) ai.path = [{x: ai.x, y: ai.y}]; 
                         }
                     }
                 }
@@ -6567,6 +6660,12 @@ class HauntedDorm {
                         if (doorPlant && zRm !== vRm) safeBehindDoor = true;
                     }
                     if (!safeBehindDoor) {
+                        // v4.0.143（用户规则）：玩僵尸时「碰到人机就直接打死」。
+                        // 旧逻辑贴脸啃 1.5s 一口、人机 500 血要啃 7 口（10.5 秒），而它掉一口就逃、逃速 300 比僵尸快
+                        // → 玩家永远追不上也打不死（用户实报）。这里把 AI 血量压到 1、并把咬合计时直接顶满，
+                        // 让本帧这一口必定致死（下面原有的击杀记账/尸潮解锁/胜负判定全部照旧生效）。
+                        // 隔门免疫（safeBehindDoor）保留：门板还活着时碰不到人，不算「碰到」。
+                        if (this.isZombieFaction && v.isAi && !v.dead) { v.hp = 1; v.biteT = 1.5; v._instaKill = true; }
                         v.biteT = (v.biteT || 0) + dt;
                         if (v.biteT >= 1.5) {
                             v.biteT = 0;
@@ -6574,7 +6673,7 @@ class HauntedDorm {
                             v.hp -= dmg;
                             v.fleeing = true; v.fleeT = 0; // v4.0.31b：被咬立即刷新逃离目标
                             if (v.hpBg) { v.hpBg.style.display = 'block'; v.hpFg.style.width = Math.max(0, v.hp / v.maxHp * 100) + '%'; }
-                            this._flyText(v.x, v.y - 26, '-' + dmg + ' 😈', '#ff5252');
+                            this._flyText(v.x, v.y - 26, v._instaKill ? '💀 一击毙命' : '-' + dmg + ' 😈', '#ff5252');
                             this.playSfx('chomp.mp3', 0.4);
                             if (v.hp <= 0 && !v.dead) {
                                 this.kills++;
@@ -6591,6 +6690,7 @@ class HauntedDorm {
                                 // v4.0.60：内鬼堕落值成长——咬杀一名幸存者
                                 if (zpTraitor) this._gainCorrupt(zp);
                                 this._checkPlayerDown(v);
+                                this._refreshHud(); // v4.0.143：击杀后立刻刷 HUD（旧版只有解锁尸潮那次才刷，计数一直是旧值）
                                 // v4.0.65：植物方全灭（人机 + 植物形态 P1/P2）才算僵尸/内鬼胜利——
                                 // 旧判定 victims.every（只含人机+P2、且 P2 无论阵营都算）会漏判/误判；统一走 _plantSideAlive
                                 if (this._plantSideAlive() === 0) {
