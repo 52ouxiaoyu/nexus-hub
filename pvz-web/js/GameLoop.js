@@ -1733,13 +1733,8 @@ class Game {
         if (cfg.specialZombie) {
             this.showAnnouncement(`🎲 本局特殊僵尸上架：${this.zombieName(cfg.specialZombie)}！`, '#c8a2ff');
         }
-        // v4.0.131 融合炉：卡带尾部追加"🔥 融合"按钮（选两只基础僵尸合成融合僵尸）
-        const fuseBtn = document.createElement('div');
-        fuseBtn.className = 'zcard fuse-btn';
-        fuseBtn.dataset.fuse = '1';
-        fuseBtn.innerHTML = '<span class="z-name">🔥 融合</span><span class="z-cost">炉</span>';
-        fuseBtn.style.borderColor = '#ff9a3c';
-        bank.appendChild(fuseBtn);
+        // v4.0.142：删掉卡带尾部的「🔥 融合 / 炉」按钮 —— 用户：融合入口只要手套就够了。
+        // 融合模式仍由阳光上方的 🧤 手套（#zfuse-glove）开关。
         this._refreshZombieBank();
     }
 
@@ -1809,9 +1804,8 @@ class Game {
         card.appendChild(img); card.appendChild(nm); card.appendChild(cs);
         card.style.borderColor = '#ff9a3c';
         card.style.boxShadow = '0 0 8px rgba(255,154,60,.6)';
-        // 插在融合按钮前
-        const fuseBtn = bank.querySelector('.fuse-btn');
-        bank.insertBefore(card, fuseBtn || null);
+        // v4.0.142：融合炉按钮已移除，新卡直接接到卡带末尾
+        bank.appendChild(card);
         this._refreshZombieBank();
     }
 
@@ -1831,11 +1825,6 @@ class Game {
         const zgl = document.getElementById('zfuse-glove');
         if (zgl) zgl.classList.toggle('zf-active', !!this._zFusePicking);
         cards.forEach(c => {
-            // v4.0.131 融合按钮：融合模式中点亮
-            if (c.dataset.fuse === '1') {
-                c.classList.toggle('fuse-active', !!this._zFusePicking);
-                return;
-            }
             const affordable = this.sunCount >= price[c.dataset.type];
             c.classList.toggle('disabled', !affordable);
             c.classList.toggle('selected', c.dataset.type === this.pendingZombie);
@@ -3141,10 +3130,15 @@ class Game {
         this._syncVaseRerollHud();
         if (this.container) this.container.style.cursor = 'default';
         // 被路灯花照亮的罐子同步刷新预览缩略图
-        if (v.contentEl && v.contentEl.parentNode) {
-            v.contentEl.parentNode.removeChild(v.contentEl);
+        // v4.0.142：原来调 _refreshVaseReveal，把缩略图 append 进 v.element —— 而罐子本体是
+        // <img class="vase-entity">，img 是替换元素，子节点永远不渲染。于是玩家看到的只是
+        // 「罐子半透明 + 里面一片空白」（用户实报）。现在撤销照亮标记后重走 lightUpNeighbors，
+        // 缩略图按同一套几何挂在 entityLayer 上（位置/z 序/合成预览全部复用）。
+        if (v.revealed) {
+            if (v.contentEl && v.contentEl.parentNode) v.contentEl.parentNode.removeChild(v.contentEl);
             v.contentEl = null;
-            this._refreshVaseReveal(v);
+            v.revealed = false;
+            this.lightUpNeighbors(v.row, v.col, true, true);
         }
         const label = v.content.kind === 'plant'
             ? '植物' : (v.content.kind === 'zombie'
@@ -3175,60 +3169,6 @@ class Game {
         // 激活态高亮（绿框 = 重掷模式开）
         btn.style.boxShadow = this.vaseRerollActive ? '0 0 0 3px #ffd54a, 0 0 12px rgba(255,213,74,0.8)' : '';
     }
-
-    // 路灯花照亮后重掷：刷新罐内缩略图（复用砸罐揭示前的预览逻辑）
-    _refreshVaseReveal(v) {
-        try {
-            if (!v || !v.element) return;
-            const stamp = this.assetStamp();
-            let inner;
-            if (v.content.kind === 'plant') {
-                // 探针 Plant 实例只读素材路径（与 lightUpNeighbors 同款），读完立即摘除
-                const probe = new Plant(this, v.content.type);
-                const bodySrc = probe.element.getAttribute('src');
-                if (probe.element.parentNode) probe.element.parentNode.removeChild(probe.element);
-                if (probe.fusionOverlay && probe.fusionOverlay.parentNode) {
-                    probe.fusionOverlay.parentNode.removeChild(probe.fusionOverlay);
-                }
-                if (bodySrc) {
-                    inner = document.createElement('img');
-                    inner.className = 'entity vase-reveal';
-                    inner.style.pointerEvents = 'none';
-                    inner.src = bodySrc.includes('?') ? bodySrc : `${bodySrc}?v=${stamp}`;
-                    inner.style.width = 'auto';
-                    inner.style.maxWidth = '58px';
-                    inner.style.maxHeight = '64px';
-                    inner.style.objectFit = 'contain';
-                    if (probe.element.style.filter) inner.style.filter = probe.element.style.filter;
-                }
-            } else if (v.content.kind === 'zombie') {
-                inner = this.zombieIconEl(v.content.type, 0.66);
-                if (inner) {
-                    inner.style.pointerEvents = 'none';
-                    inner.style.maxWidth = '58px';
-                    inner.style.maxHeight = '64px';
-                }
-            } else if (v.content.kind === 'sun') {
-                inner = document.createElement('img');
-                inner.className = 'entity vase-reveal';
-                inner.style.pointerEvents = 'none';
-                inner.src = `assets/images/Sun/Sun.png?v=${stamp}`;
-                inner.style.width = 'auto';
-                inner.style.maxWidth = '58px';
-                inner.style.maxHeight = '64px';
-                inner.style.objectFit = 'contain';
-            }
-            if (inner) {
-                inner.style.position = 'absolute';
-                inner.style.left = '50%';
-                inner.style.top = '50%';
-                inner.style.transform = 'translate(-50%,-50%)';
-                v.element.appendChild(inner);
-                v.contentEl = inner;
-            }
-        } catch (e) { /* 预览失败不影响内容 */ }
-    }
-
 
     // v3.33.0：拖拽幽灵 = 完整融合形态（主体 + 叠加层 + 配色滤镜）。
     // 旧版只拿 element.src 当背景图 —— 爆米花投手拖起来变"普通玉米投手"、
@@ -5520,7 +5460,7 @@ class Game {
 
     // 路灯花照亮周围一圈(8 邻居)的罐子: 罐子变成半透明, 罐内直接可见真正的内容
     //   (植物 → 卡图预览; 僵尸 → 僵尸立绘)。揭示内容与预掷 v.content 完全一致。
-    lightUpNeighbors(row, col) {
+    lightUpNeighbors(row, col, silent = false, selfToo = false) {
         if (!this.vases || this.vases.length === 0) return;
         const stamp = this.assetStamp();
         // 僵尸类型 → 在场上的小立绘,用于罐内预览
@@ -5565,7 +5505,9 @@ class Game {
         let lit = 0;
         for (let dr = -1; dr <= 1; dr++) {
             for (let dc = -1; dc <= 1; dc++) {
-                if (dr === 0 && dc === 0) continue;
+                // v4.0.142：默认只照四周 8 格（灯自己不是"被照亮的罐子"）；
+                // 重掷时由 rerollVase 传 selfToo=true，让这只罐子自己重建预览
+                if (dr === 0 && dc === 0 && !selfToo) continue;
                 const r = row + dr, c = col + dc;
                 if (r < 0 || r >= this.board.rows || c < 0 || c >= this.board.cols) continue;
                 const v = this.vases.find(x => !x.smashed && x.row === r && x.col === c);
@@ -5762,6 +5704,7 @@ class Game {
                 lit++;
             }
         }
+        if (silent) return;
         if (lit > 0) {
             this.showAnnouncement(`路灯花照亮了 ${lit} 个罐子：罐子变透明，可看清里面装的是什么`, '#ffff66');
         } else {

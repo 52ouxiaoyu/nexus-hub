@@ -36,12 +36,7 @@ class InputManager {
                 const card = e.target.closest('.zcard');
                 if (!card || card.classList.contains('disabled')) return;
                 if (!this.game.zombieMode) return;
-                // v4.0.131 融合炉：点"🔥 融合"开/关融合模式
-                if (card.dataset.fuse === '1') {
-                    this.game._toggleFuseMode();
-                    this.game.audioManager.play('btn');
-                    return;
-                }
+                // v4.0.142：融合炉按钮已删（入口=阳光上方的手套），此分支移除
                 // v4.0.131 融合模式中：点基础卡 = 选融合材料（选两只后自动合成）
                 if (this.game._zFusePicking) {
                     if (card.dataset.fuse === 'made') return; // 融合卡不可再作材料
@@ -390,7 +385,7 @@ class InputManager {
             // v3.26.0 植物盲盒：拖拽图改回"盲盒图案"（红丝带礼盒）——用户明确盲盒≠问号罐
             // v3.35.0：礼盒重画为宽幅构图，拖拽幽灵同步改宽尺寸
             if (type === 'plantbox') {
-                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1793181362')";
+                this.dragGhost.style.backgroundImage = "url('assets/images/Plants/PlantBox/GiftBox.png?v=1793181718')";
                 this.dragGhost.style.width = '68px';
                 this.dragGhost.style.height = '50px';
                 this.dragGhost.style.backgroundSize = 'contain';
@@ -402,8 +397,8 @@ class InputManager {
             const isMelonSprite = imgName === 'MelonPult/MelonPult' || imgName === 'WinterMelon/WinterMelon'
                 || imgName === 'CabbagePult/CabbagePult' || imgName === 'KernelPult/KernelPult';
             const url = isMelonSprite
-                ? `assets/images/Plants/${imgName}.png?v=1793181362`
-                : `assets/images/Plants/${imgName}.gif?v=1793181362`;
+                ? `assets/images/Plants/${imgName}.png?v=1793181718`
+                : `assets/images/Plants/${imgName}.gif?v=1793181718`;
             this.dragGhost.style.backgroundImage = `url('${url}')`;
 
             // v3.20.0：倭瓜立绘画布 100×226（身体只占底部 68×82），60×60 contain 后

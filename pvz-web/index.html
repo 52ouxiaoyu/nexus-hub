@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1793450227">
-    <link rel="stylesheet" href="css/haunted-dorm.css?v=1793450227">
+    <link rel="stylesheet" href="css/style.css?v=1793624946">
+    <link rel="stylesheet" href="css/haunted-dorm.css?v=1793624946">
 </head>
 <body>
     <div id="game-container">
@@ -371,7 +371,10 @@
                  · 安全点（久坐/跳）：标题上方天空带、标题左侧空地、底部草地 —— 都不压按钮
                  · 路过点（全屏随机，含卡片正上方，停 0.26s 就走）—— 所以能看到它横穿卡片
                翻转用 .menu-cat 上的 --cat-face 变量做（不再翻 wrap），气泡/阳光因此不会被镜像。 */
-            .menu-cat-wrap { position: absolute; left: 0; top: 0; z-index: 5; pointer-events: none;
+            /* v4.0.142：z-index 5 → 8 —— 顶部条（玩家名/返回/说明/成就）是 z-index 6，
+               猫走到上半屏会被整条盖住（用户实报）。猫只在站立时可点击，走路时 pointer-events:none，
+               浮在按钮上也不会吃掉点击。 */
+            .menu-cat-wrap { position: absolute; left: 0; top: 0; z-index: 8; pointer-events: none;
                              will-change: left, top; }
             .menu-cat { position: relative; width: 86px; height: 66px; pointer-events: auto; cursor: pointer;
                         transform: scale(0.9) scaleX(var(--cat-face, 1)); }
@@ -1120,21 +1123,21 @@
         });
     })();
     </script>
-    <script src="js/InputManager.js?v=1793450227"></script>
-    <script src="js/Board.js?v=1793450227"></script>
-    <script src="js/entities/Entity.js?v=1793450227"></script>
-    <script src="js/entities/Plant.js?v=1793450227"></script>
-    <script src="js/entities/Zombie.js?v=1793450227"></script>
-    <script src="js/entities/Projectile.js?v=1793450227"></script>
-    <script src="js/entities/Sun.js?v=1793450227"></script>
-    <script src="js/managers/WaveManager.js?v=1793450227"></script>
-    <script src="js/managers/CollisionManager.js?v=1793450227"></script>
-    <script src="js/managers/EventManager.js?v=1793450227"></script>
-    <script src="js/GameLoop.js?v=1793450227"></script>
-    <script src="js/HelpGuide.js?v=1793450227"></script>
-    <script src="js/Achievements.js?v=1793450227"></script>
-    <script src="js/HauntedDorm.js?v=1793450227"></script>
-    <script src="js/MiniGames.js?v=1793450227"></script>
+    <script src="js/InputManager.js?v=1793624946"></script>
+    <script src="js/Board.js?v=1793624946"></script>
+    <script src="js/entities/Entity.js?v=1793624946"></script>
+    <script src="js/entities/Plant.js?v=1793624946"></script>
+    <script src="js/entities/Zombie.js?v=1793624946"></script>
+    <script src="js/entities/Projectile.js?v=1793624946"></script>
+    <script src="js/entities/Sun.js?v=1793624946"></script>
+    <script src="js/managers/WaveManager.js?v=1793624946"></script>
+    <script src="js/managers/CollisionManager.js?v=1793624946"></script>
+    <script src="js/managers/EventManager.js?v=1793624946"></script>
+    <script src="js/GameLoop.js?v=1793624946"></script>
+    <script src="js/HelpGuide.js?v=1793624946"></script>
+    <script src="js/Achievements.js?v=1793624946"></script>
+    <script src="js/HauntedDorm.js?v=1793624946"></script>
+    <script src="js/MiniGames.js?v=1793624946"></script>
     <script>
     /* ===== v4.0.126 主页惊喜：时间皮肤 + 动态彩蛋猫 ===== */
     (function () {

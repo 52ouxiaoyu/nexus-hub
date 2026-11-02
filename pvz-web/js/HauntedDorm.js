@@ -827,24 +827,26 @@ class HauntedDorm {
         // 全部格子对齐生成、墙面平直、形状闭合，不存在"半个方块"或未封闭缺口。
         const genRoomShape = (kind) => {
             const sizes = {
-                // 特别小：4~8 格（每局只保留 1 间，"挤一挤小屋"的样本，但很少）
-                small: [[2, 2], [2, 3], [3, 2], [2, 4], [4, 2]],
+                // 特别小：6~12 格（v4.0.142：4~8 → 6~12，还是"挤一挤小屋"，但不再只有一格宽）
+                small: [[2, 3], [3, 2], [3, 3], [2, 4], [4, 2], [3, 4], [4, 3]],
                 // 特别大：40~50 格（7×7=49 / 6×8=48 / 5×10=50 / 9×5=45 / 8×5=40 …）——50 是正常上限
                 big:   [[7, 7], [6, 8], [8, 6], [5, 10], [10, 5], [6, 7], [7, 6], [5, 9], [9, 5]],
-                // 中等：12~20 格（原来是 9~14，整体上调一档）
-                normal:[[3, 4], [4, 3], [4, 4], [3, 5], [5, 3], [4, 5], [5, 4], [3, 6], [6, 3]]
+                // 中等：16~25 格（v4.0.142：12~20 → 16~25，再上调一档）
+                normal:[[4, 4], [4, 5], [5, 4], [5, 5], [3, 6], [6, 3], [4, 6], [6, 4]],
+                // 落点实在塞不下时的降档池（12~20 格）——只作保底，不参与常规抽签
+                normalSmall: [[3, 4], [4, 3], [3, 5], [5, 3], [4, 4]]
             };
             const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
             const g = (w, h) => makeGrid(w, h);
-            if (kind === 'small' || kind === 'big' || kind === 'normal') {
+            if (kind === 'small' || kind === 'big' || kind === 'normal' || kind === 'normalSmall') {
                 const [w, h] = pick(sizes[kind]);
                 return { w, h, grid: g(w, h), name: kind };
             }
             if (kind === 'trap') {
                 // 梯形：每行宽度 ±1 线性变化（封闭凸多边形，格对齐，墙面平直）。
-                // v4.0.141：面积上调到 12~35 格（原来 9~14），当"中大型房"用，不再和大房撞档
-                const narrow = 3 + Math.floor(Math.random() * 3);   // 窄边 3~5 格
-                const rows = 3 + Math.floor(Math.random() * 3);     // 3~5 行 → 12~35 格
+                // v4.0.142：面积上调到 16~35 格（宽 4~6、行 4~5），站稳"中大型房"
+                const narrow = 4 + Math.floor(Math.random() * 3);   // 窄边 4~6 格
+                const rows = 4 + Math.floor(Math.random() * 2);     // 4~5 行 → 16~35 格
                 const dir = Math.random() < 0.5 ? 1 : -1; // 1=上窄下宽
                 const wide = narrow + rows - 1;
                 const grid = [];
@@ -860,8 +862,8 @@ class HauntedDorm {
                 });
                 return { w, h, grid: full, name: 'trap' };
             }
-            // L 形（缺右上角，封闭凹形）——v4.0.141：上调到 19~27 格，当"中大房"用
-            const [w, h] = pick([[5, 5], [6, 5], [5, 6], [6, 6]]);
+            // L 形（缺右上角，封闭凹形）——v4.0.142：上调到 27~33 格，当"中大房"用
+            const [w, h] = pick([[6, 6], [6, 7], [7, 6]]);
             const gg = g(w, h);
             const cutR = Math.floor(h / 2);
             for (let r = 0; r < cutR; r++) for (let c = Math.ceil(w / 2); c < w; c++) gg[r][c] = 0;
@@ -913,10 +915,10 @@ class HauntedDorm {
             return beds;
         };
         // 10 个房间的类型组合
-        // v4.0.141：固定 1 间小房（不多给）＋ 1 间大房打底，约 1/3 的局再抽到第 2 间大房；梯形 1~2 间
+        // v4.0.142：固定 1 间小房（不多给）＋ 1 间大房打底，约半数局再抽到第 2 间大房；梯形 1~2 间
         const trapCount = 1 + Math.floor(Math.random() * 2);
         const kinds = ['small', 'big'];
-        if (Math.random() < 0.35) kinds.push('big');
+        if (Math.random() < 0.5) kinds.push('big');
         for (let i = 0; i < trapCount; i++) kinds.push('trap');
         while (kinds.length < 10) kinds.push(Math.random() < 0.3 ? 'l' : 'normal');
         // 洗牌
@@ -937,9 +939,10 @@ class HauntedDorm {
         const roomsDef = [];
         for (const kind of kinds) {
             let shape = null, attempts = 0;
-            // v4.0.141：大房（最大 10×5）更难塞，尝试次数 160→480；试到 320 次还放不下就降成中等房，保证 10 间都在
-            while (attempts++ < 480) {
-                const s = genRoomShape(attempts > 320 ? 'normal' : kind);
+            // v4.0.142：整体放大后更难塞，尝试次数 480→640；试到 400 次还放不下就降成紧凑房
+            //（normalSmall 12~20 格），保证每局 10 间房一间不少
+            while (attempts++ < 640) {
+                const s = genRoomShape(attempts > 400 ? 'normalSmall' : kind);
                 const x = 1 + Math.floor(Math.random() * (this.cols - s.w - 3));
                 const y = 1 + Math.floor(Math.random() * (this.rows - s.h - 3));
                 if (overlaps(x, y, s.w, s.h)) continue;

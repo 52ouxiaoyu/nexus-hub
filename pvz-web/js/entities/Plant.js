@@ -990,6 +990,17 @@ class Plant extends Entity {
     // 南瓜壳几何：固定为南瓜套独立种植时的原版尺寸（97×67），不随宿主大小变化（v3.13.0）。
     // 用户实测：按宿主 62% 缩放时向日葵等小株的壳小得看不清，统一保持最大；
     // 宿主高度只用于把壳锚定在宿主脚下。素材异步加载完成前沿用上次几何（初始为空时调用方兜底）。
+    // v4.0.142：宿主立绘「可见内容底边」占画布高的比例。
+    // 绝大多数原版素材画布贴合像素（底下没有留白），但路灯花 0.gif 是 250×237 的透明大画布，
+    // 像素只占 (84,75)-(165,163) —— 底部留白 74px（31% 画布高）。
+    // 壳的锚点原来按画布高算（y + yOffset + hostH/2），路灯花身上就整只南瓜套往下坠 72px；
+    // 实体/啃咬判定都在 (x,y) 没动，所以玩家看到的是「画面下移」而不是「实体下移」。
+    // 值 = 内容底边 y / 画布高；没登记的素材按 1.0（内容贴画布底）算。
+    static get ART_BOTTOM_RATIO() {
+        if (!Plant._artBottomRatio) Plant._artBottomRatio = { plantern: 163 / 237 };
+        return Plant._artBottomRatio;
+    }
+
     _shieldGeomCalc() {
         if (!this.shield || !this.shieldEl) return null;
         const hostH = this.element.offsetHeight || this.element.naturalHeight || 0;
@@ -999,7 +1010,10 @@ class Plant extends Entity {
             this.shieldEl.style.width = shW + 'px';
             this.shieldEl.style.height = shH + 'px';
         }
-        const hostBottom = this.y + this.yOffset + hostH / 2;
+        const ratio = Plant.ART_BOTTOM_RATIO[this.type];
+        const hostBottom = ratio
+            ? (this.y + this.yOffset - hostH / 2) + hostH * ratio   // 大画布：锚在「看得见的脚」上
+            : this.y + this.yOffset + hostH / 2;
         return { cx: this.x, cy: hostBottom - shH / 2 - 2 };
     }
     
