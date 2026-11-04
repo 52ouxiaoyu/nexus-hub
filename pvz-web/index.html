@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1793626326">
-    <link rel="stylesheet" href="css/haunted-dorm.css?v=1793626326">
+    <link rel="stylesheet" href="css/style.css?v=1793799466">
+    <link rel="stylesheet" href="css/haunted-dorm.css?v=1793799466">
 </head>
 <body>
     <div id="game-container">
@@ -119,7 +119,66 @@
                 text-shadow: 3px 3px 0 #2e6b1e, -2px 2px 0 #2e6b1e, 2px -2px 0 #2e6b1e, -2px -2px 0 #2e6b1e,
                              0 6px 14px rgba(0,0,0,0.45);
             }
-            .menu-title .game-title .pz { color: #9dff5e; }
+            /* v4.0.145（用户）：标题两段分色且可点——「植物」绿=随机开一局，「僵尸」紫=僵尸头闪现 */
+            .menu-title .game-title .pz-plant,
+            .menu-title .game-title .pz-zombie {
+                display: inline-block; cursor: pointer;
+                transition: filter .16s ease, transform .16s ease;
+            }
+            .menu-title .game-title .pz-plant {
+                color: #9dff5e;
+                text-shadow: 3px 3px 0 #2e6b1e, -2px 2px 0 #2e6b1e, 2px -2px 0 #2e6b1e, -2px -2px 0 #2e6b1e,
+                             0 6px 14px rgba(0,0,0,0.45);
+            }
+            .menu-title .game-title .pz-zombie {
+                color: #c98bff;
+                text-shadow: 3px 3px 0 #4a1a72, -2px 2px 0 #4a1a72, 2px -2px 0 #4a1a72, -2px -2px 0 #4a1a72,
+                             0 6px 16px rgba(90,20,140,0.55);
+            }
+            .menu-title .game-title .pz-plant:hover { filter: brightness(1.22) drop-shadow(0 0 12px rgba(157,255,94,0.9)); transform: translateY(-1px); }
+            .menu-title .game-title .pz-zombie:hover { filter: brightness(1.2) drop-shadow(0 0 12px rgba(179,136,255,0.95)); transform: translateY(-1px); }
+            /* 夜间：彩蛋猫整体推成紫色（hue-rotate 保留原形与高光，不会变成纯色块） */
+            #start-menu.night .menu-cat { filter: hue-rotate(232deg) saturate(1.18) brightness(1.05); }
+            #start-menu.night .cat-bubble { border-color: #6a3f9e; color: #4a2a70; }
+            /* ===== 僵尸头闪现（点「僵尸」触发）===== */
+            #zombie-scare { position: absolute; inset: 0; z-index: 70; display: none; pointer-events: none; overflow: hidden; }
+            #zombie-scare.on { display: block; }
+            #zombie-scare .zs-flash {
+                position: absolute; inset: 0; opacity: 0;
+                background: radial-gradient(circle at 50% 55%, rgba(150,0,0,0) 24%, rgba(110,0,0,0.55) 62%, rgba(34,0,0,0.94) 100%);
+            }
+            #zombie-scare.on .zs-flash { animation: zsflash 1.2s ease-out forwards; }
+            @keyframes zsflash { 0% { opacity: 0; } 12% { opacity: 1; } 64% { opacity: .85; } 100% { opacity: 0; } }
+            /* 用预烘好的静态大头贴（ZombieHeadBig.png 由 ZombieHead.gif 第 1 帧裁到内容框后 ×8 放大）：
+               原来的做法是直接放大那张 150×186 的 GIF——它本身就是「人头从左上滚到右下」的 12 帧动画，
+               放到 7 倍后头会一路滚出屏幕，看起来像什么都没闪。静态图才能稳稳停在正中。 */
+            #zombie-scare .zs-head {
+                position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+                will-change: transform, opacity;
+            }
+            #zombie-scare .zs-head img {
+                display: block; width: 420px; max-width: 42vw; height: auto;
+                filter: drop-shadow(0 0 30px #000) drop-shadow(0 0 60px rgba(120,0,0,.85)) contrast(1.08) saturate(.92);
+            }
+            #zombie-scare.on .zs-head { animation: zshead 1.2s cubic-bezier(.15,.9,.28,1) forwards; }
+            @keyframes zshead {
+                0%   { opacity: 0; transform: scale(.2) rotate(-10deg); }
+                16%  { opacity: 1; transform: scale(1.12) rotate(4deg); }
+                28%  { transform: scale(.98) rotate(-3deg); }
+                44%  { transform: scale(1.06) rotate(2deg); }
+                66%  { opacity: 1; transform: scale(1) rotate(0deg); }
+                100% { opacity: 0; transform: scale(1.3) translateY(-16px); }
+            }
+            /* 闪现场景轻微抖屏（只抖主菜单，不抖画布本身） */
+            @keyframes zssshake {
+                0%, 100% { transform: translate(0, 0); }
+                12% { transform: translate(-7px, 3px); }
+                26% { transform: translate(6px, -4px); }
+                40% { transform: translate(-5px, -2px); }
+                58% { transform: translate(4px, 3px); }
+                76% { transform: translate(-3px, 1px); }
+            }
+            #start-menu.shaking { animation: zssshake .34s ease-in-out 3; }
             /* ===== v4.0.129 网格化：两行统一 4 列 196px（列宽 196、列距 20，整行 844 居中）=====
                行1：经典冒险 / 融合进化 / 砸罐子 / 我是僵尸 —— 各 196×236
                行2：双人对战 / 守屋大作战 —— 各 196×192（用户要求「长度跟其他四张一样」）
@@ -443,7 +502,7 @@
                     <div class="menu-actions" id="menu-actions"></div>
                 </div>
                 <div class="menu-title">
-                    <div class="title-row"><div class="game-title">植物大战<span class="pz">僵尸</span></div></div>
+                    <div class="title-row"><div class="game-title"><span class="pz-plant" id="title-plant">植物</span>大战<span class="pz-zombie" id="title-zombie">僵尸</span></div></div>
                 </div>
 
                 <div class="menu-cards">
@@ -560,6 +619,12 @@
                 <div class="cat-sun" id="cat-sun">☀</div>
             </div>
 
+            <!-- v4.0.145：点标题「僵尸」时整屏闪一颗僵尸头 -->
+            <div id="zombie-scare">
+                <div class="zs-flash"></div>
+                <div class="zs-head"><img src="assets/images/Zombies/Zombie/ZombieHeadBig.png" alt=""></div>
+            </div>
+
             <div id="mg-toast">小游戏正在筹备中，敬请期待～</div>
 
             <!-- v4.0.123：玩家名 + 返回已移到左上角顶部条；这里只留右下角版本徽标 -->
@@ -577,6 +642,25 @@
                 }
             </style>
         </div>
+
+        <!-- v4.0.145：点标题「植物」随机开一局时的提示条（菜单被隐藏后依然显示在游戏画面上） -->
+        <div id="dice-toast"></div>
+        <style>
+            #dice-toast {
+                position: absolute; left: 50%; top: 12px; transform: translateX(-50%);
+                z-index: 9000; display: none; white-space: nowrap;
+                padding: 8px 22px; border-radius: 12px;
+                background: rgba(22,14,4,0.93); border: 2px solid #caa95f;
+                color: #ffe9b0; font-family: 'Kaiti SC','STKaiti','KaiTi',serif;
+                font-size: 21px; letter-spacing: 2px; font-weight: 700;
+                box-shadow: 0 10px 26px rgba(0,0,0,0.55); pointer-events: none;
+            }
+            #dice-toast.on { display: block; animation: dicepop .34s ease-out; }
+            @keyframes dicepop {
+                from { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(.94); }
+                to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+            }
+        </style>
 
         <!-- v3.81.0 双人对战：玩法选择（普通=无融合 / 融合=局内有手套+融合图鉴） -->
         <div id="vs-modal" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.78); z-index:2400; align-items:center; justify-content:center; flex-direction:column;">
@@ -1123,21 +1207,21 @@
         });
     })();
     </script>
-    <script src="js/InputManager.js?v=1793626326"></script>
-    <script src="js/Board.js?v=1793626326"></script>
-    <script src="js/entities/Entity.js?v=1793626326"></script>
-    <script src="js/entities/Plant.js?v=1793626326"></script>
-    <script src="js/entities/Zombie.js?v=1793626326"></script>
-    <script src="js/entities/Projectile.js?v=1793626326"></script>
-    <script src="js/entities/Sun.js?v=1793626326"></script>
-    <script src="js/managers/WaveManager.js?v=1793626326"></script>
-    <script src="js/managers/CollisionManager.js?v=1793626326"></script>
-    <script src="js/managers/EventManager.js?v=1793626326"></script>
-    <script src="js/GameLoop.js?v=1793626326"></script>
-    <script src="js/HelpGuide.js?v=1793626326"></script>
-    <script src="js/Achievements.js?v=1793626326"></script>
-    <script src="js/HauntedDorm.js?v=1793626326"></script>
-    <script src="js/MiniGames.js?v=1793626326"></script>
+    <script src="js/InputManager.js?v=1793799466"></script>
+    <script src="js/Board.js?v=1793799466"></script>
+    <script src="js/entities/Entity.js?v=1793799466"></script>
+    <script src="js/entities/Plant.js?v=1793799466"></script>
+    <script src="js/entities/Zombie.js?v=1793799466"></script>
+    <script src="js/entities/Projectile.js?v=1793799466"></script>
+    <script src="js/entities/Sun.js?v=1793799466"></script>
+    <script src="js/managers/WaveManager.js?v=1793799466"></script>
+    <script src="js/managers/CollisionManager.js?v=1793799466"></script>
+    <script src="js/managers/EventManager.js?v=1793799466"></script>
+    <script src="js/GameLoop.js?v=1793799466"></script>
+    <script src="js/HelpGuide.js?v=1793799466"></script>
+    <script src="js/Achievements.js?v=1793799466"></script>
+    <script src="js/HauntedDorm.js?v=1793799466"></script>
+    <script src="js/MiniGames.js?v=1793799466"></script>
     <script>
     /* ===== v4.0.126 主页惊喜：时间皮肤 + 动态彩蛋猫 ===== */
     (function () {
@@ -1266,6 +1350,152 @@
             setTimeout(function () { bubble.style.display = 'none'; sun.style.display = 'none'; }, 1600);
         });
         setTimeout(wander, 1600);
+    })();
+
+    /* ===== v4.0.145 标题彩蛋：植物=随机开一局 · 僵尸=僵尸头闪现 =====
+       两段文字平时就是绿/紫（用户要求），点上才触发：
+         · 「植物」→ 经典冒险 / 融合进化 / 砸罐子 / 我是僵尸 / 双人对战 / 守屋大作战 里随机一个直接开局，
+                     有选卡环节的模式（经典、融合、双人）连卡组也随机。
+         · 「僵尸」→ 整屏红闪 + 一颗放大的僵尸头猛然扑屏 + 抖屏 + 一声僵尸低吼。 */
+    (function () {
+        var menu = document.getElementById('start-menu');
+        if (!menu) return;
+        var plantEl = document.getElementById('title-plant');
+        var zombieEl = document.getElementById('title-zombie');
+        var scare = document.getElementById('zombie-scare');
+        var toast = document.getElementById('dice-toast');
+
+        function rnd(n) { return Math.floor(Math.random() * n); }
+        function shuffle(a) {
+            for (var i = a.length - 1; i > 0; i--) { var j = rnd(i + 1); var t = a[i]; a[i] = a[j]; a[j] = t; }
+            return a;
+        }
+        function hide(id) { var el = document.getElementById(id); if (el) el.style.display = 'none'; }
+        function game() { return window._pvzGame || null; }
+
+        var toastTimer = null;
+        function toastMsg(txt, ms) {
+            if (!toast) return;
+            toast.textContent = txt;
+            toast.classList.remove('on');
+            void toast.offsetWidth;
+            toast.classList.add('on');
+            clearTimeout(toastTimer);
+            if (ms) toastTimer = setTimeout(function () { toast.classList.remove('on'); }, ms);
+        }
+
+        /* ---------- 僵尸头闪现 ---------- */
+        var scaring = false;
+        function runScare() {
+            if (!scare || scaring) return;
+            scaring = true;
+            scare.classList.remove('on');
+            void scare.offsetWidth;
+            scare.classList.add('on');
+            menu.classList.add('shaking');
+            try {
+                var a = new Audio('assets/audio/groan4.mp3');
+                a.volume = 0.5;
+                var pr = a.play();
+                if (pr && pr.catch) pr.catch(function () {});
+            } catch (e) { /* file:// 下自动播放被拦就算了，画面照样闪 */ }
+            setTimeout(function () {
+                scare.classList.remove('on');
+                menu.classList.remove('shaking');
+                scaring = false;
+            }, 1260);
+        }
+
+        /* ---------- 「植物」= 随机模式直进 ---------- */
+        var MODES = ['经典冒险', '融合进化', '砸罐子', '我是僵尸', '双人对战', '守屋大作战'];
+
+        function launchRandom() {
+            var g = game();
+            if (!g || !g.seeds || !g.showSeedChooser) { toastMsg('还在加载，稍等一下再点～', 1400); return; }
+            var idx = rnd(MODES.length);
+            toastMsg('🎲 随机模式：' + MODES[idx], 1700);
+            setTimeout(function () { doLaunch(idx, g); }, 70);
+        }
+
+        function doLaunch(idx, g) {
+            try {
+                /* 0 经典冒险 / 1 融合进化：随机 10 张卡后直接开打 */
+                if (idx === 0 || idx === 1) {
+                    g.fusionMode = (idx === 1);
+                    g.vaseMode = false; g.zombieMode = false; g.vsMode = false;
+                    hide('start-menu');
+                    g.showSeedChooser();
+                    /* 选卡页会预选「新手推荐卡组 / 上次卡组」→ 先清空，再随机点 10 张 */
+                    g.selectedSeeds = [];
+                    var cards = [].slice.call(document.querySelectorAll('#chooser-grid .chooser-card'));
+                    cards.forEach(function (c) { c.style.filter = 'none'; });
+                    var cnt = document.getElementById('chooser-count');
+                    if (cnt) cnt.innerText = '0';
+                    shuffle(cards).slice(0, 10).forEach(function (c) { c.click(); });
+                    /* 随机卡组不该覆盖玩家记住的经典卡组：开打前备份、开打后还原 */
+                    var saved = null;
+                    try { saved = localStorage.getItem('classicSeedPicks'); } catch (e) {}
+                    var rock = document.getElementById('btn-lets-rock');
+                    if (rock) rock.click();
+                    try {
+                        if (saved !== null) localStorage.setItem('classicSeedPicks', saved);
+                        else localStorage.removeItem('classicSeedPicks');
+                    } catch (e) {}
+                    return;
+                }
+                /* 2 砸罐子 */
+                if (idx === 2) {
+                    hide('start-menu');
+                    g._chooseVaseDifficulty(['easy', 'hard', 'hell'][rnd(3)]);
+                    return;
+                }
+                /* 3 我是僵尸 */
+                if (idx === 3) {
+                    hide('start-menu');
+                    g._chooseZombieDifficulty(['easy', 'hard', 'hell'][rnd(3)]);
+                    return;
+                }
+                /* 4 双人对战：双方卡组全随机 */
+                if (idx === 4) {
+                    hide('start-menu'); hide('vs-modal'); hide('seed-chooser'); hide('vz-chooser'); hide('vs-side-modal');
+                    g.vsFusion = Math.random() < 0.5;
+                    g.vsAiMode = false; g.vsPlayerSide = null;
+                    var pool = (g.seeds || []).slice();
+                    g.vsPlantSeeds = shuffle(pool).slice(0, 8).map(function (sd) { return Object.assign({}, sd); });
+                    var roster = ((g.constructor && g.constructor.VS_ZOMBIE_ROSTER) || []).map(function (r) { return r[0]; });
+                    if (!roster.length) roster = ['normal', 'conehead', 'buckethead', 'imp'];
+                    var zs = shuffle(roster.slice()).slice(0, 8);
+                    if (zs.indexOf('sunhead') < 0 && Math.random() < 0.45) zs[0] = 'sunhead';
+                    g.vsZombiePicks = zs;
+                    g._beginVsGame();
+                    return;
+                }
+                /* 5 守屋大作战：随机人数 / 阵营 / 皮肤 */
+                hide('start-menu');
+                var roles = [].slice.call(document.querySelectorAll('.dorm-skin-btn'))
+                    .map(function (b) { return b.getAttribute('data-role'); })
+                    .filter(Boolean);
+                if (!roles.length) roles = ['sunflower', 'peashooter', 'wallnut', 'chomper', 'squash'];
+                var mode = Math.random() < 0.5 ? '1p' : '2p';
+                var faction = Math.random() < 0.34 ? 'zombie' : 'plant';
+                var scr = document.getElementById('dorm-screen');
+                if (scr) scr.style.display = 'block';
+                window.startHauntedDorm({
+                    mode: mode,
+                    faction: faction,
+                    role1: roles[rnd(roles.length)],
+                    role2: mode === '2p' ? roles[rnd(roles.length)] : undefined
+                });
+            } catch (err) {
+                console.error('[random-mode]', err && err.stack || err);
+                toastMsg('这个模式没开起来，再点一次试试…', 1600);
+            }
+        }
+
+        if (plantEl) plantEl.addEventListener('click', launchRandom);
+        if (zombieEl) zombieEl.addEventListener('click', runScare);
+        /* 暴露给自动化验收：随机入口 + 指定模式直进 + 闪现（手动玩不到，仅测试用） */
+        window.__pvzTitleEaster = { plant: launchRandom, scare: runScare, launch: doLaunch };
     })();
     </script>
 </body>
