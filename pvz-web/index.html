@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1793799466">
-    <link rel="stylesheet" href="css/haunted-dorm.css?v=1793799466">
+    <link rel="stylesheet" href="css/style.css?v=1793800473">
+    <link rel="stylesheet" href="css/haunted-dorm.css?v=1793800473">
 </head>
 <body>
     <div id="game-container">
@@ -179,6 +179,80 @@
                 76% { transform: translate(-3px, 1px); }
             }
             #start-menu.shaking { animation: zssshake .34s ease-in-out 3; }
+            /* ===== v4.0.146 首页自动彩蛋：不用点，隔十几秒自己冒一个出来 =====
+               层级 12 —— 压在卡牌之上、提示条(z9)与闪现层(z70)之下；pointer-events:none 绝不挡点击 */
+            #menu-egg { position: absolute; inset: 0; z-index: 12; pointer-events: none; overflow: hidden; }
+            #menu-egg .egg { position: absolute; will-change: transform, opacity; }
+            #menu-egg .egg img { display: block; width: 100%; }
+
+            /* ① 僵尸头从屏幕底部钻出来，左右张望几下再缩回去 */
+            #menu-egg .egg-pop { left: 50%; bottom: 0; width: 196px; transform: translate(-50%, 115%); }
+            #menu-egg .egg-pop img { filter: drop-shadow(0 6px 18px rgba(0,0,0,.65)); }
+            #menu-egg .egg-pop.go { animation: eggPop 4.4s cubic-bezier(.3,.9,.3,1) forwards; }
+            /* 只冒到「半颗头」的高度（translateY 30% 左右）——再往上就会挡住第二行卡牌的名字 */
+            @keyframes eggPop {
+                0%   { transform: translate(-50%, 115%) rotate(-3deg); }
+                14%  { transform: translate(-50%, 34%)  rotate(4deg); }
+                26%  { transform: translate(-50%, 29%)  rotate(-3deg); }
+                42%  { transform: translate(-50%, 32%)  rotate(3deg); }
+                58%  { transform: translate(-50%, 27%)  rotate(-1deg); }
+                76%  { transform: translate(-50%, 31%)  rotate(0deg); }
+                100% { transform: translate(-50%, 118%) rotate(0deg); }
+            }
+
+            /* ② 从屏幕右边探进半个头，盯着你看一会儿再缩回去 */
+            #menu-egg .egg-peek { right: 0; top: 26%; width: 194px; transform: translateX(96%); }
+            #menu-egg .egg-peek img { transform: scaleX(-1); filter: drop-shadow(-6px 4px 14px rgba(0,0,0,.6)); }
+            #menu-egg .egg-peek.go { animation: eggPeek 3.2s ease-in-out forwards; }
+            @keyframes eggPeek {
+                0%   { transform: translateX(96%) rotate(3deg); }
+                18%  { transform: translateX(6%)  rotate(-6deg); }
+                34%  { transform: translateX(10%) rotate(4deg); }
+                72%  { transform: translateX(6%)  rotate(-3deg); }
+                100% { transform: translateX(96%) rotate(0deg); }
+            }
+
+            /* ③ BRAINS… 血字从右飘到左 */
+            #menu-egg .egg-brains {
+                top: 34%; left: 100%; white-space: nowrap;
+                font-family: 'Kaiti SC','STKaiti','KaiTi',Georgia,serif;
+                font-size: 56px; font-weight: 800; letter-spacing: 6px; font-style: italic;
+                color: #e0322a;
+                text-shadow: 0 0 18px rgba(120,0,0,.9), 3px 3px 0 #2a0505, -2px 2px 0 #2a0505, 2px -2px 0 #2a0505;
+            }
+            #menu-egg .egg-brains.go { animation: eggBrains 3.8s linear forwards; }
+            @keyframes eggBrains {
+                0%   { transform: translateX(0) rotate(-5deg); opacity: 0; }
+                12%  { opacity: .95; }
+                82%  { opacity: .95; }
+                100% { transform: translateX(-118vw) rotate(-5deg); opacity: 0; }
+            }
+
+            /* ④ 阳光从天而降，落地前弹两下就消失 */
+            #menu-egg .egg-sun { top: -92px; left: 0; width: 74px; }
+            #menu-egg .egg-sun img { filter: drop-shadow(0 0 16px rgba(255,220,90,.85)); }
+            #menu-egg .egg-sun.go { animation: eggSun 3.4s ease-in forwards; }
+            @keyframes eggSun {
+                0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
+                8%   { opacity: 1; }
+                52%  { transform: translateY(66vh) rotate(170deg); opacity: 1; }
+                61%  { transform: translateY(58vh) rotate(205deg); opacity: 1; }
+                71%  { transform: translateY(67vh) rotate(240deg); opacity: .9; }
+                100% { transform: translateY(62vh) rotate(310deg) scale(.55); opacity: 0; }
+            }
+
+            /* ⑤ 一只小鬼从左边一溜烟跑过去 */
+            #menu-egg .egg-imp { bottom: 4%; left: -150px; width: 126px; }
+            #menu-egg .egg-imp img { filter: drop-shadow(0 6px 10px rgba(0,0,0,.55)); }
+            #menu-egg .egg-imp.go { animation: eggImp 3.4s linear forwards; }
+            @keyframes eggImp {
+                0%   { transform: translate(0, 0); opacity: .95; }
+                25%  { transform: translate(32vw, -10px); }
+                50%  { transform: translate(64vw, 2px); }
+                75%  { transform: translate(96vw, -8px); }
+                100% { transform: translate(128vw, 0); opacity: .9; }
+            }
+
             /* ===== v4.0.129 网格化：两行统一 4 列 196px（列宽 196、列距 20，整行 844 居中）=====
                行1：经典冒险 / 融合进化 / 砸罐子 / 我是僵尸 —— 各 196×236
                行2：双人对战 / 守屋大作战 —— 各 196×192（用户要求「长度跟其他四张一样」）
@@ -624,6 +698,9 @@
                 <div class="zs-flash"></div>
                 <div class="zs-head"><img src="assets/images/Zombies/Zombie/ZombieHeadBig.png" alt=""></div>
             </div>
+
+            <!-- v4.0.146：首页自动彩蛋层（不用点，隔一会儿自己冒东西出来） -->
+            <div id="menu-egg"></div>
 
             <div id="mg-toast">小游戏正在筹备中，敬请期待～</div>
 
@@ -1207,21 +1284,21 @@
         });
     })();
     </script>
-    <script src="js/InputManager.js?v=1793799466"></script>
-    <script src="js/Board.js?v=1793799466"></script>
-    <script src="js/entities/Entity.js?v=1793799466"></script>
-    <script src="js/entities/Plant.js?v=1793799466"></script>
-    <script src="js/entities/Zombie.js?v=1793799466"></script>
-    <script src="js/entities/Projectile.js?v=1793799466"></script>
-    <script src="js/entities/Sun.js?v=1793799466"></script>
-    <script src="js/managers/WaveManager.js?v=1793799466"></script>
-    <script src="js/managers/CollisionManager.js?v=1793799466"></script>
-    <script src="js/managers/EventManager.js?v=1793799466"></script>
-    <script src="js/GameLoop.js?v=1793799466"></script>
-    <script src="js/HelpGuide.js?v=1793799466"></script>
-    <script src="js/Achievements.js?v=1793799466"></script>
-    <script src="js/HauntedDorm.js?v=1793799466"></script>
-    <script src="js/MiniGames.js?v=1793799466"></script>
+    <script src="js/InputManager.js?v=1793800473"></script>
+    <script src="js/Board.js?v=1793800473"></script>
+    <script src="js/entities/Entity.js?v=1793800473"></script>
+    <script src="js/entities/Plant.js?v=1793800473"></script>
+    <script src="js/entities/Zombie.js?v=1793800473"></script>
+    <script src="js/entities/Projectile.js?v=1793800473"></script>
+    <script src="js/entities/Sun.js?v=1793800473"></script>
+    <script src="js/managers/WaveManager.js?v=1793800473"></script>
+    <script src="js/managers/CollisionManager.js?v=1793800473"></script>
+    <script src="js/managers/EventManager.js?v=1793800473"></script>
+    <script src="js/GameLoop.js?v=1793800473"></script>
+    <script src="js/HelpGuide.js?v=1793800473"></script>
+    <script src="js/Achievements.js?v=1793800473"></script>
+    <script src="js/HauntedDorm.js?v=1793800473"></script>
+    <script src="js/MiniGames.js?v=1793800473"></script>
     <script>
     /* ===== v4.0.126 主页惊喜：时间皮肤 + 动态彩蛋猫 ===== */
     (function () {
@@ -1496,6 +1573,70 @@
         if (zombieEl) zombieEl.addEventListener('click', runScare);
         /* 暴露给自动化验收：随机入口 + 指定模式直进 + 闪现（手动玩不到，仅测试用） */
         window.__pvzTitleEaster = { plant: launchRandom, scare: runScare, launch: doLaunch };
+    })();
+
+    /* ===== v4.0.146 首页自动彩蛋 =====
+       不用点击：在首页停一会儿，就有东西自己冒出来——僵尸头从屏幕底钻出来张望、
+       从右边探头、BRAINS… 血字飘过、阳光砸下来、小鬼跑过去，五种随机轮着来。
+       全部 pointer-events:none，绝不挡任何点击；菜单一隐藏（开打了）就自动停，
+       回到首页 2 秒内自动续上。 */
+    (function () {
+        var menu = document.getElementById('start-menu');
+        var layer = document.getElementById('menu-egg');
+        if (!menu || !layer) return;
+        var A = 'assets/images/';
+        var HEAD = A + 'Zombies/Zombie/ZombieHeadBig.png';
+        var EGGS = {
+            pop:    { cls: 'egg-pop',    ms: 4400, html: '<img src="' + HEAD + '" alt="">' },
+            peek:   { cls: 'egg-peek',   ms: 3200, html: '<img src="' + HEAD + '" alt="">' },
+            brains: { cls: 'egg-brains', ms: 3800, text: 'BRAINS…' },
+            sun:    { cls: 'egg-sun',    ms: 3400, html: '<img src="' + A + 'interface/Sun.gif" alt="">' },
+            imp:    { cls: 'egg-imp',    ms: 3400, html: '<img src="' + A + 'Zombies/Imp/0.gif" alt="">' }
+        };
+        var keys = Object.keys(EGGS);
+        var lastKey = '', timer = null;
+
+        function menuLive() {
+            if (document.hidden) return false;
+            var cs = getComputedStyle(menu);
+            return cs.display !== 'none' && cs.visibility !== 'hidden' && menu.offsetWidth > 0;
+        }
+
+        function fire(forceKey) {
+            if (!layer || !menuLive()) return null;
+            var key = (forceKey && EGGS[forceKey]) ? forceKey : (function () {
+                var pool = keys.filter(function (k) { return k !== lastKey; });
+                return pool[Math.floor(Math.random() * pool.length)] || keys[0];
+            })();
+            lastKey = key;
+            var cfg = EGGS[key];
+            // 同一时刻只留一个彩蛋，避免叠成一坨
+            while (layer.firstChild) layer.removeChild(layer.firstChild);
+            var el = document.createElement('div');
+            el.className = 'egg ' + cfg.cls;
+            el.setAttribute('data-egg', key);
+            if (cfg.html) el.innerHTML = cfg.html; else el.textContent = cfg.text;
+            if (key === 'sun')  el.style.left = (12 + Math.random() * 68) + '%';
+            if (key === 'peek') el.style.top = (14 + Math.random() * 42) + '%';
+            layer.appendChild(el);
+            void el.offsetWidth;
+            el.classList.add('go');
+            var kill = function () { if (el.parentNode) el.parentNode.removeChild(el); };
+            el.addEventListener('animationend', kill);
+            setTimeout(kill, cfg.ms + 700);   // 兜底：系统开了「减少动态效果」导致没 animationend 也要清干净
+            return key;
+        }
+
+        function loop() {
+            clearTimeout(timer);
+            if (!menuLive()) { timer = setTimeout(loop, 2000); return; }
+            timer = setTimeout(function () { fire(); loop(); },
+                               16000 + Math.random() * 12000);   // 16~28 秒冒一个
+        }
+
+        // 进首页先安静 8~12 秒（别一进来就吓人），然后开始排
+        setTimeout(function () { fire(); loop(); }, 8000 + Math.random() * 4000);
+        window.__pvzMenuEggs = { fire: fire, kinds: keys };
     })();
     </script>
 </body>

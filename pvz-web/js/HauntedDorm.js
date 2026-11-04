@@ -322,8 +322,11 @@ class HauntedDorm {
     static get GHOST_MAX_LV() { return HauntedDorm.GHOST_LEVELS.length; }
     // v4.0.144（用户实报「波次变成了无尽，再也赢不了了」）：
     // 尸潮原来永无止境（每 75s 一波 + 无限递增），主僵尸死后残部永远清不完 → 「肃清剩余残部即可获胜」永远达不成。
-    // 现在总波次封顶 10 波：第 10 波是最终波，会刷「尸潮领主」，打死它直接判植物方胜利。
-    static get WAVE_MAX() { return 10; }
+    // 现在总波次封顶：最后一波是最终波，会刷「尸潮领主」，打死它直接判植物方胜利。
+    // v4.0.146（用户「波次稍微缩短，就改为第 7 波吧」）：10 波 → 7 波，间隔 75s → 60s，一局约 6.5 分钟见分晓。
+    static get WAVE_MAX() { return 7; }
+    // v4.0.146：波间隔单独抽常量，改节奏只动这一处
+    static get WAVE_GAP() { return 60000; }
     // v4.0.36：真人僵尸玩家血量倍率——AI 植物火力（豌豆/投掷/地刺/毁灭菇真伤）对 500 血玩家几秒融化（用户实报），
     // 仅放大真人玩家血池，AI 僵尸小怪不变；所有伤害源按数值照扣，等效生存 ×3，地图中心 %回血自动同步放大
     static get PLAYER_HP_MUL() { return 3; }
@@ -388,7 +391,7 @@ class HauntedDorm {
 
         // v4.0.20：尸潮波次 + 昼夜循环 + 内鬼模式
         this.waveN = 0;               // 已到来的尸潮波数
-        this.waveAt = 40000;          // v4.0.91：开局第一波 75000→40000（用户"开局一次僵尸都碰不到"）——后续波仍 75s/波
+        this.waveAt = 40000;          // v4.0.91：开局第一波 75000→40000（用户"开局一次僵尸都碰不到"）；v4.0.146：后续波 75s→60s（WAVE_GAP）
         this.waveWarned = false;      // 是否已播报「一大波僵尸正在接近」
         this.isNight = false;         // v4.0.46：作息反转后开局即白天——阳光系白天醒着产出（夜晚开局会 90s 零收入死局）；白天 60s
         this.dnNext = 60000;          // 下一次昼夜切换时间（开局白天 60s）
@@ -5675,7 +5678,7 @@ class HauntedDorm {
         this.waveN++;
         this.waveWarned = false;
         // v4.0.144：第 10 波之后不再排下一波（waveAt=Infinity），游戏进入「打完就赢」的终局
-        this.waveAt = this.waveN >= WMAX ? Infinity : time + 75000;
+        this.waveAt = this.waveN >= WMAX ? Infinity : time + HauntedDorm.WAVE_GAP;
         const n = Math.min(4, 2 + Math.floor(this.waveN / 2)); // v4.0.84：3~6 → 2~4（数量减少，战力已翻倍，成群小鬼排成横队不再叠成一坨）
         const base = this._ghostSpawnPoint(); // v4.0.84：同一波共用同一生成点，小鬼以它为中心排横队
         for (let i = 0; i < n; i++) this._spawnMinion(false, i, n, base);
