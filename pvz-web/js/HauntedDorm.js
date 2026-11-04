@@ -320,6 +320,10 @@ class HauntedDorm {
         ];
     }
     static get GHOST_MAX_LV() { return HauntedDorm.GHOST_LEVELS.length; }
+    // v4.0.144（用户实报「波次变成了无尽，再也赢不了了」）：
+    // 尸潮原来永无止境（每 75s 一波 + 无限递增），主僵尸死后残部永远清不完 → 「肃清剩余残部即可获胜」永远达不成。
+    // 现在总波次封顶 10 波：第 10 波是最终波，会刷「尸潮领主」，打死它直接判植物方胜利。
+    static get WAVE_MAX() { return 10; }
     // v4.0.36：真人僵尸玩家血量倍率——AI 植物火力（豌豆/投掷/地刺/毁灭菇真伤）对 500 血玩家几秒融化（用户实报），
     // 仅放大真人玩家血池，AI 僵尸小怪不变；所有伤害源按数值照扣，等效生存 ×3，地图中心 %回血自动同步放大
     static get PLAYER_HP_MUL() { return 3; }
@@ -2082,8 +2086,15 @@ class HauntedDorm {
         // v4.0.20：追加尸潮/昼夜倒计时（所有事件都有预告，绝不搞突然袭击）
         if (!this.isZombieFaction && !this.over) {
             let extra = '';
+            const WMAX2 = HauntedDorm.WAVE_MAX;
             if (this.ghostSpawned && this.ghostRespawnAt === 0) {
-                extra += ` · 下一波 ${Math.max(0, Math.ceil((this.waveAt - now) / 1000))}s`;
+                if (!Number.isFinite(this.waveAt)) {
+                    // v4.0.144：第 10 波已开完（waveAt=Infinity）——旧版会渲染成「下一波 Infinitys」
+                    extra += ` · 🏁 最终波已降临（共 ${WMAX2} 波）`;
+                } else {
+                    const nxt2 = Math.min(this.waveN + 1, WMAX2);
+                    extra += ` · 第 ${nxt2}/${WMAX2} 波 ${Math.max(0, Math.ceil((this.waveAt - now) / 1000))}s`;
+                }
             }
             const dnLeft = Math.max(0, Math.ceil((this.dnNext - now) / 1000));
             extra += this.isNight ? ` · 🌙${dnLeft}s` : ` · ☀${dnLeft}s`;
@@ -2209,7 +2220,7 @@ class HauntedDorm {
                     : `<span style="color:#ffd700;">【2】加速</span> <span style="color:#aaaaaa;">(6秒疾跑)</span>`;
                 skillEl2.innerHTML = `😇 ${cap2} ｜ ${spd2} <span style="color:#ffd54a; font-size:12px;">｜ ⭐功德 ${this.player2.merit || 0}/6</span>`;
             } else if (skillEl2 && this.player2.traitor) {
-                skillEl2.innerHTML = `<span style="color:#ff5252;">😈 内鬼</span> <span style="color:#aaaaaa;">堕落值 ${this.player2.corrupt || 0}/6（伤害+${25 * Math.min(6, this.player2.corrupt || 0)}%）</span>`;
+                skillEl2.innerHTML = `<span style="color:#ff5252;">😈 内鬼</span> <span style="color:#aaaaaa;">方向键移动 · 贴门/植物自动挠 · 堕落值 ${this.player2.corrupt || 0}/6（伤害+${25 * Math.min(6, this.player2.corrupt || 0)}%）</span>`;
             } else if (skillEl2 && this.player2.roleDef) {
                 const nut2 = (this.player2.nutHealCd || 0) > 0
                     ? `<span style="color:#777777;"><s>【+】修门</s> (CD:${Math.ceil(this.player2.nutHealCd)}s)</span>`
@@ -2593,6 +2604,38 @@ class HauntedDorm {
     }
 
     // ===== v4.0.122：出门键（P1=O / P2=4）——直接落到门外一格 =====
+    // ===== v4.0.144：内鬼玩家「从脚下的植物里走出来」=====
+    // 内鬼 isZombie=true → checkCollision 把「所有植物」当绝对实体（连自己正踩着的那格也算）。
+    // 玩家认领房间后默认站在床位上，而床上就有一株阳光菇 → 内鬼四向全被拦死，一格都挪不动
+    // （用户实报：双人模式一人变内鬼后「没有任何操作，挠不了别人的门」）。
+    // 解法：只拦「新增的阻挡格」，允许从已经压住的格子里滑出来。
+    _blockKeys(x, y, isZombie) {
+        const gs = this.gridSize, r = 15;
+        const pts = [[0, 0], [0, -1], [0, 1], [-1, 0], [1, 0], [-1, -1], [1, -1], [-1, 1], [1, 1]];
+        const out = new Set();
+        for (const [ox, oy] of pts) {
+            const c = Math.floor((x + ox * r) / gs), rr = Math.floor((y + oy * r) / gs);
+            const k = c + ',' + rr;
+            if (this.walls.has(k)) { out.add(k); continue; }
+            if (isZombie) {
+                const pl = this.getPlantAt(c * gs, rr * gs);
+                if (pl && !pl.def.ground) out.add(k);
+            }
+        }
+        return out;
+    }
+    _traitorFreeStep(p, nx, ny) {
+        const now = this._blockKeys(p.x, p.y, true);
+        const nxt = this._blockKeys(nx, ny, true);
+        for (const k of nxt) if (!now.has(k)) return false; // 只要多压到一格新的阻挡就拦
+        return true;
+    }
+    // 移动判定统一入口：内鬼走「不新增阻挡」，其他实体仍走完整碰撞
+    _moveOk(ent, nx, ny) {
+        if (ent && ent.traitor) return this._traitorFreeStep(ent, nx, ny);
+        return !this.checkCollision(nx, ny, 10, ent ? ent.isZombie : false);
+    }
+
     _doorExit(p) {
         if (!p || p.dead || this.over) return false;
         if (p.isZombie || p.traitor || p.angelic) return false;
@@ -3367,7 +3410,9 @@ class HauntedDorm {
             for (const e of ents) {
                 // v4.0.86：内鬼（AI isTraitor / 玩家内鬼 playerTraitor）也能踩跳板出门——原 2583 把 isZombie 全排除，
                 // 导致内鬼被自己房间的门锁死只能去钻门（钻门还会卡住）；僵尸阵营的玩家本体（真正的僵尸方）仍不触发跳板
-                if (e.isZombie && !e.isTraitor && !this.playerTraitor) continue;
+                // v4.0.144：内鬼判定必须逐人——原来只看 this.playerTraitor（= P1），P2 变内鬼后踩跳板被 continue 掉，
+                // 结果被自家房门锁死在屋里（用户实报「挠不了别人的门」）
+                if (e.isZombie && !e.isTraitor && !e.traitor) continue;
                 // v4.0.86：触发半径 34→44——AI 内鬼走到跳板旁（40px 停点）即触发传送，不再擦肩而过
                 if (Math.hypot(e.x - px, e.y - py) < 44) {
                     if (e._jumpFly) continue; // 已在飞行中
@@ -3846,7 +3891,7 @@ class HauntedDorm {
         if (nameEl) { nameEl.innerText = (who === 'p2' ? 'P2' : '你') + ' (内鬼)'; nameEl.style.color = '#ff5252'; }
         if (who === 'p1') {
             const p1Ctl = document.querySelector('#hud-p1 > div');
-            if (p1Ctl) p1Ctl.innerHTML = '<div>【内鬼 控制】移动: W/A/S/D ｜ 靠近门/植物自动慢咬 ｜ 靠近幸存者啃咬</div><div>血量=当前僵尸血量 ｜ 堕落值:0（每拆掉一株植物+1：伤害+25%、血量+10%）｜ 团灭所有幸存者即胜利 ｜ 主僵尸被消灭=失败</div>';
+            if (p1Ctl) p1Ctl.innerHTML = '<div>【内鬼 控制】移动: W/A/S/D ｜ 靠近门/植物自动慢咬 ｜ 靠近幸存者啃咬</div><div>血量=当前僵尸血量 ｜ 堕落值:0（每拆掉一株植物+1：伤害+25%、血量+10%）｜ 团灭所有幸存者即胜利 ｜ 主僵尸被消灭=失败</div><div style="color:#ffb0b0;">自家房门还挡着？踩屋里的跳板直接飞出去，或用嘴把门啃穿</div>';
         }
         this.setHp();
         this._refreshHud();
@@ -4027,6 +4072,15 @@ class HauntedDorm {
             zb.el1.style.opacity = '0';
             setTimeout(() => zb.el1.remove(), 480);
             this.playSfx('scream.mp3', 0.35);
+            if (zb.isFinalBoss) {
+                // v4.0.144：最终波的尸潮领主倒下 → 守屋直接胜利（不再要求清残部，残部本来就清不完）
+                this._announce('🏆 尸潮领主倒下了——第 10 波终结，守屋成功！', 'points.mp3', true, 'always');
+                if (window.AchTracker) window.AchTracker.bump('dBoss', 1);
+                for (const p of this.allPlayers) if (!p.dead) this.addSun(200, p);
+                if (this._gameOverTimer) clearTimeout(this._gameOverTimer);
+                this._gameOverTimer = setTimeout(() => this.gameOver(!this._anyTraitor() && !this.isZombieFaction), 1800);
+                return;
+            }
             if (zb.isBoss) {
                 this._announce('🏆 巨人僵尸被击倒了！它洒落了一地阳光！', 'points.mp3', true, 'always');
                 // v4.0.73 成就：击败机甲僵王
@@ -5606,33 +5660,43 @@ class HauntedDorm {
             return;
         }
         if (this.over || !this.ghostSpawned) return;
+        // v4.0.144：主僵尸（领主幽灵）一死就停刷——旧版波次永不停，残部清不完，「肃清剩余残部即可获胜」是空话
+        if (this.ghostRespawnAt > 0) return;
+        const WMAX = HauntedDorm.WAVE_MAX;
         // 开波前 10 秒预警——PVZ 经典台词，绝不搞突然袭击
-        if (!this.waveWarned && time >= this.waveAt - 10000) {
+        if (!this.waveWarned && Number.isFinite(this.waveAt) && time >= this.waveAt - 10000) {
             this.waveWarned = true;
-            const bossComing = (this.waveN + 1) % 5 === 0;
+            const nxt = this.waveN + 1;
+            const bossComing = nxt % 5 === 0 || nxt >= WMAX;
             this._announce(bossComing ? '⚠️ 一大波僵尸即将来临——含巨人！' : '⚠️ 一大波僵尸即将来临！', 'finalwave.mp3', true, 'always');
         }
-        if (time < this.waveAt) return;
+        if (!Number.isFinite(this.waveAt) || time < this.waveAt) return;
         // 开波
         this.waveN++;
         this.waveWarned = false;
-        this.waveAt = time + 75000;
+        // v4.0.144：第 10 波之后不再排下一波（waveAt=Infinity），游戏进入「打完就赢」的终局
+        this.waveAt = this.waveN >= WMAX ? Infinity : time + 75000;
         const n = Math.min(4, 2 + Math.floor(this.waveN / 2)); // v4.0.84：3~6 → 2~4（数量减少，战力已翻倍，成群小鬼排成横队不再叠成一坨）
         const base = this._ghostSpawnPoint(); // v4.0.84：同一波共用同一生成点，小鬼以它为中心排横队
         for (let i = 0; i < n; i++) this._spawnMinion(false, i, n, base);
-        if (this.waveN % 5 === 0) {
+        if (this.waveN >= WMAX) {
+            this._spawnFinalBoss();
+            this._announce(`🚨 第 ${WMAX} 波 · 最终波——尸潮领主降临！击败它即守屋成功！`, 'scream.mp3', true, 'always');
+        } else if (this.waveN % 5 === 0) {
             this._spawnBoss();
             this._announce(`🚨 第 ${this.waveN} 波尸潮——巨人驾到！`, 'scream.mp3', true, 'always');
         } else {
-            this._announce(`🧟 第 ${this.waveN} 波尸潮来袭！`, 'evillaugh.mp3', true, 'always');
+            this._announce(`🧟 第 ${this.waveN} 波尸潮来袭！（共 ${WMAX} 波）`, 'evillaugh.mp3', true, 'always');
         }
         this._updateGhostChip();
     }
 
-    _spawnMinion(isBoss = false, queueIdx = 0, queueCount = 1, basePoint = null) {
+    _spawnMinion(isBoss = false, queueIdx = 0, queueCount = 1, basePoint = null, isFinal = false) {
         const lv = this.ghostLevel;
+        const bossHp = Math.round(750 * Math.pow(2, Math.min(this.waveN, 6))); // v4.0.42：随波次翻倍
         const cfg = isBoss
-            ? { name: '巨人僵尸', img: 'Zombies/Gargantuar/0.png', hp: Math.round(750 * Math.pow(2, Math.min(this.waveN, 6))), speed: 170 } // v4.0.89：血量 ÷4（3000→750），咬合力已 ×2——巨人更疼更脆；v4.0.42：随波次翻倍；v4.0.81：外观=原版伽刚特尔（正常体型）
+            ? { name: isFinal ? '尸潮领主' : '巨人僵尸', img: 'Zombies/Gargantuar/0.png',
+                hp: Math.round(bossHp * (isFinal ? 2 : 1)), speed: isFinal ? 150 : 170 } // v4.0.144：最终波领主 = 同波巨人 ×2 血、略慢
             : { name: '小鬼僵尸', img: 'Zombies/Imp/0.gif', hp: Math.round(50 * Math.pow(2, lv - 1)), speed: 260 }; // v4.0.89：血量 ÷4（200→50）——玻璃大炮：咬人疼、但植物几下能清；v4.0.84：100→200（战力翻倍配合数量减少）
         const p = basePoint || this._ghostSpawnPoint(); // v4.0.84：同一批共用同一生成点，才能排成一条横队
         // v4.0.84：成群小鬼排成横队——以生成点为中心向两侧错位（约 46px/只），不再全部叠在同一个坐标上
@@ -5648,18 +5712,20 @@ class HauntedDorm {
         }
         const zb = { x: sx, y: sy, hp: cfg.hp, maxHp: cfg.hp, speed: cfg.speed, level: lv, cfg: cfg,
                      side: Math.random() < 0.5 ? 1 : -1, stuck: 0, detourT: 0, stunT: 0, slowT: 0, dead: false,
-                     isMinion: !isBoss, isBoss: isBoss };
+                     isMinion: !isBoss, isBoss: isBoss, isFinalBoss: !!(isBoss && isFinal) };
         this.zombies.push(zb);
 
         const zEl1 = document.createElement('div');
         zEl1.className = 'entity avatar';
-        const size = isBoss ? 'width:130%; height:130%; transform:translate(-42%, -40%);' // v4.0.81：巨人正常体型（原 220% 巨型取消）
+        const size = isBoss ? (isFinal ? 'width:160%; height:160%; transform:translate(-46%, -43%);'
+                                        : 'width:130%; height:130%; transform:translate(-42%, -40%);') // v4.0.81：巨人正常体型（原 220% 巨型取消）
                             : 'width:100%; height:100%; transform:translate(-3%, -25%);';
         const barTop = isBoss ? 'top:-42px;' : 'top:-14px;';
         zEl1.innerHTML = `<img src="assets/images/${cfg.img}" style="${size}">` +
-            (isBoss ? `<div class="lv-badge" style="background:#a00000; top:-36px;">巨人</div>` : '') +
+            (isBoss ? `<div class="lv-badge" style="background:${isFinal ? '#6a1b9a' : '#a00000'}; top:-36px;">${isFinal ? '尸潮领主' : '巨人'}</div>` : '') +
             `<div class="hp-bar-bg" style="${barTop} display:none;"><div class="hp-bar-fg" style="width:100%; background:#ff5252;"></div></div>` +
             (this.isZombieFaction && !isBoss ? `<div style="position:absolute; top:-30px; left:50%; transform:translateX(-50%); font-size:15px; color:#ff5252; text-shadow:0 0 5px #000; z-index:60; pointer-events:none;">🧟 尸潮</div>` : ''); // v4.0.77：号令尸潮的小鬼加「尸潮」角标，与玩家本体（无角标）区分，避免"看到一样的僵尸"
+        if (isFinal) zEl1.style.filter = 'drop-shadow(0 0 16px #b388ff)'; // 领主紫光轮廓，和普通巨人一眼分得开
         this.world1.appendChild(zEl1);
         zb.el1 = zEl1;
         zb.imgEl = zEl1.querySelector('img');
@@ -5668,6 +5734,8 @@ class HauntedDorm {
     }
 
     _spawnBoss() { this._spawnMinion(true); }
+    // v4.0.144：最终波 BOSS——击杀即胜利（见 _killZombie）
+    _spawnFinalBoss() { this._spawnMinion(true, 0, 1, null, true); }
 
     // ===== v4.0.121：内鬼脱困 =====
     // 判定「嵌入」= 自身判定中心（checkCollision 会强制 r=15 并采样 9 个点，中心点就在里面）
@@ -6100,11 +6168,11 @@ class HauntedDorm {
         let nx1 = this.player.x + this.player.vx * dt;
         let ny1 = this.player.y;
         // v4.0.122：房内不能靠走路迈出门（出门只能跳板 / O 键），撞到门边就停住
-        if (nx1 > 20 && nx1 < this.worldWidth - 20 && !this.checkCollision(nx1, ny1, 10, this.player.isZombie)
+        if (nx1 > 20 && nx1 < this.worldWidth - 20 && this._moveOk(this.player, nx1, ny1)
             && this._canWalkTo(this.player, nx1, ny1)) this.player.x = nx1;
         else this.player.vx = 0;
         nx1 = this.player.x; ny1 = this.player.y + this.player.vy * dt;
-        if (ny1 > 30 && ny1 < this.worldHeight - 10 && !this.checkCollision(nx1, ny1, 10, this.player.isZombie)
+        if (ny1 > 30 && ny1 < this.worldHeight - 10 && this._moveOk(this.player, nx1, ny1)
             && this._canWalkTo(this.player, nx1, ny1)) this.player.y = ny1;
         else this.player.vy = 0;
 
@@ -6132,11 +6200,11 @@ class HauntedDorm {
             this.player2.vy = (this.player2.vy || 0) + (vy2 - (this.player2.vy || 0)) * acc2;
             let nx2 = this.player2.x + this.player2.vx * dt;
             let ny2 = this.player2.y;
-            if (nx2 > 20 && nx2 < this.worldWidth - 20 && !this.checkCollision(nx2, ny2, 10, this.player2.isZombie)
+            if (nx2 > 20 && nx2 < this.worldWidth - 20 && this._moveOk(this.player2, nx2, ny2)
                 && this._canWalkTo(this.player2, nx2, ny2)) this.player2.x = nx2;
             else this.player2.vx = 0;
             nx2 = this.player2.x; ny2 = this.player2.y + this.player2.vy * dt;
-            if (ny2 > 30 && ny2 < this.worldHeight - 10 && !this.checkCollision(nx2, ny2, 10, this.player2.isZombie)
+            if (ny2 > 30 && ny2 < this.worldHeight - 10 && this._moveOk(this.player2, nx2, ny2)
                 && this._canWalkTo(this.player2, nx2, ny2)) this.player2.y = ny2;
             else this.player2.vy = 0;
         }
