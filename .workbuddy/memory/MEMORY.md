@@ -2,72 +2,80 @@
 
 ## 概况
 - 用户 区耀丁；仓库 github.com/52ouxiaoyu/nexus-hub.git
-- 项目：pvz-web/、tank-battle/、billiards/、racing-3d/、kingdom-rush/、thunder-wing/、tvbox/、slime-cannon/
-- 本文件只留铁律与契约；逐版细节查 .workbuddy/memory/ 日期日志与各子游戏 README.md
+- 子项目：pvz-web / tank-battle / billiards / racing-3d / kingdom-rush / thunder-wing / tvbox / slime-cannon / geometry-wars / snake / tetris-battle / sheep-stack / calabash-brothers / chinese-blitz
+- 本文件只留铁律与契约；逐版细节查 `.workbuddy/memory/YYYY-MM-DD.md` 与各子游戏 README
 
 ## 用户偏好（铁律）
-- 每次改动：升版本号 → git add+commit+push origin main；**版本号只升不降**；改完立即推（防并行会话扫走）
-- **bump 前必须 `git log --oneline -5` + `git show HEAD:<ver文件>` 核对实际最新版**（摘要可能过期）
-- 版本号单一来源=各子游戏主界面徽标；games.html 禁加版本号
-- PVZ 严格原版手绘素材，禁自画/Q 版/emoji 混搭；融合配方要有清晰逻辑；改动最小化
-- 红圈截图按标注精确位置实现，禁止推测；删除类操作先只读扫描+等确认
-- 键位精简：一个玩法=方向+主动作+大招；双人两套键互不串台
+- 每次改动：升版本号 → git add+commit+push origin main；版本号只升不降；改完立即推
+- **bump 前必须 `git log --oneline -5` + `git show HEAD:<ver文件>` 核对实际最新版**（摘要会过期）
+- 版本号单一来源＝各子游戏主界面徽标；games.html 禁加版本号
+- PVZ 严格原版手绘素材，禁自画/Q 版/emoji 混搭；改动最小化
+- 红圈截图按标注位置实现，禁止推测；删除类操作先只读扫描 + 等确认
+- 键位精简：一个玩法＝方向 + 主动作 + 大招；双人两套键互不串台
 
 ## 通用工程教训
-- python rep()（`assert count==1`）替换防 Edit 不落盘；整脚本先全部断言再统一写盘（失败=零写入）；改完 git diff 复核
-- Bash 多模式 grep / 中文搜索常假阴性 → 用 Grep 工具或 python
-- 倒序遍历+循环内清表 → 每轮开头 `const b=arr[i]; if(!b) break;`
-- 左右修饰键/e.code；**e.key 会被 IME 改写**（中文吞成 'Process'）→ 每键同时认 e.key+e.code
-- 丢 keyup 卡键 → blur+visibilitychange 全量释放 keys+firing
-- 断言帧推进前清 hitstop/无敌帧；像素阈值留余量；主循环 filter() 换数组会让 push 探针失聪（先冻结模拟）
+- **Edit 工具偶发「报成功但没落盘」** → python `assert count==1` 替换；整脚本先全部断言再统一写盘（失败=零写入）；改完 `git diff` 复核
+- Bash 里 grep 多模式/中文常假阴性 → 用 Grep 工具或 python
+- 倒序遍历 + 循环内清表 → 每轮开头 `const b=arr[i]; if(!b) break;`
+- 左右修饰键用 `e.code`；**`e.key` 会被 IME 改写**（吞成 'Process'）→ 每键同时认 e.key + e.code
+- 丢 keyup 卡键 → blur + visibilitychange 全量释放 keys
 - data-page-node-id 注入是噪声 diff，add 前剥离
-- puppeteer：绝对路径 require repo 根 node_modules；系统 Chrome + `--no-sandbox` + 独立 userDataDir（并行开会冲突，串行跑）
+- puppeteer：绝对路径 require repo 根 node_modules；系统 Chrome + `--no-sandbox` + 独立 userDataDir（并行会冲突，串行跑）
+- **Chrome 沙箱坑**：报 "sandbox initialization failed" / "Requesting main frame too early" 时不是环境抖动，加 `--no-sandbox` + `userDataDir`；僵尸进程 `pkill -9 -f "Google Chrome.*--headless"`
 
 ## 并行会话风险（多次踩）
-- **只 add 自己改的文件，绝不 `git commit -a`/`add -A`**；别人的未提交改动不要碰；绝不在真仓库 `git checkout HEAD -- .`
-- 交付后 `git show HEAD:<file>` 逐个核对；`<script src>` 引用的文件必须在 HEAD（曾 404）
-- push 遇 502 时**以 push 输出 `<old>..<new> main -> main` 为准**，再补 ls-remote 验真（ssh 通道更稳）
+- **只 add 自己改的文件，绝不 `git commit -a`/`add -A`**；别人未提交的改动不要碰；绝不在真仓库 `git checkout HEAD -- .`
+- 交付后 `git show HEAD:<file>` 逐个核对；`<script src>` / `url()` 引用的新素材必须在 HEAD
+- push 遇 502 时以输出 `<old>..<new> main -> main` 为准，再补 ls-remote 验真
 
 ## pvz-web 通用
-- 禁裸写 element.style.transform（.entity 靠 CSS translate(-50%,-50%) 居中，走 setTransform/addTransform）；手套显隐统一 gloveHide()/gloveRestore()
-- 数据驱动融合 PVZ_FUSION_EXTRA；**材料名含下划线会被 split('_') 截断（scaredy 教训）**
-- 加新植物 9 接入点 / 新弹种三表同步（CollisionManager 行命中排除+破甲+减速）→ 查日期日志
-- 测试：每用例清场（g.entities.length=0）；融合模式走真实菜单；强制 state='PLAYING' 需手动驱动+sleep
-- 主菜单模式卡在 body 内 `<style id="menu-style">`：**puppeteer addStyleTag 插 head 会被它反超**（同权重按文档序）→ 试验 CSS 用 `insertBefore(st, menuStyle.nextSibling)`；`.pkt-art` 有 3px border，absolute 的 left/right 从 padding box 起算（断言 +3/-3）；覆盖旧规则**必须显式 `transform: none`**
+- 禁裸写 `element.style.transform`（.entity 靠 CSS translate(-50%,-50%) 居中，走 setTransform/addTransform）；手套显隐统一 gloveHide()/gloveRestore()
+- 数据驱动融合 PVZ_FUSION_EXTRA；**材料名含下划线会被 split('_') 截断**
+- 加新植物 9 接入点 / 新弹种三表同步（CollisionManager 行命中排除+破甲+减速）
+- 测试：每用例清场（g.entities.length=0）；融合模式走真实菜单；强制 state='PLAYING' 需手动驱动 + sleep
+- 主菜单模式卡在 body 内 `<style id="menu-style">`：**puppeteer addStyleTag 插 head 会被它反超**（同权重按文档序）→ 试用 CSS 用 `insertBefore(st, menuStyle.nextSibling)`；`.pkt-art` 有 3px border（absolute 的 left/right 从 padding box 起算 → 断言 +3/-3）；覆盖旧规则**必须显式 `transform: none`**
+- 缓存戳 17 处 `?v=<ts>` 手工统一替换（正则断言 17 个且唯一）
+
+## 彩蛋系统（v4.0.146~148）
+- 首页 `#menu-egg`（z12、pointer-events:none、挂 #start-menu 内）：pop/peek/brains/sun/imp 五种
+- 局内 `#game-egg`（守屋挂 #dorm-container z950；PvZ 挂 #game-container z6）：head/brains/cloud/motes
+- 只在**安全窗口**放：守屋未暂停未结算 + 最近僵尸 >320px；PvZ 僵尸全在右半场 x>420
+- 暂停/结算/切后台 1.2s 内 purge（loop 排程 17~44s 太长，必须另设 setInterval 盯）
+- **抽签用洗牌袋**，不用纯随机（纯随机会让某类长期不出现）；brains 池里放两份加权
+- **袋间去重**：`bag[0]===last` 时不能只跟 bag[1] 交换（两份额时会换回同类）→ 找第一个 ≠ last 的项换首位
+- 冒头类峰值只到 `translateY(30%)`（0% 会盖住卡牌标题）；小鬼 `Imp/0.gif` 素材朝左 → 往右跑必须 `scaleX(-1)`
+- 静态大头贴 `ZombieHeadBig.png`（ZombieHead.gif 是「人头从左上滚到右下」的 12 帧动画，放大后会滚出屏幕）
+- 云影必须用**贴图** `assets/images/UI/cloud_shadow.png`：radial-gradient 怎么调都像「屏幕暗了一块」（人眼对均匀渐变无感）
 
 ## 守屋大作战（HauntedDorm.js 单文件，最活跃）
-- **入口=index.html 内嵌 #dorm-screen**（原页开局，URL 不跳转），haunted-dorm.html 只做直链兼容；启动 `window.startHauntedDorm({mode,role1,role2,faction})`；代际号 __dormGen 防旧 rAF；样式作用域 #dorm-screen
-- **allPlayers 含 5 个人机**；真人存活判 _humansAll()；AI 发育在 _updateAIs、行走/认领在 _tick；植物随身 owner（spawnPlant 第 5 参），伤害记账 `pl.owner||owners[0]||null` 绝不兜底给 P1；结算=_humansAll 全灭
-- **暂停/托管/钉床（v4.0.101~106）**：暂停=P 键零模拟（loop 顶部 return，gameTime 不推进；恢复须后移 p._lastInputAt + 挂起 _pendingGameOver 补结算）；托管=2p 任一方 10s 无本方键 → 塞进 AI 两条链（不设 isAi）、禁抢盲盒；钉床=_pinToBed，认领判定必须 `owners.includes(self)`（否则 cap=1 时自家房恒判「有人」→ 进屋即出乒乓）
-- **寻路铁律（v4.0.113 / v4.0.118）**：① 人机一律 `_pathToBed(x,y,rm)` 一次 BFS 直达床位，**禁止「到门口 + push 床位点」**（门格到床位隔 4~6 格，末段直线穿墙）；每帧路点相邻性自检（曼哈顿 >1.5 格重算）+ 单帧位移封顶 0.9 格 + 墙内救援放 `_updateAIs` 循环开头；**任何搬移/瞬移后必须重算该实体 path**。② **僵尸寻路绝不能把植物写进障碍表**——屋内唯一通道被坚果/塔堵死时 BFS 必失败返回 null → 调用方走直线 → 撞墙 detour 死循环（实测 75.7% 僵尸帧无路径、25 次僵死，表现「卡在墙边不吃人、门破也不挠」）。用 `_findPath(..., false, {ignorePlants:true, nearest:true})`：除门板外植物视为可通行（能否进入由 `checkCollision` + 前方 25px 探针啃食把关，不会穿模），`!found` 时遍历 visited 返回「离目标最近的可达格」。③ 路径末端补目标像素点前必须验「最后一格 ≤1.5 格」，否则补出来就是一段穿墙直线。④ 帧末兜底：本帧位移 <1px 且没啃食累计 5s → 作废 `lockedTarget` + 重选（`idleT`）
-- **僵尸开局观察期（v4.0.117）**：`zombieFreezeT=10`（只有 10 秒，用户口中的"几分钟"是错觉）。技能封锁必须同时做三层——keydown 整批吞技能键（m/n/b/g/h/5///3/+ 空格）+ `_cycleCommandTarget`/`_orderHorde` 入口 `_frozenSkillBlock()` 兜底 + 技能栏显示 `❄️ 观察期 Ns · 技能锁定`；只靠 `_useSkill` 里那行 return 时 G/H 照放（H 开局 1 秒能刷 3 只小鬼）。**横幅类 DOM 必须 append 进 `#dorm-screen`**（它 z-index 4000，挂 body 上 z-index 2500 会被整块盖住 → 玩家只感到"不能动"看不到倒数）
-- **号令尸潮解锁（v4.0.117）**：`survivorKills >= 2`（`_hordeUnlocked()`），只统计僵尸方真人啃咬击杀（写在 `this.kills++` 旁，尸潮小怪咬死的不算），重开清零；HUD 未解锁时灰化划线显示 n/2。**连发两条 `_announce` 会互相覆盖**，解锁播报要合并成一条
-- 小推车（v4.0.30）=存活奖励：无自动摆放/无地图道具；祝福「推车布防」=恢复自家已用或随身获得（mowerCarry+badge），走回自家门口格自动放置；僵尸 AI 每 90s 自动领；僵尸玩家开局冻结 10s
-- AI 行为：hp 300、接触咬 1.5s/口按血量；无房 AI 贴脸 130px 反向逃、蹲避**丢路点**；门破选房避开僵尸 250px；**整段替换代码前先列出段内全部方法清单**（曾连带删掉 _placeMower）
-- 砸罐子/盲盒（v4.0.24）：_plantBoxPool（含 plantbox 自身，连开链）；开箱统一 _openPlantBoxAt；金罐 _rollGoldenVaseContent
-- **豌豆链伤害（v4.0.111）**：tier1~9 每级 ×2（1→256），**tier10~16 ×1.85**（480/890/1650/3050/5650/10450/**19300**）；只改 DEFS `shoot.dmg`（图鉴/飘字自动同步），**别动弹数/射速**。固有非单调：tier9 机枪 853 DPS → tier10 西瓜 218 DPS（cd2.2/n1，aoe 70 补偿）
-- **地板规则（v4.0.109）**：房间 footprint 铺 `.tile.room`，但**敞开凹口格不铺**（屋外露草地）——边界洞格 4 邻域 flood fill 能连到边界=外部；封闭中庭照铺
-- **图鉴三分区（v4.0.110）**：HelpGuide `FUSION` 混着真融合与守屋升级形态（必须标 `k:'dorm'`）→ 分区「守屋专属」+ 副标题 + 徽章。**别再把守屋 DEFS 升级形态塞进融合区**（v4.0.74 塞 21 条 → 被当成"融合植物漏配方"）。同名 4 组（魅惑向日葵/冰蒜卫士/金蒜坚果/蒜味高坚果）守屋侧加「·守屋」
-- 融合卡面（v4.0.25）：PLANT_ART_BBOX 表 + fitOversizedCardArt；`.vz-card img`/`.zcard img` 收窄为 `>` 直接子
-- 诊断范式：全植物体检 _diag_plants.js（每批新开对局）；全游戏巡检 _audit_all_games.js；旧脚本失败先 git worktree add /tmp 对照 HEAD 判历史遗留
+- **入口=index.html 内嵌 #dorm-screen**；`window.startHauntedDorm({mode,role1,role2,faction})`；代际号 __dormGen 防旧 rAF
+- allPlayers 含 5 个人机；植物随身 owner（spawnPlant 第 5 参），伤害记账 `pl.owner||owners[0]||null` 绝不兜底给 P1；结算=_humansAll 全灭
+- **暂停**=P 键零模拟（loop 顶部 return）；恢复须后移 `p._lastInputAt` + 补挂起的 `_pendingGameOver`
+- **钉床** `_pinToBed`：认领判定必须 `owners.includes(self)`（否则 cap=1 时自家房恒判「有人」→ 进屋即出乒乓）
+- **寻路铁律**：① 人机一律 `_pathToBed` 一次 BFS 直达床位，**禁止「到门口 + push 床位点」**；每帧路点相邻性自检（曼哈顿 >1.5 格重算）+ 单帧位移封顶 0.9 格 + 墙内救援；任何搬移后必须重算 path。② **僵尸寻路绝不能把植物写进障碍表**（屋内通道被堵→BFS null→走直线→撞墙死循环）→ `_findPath(..., false, {ignorePlants:true, nearest:true})`。③ 末端补像素点前验「最后一格 ≤1.5 格」。④ 帧末兜底：位移 <1px 且未啃食累计 5s → 作废 lockedTarget 重选
+- **僵尸开局观察期 `zombieFreezeT=10`**：技能封锁要三层（keydown 整批吞技能键 + `_cycleCommandTarget`/`_orderHorde` 入口 `_frozenSkillBlock()` + 技能栏显示）；**横幅 DOM 必须 append 进 #dorm-screen**（它 z4000，挂 body 会被盖住）
+- **号令尸潮**：`survivorKills >= 2`，只统计僵尸方真人啃咬击杀；**连发两条 _announce 会互相覆盖**，要合并
+- **波次 `WAVE_MAX=7` + `WAVE_GAP=60000`**（v4.0.146）：第 5 波巨人波、第 7 波最终波「尸潮领主」（同波巨人 ×2 血、160% 体型）击杀即胜；开波后 waveAt=Infinity
+- **房间尺寸档位**（v4.0.142）：small 6~12（固定 1 间）/ normal 16~25 / trap 16~35 / L 27~33 / **big 40~50（硬上限）**；落点 640 次、>400 降 `normalSmall` 保底；**出生/回血圆圈 ±2 格内无房间**（用包围盒判，_insideRoom 漏 L 形缺口）
+- **南瓜套锚点**：`Plant.ART_BOTTOM_RATIO`（内容底边/画布高），素材 bbox 底距画布底 >15% 才登记；否则超大透明画布会让壳整体下坠
+- **不能往 `<img>` 里塞子节点**（罐子重掷空白）：要缩略图挂 entityLayer，走 `lightUpNeighbors`，重掷必须传 `selfToo`
+- **破门永久**：判据落在 `spawnPlant` 建的 `rm._doorSeen`（建过又没了＝被咬毁）；只靠 doorBroken 会漏「同帧先咬毁后认领」
+- **人机不许原地绕圈**：换房失败拉黑 20s（`_aiMarkBadRoom`/`_aiNearestClaimRoom`）+ capacity + `_roomReservedForHuman`；3s 采样净位移、6s 挪不到 1.2 格就钉床/停摆
+- **僵尸阵营真人碰到人机＝秒杀**：`v.hp=1; v.biteT=1.5` 让当帧那一口必死；内鬼形态不适用
+- **内鬼能动**：床位那格有植物时 checkCollision 会四向全拦 → 内鬼走 `_traitorFreeStep`（只拦新增阻挡格）；跳板出门判据要逐人（原来只看 P1）
+- 地板铺 `.tile.room` 但**敞开凹口不铺**（4 邻域 flood fill 能连到边界＝外部）
+- **图鉴三分区**：守屋 DEFS 升级形态必须标 `k:'dorm'`，放「守屋专属」，别塞进融合区
+- 诊断范式：全植物体检 _diag_plants.js；守屋三场景巡检 _diag_v4144_soak.js（单人植物/双人植物/双人僵尸各 42s 真实按键）
 
 ## 守屋数值骨架（v4.0.106 审计，仍未改）
-- **病根**：四条 ×2 曲线叠加（产出/升费/植物伤害/僵尸血量）→ 回本恒定 10~20s → 永远升级恒最优；开局「杀 1 僵尸 300s vs 门 18s 破」无解，终局「满级门 306s 啃不穿 + 满级植物 0.6s 秒杀巨人」双向无敌。只能重设骨架（产出 ×2→×1.6），调参无效；55 融合配方全建在 ×2 链上，必须「先骨架后内容」
-- v4.0.107 已修：僵尸阵营 2p 的 P2 幽灵 / 门板回血 def.hp→maxHp / 人机盲盒按档 600·90·150 + 40% 产出 / AI 僵尸补 Lv10 / P2 天使停产 / 阳光袋复活 / 回血 5 格半径 / 开局 ☀50
-- **v4.0.108 出生点=场外**：落点=最近空房房门朝外第 3 格（240px），硬约束 `_insideRoom` 必须 null + 非墙/无碰撞；被挡按 3→2→4→1 退让再环形搜。配套 `_homeReservedUntil=45000` 开局保护（_roomReservedForHuman 4 处 AI 选房过滤 + _claimRoom 拦截）。引导文案按屋内/屋外动态给；**别用 `_flyText` 循环 allPlayers**（飘字池复用 → 重开出现多份同文），用单条 DOM + `window.game !== this` 守卫
-- **v4.0.112 封面**：`#btn-dorm .pkt-art.dorm` 改绝对定位「远小近大三段景深」——向日葵 38px(左/bottom16) / 高坚果 84px(中/left34/z4) / 豌豆 62px(右/bottom10)，互压 7px·5px；三枚原版 plantshadow32 投影 + 16px 草地台阶 + 左上暖光 + 四角暗角 + 原版 Sun.gif
+- **病根**：四条 ×2 曲线叠加（产出/升费/植物伤害/僵尸血量）→ 回本恒定 10~20s → 永远升级恒最优；只能重设骨架（产出 ×2→×1.6），调参无效；55 融合配方全建在 ×2 链上 → 「先骨架后内容」
+- 豌豆链：tier1~9 ×2（1→256）、tier10~16 ×1.85（封顶 19300）；只改 DEFS `shoot.dmg`，别动弹数/射速
+- **平衡铁律**：僵尸血量必须与植物攻击力匹配（普通 50×2^(L-1) → 机甲 25600；小鬼 25×2^(lv-1)），保持「单株同级豌豆恒 50 发击杀」
 
-## 守屋平衡铁律（用户 2026-10-16 明确要求）
-- **僵尸血量必须与植物攻击力匹配**：植物 ×2 链（豌豆 2^(tier-1) 1→1024 → v4.0.111 后放缓），僵尸 50×2^(L-1)（普通 50→机甲 25600）、小鬼 25×2^(lv-1)、僵王 800×2^波次封顶。调植物伤害/加植物必须同步重算，保持「单株同级豌豆恒 50 发击杀」
-
-## 其他子游戏（只留铁律，细节看日期日志）
-- **tank-battle v1.4.20**：单文件 game.js，句柄 window._tankGame；击杀收敛 Tank.destroy(killer,damage)；Boss 覆写不调 super（回充单独加）；数值集中 VITALS，伤害先扣 shieldHp；禁 shadowBlur，改 map.grid 必 markDirty()，MAX_EFFECTS=90/BULLET_CAP=100；测试清空敌人会触发 STAGE_CLEAR 停摆 → 留 frozen 敌人
-- **billiards v2.8.5**：G.aimDir 是快照恒旧值 → 用 aimLine 端点反推、重定向必须 setAim()；POOL.state 只读 getter；角袋圆心 (±(W/2+0.015),±(H/2+0.015)) r=0.081，斯诺克结算用出杆瞬间快照；双人 P1=WASD+空格 / P2=方向键+回车；测试干扰球间距>2R、难度 bug 走真实菜单（`||默认值` 会顶掉 0 档）、测 AI 回合先 `POOL.current=1; POOL.maybeRunAI()`
-- **racing-3d v1.4.1**：相机 right=-worldX；_test.js 96 条必全跑；深草 off=1（极速 0.40×/滚阻 0.055/抓地 0.65）；LAT_GRIP=36；frame() 给 P2 必须显式传 Input.p2
-- **thunder-wing v1.5.1**：纯 Canvas2D 零素材；句柄 window.__twGame；玩家状态在 G.players[]（加属性同改 makePlayer+defineProperty 代理名单+HUD）；键位 1P `WASD/空格/M`、2P `方向键/NumpadEnter/NumpadAdd`（每键含 e.code 兜底）。**铁律：坚决不能有弹窗**（弹卡/选单/强制读字全禁，升级=全自动随机发放只飘一行字，TW.drawPick 永久禁用）；**弹幕契约（用户密集恐惧症）**：敌弹上限 120/我方 80、敌弹速 1.4~2.2/我方 5~7、出弹间隔×2；色彩契约：有害=暖色尖锐星芒、有利=白环徽章、**禁绿色敌人/绿弹**；自适应纵向恒 800，**关卡横向字面量必须包 X(v)**
-- **slime-cannon v4.7.0（纯单局双塔·纯键盘·元素共鸣）**：单文件 index.html，只有双人模式；1280x720，F 全屏 P 暂停。**纯单局铁律（2026-10-24）**：绝不能有 localStorage 存档/金币银行/局外永久强化（用户拒绝"每天上瘾式养成"），菜单写「一次一局 · 不存档 · 每盘从零开始」。坐标 WALL_TOP=596/TOWER_X=[206,1074]/TOWER_Y=646/**PIVOT_Y=630**（敌人在炮口上方，角 0=正上、±1.45）；四键 P1 `A/D`+`W`推+`S`选、P2 `←/→`+**`↑`换下一张、`↓`选**；**画布不接受任何指针输入**（mousemove/touch 已全删）；角度状态只认 t.ang；5 秒 AI 托管；**子弹微吸附** homingSteer（HOME_ARC=0.38/HOME_RATE=1.2 rad/s 绝不能调大/锥外不转向/模长守恒）；**处决** `EXEC.cd=12`/`hpPct=0.008` 绝不能调高；词缀精英 `AFFIX_KEYS` 5 种、`affixRate=clamp(.05+t/1400,.05,.30)`、boss 与分裂产物 `noAffix`；`G.shocks` 半径必须按各自 dur 算（固定值→r 负→arc 抛错）；drawSlime 必须走 slimePath()；**头顶禁止圆球**（用户嫌像炸弹）。**射速/单发是常数对**：`rateOf` 基础 6.3 × `dmgBase` 12.5 = 78.75（旧 10.5×7.5），只许成对改（10.5/s×4 支=132 发/秒会连成一条直线）；**震动禁 rand(-sh,sh) 白噪声**（高频"麻"最晕）→ `min(G.shake,9)*0.42` + 低频正弦 `sin(t*37)/cos(t*53)`，衰减 62/s，普通击杀只给 1.0；拖尾 `42*thin*(b.jl||1)`、MAX_PARTS=220。**密度铁律（用户密恐）**：`popMax: 30` / `popBase: 12`（74→30 才让他有判断空间），同屏箭矢目标 ≤35；难度只靠 `hpA`（现 4.4）补，绝不靠数量。出生 x 必须 `rand(110, W-110)` 铺满（原 rand(300,W-300) 只占中段）。速度与个体差：ETYPES 已 -22%、`rand(.72,1.28)`、`waitT=rand(0,0.9)` **king spd 28 不许降**。
-- **元素系统（v4.7.0 核心，两人的配合载体）**：`elemOf(p)` = 火/冰/雷中等级最高者（同分沿用 `p._elem` 防抖）；两塔元素不同、0.85s 内交替命中同一只 → 触发反应。四反应：融化(冰火,按 max 5.5%×rp)/超导(冰雷,冻结+易伤)/过载(火雷,爆炸+max2%)/破绽(锐+X,×1.55)。`reactPower() = 1 + 双方三系等级和×0.22`。**`reactKey` 必须 sort 后比较（`bolt+ice` 不是 `ice+bolt`）**；**`reactCd` 不许低于 .9**（.55 时每秒 8 次反应，直接盖过箭矢 = 自动打怪）。AI 托管必须主动与搭档错开元素。
-- **阶梯升级（v4.7.0）**：`ATK_STEP[1,1.5,2.25,3.2]`、`RATE_STEP[1,1.15,1.28,1.42]`，atk/rate max 3；卡片第三行必须写「下一级换来什么」。
-- **视觉差异化（v4.7.0）**：四种弹体独立函数 `drawBoltSteel/Ice/Fire/Thunder`，形状/拖尾/光晕全不同；塔身随元素变（冰棱/火苗/电弧）；受击白闪用 `shade(e.col,.62)` **不许刷纯白**；`⚔`(U+2694) 在 canvas 缺字形（渲染成 ×）**禁用**；反应/合击大字必须全局限流（`reactShowT .42` / `crossShowT .55`）；ult 光柱 w ≤26 白 ≤.40（否则糊掉半个战场）
-- **Boss 漫画演出（v4.6.0）**：`BOSS_PERSONA` 三套人格（傲慢/怂包/网红）各带 enter/taunts/pleads/deaths/cry；`bossSay(kind)` + `updateBossShow(dt)` 驱动；求饶 = hp<28% → `freezeT=1.15`（updateEnemies 里 continue）+ 黄底气泡，每只一次；死亡 = `bossDeath` 大字 + 锯齿爆炸框 + `sfx('scream')`。**排版红线**：气泡 `by<190` 必须改放下方（顶部 130~210 是横幅）；惨叫大字 166 / 台词条 220 / 爆炸框 clamp(y,300,500) 三者不许重叠
-- **tvbox-web-player**：CF Pages 连 GitHub，push main 自动部署；functions/api/proxy.js；播放发生在访问者端
+## 其他子游戏（只留铁律）
+- **tank-battle**：单文件 game.js，句柄 window._tankGame；击杀收敛 Tank.destroy(killer,damage)；Boss 覆写不调 super；数值集中 VITALS，伤害先扣 shieldHp；禁 shadowBlur；改 map.grid 必 markDirty()；测试清空敌人会触发 STAGE_CLEAR 停摆 → 留 frozen 敌人
+- **billiards**：G.aimDir 是快照 → 用 aimLine 端点反推、重定向必须 setAim()；POOL.state 只读；角袋圆心 (±(W/2+0.015),±(H/2+0.015)) r=0.081；双人 P1=WASD+空格 / P2=方向键+回车；`||默认值` 会顶掉 0 档
+- **racing-3d**：相机 right=-worldX；_test.js 96 条必全跑；LAT_GRIP=36；frame() 给 P2 必须显式传 Input.p2
+- **thunder-wing**：纯 Canvas2D 零素材；句柄 window.__twGame；玩家状态在 G.players[]。**坚决不能有弹窗**（升级=全自动随机发放只飘一行字）；弹幕契约（密恐）：敌弹 ≤120/我方 ≤80、出弹间隔×2；**禁绿色敌人/绿弹**；关卡横向字面量必须包 X(v)
+- **slime-cannon**：纯单局（禁 localStorage 存档/局外养成）；坐标 PIVOT_Y=630；**画布不接受指针输入**；子弹微吸附 HOME_ARC=0.38 不许调大；处决 EXEC.cd=12 不许调高；射速×单发是常数对（6.3×12.5）；**震动禁白噪声**（用 min(shake,9)*0.42 + 低频正弦）；**密度铁律** popMax 30 / popBase 12；元素反应 `reactKey` 必须 sort 后比较、`reactCd ≥ .9`
+- **tvbox-web-player**：CF Pages 连 GitHub，push 自动部署；functions/api/proxy.js
