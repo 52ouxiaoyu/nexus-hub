@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1793800473">
-    <link rel="stylesheet" href="css/haunted-dorm.css?v=1793800473">
+    <link rel="stylesheet" href="css/style.css?v=1793801319">
+    <link rel="stylesheet" href="css/haunted-dorm.css?v=1793801319">
 </head>
 <body>
     <div id="game-container">
@@ -251,6 +251,76 @@
                 50%  { transform: translate(64vw, 2px); }
                 75%  { transform: translate(96vw, -8px); }
                 100% { transform: translate(128vw, 0); opacity: .9; }
+            }
+
+            /* ===== v4.0.147 游戏内自动彩蛋 =====
+               全部是「屏幕空间」的装饰（不落在棋格/地图坐标里，也不冒充任何游戏实体）：
+               血字、云影、萤火、从屏幕底边探出来的僵尸头。pointer-events:none，
+               且只在「附近没有敌人 + 没暂停/结算」时放，绝不在交战时糊脸。
+               尺寸用 em，由 JS 按宿主宽度折算（守屋容器≈1440px、PvZ 容器恒 900px，各按各的缩放）。 */
+            #game-egg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+            #game-egg .ge { position: absolute; }
+            #game-egg .ge i { display: block; }
+
+            /* ① BRAINS… 血字从右横穿到左 */
+            #game-egg .ge-brains {
+                top: 20%; left: 100%; white-space: nowrap;
+                font-family: 'Kaiti SC','STKaiti','KaiTi',Georgia,serif;
+                font-size: 2.6em; font-weight: 800; font-style: italic; letter-spacing: .08em;
+                color: #e0322a; opacity: .7;
+                text-shadow: 0 0 10px rgba(120,0,0,.85), 2px 2px 0 #2a0505, -2px 2px 0 #2a0505;
+            }
+            #game-egg .ge-brains.go { animation: geBrains 3.6s linear forwards; }
+            @keyframes geBrains {
+                0%   { left: 100%; opacity: 0; }
+                12%  { opacity: .7; }
+                80%  { opacity: .7; }
+                100% { left: -100%; opacity: 0; }
+            }
+
+            /* ② 一团云影慢慢扫过（白天黑夜都成立，最不容易被当成敌人） */
+            /* 这一层必须自己撑满：<i> 的 left:105% 是按父盒宽度算的，
+               父盒若是 0 宽，云影就只会从左边挪到左边，压根扫不过屏幕 */
+            #game-egg .ge-cloud { inset: 0; }
+            #game-egg .ge-cloud i {
+                position: absolute; top: 10%; left: -32em;
+                width: 28em; height: 15em; border-radius: 50%;
+                background: radial-gradient(closest-side, rgba(0,0,0,.42), rgba(0,0,0,.18) 58%, rgba(0,0,0,0));
+                filter: blur(.6em);
+                animation: geCloud 6.2s linear forwards;
+            }
+            @keyframes geCloud {
+                0%   { left: -32em; opacity: 0; }
+                16%  { opacity: 1; }
+                84%  { opacity: 1; }
+                100% { left: 102%; opacity: 0; }
+            }
+
+            /* ③ 一撮萤火/尘埃斜着飘过 */
+            #game-egg .ge-motes { inset: 0; }
+            #game-egg .ge-motes i {
+                position: absolute; width: .34em; height: .34em; border-radius: 50%;
+                background: #ffeaa6; box-shadow: 0 0 1em rgba(255,214,110,.9);
+                animation-name: geMote; animation-timing-function: ease-out; animation-fill-mode: forwards;
+            }
+            @keyframes geMote {
+                0%   { transform: translate(0, 0) scale(.3); opacity: 0; }
+                22%  { opacity: 1; }
+                100% { transform: translate(2.6em, -4em) scale(1.15); opacity: 0; }
+            }
+
+            /* ④ 僵尸头从屏幕底边探出半颗，张望两下再缩回去 */
+            #game-egg .ge-head { left: 50%; bottom: 0; width: 8.4em; transform: translate(-50%, 115%); }
+            #game-egg .ge-head img { display: block; width: 100%; filter: drop-shadow(0 .3em .9em rgba(0,0,0,.6)); }
+            #game-egg .ge-head.go { animation: geHead 4.2s cubic-bezier(.3,.9,.3,1) forwards; }
+            @keyframes geHead {
+                0%   { transform: translate(-50%, 115%) rotate(-3deg); }
+                15%  { transform: translate(-50%, 36%)  rotate(4deg); }
+                27%  { transform: translate(-50%, 31%)  rotate(-3deg); }
+                43%  { transform: translate(-50%, 34%)  rotate(3deg); }
+                60%  { transform: translate(-50%, 30%)  rotate(-1deg); }
+                78%  { transform: translate(-50%, 33%)  rotate(0deg); }
+                100% { transform: translate(-50%, 118%) rotate(0deg); }
             }
 
             /* ===== v4.0.129 网格化：两行统一 4 列 196px（列宽 196、列距 20，整行 844 居中）=====
@@ -1284,21 +1354,21 @@
         });
     })();
     </script>
-    <script src="js/InputManager.js?v=1793800473"></script>
-    <script src="js/Board.js?v=1793800473"></script>
-    <script src="js/entities/Entity.js?v=1793800473"></script>
-    <script src="js/entities/Plant.js?v=1793800473"></script>
-    <script src="js/entities/Zombie.js?v=1793800473"></script>
-    <script src="js/entities/Projectile.js?v=1793800473"></script>
-    <script src="js/entities/Sun.js?v=1793800473"></script>
-    <script src="js/managers/WaveManager.js?v=1793800473"></script>
-    <script src="js/managers/CollisionManager.js?v=1793800473"></script>
-    <script src="js/managers/EventManager.js?v=1793800473"></script>
-    <script src="js/GameLoop.js?v=1793800473"></script>
-    <script src="js/HelpGuide.js?v=1793800473"></script>
-    <script src="js/Achievements.js?v=1793800473"></script>
-    <script src="js/HauntedDorm.js?v=1793800473"></script>
-    <script src="js/MiniGames.js?v=1793800473"></script>
+    <script src="js/InputManager.js?v=1793801319"></script>
+    <script src="js/Board.js?v=1793801319"></script>
+    <script src="js/entities/Entity.js?v=1793801319"></script>
+    <script src="js/entities/Plant.js?v=1793801319"></script>
+    <script src="js/entities/Zombie.js?v=1793801319"></script>
+    <script src="js/entities/Projectile.js?v=1793801319"></script>
+    <script src="js/entities/Sun.js?v=1793801319"></script>
+    <script src="js/managers/WaveManager.js?v=1793801319"></script>
+    <script src="js/managers/CollisionManager.js?v=1793801319"></script>
+    <script src="js/managers/EventManager.js?v=1793801319"></script>
+    <script src="js/GameLoop.js?v=1793801319"></script>
+    <script src="js/HelpGuide.js?v=1793801319"></script>
+    <script src="js/Achievements.js?v=1793801319"></script>
+    <script src="js/HauntedDorm.js?v=1793801319"></script>
+    <script src="js/MiniGames.js?v=1793801319"></script>
     <script>
     /* ===== v4.0.126 主页惊喜：时间皮肤 + 动态彩蛋猫 ===== */
     (function () {
@@ -1637,6 +1707,152 @@
         // 进首页先安静 8~12 秒（别一进来就吓人），然后开始排
         setTimeout(function () { fire(); loop(); }, 8000 + Math.random() * 4000);
         window.__pvzMenuEggs = { fire: fire, kinds: keys };
+    })();
+
+    /* ===== v4.0.147 游戏内自动彩蛋 =====
+       首页之外，真正开局以后也会自己冒东西出来，但只挑「安全窗口」：
+         · 守屋：没暂停/没结算，且最近的僵尸离你 > 320px
+         · PvZ ：state=PLAYING 且没有僵尸压到左半场（x > 420）
+       四类：BRAINS 血字横穿 / 云影扫过 / 萤火飘过 / 僵尸头从屏幕底探出半颗。
+       全部屏幕空间、pointer-events:none，不改任何游戏数据。 */
+    (function () {
+        var A = 'assets/images/';
+        var HEAD = A + 'Zombies/Zombie/ZombieHeadBig.png';
+        var KINDS = {
+            head: {
+                ms: 4200,
+                build: function (el) { el.innerHTML = '<img src="' + HEAD + '" alt="">'; }
+            },
+            brains: {
+                ms: 3600,
+                build: function (el) { el.textContent = 'BRAINS…'; }
+            },
+            motes: {
+                ms: 5400,
+                build: function (el) {
+                    var n = 8 + Math.floor(Math.random() * 4);
+                    for (var i = 0; i < n; i++) {
+                        var s = document.createElement('i');
+                        s.style.left = (6 + Math.random() * 88) + '%';
+                        s.style.top = (30 + Math.random() * 62) + '%';
+                        s.style.animationDelay = (Math.random() * 1.8).toFixed(2) + 's';
+                        s.style.animationDuration = (2.6 + Math.random() * 2.2).toFixed(2) + 's';
+                        s.style.opacity = (0.4 + Math.random() * 0.5).toFixed(2);
+                        el.appendChild(s);
+                    }
+                }
+            },
+            cloud: {
+                ms: 6200,
+                build: function (el) { el.appendChild(document.createElement('i')); }
+            }
+        };
+        var order = ['head', 'brains', 'cloud', 'motes'];
+        var hostEl = null, layer = null, timer = null, used = 0, lastKind = '', curEl = null;
+
+        function active() {
+            var dorm = document.getElementById('dorm-screen');
+            if (dorm && getComputedStyle(dorm).display !== 'none') {
+                var g = window.game;
+                if (g && g.player && g.allPlayers) return { el: document.getElementById('dorm-container') || dorm, mode: 'dorm', g: g };
+            }
+            var gc = document.getElementById('game-container');
+            var p = window._pvzGame;
+            if (gc && p && p.state === 'PLAYING' && getComputedStyle(gc).display !== 'none') return { el: gc, mode: 'pvz', g: p };
+            return null;
+        }
+
+        function calm(h) {
+            if (document.hidden) return false;
+            var g = h.g;
+            if (g.over || g.paused) return false;
+            if (h.mode === 'dorm') {
+                var me = g.player;
+                if (!me || me.dead) return false;
+                return !(g.zombies || []).some(function (z) {
+                    return z && !z.dead && Math.hypot(z.x - me.x, z.y - me.y) < 320;
+                });
+            }
+            // PvZ：僵尸全都还在右半场（x > 420）才放——避免「屏幕上冒颗头」被当成真的僵尸
+            if (typeof Zombie === 'undefined') return true;
+            return (g.entities || []).every(function (e) {
+                return !(e instanceof Zombie) || e.isDead || e.x > 420;
+            });
+        }
+
+        function purge() {
+            if (layer) { while (layer.firstChild) layer.removeChild(layer.firstChild); }
+            curEl = null;
+        }
+
+        function mount(h) {
+            if (layer && hostEl === h.el && layer.parentNode === h.el) return layer;
+            if (layer && layer.parentNode) layer.parentNode.removeChild(layer);
+            layer = document.createElement('div');
+            layer.id = 'game-egg';
+            var k = Math.max(0.55, (h.el.clientWidth || 900) / 900);
+            layer.style.zIndex = (h.mode === 'dorm' ? 950 : 6);   // 守屋：压在世界之上、HUD(1000) 之下；PvZ：实体(1) 之上、UI(10) 之下
+            layer.style.fontSize = (16 * k).toFixed(1) + 'px';
+            h.el.appendChild(layer);
+            hostEl = h.el;
+            return layer;
+        }
+
+        function fire(forceKind) {
+            var h = active();
+            if (!h || !calm(h)) return null;
+            mount(h);
+            var kind = (forceKind && KINDS[forceKind]) ? forceKind
+                     : (function () {
+                           var pool = order.filter(function (k) { return k !== lastKind; });
+                           return pool[Math.floor(Math.random() * pool.length)] || order[0];
+                       })();
+            lastKind = kind;
+            purge();
+            var el = document.createElement('div');
+            el.className = 'ge ge-' + kind;
+            el.setAttribute('data-egg', kind);
+            KINDS[kind].build(el);
+            layer.appendChild(el);
+            curEl = el;
+            void el.offsetWidth;
+            el.classList.add('go');
+            var kill = function () { if (el.parentNode) el.parentNode.removeChild(el); if (curEl === el) curEl = null; };
+            el.addEventListener('animationend', function (ev) { if (ev.target === el) kill(); });
+            setTimeout(kill, KINDS[kind].ms + 900);
+            return kind;
+        }
+
+        function loop() {
+            clearTimeout(timer);
+            var h = active();
+            if (!h) { used = 0; lastKind = ''; purge(); timer = setTimeout(loop, 2500); return; }
+            if (!h.g.paused && !h.g.over) {
+                timer = setTimeout(function () {
+                    var c = active();
+                    if (c && used < 6 && calm(c)) { if (fire()) used++; }
+                    loop();
+                }, 26000 + Math.random() * 18000);   // 26~44 秒一次，一局最多 6 次
+            } else {
+                purge();                                  // 暂停/结算里正在放的立刻收掉
+                timer = setTimeout(loop, 2000);
+            }
+        }
+
+        // 只在「有彩蛋正在播」时每 1.2 秒复核一次：一暂停/结算/切后台就立刻收掉，
+        // 不能等 loop 的 26~44 秒长排程（否则暂停界面里还飘着一行 BRAINS）
+        setInterval(function () {
+            if (!curEl) return;
+            var h = active();
+            if (!h || h.g.paused || h.g.over || document.hidden) purge();
+        }, 1200);
+
+        // 开局 18~30 秒后才开始（先让玩家把阵型摆起来）
+        setTimeout(function () { loop(); }, 18000 + Math.random() * 12000);
+        window.__pvzGameEggs = {
+            fire: fire, kinds: Object.keys(KINDS), calm: function () { var h = active(); return h ? calm(h) : null; },
+            active: function () { var h = active(); return h ? h.mode : null; }, purge: purge
+        };
     })();
     </script>
 </body>
