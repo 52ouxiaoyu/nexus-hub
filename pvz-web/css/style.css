@@ -816,3 +816,155 @@ body {
     42%  { opacity: .88; transform: translate(-50%, -50%) scale(1.06); }
     100% { opacity: 0;   transform: translate(-50%, -50%) scale(1.95); }
 }
+
+
+/* ==========================================================================
+   v4.0.149 砸罐子 · 关卡挑战（10 个手工关）
+   ========================================================================== */
+.vlm-panel {
+    background: linear-gradient(180deg, #8a5a2b 0%, #6b4220 100%);
+    border: 4px solid #3c2a11;
+    border-radius: 18px;
+    box-shadow: inset 0 0 22px rgba(0,0,0,0.45), 0 14px 34px rgba(0,0,0,0.7);
+    padding: 18px 24px 14px;
+    text-align: center;
+    /* 注意：#game-container 是 900×600 设计面按 1.5 倍缩放显示的，
+       所以这里的 px 都是「设计面像素」，写 1020px 会变成 1530 实际像素直接溢出屏幕。
+       改用百分比，跟着容器走。 */
+    width: 94%;
+    max-width: 94%;
+    min-width: 0;
+    max-height: 94%;
+    display: flex;
+    flex-direction: column;
+}
+.vlm-title {
+    font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif;
+    font-size: 30px; font-weight: 900; letter-spacing: 7px;
+    color: #ffe9b0; line-height: 1.15;
+    text-shadow: 3px 3px 0 #2a1a08, 0 4px 12px rgba(0,0,0,0.5);
+}
+.vlm-title span {
+    display: block;
+    font-family: Impact, 'Arial Black', sans-serif;
+    font-size: 13px; letter-spacing: 5px;
+    color: rgba(255, 240, 200, 0.85);
+    margin-top: 3px;
+}
+.vlm-sub {
+    margin-top: 8px;
+    font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif;
+    font-size: 14px; color: #f0d9a8; line-height: 1.5;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+}
+.vlm-sub b { color: #ffd75e; }
+.vlm-grid {
+    display: grid;
+    /* minmax(0,1fr) 不能省：默认 1fr 的 min 是 auto，长提示文字会把列撑爆，
+       5 列直接溢出到面板外面（截图里第 1/5 列都是被裁掉的） */
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+    margin: 14px 0 12px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-width: 0;
+    padding: 3px;
+}
+.vlm-cell {
+    display: flex; flex-direction: column; gap: 3px;
+    min-width: 0; overflow: hidden;   /* 不加就会被长提示文字撑破列宽 */
+    text-align: left; padding: 8px 10px 9px;
+    border-radius: 12px; border: 3px solid #3c2a11;
+    background: linear-gradient(180deg, #a0723c 0%, #7a5228 100%);
+    color: #ffeec4; font-family: inherit; cursor: pointer; outline: none;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.22), 0 5px 12px rgba(0,0,0,0.38);
+    transition: transform 0.14s ease, box-shadow 0.14s ease, filter 0.14s ease;
+}
+.vlm-cell:hover {
+    transform: translateY(-4px); filter: brightness(1.1);
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.35), 0 10px 20px rgba(0,0,0,0.5);
+}
+.vlm-cell.diff-hard { background: linear-gradient(180deg, #96652f 0%, #6d4520 100%); }
+.vlm-cell.diff-hell { background: linear-gradient(180deg, #7d3a22 0%, #4d2312 100%); border-color: #2a1208; }
+.vlm-cell.done { box-shadow: inset 0 0 0 2px rgba(255,225,120,0.9), 0 0 16px rgba(255,200,60,0.4); }
+.vlm-top { display: flex; align-items: center; justify-content: space-between; }
+.vlm-top b {
+    font-family: Impact, 'Arial Black', sans-serif;
+    font-size: 22px; line-height: 1; color: #ffe9b0;
+    text-shadow: 2px 2px 0 #2a1a08;
+}
+.vlm-stars {
+    font-style: normal; font-size: 13px; letter-spacing: 1px;
+    color: #ffd75e; text-shadow: 0 0 6px rgba(255,190,40,0.6);
+}
+.vlm-name {
+    font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif;
+    font-size: 17px; font-weight: 900; letter-spacing: 1px;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.55);
+    min-width: 0; white-space: normal; word-break: break-all;
+}
+.vlm-meta { font-size: 11px; color: rgba(255,235,200,0.82); }
+.vlm-hint {
+    font-size: 11px; color: rgba(255,235,200,0.58); line-height: 1.35;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; min-height: 30px;
+}
+.vlm-foot { display: flex; justify-content: center; gap: 14px; }
+.vlm-foot button {
+    font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif;
+    font-size: 16px; font-weight: 700; letter-spacing: 2px;
+    padding: 8px 22px; border-radius: 10px; cursor: pointer;
+    border: 3px solid #3c2a11; color: #ffeec4;
+    background: linear-gradient(180deg, #7a5228 0%, #553a1a 100%);
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.18), 0 4px 10px rgba(0,0,0,0.4);
+    transition: transform 0.14s ease, filter 0.14s ease;
+}
+.vlm-foot button:hover { transform: translateY(-3px); filter: brightness(1.14); }
+
+/* —— 关卡 HUD：行动点 / 剩余僵尸罐 —— */
+.vase-hud-chip {
+    margin-top: 6px; min-width: 56px; padding: 4px 8px;
+    border-radius: 10px; text-align: center;
+    background: linear-gradient(180deg, rgba(30,40,22,0.92), rgba(14,20,10,0.92));
+    border: 2px solid #3c2a11;
+    color: #ffe9a8;
+    font-family: Impact, 'Arial Black', sans-serif;
+    font-size: 16px; line-height: 1.05; letter-spacing: 0.5px;
+    text-shadow: 1px 1px 0 #000;
+    transition: color 0.2s, border-color 0.2s;
+}
+.vase-hud-chip b { font-size: 13px; margin-right: 3px; }
+.vase-hud-chip i { font-style: normal; font-size: 11px; opacity: 0.65; }
+.vase-hud-chip.low { color: #ff7a5e; border-color: #7a2418; animation: vaseChipPulse 1s ease-in-out infinite; }
+.vase-hud-chip.z { color: #ffb3a0; }
+.vase-hud-chip.z.clear { color: #9dff7a; border-color: #2a5a18; }
+@keyframes vaseChipPulse {
+    0%, 100% { box-shadow: 0 0 0 rgba(255,90,60,0); }
+    50%      { box-shadow: 0 0 12px rgba(255,90,60,0.85); }
+}
+
+/* —— 结算星级 —— */
+.vase-stars {
+    margin: 8px 0 2px; font-size: 40px; letter-spacing: 8px;
+    color: #ffd24a;
+    text-shadow: 0 0 14px rgba(255,190,40,0.85), 2px 3px 0 #6b3d05;
+    animation: vaseStarIn 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+@keyframes vaseStarIn {
+    from { transform: scale(0.3) rotate(-14deg); opacity: 0; }
+    to   { transform: none; opacity: 1; }
+}
+.vase-win-stats { margin-top: 6px; font-size: 14px; color: #f0d9a8; line-height: 1.6; }
+.vase-star-tip { font-size: 12px; color: rgba(255,235,200,0.7); }
+.vase-win-btn.next {
+    background: linear-gradient(180deg, #4e8a2c, #2e5c17) !important;
+    border-color: #1b3a0c !important;
+    color: #e4ffcd !important;
+}
+
+/* —— 僵尸罐：常驻红光脉动（视觉上先提醒「这个罐子里有东西」） —— */
+.vase-entity.vase-danger { animation: vaseDanger 2.8s ease-in-out infinite; }
+@keyframes vaseDanger {
+    0%, 100% { filter: drop-shadow(0 0 2px rgba(190,30,20,0.45)); }
+    50%      { filter: drop-shadow(0 0 10px rgba(255,60,35,0.95)); }
+}

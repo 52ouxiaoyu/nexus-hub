@@ -286,6 +286,86 @@ window.PVZ_ICE_ULT_TYPES = new Set([
 // v3.74.0 防具掉落物系统 —— v3.80.3 整体删除（用户：掉落物和掉落融合株都太难看）
 // ============================================================================
 
+// ===== v4.0.149 砸罐子 · 10 个手工关卡 =====
+// 用户诉求：砸罐子不该是「开盲盒」，要有难度曲线、有取舍、能重刷。
+//
+// 与旧的「纯随机一局」区别：
+//   · 每关的植物内容 / 问号罐内容 / 僵尸种类全部写死（确定性），同一关反复挑战的结果一致 ——
+//     只有这样才谈得上「最少行动点通关」和三星评价。
+//   · 行动点（acts）有限且略少于罐子总数：砸每一个罐都扣 1 点，砸完绝不能全砸。
+//   · 胜利条件从「砸完全部罐子」改为「砸开全部僵尸罐 + 场上无僵尸」——
+//     植物罐 / 问号罐可以主动跳过，省下的点数就是容错空间。
+//
+// 字段：
+//   p/q/z     植物罐 / 问号罐 / 僵尸罐 的数量（p+q+z 必须等于 total）
+//   plants    植物罐内容的按序队列，长度必须 = p；'sun' 表示该罐开出阳光
+//   qs        问号罐内容的按序队列，长度必须 = q；'p:xxx' 植物 / 'z:xxx' 僵尸 / 's' 阳光
+//   zombies   僵尸罐内容的按序队列，长度必须 = z
+//   acts      行动点（= 可砸罐次数上限）
+//   wrap      南瓜套罐数量（0 起）
+//   golden    金罐数量（内容仍随机：融合植物 / 强力僵尸）
+const VASE_LEVELS = [
+    { n: 1, name: '罐子练习场', diff: 'easy', total: 14, p: 8, q: 4, z: 2, acts: 13, wrap: 0, golden: 0,
+      hint: '先砸绿罐攒火力，紫罐留到最后',
+      plants: ['peashooter', 'sunflower', 'peashooter', 'wallnut', 'sunflower', 'peashooter', 'sun', 'snowpea'],
+      qs: ['p:peashooter', 's', 'p:sunflower', 'z:normal'],
+      zombies: ['normal', 'normal'] },
+
+    { n: 2, name: '铁桶初现', diff: 'easy', total: 16, p: 8, q: 5, z: 3, acts: 15, wrap: 0, golden: 0,
+      hint: '铁桶僵尸抗打，先把双发摆出来',
+      plants: ['peashooter', 'sunflower', 'repeater', 'wallnut', 'sunflower', 'snowpea', 'sun', 'potatomine'],
+      qs: ['p:repeater', 'p:sunflower', 'z:conehead', 's', 'p:wallnut'],
+      zombies: ['normal', 'conehead', 'conehead'] },
+
+    { n: 3, name: '问号之夜', diff: 'hard', total: 18, p: 7, q: 7, z: 4, acts: 16, wrap: 1, golden: 0,
+      hint: '问号罐一半是僵尸，别一口气全砸开',
+      plants: ['peashooter', 'sunflower', 'sunflower', 'repeater', 'wallnut', 'sun', 'snowpea'],
+      qs: ['p:repeater', 'z:conehead', 'p:peashooter', 's', 'z:normal', 'p:wallnut', 'p:chomper'],
+      zombies: ['normal', 'conehead', 'buckethead', 'normal'] },
+
+    { n: 4, name: '双线压制', diff: 'hard', total: 20, p: 8, q: 7, z: 5, acts: 17, wrap: 1, golden: 0,
+      hint: '三线射手能同时照顾三行，优先拿',
+      plants: ['peashooter', 'sunflower', 'threepeater', 'wallnut', 'sunflower', 'repeater', 'sun', 'snowpea'],
+      qs: ['p:threepeater', 'p:sunflower', 'z:buckethead', 's', 'p:wallnut', 'z:conehead', 'p:snowpea'],
+      zombies: ['normal', 'conehead', 'conehead', 'buckethead', 'normal'] },
+
+    { n: 5, name: '金罐试炼', diff: 'hard', total: 20, p: 7, q: 7, z: 6, acts: 18, wrap: 1, golden: 1,
+      hint: '金罐里可能是融合植物，也可能是巨人',
+      plants: ['peashooter', 'sunflower', 'repeater', 'wallnut', 'sunflower', 'sun', 'snowpea'],
+      qs: ['p:repeater', 'z:buckethead', 'p:sunflower', 's', 'z:conehead', 'p:wallnut', 'p:threepeater'],
+      zombies: ['normal', 'conehead', 'buckethead', 'newspaper', 'normal', 'conehead'] },
+
+    { n: 6, name: '冰霜防线', diff: 'hard', total: 22, p: 8, q: 7, z: 7, acts: 19, wrap: 2, golden: 0,
+      hint: '寒冰豌豆减速，撑杆僵尸会跳过第一株',
+      plants: ['snowpea', 'sunflower', 'snowpea', 'wallnut', 'sunflower', 'repeater', 'sun', 'potatomine'],
+      qs: ['p:snowpea', 'z:polevaulting', 'p:sunflower', 's', 'p:wallnut', 'z:buckethead', 'p:chomper'],
+      zombies: ['normal', 'conehead', 'polevaulting', 'buckethead', 'conehead', 'normal', 'newspaper'] },
+
+    { n: 7, name: '地狱之门', diff: 'hell', total: 24, p: 6, q: 10, z: 8, acts: 21, wrap: 2, golden: 1,
+      hint: '地狱植物金贵，每一株都要摆在刀刃上',
+      plants: ['peashooter', 'sunflower', 'repeater', 'wallnut', 'sun', 'snowpea'],
+      qs: ['p:repeater', 'z:conehead', 'p:sunflower', 's', 'z:buckethead', 'p:wallnut', 'z:newspaper', 'p:snowpea', 's', 'p:threepeater'],
+      zombies: ['normal', 'conehead', 'buckethead', 'polevaulting', 'newspaper', 'conehead', 'buckethead', 'screendoor'] },
+
+    { n: 8, name: '南瓜套阵', diff: 'hell', total: 24, p: 6, q: 10, z: 8, acts: 21, wrap: 3, golden: 0,
+      hint: '南瓜壳的罐子要先啃壳，等于白送一道墙',
+      plants: ['sunflower', 'peashooter', 'wallnut', 'repeater', 'sun', 'snowpea'],
+      qs: ['p:wallnut', 'z:football', 'p:repeater', 's', 'z:buckethead', 'p:sunflower', 'z:screendoor', 'p:snowpea', 's', 'p:threepeater'],
+      zombies: ['normal', 'conehead', 'buckethead', 'football', 'newspaper', 'polevaulting', 'conehead', 'buckethead'] },
+
+    { n: 9, name: '机械洪流', diff: 'hell', total: 26, p: 6, q: 12, z: 8, acts: 22, wrap: 2, golden: 1,
+      hint: '冰车无视植物碾过去，别把火力全堆一行',
+      plants: ['sunflower', 'peashooter', 'repeater', 'wallnut', 'sun', 'snowpea'],
+      qs: ['p:repeater', 'z:zomboni', 'p:sunflower', 's', 'z:buckethead', 'p:wallnut', 'z:football', 'p:snowpea', 's', 'p:threepeater', 'z:dancing', 'p:gatlingpea'],
+      zombies: ['normal', 'conehead', 'buckethead', 'football', 'zomboni', 'newspaper', 'buckethead', 'conehead'] },
+
+    { n: 10, name: '终极尸潮', diff: 'hell', total: 28, p: 6, q: 13, z: 9, acts: 23, wrap: 3, golden: 2,
+      hint: '巨人一锤一棵植物，留一手炸弹',
+      plants: ['sunflower', 'peashooter', 'wallnut', 'sun', 'repeater', 'snowpea'],
+      qs: ['p:repeater', 'z:gargantuar', 'p:sunflower', 's', 'z:buckethead', 'p:wallnut', 'p:snowpea', 's', 'z:football', 'p:threepeater', 'z:dancing', 's', 'p:gatlingpea'],
+      zombies: ['normal', 'conehead', 'buckethead', 'football', 'newspaper', 'polevaulting', 'buckethead', 'conehead', 'screendoor'] }
+];
+
 class Game {
     constructor() {
         this.container = document.getElementById('game-container');
@@ -314,6 +394,13 @@ class Game {
         this.vaseDifficulty = null; // 砸罐子难度: 'easy' 简单 | 'hard' 困难 | 'hell' 地狱（null 时按 hard 配置兜底）
         this.vaseRerollUses = 0;   // v4.0.61 砸罐子：罐子重掷剩余次数（每局 3 次）
         this.vaseRerollActive = false; // v4.0.61 是否处于"重掷模式"（点罐子=重掷而非砸碎）
+        // v4.0.149 砸罐子关卡化：vaseLevel = 1..10 走手工关卡，null 走旧的自由随机局
+        this.vaseLevel = null;
+        this.vaseActs = 0;         // 剩余行动点（每砸一罐 -1）
+        this.vaseActsMax = 0;
+        this.vaseZombieVasesLeft = 0; // 还没砸开的僵尸罐数（HUD 展示，通关判据）
+        this.vaseStars = 0;        // 结算星级 1~3
+        this.vaseUsedActs = 0;     // 本局实际用掉的行动点（算星用）
         this._sigEl = null; // 战场左侧"区耀丁"署名 DOM（vase 模式专属）
         
         this.lastTime = 0;
@@ -423,10 +510,25 @@ class Game {
             this.showSeedChooser();
         };
         
-        // 砸罐子：先弹难度选择（简单/困难/地狱），选定后免选卡直接开局
+        // 砸罐子：v4.0.149 起先弹「关卡选择」（10 个手工关），关卡内一键开局；
+        // 弹窗底部保留「自由挑战」入口，走原来的难度弹窗（纯随机局，不计星级）
         btnVase.onclick = () => {
             this.audioManager.play('btn');
+            this._openVaseLevels();
+        };
+        // v4.0.149：关卡弹窗底部两个出口 ——「自由挑战」走旧难度弹窗，「返回主菜单」回首页
+        const vlmFree = document.getElementById('vlm-free');
+        if (vlmFree) vlmFree.onclick = () => {
+            this.audioManager.play('btn');
+            this._closeVaseLevels();
             this._openVaseDifficulty();
+        };
+        const vlmBack = document.getElementById('vlm-back');
+        if (vlmBack) vlmBack.onclick = () => {
+            this.audioManager.play('btn');
+            this._closeVaseLevels();
+            const menu = document.getElementById('start-menu');
+            if (menu) menu.style.display = 'block';
         };
 
         // 我是僵尸（v3.7.0）：同样先弹三档难度，选定后免选卡直接开局
@@ -507,6 +609,65 @@ class Game {
         }
     }
 
+    // ===== v4.0.149 砸罐子 · 关卡选择（10 个手工关） =====
+    // 进度存 localStorage：{ "1":3, "2":2, ... }（关号 → 最高星级）
+    _vaseProgress() {
+        try { return JSON.parse(localStorage.getItem('pvz_vase_progress_v1') || '{}') || {}; } catch (e) { return {}; }
+    }
+
+    _saveVaseStar(n, stars) {
+        if (!n || !stars) return;
+        try {
+            const p = this._vaseProgress();
+            if ((p[n] || 0) >= stars) return;   // 只记录更好的成绩，被刷低不覆盖
+            p[n] = stars;
+            localStorage.setItem('pvz_vase_progress_v1', JSON.stringify(p));
+        } catch (e) { /* 隐私模式下 localStorage 会抛，忽略即可 */ }
+    }
+
+    _openVaseLevels() {
+        const modal = document.getElementById('vase-levels-modal');
+        if (!modal) { this._openVaseDifficulty(); return; }  // 兜底：弹窗被裁掉时退回旧的难度选择
+        this._renderVaseLevels();
+        modal.style.display = 'flex';
+    }
+
+    _closeVaseLevels() {
+        const modal = document.getElementById('vase-levels-modal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    _renderVaseLevels() {
+        const grid = document.getElementById('vlm-grid');
+        if (!grid) return;
+        const prog = this._vaseProgress();
+        grid.innerHTML = '';
+        VASE_LEVELS.forEach(lv => {
+            const stars = prog[lv.n] || 0;
+            const b = document.createElement('button');
+            b.className = 'vlm-cell diff-' + lv.diff + (stars ? ' done' : '');
+            b.dataset.level = String(lv.n);
+            b.title = lv.hint;
+            b.innerHTML =
+                `<span class="vlm-top"><b>${lv.n}</b><i class="vlm-stars">${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</i></span>` +
+                `<span class="vlm-name">${lv.name}</span>` +
+                `<span class="vlm-meta">${lv.total} 罐 · ${lv.acts} 行动点</span>` +
+                `<span class="vlm-hint">${lv.hint}</span>`;
+            b.onclick = () => this._startVaseLevel(lv.n);
+            grid.appendChild(b);
+        });
+    }
+
+    _startVaseLevel(n) {
+        const lv = VASE_LEVELS.find(x => x.n === n);
+        if (!lv) return;
+        this.audioManager.play('btn');
+        this.vaseLevel = lv.n;
+        this.vaseDifficulty = lv.diff;
+        this._closeVaseLevels();
+        this._beginVaseGame();
+    }
+
     // ===== 砸罐子难度选择（v3.5.0）：简单 / 困难 / 地狱 =====
     _openVaseDifficulty() {
         const modal = document.getElementById('difficulty-modal');
@@ -516,12 +677,37 @@ class Game {
 
     _chooseVaseDifficulty(diff) {
         this.vaseDifficulty = diff; // 'easy' | 'hard' | 'hell'
+        this.vaseLevel = null;      // v4.0.149：从难度弹窗进来 = 自由随机局（不计星级）
         this._beginVaseGame();
     }
 
     // 统一开局入口：隐藏菜单/选卡/难度弹窗 → 进入 vase 模式
     _beginVaseGame() {
         this.audioManager.play('btn');
+        // v4.0.149：上一局的结算面板必须先摘掉 —— 否则「下一关 / 再挑战」会把旧面板
+        // 一起留在场上，新一局结算时叠成两层（实测第 7 项拿到的是上一关的 VICTORY 面板）
+        this._removeGameOverEls();
+        if (this._vaseWinEls) {
+            this._vaseWinEls.forEach(el => { if (el.parentNode) el.parentNode.removeChild(el); });
+            this._vaseWinEls = null;
+        }
+        // 清掉上一局残留：从自由模式直接跳关、或点「下一关」进来时，旧罐子 / 僵尸 / 植物
+        // 还挂在场上（截图里第 3 关一开局就站着两只上一局的僵尸）
+        (this.vases || []).forEach(v => {
+            ['element', 'contentEl', 'pumpkinEl', 'pumpkinBackEl'].forEach(k => {
+                const el = v[k];
+                if (el && el.parentNode) el.parentNode.removeChild(el);
+            });
+        });
+        this.vases = [];
+        (this.entities || []).forEach(e => { try { this._removeEntityDom(e); } catch (err) { } });
+        this.entities = [];
+        if (this._hardSweepEntityLayer) this._hardSweepEntityLayer();
+        if (this.board && this.board.grid) {
+            for (let r = 0; r < this.board.rows; r++) {
+                for (let c = 0; c < this.board.cols; c++) this.board.grid[r][c] = null;
+            }
+        }
         const menu = document.getElementById('start-menu');
         if (menu) menu.style.display = 'none';
         const chooser = document.getElementById('seed-chooser');
@@ -4551,40 +4737,71 @@ class Game {
     //   smash 时直接读取, 这样路灯花揭示出来的就是真正会砸出来的东西。
     setupVases() {
         const cfg = this._vaseDiffCfg();
+        // v4.0.149：关卡模式 —— 数量 / 内容 / 行动点全部由 VASE_LEVELS 定死，保证同一关可复现
+        const L = this.vaseLevel ? (VASE_LEVELS.find(x => x.n === this.vaseLevel) || null) : null;
         const candidates = [];
         for (let r = 1; r < this.board.rows; r++) {
             for (let c = 1; c < this.board.cols; c++) candidates.push([r, c]);
         }
-        const total = cfg.totalMin + Math.floor(Math.random() * (cfg.totalMax - cfg.totalMin + 1));
+        const total = L ? L.total : cfg.totalMin + Math.floor(Math.random() * (cfg.totalMax - cfg.totalMin + 1));
+        // v4.0.149：关卡模式改用「固定种子的伪随机洗牌」—— 罐位集合、金罐位置、南瓜套位置
+        // 每次都完全一致。只有这样才能拿「最少行动点」当三星标准来练。
+        let rnd = Math.random;
+        if (L) {
+            let a = (0x9e3779b9 ^ (L.n * 7919)) | 0;
+            rnd = function () {
+                a = a + 0x6D2B79F5 | 0;
+                let t = Math.imul(a ^ a >>> 15, 1 | a);
+                t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            };
+        }
+        this._vaseRnd = L ? rnd : null;
         for (let i = candidates.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
+            const j = Math.floor(rnd() * (i + 1));
             [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
         }
         const chosen = candidates.slice(0, total);
+        // 关卡模式把落点按 (行,列) 排死：罐位确定 → 类型分布确定 → 内容顺序确定，
+        // 同一关重玩才会是同一个局（否则「最少行动点」的三星标准毫无意义）
+        if (L) chosen.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
 
         // v3.15.0 金色罐子（仅地狱）：每局 1 个必出、50% 追加第 2 个（上限 2）。
         // 随机挑选已选罐位升级为金罐 —— 内容改为 50% 融合高阶植物 / 50% 强力僵尸。
         let goldenSlots = new Set();
-        if (cfg.key === 'hell' && total >= 1) {
-            const goldCount = Math.min(total, 1 + (Math.random() < 0.5 ? 1 : 0));
+        // 关卡模式金罐数量由关卡定（0 就是不出，哪怕难度是地狱）
+        const wantGolden = L ? L.golden : (cfg.key === 'hell' ? 1 + (Math.random() < 0.5 ? 1 : 0) : 0);
+        if (wantGolden > 0 && total >= 1) {
+            const goldCount = Math.min(total, wantGolden);
             // v3.23.0：金罐只落在中间排（col 3~5）——问号罐靠前、僵尸罐靠后、金罐居中
             const idxs = chosen.map((_, i) => i).filter(i => chosen[i][1] >= 3 && chosen[i][1] <= 5);
             for (let i = idxs.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
+                const j = Math.floor(rnd() * (i + 1));   // v4.0.149 关卡走种子随机
                 [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
             }
             goldenSlots = new Set(idxs.slice(0, goldCount));
         }
 
-        // 类型分布: 先保证 plant/question/zombie 各至少 1 个, 其余按难度抽签桶加权抽取
-        const types = ['plant', 'question', 'zombie'];
-        const drawBag = cfg.bag;
-        while (types.length < total) {
-            types.push(drawBag[Math.floor(Math.random() * drawBag.length)]);
+        // 类型分布: 关卡模式按配额精确铺开（p/q/z），自由模式先各保 1 个再按抽签桶加权
+        const types = [];
+        if (L) {
+            for (let i = 0; i < L.p; i++) types.push('plant');
+            for (let i = 0; i < L.q; i++) types.push('question');
+            for (let i = 0; i < L.z; i++) types.push('zombie');
+        } else {
+            types.push('plant', 'question', 'zombie');
+            const drawBag = cfg.bag;
+            while (types.length < total) {
+                types.push(drawBag[Math.floor(Math.random() * drawBag.length)]);
+            }
         }
-        for (let i = types.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [types[i], types[j]] = [types[j], types[i]];
+        // 关卡模式不洗：落点已排序、类型按 p→q→z 顺序铺开，布局逐局完全一致，
+        // 玩家可以「记住地图再优化路线」——这才是手工关该有的样子
+        if (!L) {
+            for (let i = types.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [types[i], types[j]] = [types[j], types[i]];
+            }
         }
 
         // v3.41.0 布局重排：「大部分」僵尸罐钉后排（col≥5），少数（约 1/4）强制混入中前排；
@@ -4595,7 +4812,7 @@ class Game {
             const used = new Set(goldenSlots);
             const zPinned = Math.round(zCount * 0.75);
             const qPinned = Math.round(qCount * 0.75);
-            const shuffleArr = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } };
+            const shuffleArr = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } };
             // 僵尸罐主体 → 后排
             const backIdx = chosen.map((_, i) => i).filter(i => !used.has(i) && chosen[i][1] >= 5);
             shuffleArr(backIdx);
@@ -4639,7 +4856,8 @@ class Game {
         // v3.41.0 植物罐保底校准（重排后统计，金罐位不计入）：
         //   地狱 1~5 / 困难 3~7 / 简单 8~14；削减时地狱把名额还给问号罐（问号尽量多），
         //   其余难度还给僵尸罐；补足时保证僵尸罐至少 1 个
-        {
+        // v4.0.149：关卡模式的 p/q/z 已经写死，校准一律跳过（否则会把手工配额改掉）
+        if (!L) {
             const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
             let pCount = types.filter((t, i) => t === 'plant' && !goldenSlots.has(i)).length;
             const target = clamp(pCount, cfg.plantMin, cfg.plantMax);
@@ -4667,6 +4885,12 @@ class Game {
         this.vasesTotal = total;
         this.vasesSmashed = 0;
 
+        // v4.0.149 关卡队列：按数组顺序逐罐消费，用完就退化到安全兜底（正常不会发生，
+        // 只在关卡表写错长度时兜住，不至于整关崩掉）
+        const qPlant = L ? L.plants.slice() : null;
+        const qQ = L ? L.qs.slice() : null;
+        const qZ = L ? L.zombies.slice() : null;
+
         chosen.forEach((pos, i) => {
             const vType = types[i];
             const isGolden = goldenSlots.has(i); // v3.15.0 金罐
@@ -4675,13 +4899,29 @@ class Game {
             //   问号罐: qZombie 概率出僵尸 / 其余出植物卡
             //   僵尸罐: 必出僵尸
             //   任何罐子都不再出 plantern —— 路灯花只能从商店购买
-            let content = (vType === 'zombie') // v3.15.0 let：金罐内容需覆盖赋值
-                ? { kind: 'zombie', type: this._rollVaseZombieType(pos[1]) }
-                : (vType === 'plant')
-                    ? (Math.random() < cfg.pCard)
-                        ? { kind: 'plant', type: this._rollVasePlantContent(vType) }
-                        : { kind: 'sun', value: 50 }
-                    : this._rollQuestionVaseContent(cfg, pos[1]); // v3.43.0 抽签独立成函数（含阳光）
+            let content;
+            if (L) {
+                // 关卡模式：内容按队列顺序发，不做任何随机
+                if (vType === 'zombie') {
+                    content = { kind: 'zombie', type: qZ.length ? qZ.shift() : 'normal' };
+                } else if (vType === 'plant') {
+                    const t = qPlant.length ? qPlant.shift() : 'sun';
+                    content = (t === 'sun') ? { kind: 'sun', value: 50 } : { kind: 'plant', type: t };
+                } else {
+                    const t = qQ.length ? qQ.shift() : 's';
+                    if (t === 's') content = { kind: 'sun', value: 50 };
+                    else if (t.indexOf('z:') === 0) content = { kind: 'zombie', type: t.slice(2) };
+                    else content = { kind: 'plant', type: t.indexOf('p:') === 0 ? t.slice(2) : t };
+                }
+            } else {
+                content = (vType === 'zombie') // v3.15.0 let：金罐内容需覆盖赋值
+                    ? { kind: 'zombie', type: this._rollVaseZombieType(pos[1]) }
+                    : (vType === 'plant')
+                        ? (Math.random() < cfg.pCard)
+                            ? { kind: 'plant', type: this._rollVasePlantContent(vType) }
+                            : { kind: 'sun', value: 50 }
+                        : this._rollQuestionVaseContent(cfg, pos[1]); // v3.43.0 抽签独立成函数（含阳光）
+            }
             // 金罐覆盖内容（v3.15.0）：与普通抽签完全无关
             if (isGolden) content = this._rollGoldenVaseContent();
 
@@ -4695,6 +4935,8 @@ class Game {
             img.className = 'entity vase-entity';
             img.style.pointerEvents = 'none';
             if (isGolden) img.style.filter = 'drop-shadow(0 0 7px rgba(255, 210, 60, 0.95))'; // 金罐常驻金光
+            // v4.0.149：僵尸罐缓慢脉动红光 —— 「这个罐子里有东西」在视觉上先打个招呼
+            else if (vType === 'zombie') img.classList.add('vase-danger');
             const cx = this.board.offsetX + v.col * this.board.cellWidth + this.board.cellWidth / 2;
             const cy = this.board.offsetY + v.row * this.board.cellHeight + this.board.cellHeight / 2 + 12;
             img.style.left = cx + 'px';
@@ -4707,7 +4949,8 @@ class Game {
 
         // v3.5.1 问号罐保底(先执行): 本局问号罐 ≥2 个时强制至少 1 个出植物 ——
         // 玩家绝不会遇到「场上所有问号罐全是僵尸」的绝望局面
-        {
+        // v4.0.149：关卡内容已写死，所有保底一律不参与（下同 4 块）
+        if (!L) {
             const qVases = this.vases.filter(v => v.type === 'question' && !v.golden); // v3.15.0 金罐内容不受保底改写
             if (qVases.length >= 2 && qVases.every(v => v.content && v.content.kind === 'zombie')) {
                 qVases[0].content = { kind: 'plant', type: this._rollVasePlantContent('question') };
@@ -4718,7 +4961,7 @@ class Game {
         // 本局所有植物内容中「一次性炸弹」占比强制 ≤ 40% (永久植物 ≥ 60%)。
         // 分层抽取只能保证长期期望, 保底杜绝单局极端 ——
         // 玩家不会遇到"整局砸出来的全是樱桃炸弹/窝瓜, 没火力防不住"的情况。
-        {
+        if (!L) {
             const plantContents = this.vases.filter(v => v.content && v.content.kind === 'plant' && !v.golden); // v3.15.0 金罐不参与一次性置换
             if (plantContents.length > 0) {
                 const needPerm = Math.ceil(plantContents.length * 0.6);
@@ -4736,7 +4979,7 @@ class Game {
 
         // v3.65.0 地狱保底：金罐里本局至少开出 1 株融合植物（金罐 1~2 个，50% 植物率可能整局零融合；
         // 保底后融合株出现 1~2 株——第 2 个金罐仍按原 50/50 自然掷骰）
-        if (cfg.key === 'hell') {
+        if (!L && cfg.key === 'hell') {
             const goldens = this.vases.filter(v => v.golden);
             const hasFusion = goldens.some(v => v.content && v.content.kind === 'plant' &&
                 typeof v.content.type === 'string' && v.content.type.startsWith('fusion_'));
@@ -4755,7 +4998,7 @@ class Game {
         //   ④ 问号罐的僵尸内容 → 进攻植物卡（最后手段）
         //   ⑤ 僵尸罐 → 植物罐（极端兜底，僵尸罐至少保 1 个）
         // 金罐融合株不计入下限（属额外惊喜）；一次性炸弹也不计入（爆炸后无持续火力）。
-        {
+        if (!L) {
             const ATK_MIN = { easy: 6, hard: 4, hell: 3 }[cfg.key] ?? 4;
             const atkSet = this._vaseAttackerSet();
             const isAtkCard = v => v.content && v.content.kind === 'plant' && atkSet.has(v.content.type);
@@ -4780,7 +5023,7 @@ class Game {
         // ===== v3.80.2 难度再降：每行保底 1 株进攻植物（用户：保证每一行都会有攻击类植物）=====
         // v3.77.0 只保证全局总数（6/4/3），随机仍可能某一行一个进攻植物都没有。
         // 这里按行补足：本行找不到进攻植物罐时，按同优先级（阳光罐→非进攻植物罐→问号阳光→问号僵尸→僵尸罐）改造一罐。
-        {
+        if (!L) {
             const atkSet = this._vaseAttackerSet();
             let guard = 0;
             for (let r = 0; r < this.board.rows && guard < 300; r++) {
@@ -4812,11 +5055,12 @@ class Game {
         {
             // v3.16.0：南瓜套改固定名额 —— 困难 1~2 个、地狱 1~3 个、简单 0。
             // 旧版按 20%/罐 概率在 26 罐的地狱里期望 5 个，玩家反馈太多。
-            const wrapRange = { easy: [0, 0], hard: [1, 2], hell: [1, 3] }[cfg.key] ?? [0, 0];
+            const wrapRange = L ? [L.wrap, L.wrap]
+                : ({ easy: [0, 0], hard: [1, 2], hell: [1, 3] }[cfg.key] ?? [0, 0]);
             const wrapTarget = wrapRange[0] + Math.floor(Math.random() * (wrapRange[1] - wrapRange[0] + 1));
             const wrapCands = this.vases.filter(v => !v.golden);
             for (let i = wrapCands.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
+                const j = Math.floor(rnd() * (i + 1));   // v4.0.149 关卡走种子随机
                 [wrapCands[i], wrapCands[j]] = [wrapCands[j], wrapCands[i]];
             }
             let wrapped = 0;
@@ -4863,7 +5107,18 @@ class Game {
 
         // v3.80.0：开场提示精简（用户：字数太多不好看）——只报难度与罐数
         // v3.80.1：用户微调——不说"只有"，直接报数
-        this.showAnnouncement(`${cfg.label}砸罐子，场上有 ${total} 个罐子`, '#ffdd66');
+        // v4.0.149：关卡模式初始化行动点 / 剩余僵尸罐，并刷新 HUD
+        this.vaseActsMax = L ? L.acts : 0;
+        this.vaseActs = this.vaseActsMax;
+        this.vaseUsedActs = 0;
+        this.vaseStars = 0;
+        this.vaseZombieVasesLeft = this.vases.filter(v => v.type === 'zombie').length;
+        this._syncVaseHud();
+        if (L) {
+            this.showAnnouncement(`第 ${L.n} 关 · ${L.name}｜${L.total} 罐 · ${L.acts} 行动点`, '#ffdd66');
+        } else {
+            this.showAnnouncement(`${cfg.label}砸罐子，场上有 ${total} 个罐子`, '#ffdd66');
+        }
     }
 
     // ===== 砸罐子植物卡池 v3.5.1: 严格分层控制「永久 / 一次性」比例 =====
@@ -5155,7 +5410,11 @@ class Game {
                       : v.type === 'zombie' ? 'Vase_Zombie.png'
                       : 'Vase_Question.png';
         const url = `assets/images/Vase/${sprite}?v=${this.assetStamp()}`;
-        for (let i = 0; i < 8; i++) {
+        // v4.0.149 反馈分层：僵尸罐砸得更多片、带红光冲击；植物罐带绿光；问号罐金光
+        const isZ = v.type === 'zombie';
+        const glow = isZ ? 'rgba(255,70,50,.9)' : (v.type === 'plant' ? 'rgba(150,255,120,.85)' : 'rgba(255,232,140,.85)');
+        const nShard = isZ ? 12 : (v.golden ? 10 : 8);
+        for (let i = 0; i < nShard; i++) {
             const sh = document.createElement('div');
             const size = 8 + Math.floor(Math.random() * 10);
             const sx = Math.floor(Math.random() * (90 - size));
@@ -5165,7 +5424,7 @@ class Game {
                 'background-position:-' + sx + 'px -' + sy + 'px;z-index:' + (Math.floor(cy) + 3) + ';';
             layer.appendChild(sh);
             const ang = Math.random() * Math.PI * 2;
-            const dist = 40 + Math.random() * 55;
+            const dist = 40 + Math.random() * (isZ ? 78 : 55);
             const dx = Math.cos(ang) * dist;
             const dy = Math.sin(ang) * dist * 0.7;
             const rot = Math.random() * 260 - 130;
@@ -5176,6 +5435,75 @@ class Game {
             }));
             setTimeout(() => { if (sh.parentNode) sh.parentNode.removeChild(sh); }, 640);
         }
+        // 冲击环：一眼区分「砸开的是什么罐」——僵尸罐红、植物罐绿、问号罐金
+        const ring = document.createElement('div');
+        ring.style.cssText = 'position:absolute;left:' + cx + 'px;top:' + cy + 'px;width:30px;height:30px;' +
+            'margin:-15px 0 0 -15px;border-radius:50%;pointer-events:none;box-sizing:border-box;' +
+            'border:3px solid ' + glow + ';z-index:' + (Math.floor(cy) + 4) + ';';
+        layer.appendChild(ring);
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            ring.style.transition = 'transform .5s ease-out, opacity .5s ease-out';
+            ring.style.transform = 'scale(' + (isZ ? 3.4 : 2.7) + ')';
+            ring.style.opacity = '0';
+        }));
+        setTimeout(() => { if (ring.parentNode) ring.parentNode.removeChild(ring); }, 580);
+        // 尘土：几粒暖灰小圆向上飘散，收个尾
+        for (let i = 0; i < 6; i++) {
+            const d = document.createElement('div');
+            const sz = 4 + Math.floor(Math.random() * 4);
+            d.style.cssText = 'position:absolute;left:' + (cx + (Math.random() * 46 - 23)) + 'px;top:' +
+                (cy + (Math.random() * 20 - 10)) + 'px;width:' + sz + 'px;height:' + sz + 'px;border-radius:50%;' +
+                'background:rgba(206,196,168,.85);pointer-events:none;z-index:' + (Math.floor(cy) + 2) + ';';
+            layer.appendChild(d);
+            const dy = -(18 + Math.random() * 26);
+            const dx = Math.random() * 30 - 15;
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                d.style.transition = 'transform .7s ease-out, opacity .7s ease-out';
+                d.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+                d.style.opacity = '0';
+            }));
+            setTimeout(() => { if (d.parentNode) d.parentNode.removeChild(d); }, 760);
+        }
+        // 僵尸罐：整格红光炸一下（预告「有东西要出来了」）
+        if (isZ) {
+            const flash = document.createElement('div');
+            flash.style.cssText = 'position:absolute;left:' + cx + 'px;top:' + cy + 'px;width:150px;height:150px;' +
+                'margin:-75px 0 0 -75px;border-radius:50%;pointer-events:none;z-index:' + (Math.floor(cy) + 5) + ';' +
+                'background:radial-gradient(closest-side, rgba(255,50,30,.55), rgba(255,50,30,0));';
+            layer.appendChild(flash);
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                flash.style.transition = 'opacity .45s ease-out, transform .45s ease-out';
+                flash.style.opacity = '0';
+                flash.style.transform = 'scale(1.5)';
+            }));
+            setTimeout(() => { if (flash.parentNode) flash.parentNode.removeChild(flash); }, 520);
+        }
+    }
+
+    // v4.0.149 分层音效：植物罐清脆「叮」、僵尸罐沉闷「咚」—— 纯合成，不依赖素材。
+    // 砸罐本身的原版破碎声仍由 audioManager.play('vasebreak') 打底，这里只叠一层"是哪一类"。
+    _vaseSting(kind) {
+        try {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return;
+            if (!this._stingCtx) this._stingCtx = new AC();
+            const ctx = this._stingCtx;
+            if (ctx.state === 'suspended') ctx.resume();
+            const t = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = kind === 'zombie' ? 'sawtooth' : 'triangle';
+            const f0 = kind === 'zombie' ? 96 : 1180;
+            const f1 = kind === 'zombie' ? 48 : 1560;
+            osc.frequency.setValueAtTime(f0, t);
+            osc.frequency.exponentialRampToValueAtTime(f1, t + 0.16);
+            const peak = kind === 'zombie' ? 0.16 : 0.075;
+            gain.gain.setValueAtTime(0.0001, t);
+            gain.gain.exponentialRampToValueAtTime(peak, t + 0.012);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + (kind === 'zombie' ? 0.34 : 0.26));
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(t); osc.stop(t + 0.4);
+        } catch (e) { /* 音频被浏览器策略拦住时静默，不影响玩法 */ }
     }
 
     // ===== v3.63.0 玩家砸罐挥锤动画（纯视觉）：直杆木锤在罐子上方抡起 → 劈到锤头落在罐心，
@@ -5223,10 +5551,22 @@ class Game {
 
     smashVase(row, col) {
         if (this.state !== 'PLAYING') return;
+        // v4.0.149 关卡：行动点耗尽就砸不动了（若还有僵尸罐，此时已经判负，这里只做兜底拦截）
+        if (this.vaseLevel && this.vaseActs <= 0) {
+            this.showAnnouncement('⚡ 行动点已耗尽，砸不动了', '#ff6666');
+            this.audioManager.play('btn');
+            return;
+        }
         const v = this.vases.find(x => !x.smashed && x.row === row && x.col === col);
         if (!v) return;
         v.smashed = true;
         this.vasesSmashed++;
+        if (this.vaseLevel) {
+            this.vaseActs = Math.max(0, this.vaseActs - 1);
+            this.vaseUsedActs++;
+            if (v.type === 'zombie') this.vaseZombieVasesLeft = Math.max(0, this.vaseZombieVasesLeft - 1);
+            this._refreshVaseHud();
+        }
         // v4.0.73 成就：累计砸碎罐子
         if (window.AchTracker) window.AchTracker.bump('vaseS', 1);
         // v3.13.2：套罐被砸后南瓜套不消失 —— 转为独立壳墙留在格内（耐久=剩余值），
@@ -5235,6 +5575,7 @@ class Game {
         this._removeVasePumpkin(v);
         // 罐子破碎音效（原版 PvZ 陶瓷破碎声，与破碎动画同步响起）
         this.audioManager.play('vasebreak');
+        this._vaseSting(v.type);   // v4.0.149：再叠一层「植物罐清脆 / 僵尸罐沉闷」的分层音
         // v3.25.0 罐子碎裂特效：罐身碎片四散飞溅（问号/植物/僵尸罐各自用自己的贴图）
         this._vaseShatterFX(v);
         // 罐子破碎动画：放大 + 淡出
@@ -5270,8 +5611,50 @@ class Game {
             this.board.addPlant(shell, row, col);
         }
         // 罐子减少提示
-        this.showAnnouncement(`已砸开 ${this.vasesSmashed}/${this.vasesTotal}`, '#ffdd66');
+        if (this.vaseLevel) {
+            this.showAnnouncement(
+                `⚡ 剩 ${this.vaseActs} 行动点 · 🧟 还剩 ${this.vaseZombieVasesLeft} 个僵尸罐`,
+                this.vaseActs <= 3 ? '#ff8866' : '#ffdd66');
+        } else {
+            this.showAnnouncement(`已砸开 ${this.vasesSmashed}/${this.vasesTotal}`, '#ffdd66');
+        }
         this.checkVaseVictory();
+        // 行动点耗尽但僵尸罐没砸完 = 必败（再也砸不动了），立刻结算，别让玩家干等
+        if (this.state === 'PLAYING' && this.vaseLevel && this.vaseActs <= 0 && this.vaseZombieVasesLeft > 0) {
+            this._vaseOutOfActs();
+        }
+    }
+
+    // v4.0.149 关卡失败面板：行动点耗尽
+    _vaseOutOfActs() {
+        if (this.state === 'GAMEOVER') return;
+        this.state = 'GAMEOVER';
+        this._hidePauseUi();
+        this.audioManager.stop('bgm');
+        this.audioManager.play('lose');
+        if (window.AchTracker) window.AchTracker.lose('vase');
+        const lv = this.vaseLevel ? VASE_LEVELS.find(x => x.n === this.vaseLevel) : null;
+        const overlay = document.createElement('div');
+        overlay.className = 'vase-win-overlay';
+        overlay.innerHTML = `
+            <div class="vase-win-panel">
+                <div class="vase-win-lv" style="color:#a8802a;">OUT OF ACTION</div>
+                <div class="vase-win-title" style="color:#7a5a18;">行动点耗尽</div>
+                <div class="vase-win-sub">还剩 ${this.vaseZombieVasesLeft} 个僵尸罐没砸开
+                    <span class="vase-win-diff">${lv ? '第 ' + lv.n + ' 关 · ' + lv.name : '自由挑战'}</span></div>
+                <div class="vase-win-btns">
+                    <button id="vao-retry" class="vase-win-btn again">再挑战一次</button>
+                    <button id="vao-levels" class="vase-win-btn exit">选关</button>
+                </div>
+            </div>`;
+        this.container.appendChild(overlay);
+        overlay.querySelector('#vao-retry').onclick = () => this.restartVaseLevel();
+        overlay.querySelector('#vao-levels').onclick = () => {
+            // 直接重载回首页，并让首页初始化时自动把「关卡选择」弹出来 —— 比在残局上叠弹窗干净
+            try { sessionStorage.setItem('pvz_open_vase_levels', '1'); } catch (e) { }
+            location.reload();
+        };
+        this._vaseWinEls = [overlay];
     }
 
     // type -> Card/Plants 素材文件名（大小写与 git 入库路径严格一致，部署环境大小写敏感！）
@@ -5424,6 +5807,16 @@ class Game {
         this.vaseFreeCards.push({ type, element: el, consumed: false });
         this.updateUI();
         this.audioManager.play('plant');
+        // v4.0.149 生长浮现：新卡先缩小压扁、闪一下白光再弹回原位 ——
+        // 砸出植物是本模式唯一的正反馈，必须一眼看得出「我拿到了什么」
+        try {
+            el.style.transformOrigin = '50% 100%';
+            el.animate([
+                { transform: 'scale(.4) translateY(14px)', opacity: 0, filter: 'brightness(2.4)' },
+                { transform: 'scale(1.14) translateY(-3px)', opacity: 1, filter: 'brightness(1.5)', offset: 0.62 },
+                { transform: 'scale(1) translateY(0)', opacity: 1, filter: 'brightness(1)' }
+            ], { duration: 420, easing: 'cubic-bezier(.2,1.4,.4,1)' });
+        } catch (e) { /* 老浏览器不支持 WAAPI 就跳过动画 */ }
         const prefix = this._vaseTypeLabel(vaseType); // v3.15.0 支持金罐
         this.showAnnouncement(`${prefix}：获得「${this.getPlantName(type)}」卡片！拖到草地上任意格子种植`, '#66ff66');
     }
@@ -5731,25 +6124,63 @@ class Game {
     }
 
     // HUD 常驻难度角标（右上角 Speed 按钮旁），仅 vase 模式显示
+    // v4.0.149 关卡模式追加两枚：行动点 / 剩余僵尸罐
     _syncVaseHud() {
-        const old = document.getElementById('vase-diff-chip');
-        if (old && old.parentNode) old.parentNode.removeChild(old);
+        ['vase-diff-chip', 'vase-act-chip', 'vase-zchip'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el && el.parentNode) el.parentNode.removeChild(el);
+        });
         if (!this.vaseMode) return;
         const cfg = this._vaseDiffCfg();
+        const corner = document.getElementById('corner-hud');
         const chip = document.createElement('div');
         chip.id = 'vase-diff-chip';
         chip.className = 'diff-chip diff-' + cfg.key;
         // v3.34.0：文案去掉"难度"前缀，只留 档位名+英文；竖排挂在 Speed 正下方
         chip.innerHTML = `${cfg.label}<span class="diff-chip-en">${cfg.key.toUpperCase()}</span>`;
         chip.title = `砸罐子 · ${cfg.label}难度`;
-        const corner = document.getElementById('corner-hud');
         if (corner) corner.appendChild(chip);
+        if (!this.vaseLevel) return;   // 自由模式没有行动点，不显示
+        const acts = document.createElement('div');
+        acts.id = 'vase-act-chip';
+        acts.className = 'vase-hud-chip';
+        acts.title = '行动点：每砸一个罐子扣 1 点。耗尽时若还有僵尸罐没砸开即失败' +
+                     '（砸绿罐/问号罐会消耗点数，所以要挑着砸）';
+        if (corner) corner.appendChild(acts);
+        const zc = document.createElement('div');
+        zc.id = 'vase-zchip';
+        zc.className = 'vase-hud-chip z';
+        zc.title = '还剩多少个僵尸罐没砸开 —— 全部砸开并清掉场上僵尸即通关';
+        if (corner) corner.appendChild(zc);
+        this._refreshVaseHud();
+    }
+
+    // 只更新数字，不重建 DOM（每砸一罐调用一次，重建会闪）
+    _refreshVaseHud() {
+        const acts = document.getElementById('vase-act-chip');
+        if (acts) {
+            const left = Math.max(0, this.vaseActs | 0);
+            acts.innerHTML = `<b>⚡</b>${left}<i>/${this.vaseActsMax | 0}</i>`;
+            acts.classList.toggle('low', left <= 3);
+        }
+        const zc = document.getElementById('vase-zchip');
+        if (zc) {
+            const n = Math.max(0, this.vaseZombieVasesLeft | 0);
+            zc.innerHTML = `<b>🧟</b>${n}`;
+            zc.classList.toggle('clear', n === 0);
+        }
     }
 
     checkVaseVictory() {
         if (this.state !== 'PLAYING') return;
         if (this.vases.length === 0) return;
-        if (!this.vases.every(v => v.smashed)) return;
+        // v4.0.149：关卡模式只要「僵尸罐全砸开」就算通关 —— 植物罐/问号罐可以主动跳过省行动点；
+        // 自由模式维持旧规则（砸完全部罐子）
+        if (this.vaseLevel) {
+            if (this.vaseZombieVasesLeft > 0) return;
+        } else if (!this.vases.every(v => v.smashed)) {
+            return;
+        }
         // 等场上僵尸清空（Dying 动画允许播放完、元素已移除）
         const live = this.entities.some(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING');
         if (live) return;
@@ -5762,19 +6193,34 @@ class Game {
         // 胜利弹窗：居中 modal —— LEVEL CLEAR + VICTORY! 砸罐子完成! + 难度 + Final Score + 再玩一局/退出
         const container = this.container;
         const diffLabel = this._vaseDiffCfg().label; // 简单/困难/地狱
+        const lv = this.vaseLevel ? VASE_LEVELS.find(x => x.n === this.vaseLevel) : null;
+        const nextLv = lv ? VASE_LEVELS.find(x => x.n === lv.n + 1) : null;
+        // 星级：剩余行动点 ≥ max(2, 30%) 三星；≥1 两星；0 一星（险胜）
+        let starBlock = '';
+        if (lv) {
+            const need = Math.max(2, Math.ceil(this.vaseActsMax * 0.3));
+            this.vaseStars = this.vaseActs >= need ? 3 : (this.vaseActs >= 1 ? 2 : 1);
+            this._saveVaseStar(lv.n, this.vaseStars);
+            starBlock = `<div class="vase-stars" data-stars="${this.vaseStars}">${'★'.repeat(this.vaseStars)}${'☆'.repeat(3 - this.vaseStars)}</div>
+                <div class="vase-win-stats">剩余行动点 ${this.vaseActs}/${this.vaseActsMax} · 砸开 ${this.vasesSmashed} 个罐子
+                    ${this.vaseStars < 3 ? `<br><span class="vase-star-tip">三星需要剩余 ${need} 点：少砸几个绿罐/问号罐试试</span>` : ''}</div>`;
+        }
         const overlay = document.createElement('div');
         overlay.className = 'vase-win-overlay';
         overlay.innerHTML = `
             <div class="vase-win-panel">
                 <div class="vase-win-lv">LEVEL CLEAR</div>
                 <div class="vase-win-title">VICTORY!</div>
-                <div class="vase-win-sub">砸罐子完成！<span class="vase-win-diff">难度 · ${diffLabel}</span></div>
+                <div class="vase-win-sub">${lv ? `第 ${lv.n} 关 · ${lv.name} 通关！` : '砸罐子完成！'}<span class="vase-win-diff">难度 · ${diffLabel}</span></div>
+                ${starBlock}
                 <div class="vase-win-btns">
+                    ${nextLv ? `<button id="vase-win-next" class="vase-win-btn next">下一关 →</button>` : ''}
                     <button id="vase-win-replay" class="vase-win-btn again">再玩一局</button>
                     <button id="vase-win-exit" class="vase-win-btn exit">退出</button>
                 </div>
             </div>`;
         container.appendChild(overlay);
+        if (nextLv) overlay.querySelector('#vase-win-next').onclick = () => this._startVaseLevel(nextLv.n);
         overlay.querySelector('#vase-win-replay').onclick = () => this.restartVaseLevel();
         overlay.querySelector('#vase-win-exit').onclick = () => location.reload(); // 回主菜单（干净重载）
         this._vaseWinEls = [overlay];
@@ -5925,4 +6371,14 @@ class VsTraitor extends Zombie {
 // Start game when page loads
 window.onload = () => {
     window._pvzGame = new Game();
+    // v4.0.149：从「行动点耗尽 → 选关」重载回来时，自动把关卡列表弹出来
+    try {
+        if (sessionStorage.getItem('pvz_open_vase_levels')) {
+            sessionStorage.removeItem('pvz_open_vase_levels');
+            setTimeout(() => {
+                const g = window._pvzGame;
+                if (g && g._openVaseLevels) g._openVaseLevels();
+            }, 260);
+        }
+    } catch (e) { /* sessionStorage 不可用就当没标记 */ }
 };
