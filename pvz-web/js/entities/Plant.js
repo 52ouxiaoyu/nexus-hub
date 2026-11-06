@@ -1375,6 +1375,15 @@ class Plant extends Entity {
             }
             this.isDead = true;
 
+            // v4.0.150 砸罐子关卡：统计「被僵尸吃掉的植物」——关卡星级改看这一项
+            // （0 株损失 = 三星）。一次性自杀植物（樱桃/土豆雷/倭瓜/辣椒/寒冰菇/毁灭菇）
+            // 自己爆掉不算损失，否则种个炸弹就掉星，玩家会不敢用。
+            if (this.game && this.game.vaseMode && this.game.vaseLevel) {
+                const onceFn = this.game._isVaseOncePlant;
+                const isOnce = (typeof onceFn === 'function' && onceFn.call(this.game, this.type)) || this.type === 'doomshroom';
+                if (!isOnce) this.game.vaseLostPlants = (this.game.vaseLostPlants || 0) + 1;
+            }
+
             // v4.0.73 成就：我是僵尸模式击杀植物计 kill（玩家放僵尸啃掉植物）
             if (window.AchTracker && this.game && this.game.zombieMode) window.AchTracker.kill();
 

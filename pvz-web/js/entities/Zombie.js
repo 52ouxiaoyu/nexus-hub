@@ -1357,15 +1357,29 @@ class Zombie extends Entity {
         }
 
 
-        if (this.type === 'sunhead' && this.game.vsMode && !this.hypnotized) {
+        // v4.0.150：「我是僵尸」也要产阳光 —— 旧条件写死 vsMode，导致买向日葵头僵尸后
+        // 一滴阳光都不产出（卡片还标着"产阳光"），玩家等于白花 50。
+        // 两侧经济池不同：双人对战加 zombieSun，我是僵尸复用 sunCount。
+        if (this.type === 'sunhead' && (this.game.vsMode || this.game.zombieMode) && !this.hypnotized) {
             this._vsAlive = (this._vsAlive || 0) + deltaTime;
             this._vsSunTimer = (this._vsSunTimer === undefined ? 5 : this._vsSunTimer) - deltaTime;
             if (this._vsSunTimer <= 0) {
                 this._vsSunTimer = 7;
-                const amount = 25 + 10 * Math.floor(this._vsAlive / 30);
-                this.game.zombieSun += amount;
-                this.game._refreshVsZombieBar();
-                this.game._vsFloatText(this.x, this.y - 60, `🧠+${amount}`, '#ff9ed2');
+                if (this.game.zombieMode) {
+                    // 我是僵尸：每只终生 3 次，避免"买一堆向日葵头 → 无限刷阳光"变成唯一解
+                    this._zmSunLeft = (this._zmSunLeft === undefined ? 3 : this._zmSunLeft);
+                    if (this._zmSunLeft > 0) {
+                        this._zmSunLeft--;
+                        this.game.sunCount += 50;
+                        if (this.game._syncZombieSunUI) this.game._syncZombieSunUI();
+                        if (this.game._zombieFloatText) this.game._zombieFloatText('☀+50', '#ffd54a', this.x, this.y - 60);
+                    }
+                } else {
+                    const amount = 25 + 10 * Math.floor(this._vsAlive / 30);
+                    this.game.zombieSun += amount;
+                    this.game._refreshVsZombieBar();
+                    this.game._vsFloatText(this.x, this.y - 60, `🧠+${amount}`, '#ff9ed2');
+                }
             }
         }
 
