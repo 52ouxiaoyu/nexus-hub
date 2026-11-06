@@ -645,21 +645,57 @@
     ];
     class Bubble extends Base {
         setup() {
-            this.R = 22; this.COLS = 12; this.ROWH = 38; this.TOP = 92;
-            this.LEFT = 96;
-            this.rows = 13;
+            // v4.0.151（用户：整个界面都可以打，所有的地方都是可以打到的）——
+            // 旧版 12 列只占左侧 528px，右边 260px 全给了 HUD，屏幕右边三分之一是死区。
+            // 现在 18 列铺满 864px（左右各留 18px 边），HUD 压成顶部一条 50px 横栏，
+            // 整个画面从 y=96 往下都是场地。
+            this.R = 24; this.COLS = 18; this.LEFT = 18;
+            this.ROWH = 41.6;               // = R*√3，六边形密铺的行距
+            this.TOP = 96;                  // 顶栏下沿 = 场地顶
+            this.rows = 11;
             this.g = Array.from({ length: this.rows }, () => new Array(this.COLS).fill(-1));
-            // v4.0.138：起始 8 行（原 4 行）——原版开局只铺 4 行，下半屏全空，看着像没开始；
-            // 清空全场才算赢，行数够了才有推进感
-            for (let r = 0; r < 8; r++) for (let c = 0; c < this.colsIn(r); c++) {
-                if (r === 7 && c % 3 === 0) continue;
+            // 起始 6 行（末行挖掉 1/3，像前锋线被打掉一截）
+            for (let r = 0; r < 6; r++) for (let c = 0; c < this.colsIn(r); c++) {
+                if (r === 5 && c % 3 === 0) continue;
                 this.g[r][c] = (Math.random() * 4) | 0;
             }
             this.shooter = { x: this.LEFT + this.COLS * this.R, y: 556, ang: -Math.PI / 2 };
             this.ball = null; this.next = (Math.random() * 4) | 0; this.cur = (Math.random() * 4) | 0;
             this.pops = []; this.drops = [];
-            this.missStreak = 0;      // v4.0.138：连续几发没消掉任何东西
-            this.deadline = this.yOf(this.rows - 2);
+            this.missStreak = 0;      // 连续几发没消掉任何东西
+            this.deadline = this.shooter.y - 24;
+        }
+
+        // v4.0.151：瞄准左界 / 右界（球在这两条线上反弹）
+        get wallL() { return this.LEFT + this.R; }
+        get wallR() { return this.LEFT + this.COLS * this.R * 2 - this.R; }
+
+        // v4.0.151：瞄准锥不再是写死的常量 —— 由「炮口 → 每一行最外侧球心」的最大张角
+        // 自动算出来，保证场上每一格都能被直接指到。
+        // 旧版写死 lim=1.32，实际只允许偏离竖直 14.4°（总张角 28.7°），
+        // 连第 0 行最边上的球都要 28.7° —— 外圈一整片永远打不到，
+        // 「清空全场即通关」这个条件等于摆设。
+        _aimLimit() {
+            const last = this.rows - 2;        // 最深可打行（再往下一行就是判负线）
+            let th = 0;
+            for (let r = 0; r <= last; r++) {
+                const dy = this.shooter.y - this.yOf(r);
+                if (dy <= 0) continue;
+                const dl = Math.abs(this.cx(r, 0) - this.shooter.x);
+                const dr = Math.abs(this.cx(r, this.colsIn(r) - 1) - this.shooter.x);
+                th = Math.max(th, Math.atan2(Math.max(dl, dr), dy));
+            }
+            return Math.min(th + 0.02, 1.45);  // 留 1° 余量，封顶 83°
+        }
+
+        // 鼠标位置 → 炮口角度（只允许朝上半圈）
+        _aimAt(x, y) {
+            const th = this._aimLimit(), mid = -Math.PI / 2;
+            let d = Math.atan2(y - this.shooter.y, x - this.shooter.x) - mid;
+            d = Math.atan2(Math.sin(d), Math.cos(d));       // 归一到 [-π, π]
+            if (d > Math.PI / 2) d = Math.PI / 2;           // 指向下半圈的按最近边收
+            if (d < -Math.PI / 2) d = -Math.PI / 2;
+            this.shooter.ang = mid + Math.max(-th, Math.min(th, d));
         }
         // v4.0.138：奇数行整体右移半个球，最后一列会顶出右侧边框（中心 624 + R 22 > 右界 624），
         // 球在墙上反弹永远够不到那一列 → 场上永远清不空，这就是「泡泡龙根本赢不了」的根因。
@@ -682,9 +718,8 @@
             const steps = Math.ceil((Math.abs(b.vx) + Math.abs(b.vy)) * dt / 6);
             for (let i = 0; i < steps; i++) {
                 b.x += b.vx * dt / steps; b.y += b.vy * dt / steps;
-                if (b.x < this.LEFT + this.R) { b.x = this.LEFT + this.R; b.vx = Math.abs(b.vx); }
-                const right = this.LEFT + this.COLS * this.R * 2;
-                if (b.x > right - this.R) { b.x = right - this.R; b.vx = -Math.abs(b.vx); }
+                if (b.x < this.wallL) { b.x = this.wallL; b.vx = Math.abs(b.vx); }
+                if (b.x > this.wallR) { b.x = this.wallR; b.vx = -Math.abs(b.vx); }
                 if (b.y < this.TOP + this.R * 0.55) { this.attach(b); return; }
                 // 命中已有泡泡
                 for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) {
@@ -791,33 +826,38 @@
         }
         onDown(x, y) {
             if (this.over) return;
-            this.shooter.ang = Math.atan2(y - this.shooter.y, x - this.shooter.x);
-            const lim = 1.32;
-            this.shooter.ang = Math.max(-Math.PI + lim, Math.min(-lim, this.shooter.ang));
+            this._aimAt(x, y);
             this.shoot();
         }
         onMove(x, y) {
             if (this.over) return;
-            this.shooter.ang = Math.atan2(y - this.shooter.y, x - this.shooter.x);
-            const lim = 1.32;
-            this.shooter.ang = Math.max(-Math.PI + lim, Math.min(-lim, this.shooter.ang));
+            this._aimAt(x, y);
         }
         onKey(down, k) {
             if (!down || this.over) return;
-            const step = 0.09;
-            if (k === 'left' || k === 'a') this.shooter.ang = Math.max(-Math.PI + 1.32, this.shooter.ang - step);
-            if (k === 'right' || k === 'd') this.shooter.ang = Math.min(-1.32, this.shooter.ang + step);
+            const step = 0.09, th = this._aimLimit(), mid = -Math.PI / 2;
+            if (k === 'left' || k === 'a') this.shooter.ang = Math.max(mid - th, this.shooter.ang - step);
+            if (k === 'right' || k === 'd') this.shooter.ang = Math.min(mid + th, this.shooter.ang + step);
             if (k === 'space' || k === 'up') this.shoot();
         }
         draw() {
             const g = ctx.createLinearGradient(0, 0, 0, H);
             g.addColorStop(0, '#1d3557'); g.addColorStop(1, '#0d1b2a');
             ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+            // v4.0.151：场地铺满整个画面（原来只有左边 528px 是场地，右侧 260px 是 HUD 死区）
+            ctx.fillStyle = 'rgba(255,255,255,0.045)'; ctx.fillRect(0, this.TOP, W, H - this.TOP);
             const rx = this.LEFT, rw = this.COLS * this.R * 2;
-            ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fillRect(rx, this.TOP, rw, H - this.TOP - 40);
+            // 左右边界：球在这两条线上反弹，也就是"整个界面"的物理边界
+            ctx.strokeStyle = 'rgba(255,255,255,0.09)'; ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(rx, this.TOP); ctx.lineTo(rx, this.shooter.y - 4);
+            ctx.moveTo(rx + rw, this.TOP); ctx.lineTo(rx + rw, this.shooter.y - 4);
+            ctx.stroke();
+            // 红线
             ctx.strokeStyle = 'rgba(255,120,120,0.5)'; ctx.setLineDash([8, 8]); ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.moveTo(rx, this.shooter.y - 24); ctx.lineTo(rx + rw, this.shooter.y - 24); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, this.shooter.y - 24); ctx.lineTo(W, this.shooter.y - 24); ctx.stroke();
             ctx.setLineDash([]);
+            txt('顶到这条线就输', 20, this.shooter.y - 36, 11, 'rgba(255,150,150,0.55)', 'left', 600);
             for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) {
                 const v = this.g[r][c]; if (v < 0) continue;
                 this.bub(this.cx(r, c), this.yOf(r), v);
@@ -830,6 +870,7 @@
             }
             for (const d of this.drops) this.bub(d.x, d.y, d.c);
             if (this.ball) this.bub(this.ball.x, this.ball.y, this.ball.col);
+            else if (!this.over) this._drawAim();      // 瞄准虚线
             // 猫尾草炮台
             sprH('cattail', this.shooter.x - 34, this.shooter.y - 26, 62);
             ctx.save();
@@ -837,31 +878,72 @@
             ctx.fillStyle = '#c9e08a'; rr(-6, -46, 12, 42, 6); ctx.fill();
             ctx.restore();
             this.bub(this.shooter.x + Math.cos(this.shooter.ang) * 70, this.shooter.y - 20 + Math.sin(this.shooter.ang) * 70, this.cur, 0.75);
-            // HUD
-            const hx = 690;
-            txt('猫尾草泡泡龙', hx, 132, 27, '#ffe9a8', 'left', 900);
-            txt('CATTAIL BUBBLE', hx, 160, 11, 'rgba(255,255,255,0.45)', 'left', 700);
-            panel(hx - 10, 180, 190, 92, 0.6);
-            txt('分数', hx, 202, 13, 'rgba(255,255,255,0.6)');
-            txt(String(this.score), hx, 240, 32, '#ffe066', 'left', 900);
-            panel(hx - 10, 286, 190, 110, 0.5);
-            txt('下一颗', hx, 306, 13, 'rgba(255,255,255,0.6)');
-            this.bub(hx + 30, 348, this.next);
-            txt(BUB_COLORS[this.next].n, hx + 66, 348, 15, '#dfe9f5');
-            txt('鼠标瞄准 · 点击发射', hx, 428, 12.5, 'rgba(255,255,255,0.6)');
-            txt('同色 ≥3 爆破', hx, 452, 12.5, 'rgba(255,255,255,0.6)');
-            txt('清空全场即通关', hx, 476, 12.5, '#b7f06a');
-            txt('剩 ' + this.leftCount() + ' 颗 · 顶到红线就输', hx, 500, 12.5, 'rgba(255,255,255,0.6)');
-            txt('连续 8 发打空会压下一行', hx, 522, 12, 'rgba(255,255,255,0.38)');
+            this._drawHud();
             if (this.over) {
                 if (this.win) this.overlay('全场清空！', '分数 ' + this.score + ' · 泡泡一个不剩', '#b7f06a');
                 else this.overlay('泡泡堆到炮口了', '分数 ' + this.score + ' · 剩 ' + this.leftCount() + ' 颗', '#ff8f6b');
             }
         }
+
+        // v4.0.151：HUD 由右侧整列改成顶部一条横栏（y 44~96）——
+        // 右边那 260px 空出来给场地，整个画面就没有"打得着/打不着"的分界了。
+        _drawHud() {
+            const y0 = 44, y1 = this.TOP, cy = (y0 + y1) / 2;
+            ctx.fillStyle = 'rgba(6,14,22,0.62)';
+            ctx.fillRect(0, y0, W, y1 - y0);
+            ctx.strokeStyle = 'rgba(150,205,255,0.16)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(0, y1); ctx.lineTo(W, y1); ctx.stroke();
+
+            txt('分数', 20, cy - 1, 12.5, 'rgba(255,255,255,0.5)', 'left', 600);
+            txt(String(this.score), 54, cy, 22, '#ffe066', 'left', 900);
+            txt('剩 ' + this.leftCount() + ' 颗', 208, cy, 15, '#dfe9f5', 'left', 700);
+            txt('同色 ≥3 爆破 · 清空全场即通关', 336, cy - 6, 12, 'rgba(255,255,255,0.52)', 'left', 600);
+            txt('连续 8 发打空会压下一行', 336, cy + 10, 10.5, 'rgba(255,255,255,0.3)', 'left', 600);
+            txt('下一颗', 806, cy, 12.5, 'rgba(255,255,255,0.5)', 'right', 600);
+            this.bub(852, cy, this.next, 1, 18);
+        }
+
+        // v4.0.151：瞄准虚线 —— 张角放大到 160° 之后必须让玩家看得见球会往哪飞，
+        // 顺便也是"每一格都指得到"的直观证据。只对附近两三行做碰撞测试，开销可忽略。
+        _drawAim() {
+            const a = this.shooter.ang, vx = Math.cos(a), vy = Math.sin(a);
+            if (vy > -0.02) return;                       // 指向地平线以下就不画
+            const ox = this.shooter.x + vx * 30, oy = this.shooter.y - 20 + vy * 30;
+            const lim2 = (this.R * 1.7) * (this.R * 1.7);
+            let px = ox, py = oy, ex = ox, ey = oy;
+            for (let i = 0; i < 220; i++) {
+                px += vx * 9; py += vy * 9; ex = px; ey = py;
+                if (px <= this.wallL || px >= this.wallR) break;
+                if (py <= this.TOP + this.R * 0.55) break;
+                const r0 = Math.max(0, Math.floor((py - this.TOP - this.R) / this.ROWH) - 1);
+                let hit = false;
+                for (let r = r0; r <= Math.min(this.rows - 1, r0 + 2) && !hit; r++) {
+                    for (let c = 0; c < this.colsIn(r); c++) {
+                        if (this.g[r][c] < 0) continue;
+                        const dx = px - this.cx(r, c), dy = py - this.yOf(r);
+                        if (dx * dx + dy * dy < lim2) { hit = true; break; }
+                    }
+                }
+                if (hit) break;
+            }
+            ctx.save();
+            ctx.strokeStyle = 'rgba(180,235,255,0.28)'; ctx.lineWidth = 2;
+            ctx.setLineDash([6, 9]);
+            ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ex, ey); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = 'rgba(180,235,255,0.34)';
+            ctx.beginPath(); ctx.arc(ex, ey, 3.2, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        }
         // 整体下移一行、顶部补一行新球；超出该行列数的球滚落
         pushRow() {
             for (let r = this.rows - 1; r >= 1; r--) {
                 this.g[r] = this.g[r - 1].slice();
+                // v4.0.151：奇数行只有 COLS-1 格，整体下移后会比偶数行少一个元素，
+                // slice 出来的数组尾部是空洞（undefined）。draw 里 `v < 0` 对 undefined 是 false，
+                // update 里的碰撞检测同理 —— 于是每个空洞都被当成"一颗看不见的绿球"，
+                // 既打不掉也算不进 leftCount，「清空全场」永远差这几颗。补成 -1。
+                while (this.g[r].length < this.COLS) this.g[r].push(-1);
                 for (let c = this.colsIn(r); c < this.COLS; c++) {
                     if (this.g[r][c] >= 0) {
                         this.drops.push({ x: this.cx(r, c), y: this.yOf(r), v: 60, c: this.g[r][c] });
@@ -885,18 +967,19 @@
             for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) if (this.g[r][c] >= 0) n++;
             return n;
         }
-        bub(x, y, col, a) {
+        bub(x, y, col, a, rad) {
             const c = BUB_COLORS[col] || BUB_COLORS[0];
+            const R = rad || this.R;      // v4.0.151：顶栏预览球用小一号半径
             ctx.globalAlpha = a == null ? 1 : a;
-            const g = ctx.createRadialGradient(x - 7, y - 9, 2, x, y, this.R);
+            const g = ctx.createRadialGradient(x - R * 0.32, y - R * 0.41, 2, x, y, R);
             g.addColorStop(0, 'rgba(255,255,255,0.95)');
             g.addColorStop(0.34, c.c);
             g.addColorStop(1, 'rgba(20,26,34,0.55)');
             ctx.fillStyle = g;
-            ctx.beginPath(); ctx.arc(x, y, this.R, 0, Math.PI * 2); ctx.fill();
-            spr(c.p, x - this.R * 0.52, y - this.R * 0.52, this.R * 1.04, this.R * 1.04, 0.92);
+            ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill();
+            spr(c.p, x - R * 0.52, y - R * 0.52, R * 1.04, R * 1.04, 0.92);
             ctx.strokeStyle = 'rgba(255,255,255,0.32)'; ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.arc(x, y, this.R - 1, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(x, y, R - 1, 0, Math.PI * 2); ctx.stroke();
             ctx.globalAlpha = 1;
         }
     }

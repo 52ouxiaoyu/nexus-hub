@@ -201,9 +201,11 @@ function ok(c, name, extra) {
             if (x + a.R > rightEdge + 0.5) over++;
             worst = Math.max(worst, x + a.R);
         }
-        return { odd: a.colsIn(1), even: a.colsIn(0), over, worst: Math.round(worst), edge: rightEdge, balls: a.leftCount(), over2: a.over };
+        return { odd: a.colsIn(1), even: a.colsIn(0), cols: a.COLS, over, worst: Math.round(worst), edge: rightEdge, balls: a.leftCount(), over2: a.over };
     });
-    ok(bub.odd === 11 && bub.even === 12, 'E1 奇数行少一列（11/12）', bub.odd + '/' + bub.even);
+    // v4.0.151：列数从 12 加到 18（铺满画面），断言改成相对 COLS 判断
+    ok(bub.odd === bub.cols - 1 && bub.even === bub.cols,
+        'E1 奇数行少一列（' + bub.odd + '/' + bub.even + '）', bub.odd + '/' + bub.even);
     ok(bub.over === 0, 'E2 没有泡泡溢出右边界（原来的死结）', 'worst=' + bub.worst + ' edge=' + bub.edge);
     ok(bub.balls > 40 && bub.over2 === false, 'E3 起始满场且未判负', 'balls=' + bub.balls);
 
