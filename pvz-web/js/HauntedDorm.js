@@ -499,6 +499,7 @@ class HauntedDorm {
         this.ghostRespawnAt = 0;          // >0 = 死亡等待重生
         this.kills = 0;
         this.over = false;
+        this._zombieWinPending = false; // v4.0.154：僵尸阵营收尾结算的防重入标志
         this.lastFlashAt = 0;
         // v4.0.106：P 键绝对暂停（全场零模拟，只留观察）
         this.paused = false;
@@ -3745,8 +3746,13 @@ class HauntedDorm {
             p.el1.classList.add('dead-slash');
             p.el1.style.filter = 'grayscale(1)';
             p.vx = 0; p.vy = 0;
+            // v4.0.154：AI 死亡统一计入「击杀」——原来只有玩家亲手咬死（啃咬分支）才 +1，
+            // 己方僵尸 / 尸潮小怪蹭死的完全不涨，HUD 上的击杀数看着像卡住了。
+            if (this.isZombieFaction && p.isAi) this.kills++;
             // v4.0.44：天使形态下——人机全灭=没人可帮，直接失败结算
-            if (this.playerAngelic && this.ais.every(a => a.dead)) {
+            // v4.0.154：旧判据 ais.every(dead) 只看人机，2p 里 P2 还在守屋时也会误判负。
+            // 天使自己 isZombie=false 会被 _plantSideAlive 算进去，所以「只剩自己」= <= 1。
+            if (this.playerAngelic && this._plantSideAlive() <= 1) {
                 this.gameOver(false);
                 return;
             }
@@ -3754,8 +3760,16 @@ class HauntedDorm {
             // 旧版这里只判了天使，内鬼把 5 个人机咬死后没有任何结算 → 游戏永远不结束（用户实报）
             // v4.0.65：改为统一判定"植物方全灭"（含双人 P2 植物形态、AI 内鬼反水排除）——
             // 用户实报"只要场上都是僵尸和内鬼就直接宣布胜利"，此前人机全灭即判胜、漏判 P2 还在守屋的情况
-            if (this._anyTraitor() && this._plantSideAlive() === 0) {
-                this._announce('😈 内鬼屠尽了所有幸存者——邪恶胜利！', 'evillaugh.mp3', true, 'always');
+            // v4.0.154（用户实报：僵尸阵营把 6 名幸存者全部击杀后仍未获胜）——
+            // 这里是「幸存者死亡」的唯一统一出口：己方僵尸 / 尸潮小怪的接触伤害（_tick 里
+            // allPlayers 掉血循环 → _checkPlayerDown）打死人时只走本函数，不走「玩家亲手啃咬」那条
+            // 带判胜的分支。旧版这里只判了内鬼，于是最后一名幸存者但凡是被小怪蹭死的，
+            // _plantSideAlive() 已经归 0 却永远不结算（僵尸-植物阵营的「邪恶方」判定被整体漏掉）。
+            const _fatePending = this._humansAll().some(h => h && h.pendingFate);
+            if ((this._anyTraitor() || this.isZombieFaction) && !_fatePending && this._plantSideAlive() === 0) {
+                this._announce(this.isZombieFaction
+                    ? '🏆 所有幸存者已被肃清——猎杀完成！'
+                    : '😈 内鬼屠尽了所有幸存者——邪恶胜利！', 'evillaugh.mp3', true, 'always');
                 this.gameOver(true);
                 return;
             }
@@ -3852,9 +3866,17 @@ class HauntedDorm {
         }
         this.setHp();
         this._refreshHud();
-        // v4.0.65：变天使瞬间人机已全灭 → 没人可帮，立即失败结算（否则挂起）
-        if (this._plantSideAlive() === 0) {
-            this.gameOver(false);
+        // v4.0.65：变天使瞬间人机已全灭 → 没人可帮，立即结算（否则挂起）
+        // v4.0.154：天使自己算植物方（isZombie=false），plantSideAlive 至少为 1，
+        // 旧的 === 0 恒不成立 → 这段兜底从来没生效过。改成「除自己以外没有别的植物方成员」；
+        // 此时若场上有内鬼，走的是邪恶胜利（天使无攻击手段，一个人翻不了盘）。
+        if (this._plantSideAlive() <= 1) {
+            if (this._anyTraitor()) {
+                this._announce('😈 内鬼屠尽了所有幸存者——邪恶胜利！', 'evillaugh.mp3', true, 'always');
+                this.gameOver(true);
+            } else {
+                this.gameOver(false);
+            }
             return;
         }
         this._announce(who === 'p2'
@@ -5963,7 +5985,7 @@ class HauntedDorm {
                     this._checkPlayerDown(best);
                     // v4.0.65：AI 内鬼肃清全部植物方成员 → 邪恶胜利（此前 AI 内鬼咬死人机后无任何结算，
                     // 玩家已死/变内鬼/变天使时游戏永远挂起；玩家植物形态还活着则不算全灭，游戏继续）
-                    if (this._plantSideAlive() === 0) {
+                    if (!this.over && this._plantSideAlive() === 0 && !this._humansAll().some(h => h && h.pendingFate)) {
                         this._announce('😈 内鬼屠尽了所有幸存者——邪恶胜利！', 'evillaugh.mp3', true, 'always');
                         this.gameOver(true);
                     }
@@ -6113,6 +6135,18 @@ class HauntedDorm {
         this._updateAIs(dt);
         this._updateWaves(time);      // v4.0.20：尸潮波次
         this._updateDayNight(time);   // v4.0.20：昼夜循环
+        // v4.0.154：僵尸阵营胜负兜底 —— 0.5 秒扫一次。
+        // 「幸存者全灭」的判胜原本散落在各条击杀路径里（玩家啃咬 / 内鬼啃咬 / _checkPlayerDown），
+        // 只要将来再新增一种伤害来源就会再漏一次。这里按「场上是否还有植物方活人」做终局兜底，
+        // 不关心是谁杀的。开局 3 秒内不判（防止床位数异常导致 ais 为空时直接开奖）。
+        if (this.isZombieFaction && !this.over && !this._zombieWinPending &&
+            time > 3000 && Math.floor(time / 500) !== Math.floor((time - dt * 1000) / 500) &&
+            this._plantSideAlive() === 0 && !this._humansAll().some(h => h && h.pendingFate)) {
+            this._zombieWinPending = true;
+            this._announce('🏆 所有幸存者已被肃清——猎杀完成！', 'evillaugh.mp3', true, 'always');
+            if (this._gameOverTimer) clearTimeout(this._gameOverTimer);
+            this._gameOverTimer = setTimeout(() => this.gameOver(true), 1500);
+        }
         this._updateTraitor(dt);      // v4.0.20：内鬼模式
         this._updateJumpPads(dt);     // v4.0.72：房间跳板传送
         if (Math.floor(time / 500) !== Math.floor((time - dt * 1000) / 500)) this._updateGhostChip(); // 0.5s 刷一次信息牌
@@ -6747,7 +6781,7 @@ class HauntedDorm {
                             this._flyText(v.x, v.y - 26, v._instaKill ? '💀 一击毙命' : '-' + dmg + ' 😈', '#ff5252');
                             this.playSfx('chomp.mp3', 0.4);
                             if (v.hp <= 0 && !v.dead) {
-                                this.kills++;
+                                // v4.0.154：击杀计数统一挪进 _checkPlayerDown，这里不再重复 +1
                                 // v4.0.117：号令尸潮解锁进度——只算僵尸方真人自己咬死的（尸潮小怪的不算）
                                 // 注意：不能连发两条 _announce（后者会顶掉前者），解锁那次直接替换文案
                                 const _wasLocked = !this._hordeUnlocked();
