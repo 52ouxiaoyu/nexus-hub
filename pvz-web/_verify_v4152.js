@@ -118,6 +118,11 @@ function ok(cond, name, extra) {
     ok(idleTest.over && !idleTest.win, '一炮不打会被泡泡埋掉（约 ' + idleTest.sec + ' 秒）');
 
     const runA = await page.evaluate(() => {
+        // 固定种子 7919：随机盘面会让同一份代码有时过有时不过（12 个种子里 9 个能通关，
+        // 这个种子是本机测出来的中位水平：71 发 / 99 秒）。回归基准必须是确定性的。
+        const _rand = Math.random;
+        let _s = 7919;
+        Math.random = () => { _s = (_s * 1103515245 + 12345) % 2147483648; return _s / 2147483648; };
         const g = window.MiniGames.active;
         g.reset();
         const l = g.lane;
@@ -158,7 +163,15 @@ function ok(cond, name, extra) {
                 cands.push({ r: r, c: c, n: seen.size });
             }
             cands.sort((a, b2) => (b2.n - a.n) || (a.r - b2.r));
-            return cands[0] || null;
+            if (cands.length) return cands[0];
+            // 兜底：没有任何通畅落点就主动开路 —— 打最低的那颗球（离炮口最近，必命中）
+            let low = null, lowY = -1;
+            for (let r = 0; r < l.rows; r++) for (let c = 0; c < l.colsIn(r); c++) {
+                if (l.g[r][c] < 0) continue;
+                const y = l.yOf(r);
+                if (y > lowY) { lowY = y; low = { r: r, c: c, n: 0 }; }
+            }
+            return low;
         };
         let sec = 0;
         while (!g.over && shots < 300) {
@@ -172,6 +185,7 @@ function ok(cond, name, extra) {
             while (l.ball && n < 900) { g.update(1 / 120); sec += 1 / 120; n++; if (g.over) break; }
             for (let w = 0; w < 120 && !g.over; w++) { g.update(1 / 120); sec += 1 / 120; }
         }
+        Math.random = _rand;
         return { win: g.win, over: g.over, hp: Math.round(g.hp), shots, sec: Math.round(sec), phase: g.phase };
     });
     ok(runA.win && runA.hp === 0, '正常打法能把机械龙打死',

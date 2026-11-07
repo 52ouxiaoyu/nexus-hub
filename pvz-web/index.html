@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1794040867">
-    <link rel="stylesheet" href="css/haunted-dorm.css?v=1794040867">
+    <link rel="stylesheet" href="css/style.css?v=1794048722">
+    <link rel="stylesheet" href="css/haunted-dorm.css?v=1794048722">
 </head>
 <body>
     <div id="game-container">
@@ -347,13 +347,12 @@
                 display: flex; align-items: stretch; gap: 20px;
                 width: 844px; max-width: 100%; margin-top: 14px;
             }
-            #btn-vs, #btn-dorm { width: 196px; flex: 0 0 196px; height: 192px; padding: 8px 8px 10px; }
-            #btn-minigame  { width: 412px; flex: 0 0 412px; height: 192px; padding: 8px 10px 10px; }
+            #btn-vs, #btn-dorm, #btn-bubble, #btn-minigame { width: 196px; flex: 0 0 196px; height: 192px; padding: 8px 8px 10px; }
             /* 行2 卡片比行1 矮（192），插图区同步收到 82，文字按 1 行副标题排 */
-            #btn-vs .pkt-art, #btn-dorm .pkt-art, #btn-minigame .pkt-art { flex: 0 0 82px; height: 82px; width: 100%; }
-            #btn-vs .pkt-name, #btn-dorm .pkt-name, #btn-minigame .pkt-name { font-size: 22px; letter-spacing: 4px; margin-top: 6px; }
-            #btn-vs .pkt-tag, #btn-dorm .pkt-tag, #btn-minigame .pkt-tag { font-size: 10.5px; margin-top: 2px; letter-spacing: 2px; padding: 1px 7px; }
-            #btn-vs .pkt-sub, #btn-dorm .pkt-sub, #btn-minigame .pkt-sub { font-size: 11px; margin-top: 4px; line-height: 1.4; }
+            #btn-vs .pkt-art, #btn-dorm .pkt-art, #btn-bubble .pkt-art, #btn-minigame .pkt-art { flex: 0 0 82px; height: 82px; width: 100%; }
+            #btn-vs .pkt-name, #btn-dorm .pkt-name, #btn-bubble .pkt-name, #btn-minigame .pkt-name { font-size: 22px; letter-spacing: 4px; margin-top: 6px; }
+            #btn-vs .pkt-tag, #btn-dorm .pkt-tag, #btn-bubble .pkt-tag, #btn-minigame .pkt-tag { font-size: 10.5px; margin-top: 2px; letter-spacing: 2px; padding: 1px 7px; }
+            #btn-vs .pkt-sub, #btn-dorm .pkt-sub, #btn-bubble .pkt-sub, #btn-minigame .pkt-sub { font-size: 11px; margin-top: 4px; line-height: 1.4; }
             /* 双人对战：豌豆射手右移一点（露出背后叶子）、僵尸左移一点，两边往 VS 靠出「融合」感 */
             #btn-vs .vs-duel { display: flex; align-items: center; justify-content: center; gap: 2px; }
             #btn-vs .vs-duel img { height: 44px; width: auto; image-rendering: pixelated; }
@@ -366,7 +365,7 @@
                 position: relative; z-index: 2; padding: 0 1px;
             }
             /* 小游戏占位卡：三只小植物当封面 */
-            #btn-minigame .pkt-art.mini { display: flex; align-items: flex-end; justify-content: center; gap: 64px; padding-bottom: 13px; }
+            #btn-minigame .pkt-art.mini { display: flex; align-items: flex-end; justify-content: center; gap: 15px; padding-bottom: 13px; }
             /* 草地台阶：三只小植物踩同一条地平线，不再悬空 */
             #btn-minigame .pkt-art.mini::after {
                 content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 18px; z-index: 0;
@@ -374,9 +373,24 @@
                 box-shadow: inset 0 -5px 7px rgba(28,58,14,0.16);
             }
             #btn-minigame .pkt-art.mini img { position: relative; z-index: 1; width: auto; image-rendering: pixelated; filter: drop-shadow(0 3px 3px rgba(30,60,10,0.5)); }
-            #btn-minigame .pkt-art.mini .mg-a { height: 56px; }
-            #btn-minigame .pkt-art.mini .mg-b { height: 44px; }
-            #btn-minigame .pkt-art.mini .mg-c { height: 56px; }
+            #btn-minigame .pkt-art.mini .mg-a { height: 42px; }
+            #btn-minigame .pkt-art.mini .mg-b { height: 33px; }
+            #btn-minigame .pkt-art.mini .mg-c { height: 42px; }
+            /* v4.0.153 泡泡工坊卡：猫尾草炮台 + 三颗飘起的泡泡 */
+            #btn-bubble .pkt-art.bubble { position: relative; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; }
+            #btn-bubble .bt-cat { height: 60px; width: auto; image-rendering: pixelated; position: relative; z-index: 2;
+                filter: drop-shadow(0 3px 3px rgba(30,60,10,0.5)); transform: translateY(4px); }
+            #btn-bubble .bp { position: absolute; border-radius: 50%; width: 21px; height: 21px; z-index: 1;
+                box-shadow: inset -3px -3px 6px rgba(0,0,0,0.28), inset 4px 4px 7px rgba(255,255,255,0.6); }
+            #btn-bubble .bp1 { left: 21px; top: 18px; background: radial-gradient(circle at 34% 28%, #ff9a8a, #c22f22); }
+            #btn-bubble .bp2 { left: 52px;  top: 6px;  width: 16px; height: 16px; background: radial-gradient(circle at 34% 28%, #9fdcff, #2f74b8); }
+            #btn-bubble .bp3 { right: 21px; top: 20px; background: radial-gradient(circle at 34% 28%, #e9aaff, #7a3fb0); }
+            /* 工坊里的 4 张大卡：图标区撑满，名字更大 */
+            .mini-grid.lg .mini-card .ico { height: auto; flex: 1 1 auto; }
+            .mini-grid.lg .mini-card .ico img { height: 116px !important; }
+            .mini-grid.lg .mini-card h3 { font-size: 23px; margin-top: 10px; }
+            .mini-grid.lg .mini-card .tg { font-size: 10.5px; margin-top: 3px; }
+            .mini-grid.lg .mini-card .tp { font-size: 12px; margin-top: 7px; }
             /* v3.87.0：猛鬼宿舍不再使用专属配色，文字与其他模式卡完全一致 */
             /* ===== v4.0.112 守屋卡片封面重做：远小近大三段景深 + 原版投影/阳光 =====
                改前：三只植物 flex 横排、尺寸 100/62/62 → 总宽 193px 挤在 158px 画布里，
@@ -596,7 +610,10 @@
             .menu-cat { position: relative; width: 86px; height: 66px; pointer-events: auto; cursor: pointer;
                         transform: scale(0.9) scaleX(var(--cat-face, 1)); }
             /* 走路时让出点击：猫从「开始游戏」按钮上掠过时不能吃掉用户的点击，站定才可交互 */
-            .menu-cat.walking { pointer-events: none; }
+            /* v4.0.153：第二行多了「泡泡工坊」卡之后走道变窄，垂直移动途中会经过卡片标题，
+               走路时降到 62% 不透明度 —— 静止点本来就在不压字的位置，所以只在路过时变淡 */
+            .menu-cat.walking { pointer-events: none; opacity: .62; }
+            .menu-cat { transition: opacity .3s ease; }
             .menu-cat.jump { animation: catjump .7s ease; }
             @keyframes catjump {
                 0%, 100% { transform: scale(0.9) scaleX(var(--cat-face, 1)) translateY(0); }
@@ -740,8 +757,18 @@
                         <div class="pkt-sub">大地图双人协作 · 守住房间</div>
                     </button>
 
-                    <!-- v4.0.129 新卡位：小游戏（先占位，点一下给明确反馈，不做假功能） -->
-                    <button id="btn-minigame" class="mode-card" title="小游戏：更多玩法筹备中">
+                    <!-- v4.0.153：泡泡工坊独立成卡，位置在「砸罐子」正下方（与我是僵尸下方的小游戏左右相邻） -->
+                    <button id="btn-bubble" class="mode-card" title="猫尾草泡泡工坊：同一个炮台，四种玩法">
+                        <div class="pkt-art bubble">
+                            <span class="bp bp1"></span><span class="bp bp2"></span><span class="bp bp3"></span>
+                            <img class="bt-cat" src="assets/images/Plants/Cattail/Cattail.gif" alt="猫尾草">
+                        </div>
+                        <div class="pkt-name">泡泡工坊</div>
+                        <div class="pkt-tag">BUBBLE LAB</div>
+                        <div class="pkt-sub">4 种泡泡玩法 · 同一个炮台</div>
+                    </button>
+
+                    <button id="btn-minigame" class="mode-card" title="小游戏：6 个玩法">
                         <div class="pkt-art mini">
                             <img class="mg-a" src="assets/images/Plants/PuffShroom/0.gif" alt="小喷菇">
                             <img class="mg-b" src="assets/images/Plants/PotatoMine/0.gif" alt="土豆雷">
@@ -749,7 +776,7 @@
                         </div>
                         <div class="pkt-name">小游戏</div>
                         <div class="pkt-tag">MINI GAMES</div>
-                        <div class="pkt-sub">10 个玩法 · 玉米方块 / 僵尸地鼠 / 花园 2048</div>
+                        <div class="pkt-sub">6 个玩法 · 随时进来一局</div>
                     </button>
                 </div>
             </div>
@@ -1371,31 +1398,36 @@
         })();
     </script>
     <script>
-    // v4.0.134：小游戏卡 → 后院游乐场（10 个玩法真能玩了）
+    // v4.0.134：小游戏卡 → 后院游乐场
+    // v4.0.153：泡泡工坊卡 → 猫尾草泡泡工坊（4 种泡泡玩法共用一套炮台内核）
     (function () {
-        var btn = document.getElementById('btn-minigame');
-        if (!btn) return;
-        btn.addEventListener('click', function (e) {
+        var mg = document.getElementById('btn-minigame');
+        if (mg) mg.addEventListener('click', function (e) {
             e.preventDefault();
             if (window.MiniGames) window.MiniGames.openLobby();
         });
+        var bw = document.getElementById('btn-bubble');
+        if (bw) bw.addEventListener('click', function (e) {
+            e.preventDefault();
+            if (window.MiniGames) window.MiniGames.openBubble();
+        });
     })();
     </script>
-    <script src="js/InputManager.js?v=1794040867"></script>
-    <script src="js/Board.js?v=1794040867"></script>
-    <script src="js/entities/Entity.js?v=1794040867"></script>
-    <script src="js/entities/Plant.js?v=1794040867"></script>
-    <script src="js/entities/Zombie.js?v=1794040867"></script>
-    <script src="js/entities/Projectile.js?v=1794040867"></script>
-    <script src="js/entities/Sun.js?v=1794040867"></script>
-    <script src="js/managers/WaveManager.js?v=1794040867"></script>
-    <script src="js/managers/CollisionManager.js?v=1794040867"></script>
-    <script src="js/managers/EventManager.js?v=1794040867"></script>
-    <script src="js/GameLoop.js?v=1794040867"></script>
-    <script src="js/HelpGuide.js?v=1794040867"></script>
-    <script src="js/Achievements.js?v=1794040867"></script>
-    <script src="js/HauntedDorm.js?v=1794040867"></script>
-    <script src="js/MiniGames.js?v=1794040867"></script>
+    <script src="js/InputManager.js?v=1794048722"></script>
+    <script src="js/Board.js?v=1794048722"></script>
+    <script src="js/entities/Entity.js?v=1794048722"></script>
+    <script src="js/entities/Plant.js?v=1794048722"></script>
+    <script src="js/entities/Zombie.js?v=1794048722"></script>
+    <script src="js/entities/Projectile.js?v=1794048722"></script>
+    <script src="js/entities/Sun.js?v=1794048722"></script>
+    <script src="js/managers/WaveManager.js?v=1794048722"></script>
+    <script src="js/managers/CollisionManager.js?v=1794048722"></script>
+    <script src="js/managers/EventManager.js?v=1794048722"></script>
+    <script src="js/GameLoop.js?v=1794048722"></script>
+    <script src="js/HelpGuide.js?v=1794048722"></script>
+    <script src="js/Achievements.js?v=1794048722"></script>
+    <script src="js/HauntedDorm.js?v=1794048722"></script>
+    <script src="js/MiniGames.js?v=1794048722"></script>
     <script>
     /* ===== v4.0.126 主页惊喜：时间皮肤 + 动态彩蛋猫 ===== */
     (function () {

@@ -1307,11 +1307,31 @@
             if (k === 'space' || k === 'up') this.shoot();
         }
         draw() {
+            // v4.0.153：跟「机械龙攻城」拉开第一眼区别 —— 这里是后院夜色草坪（墨绿 + 草檐 + 草纹），
+            // 那边是钢铁工坊（暗铜 + 钢板 + 铆钉护墙）。同一个内核，两套完全不同的画面语言。
             const g = ctx.createLinearGradient(0, 0, 0, H);
-            g.addColorStop(0, '#1d3557'); g.addColorStop(1, '#0d1b2a');
+            g.addColorStop(0, '#1e4522'); g.addColorStop(0.5, '#132f17'); g.addColorStop(1, '#07130a');
             ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-            // v4.0.151：场地铺满整个画面（原来只有左边 528px 是场地，右侧 260px 是 HUD 死区）
-            ctx.fillStyle = 'rgba(255,255,255,0.045)'; ctx.fillRect(0, this.TOP, W, H - this.TOP);
+            // 草地纹理：斜向细纹（横条会变成一条条亮带，像扫描线，压得球看不清）
+            ctx.strokeStyle = 'rgba(150,220,120,0.045)'; ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let x = -H; x < W; x += 26) { ctx.moveTo(x, this.TOP); ctx.lineTo(x + (H - this.TOP), H); }
+            ctx.stroke();
+            // 中心提亮：球最多的地方稍微亮一点，视线自然落在那里
+            const rg = ctx.createRadialGradient(W / 2, this.TOP + 150, 40, W / 2, this.TOP + 150, W * 0.72);
+            rg.addColorStop(0, 'rgba(130,205,95,0.10)');
+            rg.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
+            // 场地顶檐的一排草叶
+            ctx.fillStyle = 'rgba(60,130,52,0.9)';
+            ctx.fillRect(0, this.TOP - 5, W, 5);
+            ctx.fillStyle = 'rgba(128,208,96,0.55)';
+            for (let x = 0; x < W; x += 26) {
+                ctx.beginPath();
+                ctx.moveTo(x, this.TOP - 5); ctx.lineTo(x + 13, this.TOP - 15); ctx.lineTo(x + 26, this.TOP - 5);
+                ctx.fill();
+            }
+            ctx.fillStyle = 'rgba(0,0,0,0.16)'; ctx.fillRect(0, this.TOP, W, H - this.TOP);
             const rx = this.LEFT, rw = this.COLS * this.R * 2;
             // 左右边界：球在这两条线上反弹，也就是"整个界面"的物理边界
             ctx.strokeStyle = 'rgba(255,255,255,0.09)'; ctx.lineWidth = 1;
@@ -1355,9 +1375,9 @@
         // 右边那 260px 空出来给场地，整个画面就没有"打得着/打不着"的分界了。
         _drawHud() {
             const y0 = 44, y1 = this.TOP, cy = (y0 + y1) / 2;
-            ctx.fillStyle = 'rgba(6,14,22,0.62)';
+            ctx.fillStyle = 'rgba(6,20,10,0.66)';
             ctx.fillRect(0, y0, W, y1 - y0);
-            ctx.strokeStyle = 'rgba(150,205,255,0.16)'; ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(160,220,130,0.18)'; ctx.lineWidth = 1;
             ctx.beginPath(); ctx.moveTo(0, y1); ctx.lineTo(W, y1); ctx.stroke();
 
             txt('分数', 20, cy - 1, 12.5, 'rgba(255,255,255,0.5)', 'left', 600);
@@ -1678,6 +1698,9 @@
      * ============================================================== */
     class DragonRaid extends Base {
         setup() {
+            // v4.0.153（用户：A 跟经典泡泡龙看着差不多）——两套画面语言，机制一点不动。
+            // 炮台位置试过偏左到 250，但实测偏得越远越难（250→1/6、300→4/6、350→3/6、450→5/6 通关），
+            // 那就守住 450：难度曲线必须和改动前一模一样，区分全靠配色 / 材质 / 场景。
             this.lane = new BubLane({
                 R: 21, COLS: 19, LEFT: 51, TOP: 150, rows: 10,
                 sx: 450, sy: 556, deadline: 510, nColors: 4,
@@ -1770,8 +1793,9 @@
 
         /* ---------- 绘制 ---------- */
         draw() {
+            // v4.0.153：钢铁工坊（暗铜）—— 经典泡泡龙是后院草地（墨绿），两套色系不撞
             const g = ctx.createLinearGradient(0, 0, 0, H);
-            g.addColorStop(0, '#1b2338'); g.addColorStop(0.55, '#111a2c'); g.addColorStop(1, '#0a1019');
+            g.addColorStop(0, '#3d2416'); g.addColorStop(0.5, '#26170f'); g.addColorStop(1, '#0f0a07');
             ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 
             ctx.save();
@@ -1833,16 +1857,56 @@
         }
 
         drawField() {
-            const l = this.lane;
-            ctx.fillStyle = 'rgba(8,12,20,0.62)';
-            ctx.fillRect(0, l.TOP - 10, W, H - l.TOP + 10);
-            ctx.fillStyle = 'rgba(120,170,255,0.035)';
-            ctx.fillRect(l.wallL, l.TOP - 10, l.wallR - l.wallL, H - l.TOP + 10);
-            ctx.strokeStyle = 'rgba(255,255,255,0.10)'; ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(l.wallL, l.TOP - 10); ctx.lineTo(l.wallL, l.sy - 6);
-            ctx.moveTo(l.wallR, l.TOP - 10); ctx.lineTo(l.wallR, l.sy - 6);
-            ctx.stroke();
+            const l = this.lane, wl = l.wallL, wr = l.wallR, y0 = l.TOP - 16, hh = H - y0;
+            // 钢板台面
+            const gg = ctx.createLinearGradient(0, y0, 0, H);
+            gg.addColorStop(0, 'rgba(104,76,48,0.95)');
+            gg.addColorStop(0.4, 'rgba(64,46,31,0.95)');
+            gg.addColorStop(1, 'rgba(24,17,12,0.97)');
+            ctx.fillStyle = gg; ctx.fillRect(0, y0, W, hh);
+            // 钢板接缝
+            ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
+            for (let x = wl; x <= wr; x += 96) {
+                ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, l.sy + 26); ctx.stroke();
+            }
+            // 左右金属护墙 + 铆钉
+            for (const x of [wl - 13, wr + 5]) {
+                const wg = ctx.createLinearGradient(x, 0, x + 8, 0);
+                wg.addColorStop(0, '#7a6040'); wg.addColorStop(0.55, '#4a3724'); wg.addColorStop(1, '#281c12');
+                ctx.fillStyle = wg; ctx.fillRect(x, y0, 8, hh);
+                ctx.fillStyle = 'rgba(255,224,160,0.32)';
+                for (let y = y0 + 12; y < H; y += 34) { ctx.beginPath(); ctx.arc(x + 4, y, 1.9, 0, Math.PI * 2); ctx.fill(); }
+            }
+            // 炉火底光：工坊的视觉锚点，跟经典那边的「草叶 + 草地绿」正面对立
+            const fg = ctx.createRadialGradient(W / 2, H + 30, 20, W / 2, H + 30, 470);
+            fg.addColorStop(0, 'rgba(255,122,42,0.34)');
+            fg.addColorStop(0.45, 'rgba(196,72,22,0.13)');
+            fg.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = fg; ctx.fillRect(0, l.sy - 130, W, H - l.sy + 130);
+            // 两侧厂房立柱（场地左右各留 59px，画成工坊墙壁而不是裸底色）
+            for (const x0 of [14, 851]) {
+                const pw = 35;
+                const pg = ctx.createLinearGradient(x0, 0, x0 + pw, 0);
+                pg.addColorStop(0, 'rgba(16,11,8,0.96)');
+                pg.addColorStop(0.45, 'rgba(58,42,27,0.92)');
+                pg.addColorStop(1, 'rgba(13,9,7,0.97)');
+                ctx.fillStyle = pg; ctx.fillRect(x0, y0, pw, hh);
+                ctx.fillStyle = 'rgba(198,158,100,0.085)';
+                for (let y = y0 + 30; y < H; y += 110) ctx.fillRect(x0, y, pw, 7);
+                ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                ctx.fillRect(x0, y0, 2, hh); ctx.fillRect(x0 + pw - 2, y0, 2, hh);
+            }
+            // 顶沿警示斜纹
+            ctx.save();
+            ctx.beginPath(); ctx.rect(wl - 13, y0, wr - wl + 21, 9); ctx.clip();
+            ctx.fillStyle = '#c9902f'; ctx.fillRect(wl - 13, y0, wr - wl + 21, 9);
+            ctx.fillStyle = '#2a1c10';
+            for (let x = wl - 30; x < wr + 16; x += 16) {
+                ctx.beginPath();
+                ctx.moveTo(x, y0 + 9); ctx.lineTo(x + 9, y0); ctx.lineTo(x + 17, y0); ctx.lineTo(x + 8, y0 + 9);
+                ctx.closePath(); ctx.fill();
+            }
+            ctx.restore();
             ctx.strokeStyle = 'rgba(255,110,90,0.45)';
             ctx.setLineDash([9, 9]); ctx.lineWidth = 2;
             ctx.beginPath(); ctx.moveTo(0, l.deadline); ctx.lineTo(W, l.deadline); ctx.stroke();
@@ -1852,6 +1916,13 @@
 
         drawShooter() {
             const l = this.lane, a = l.shooter.ang;
+            // v4.0.153：钢铁炮座（经典泡泡龙是直接长在草地上，这里坐在炮架上）
+            ctx.fillStyle = '#4a3724';
+            rr(l.sx - 30, l.sy - 6, 60, 22, 7); ctx.fill();
+            ctx.fillStyle = '#6d5537';
+            rr(l.sx - 30, l.sy - 6, 60, 6, 3); ctx.fill();
+            ctx.fillStyle = 'rgba(255,224,160,0.28)';
+            for (const dx of [-22, 22]) { ctx.beginPath(); ctx.arc(l.sx + dx, l.sy + 6, 2, 0, Math.PI * 2); ctx.fill(); }
             sprH('cattail', l.sx - 34, l.sy - 26, 62);
             ctx.save();
             ctx.translate(l.sx, l.sy - 20);
@@ -1899,8 +1970,7 @@
             ctx.fillRect(x0 + (x1 - x0) * 0.35, y, 2, h);
             ctx.fillRect(x0 + (x1 - x0) * 0.70, y, 2, h);
 
-            txt('机械龙', 244, y + h / 2, 13, 'rgba(255,225,200,0.9)', 'right', 800);
-            txt('第 ' + this.phase + ' 阶段', x1 - 10, y + h / 2, 11, 'rgba(255,255,255,0.92)', 'right', 800);
+            txt('机械龙 · 第 ' + this.phase + ' 阶段', 244, y + h / 2, 12.5, 'rgba(255,214,180,0.92)', 'right', 800);
             txt(Math.ceil(this.hp) + ' / ' + this.hpMax, 450, y + h / 2, 11.5, 'rgba(255,255,255,0.9)', 'center', 800);
             txt('剩 ' + l.count() + ' 颗泡泡', 20, 60, 13, 'rgba(220,235,255,0.62)', 'left', 700);
             txt('分数 ' + l.score, 880, 60, 13, 'rgba(220,235,255,0.62)', 'right', 700);
@@ -2545,18 +2615,25 @@
         }
     }
     /* ================= 游戏注册表 ================= */
+    /* v4.0.153：泡泡系 4 个玩法从「后院游乐场」里独立出去，收进首页单独的
+       「猫尾草泡泡工坊」卡（位置在砸罐子 / 我是僵尸正下方）。
+       它们共用同一套 BubLane 内核，本质是一个游戏的四种规矩，不该占 4 个散位。 */
     const GAMES = [
         { id: 'tetris', name: '玉米方块', tag: 'TETRIS', icon: 'cob', tip: '落玉米块消一行齐射一轮，撑越久分越高', cls: Tetris },
         { id: 'whack', name: '僵尸地鼠', tag: 'WHACK', icon: 'bucket', tip: '僵尸探头就敲，别敲到向日葵', cls: Whack },
         { id: 'g2048', name: '花园 2048', tag: '2048', icon: 'wintermelon', tip: '同种植物滑到一起就升级融合', cls: Garden2048 },
-        { id: 'bubble', name: '猫尾草泡泡龙', tag: 'BUBBLE', icon: 'cattail', tip: '同色三个爆破，别让泡泡压线', cls: Bubble },
         { id: 'breakout', name: '豌豆弹球', tag: 'BRICK', icon: 'lilypad', tip: '豌豆弹球砸砖，接住就继续', cls: Breakout },
-        { id: 'dragon', name: '机械龙攻城', tag: 'BOSS', icon: 'dragon', tip: '消泡泡充能，尖刺射向头顶的机械龙', cls: DragonRaid },
         { id: 'sokoban', name: '寒冰推箱', tag: 'PUSH', icon: 'snowpea', tip: '把每块冰推到绿圈里', cls: Sokoban },
+        { id: 'memory', name: '花园连连看', tag: 'MEMORY', icon: 'cobcannon', tip: '翻牌配对同种植物', cls: Memory }
+    ];
+    /* 猫尾草泡泡工坊：同一个炮台，四种规矩 */
+    const BUBBLE_GAMES = [
+        { id: 'bubble', name: '猫尾草泡泡龙', tag: 'CLASSIC', icon: 'cattail', tip: '同色三个爆破，清空全场即通关', cls: Bubble },
+        { id: 'dragon', name: '机械龙攻城', tag: 'BOSS', icon: 'dragon', tip: '消泡泡充能，尖刺射向头顶的机械龙', cls: DragonRaid },
         { id: 'duel', name: '泡泡对轰', tag: 'DUEL', icon: 'repeater', tip: '左右同屏对轰，消得多就给对面塞墓碑', cls: BubbleDuel },
-        { id: 'memory', name: '花园连连看', tag: 'MEMORY', icon: 'cobcannon', tip: '翻牌配对同种植物', cls: Memory },
         { id: 'tower', name: '泡泡塔', tag: 'TOWER', icon: 'tallnut', ih: 66, tip: '一层层往上打，每层解锁特殊球', cls: BubbleTower }
     ];
+    const ALL_GAMES = GAMES.concat(BUBBLE_GAMES);
 
     /* ================= 管理器 ================= */
     let screen = null, lobbyEl = null, gridEl = null, stageEl = null, nameEl = null, canvas = null;
@@ -2607,6 +2684,23 @@
         '.mini-top .nm{color:rgba(255,255,255,0.72);font-size:13px;letter-spacing:2px;}'
     ].join('');
 
+    /* v4.0.153：两个大厅共用一套 DOM —— 只换卡片集合、标题和列数。
+       6 个玩法排 3 列 × 2 行，4 个泡泡玩法排 2 列 × 2 行（卡片更大，像精选）。 */
+    let lobbyKind = 'all', titleEl = null, subEl = null;
+    function renderLobby(list, cols) {
+        gridEl.style.gridTemplateColumns = 'repeat(' + cols + ',1fr)';
+        gridEl.style.gridTemplateRows = 'repeat(' + Math.ceil(list.length / cols) + ',1fr)';
+        gridEl.classList.toggle('lg', cols <= 3);
+        gridEl.innerHTML = list.map((g, i) =>
+            '<div class="mini-card" data-id="' + g.id + '">' +
+            '<span class="no">' + (i + 1 < 10 ? '0' + (i + 1) : i + 1) + '</span>' +
+            '<div class="ico"><img src="' + SPR[g.icon] + '" alt="' + g.name + '"' +
+            (g.ih ? ' style="height:' + g.ih + 'px"' : '') + '></div>' +
+            '<h3>' + g.name + '</h3><div class="tg">' + g.tag + '</div>' +
+            '<div class="tp">' + g.tip + '</div></div>'
+        ).join('');
+    }
+
     function ensureDom() {
         if (screen) return;
         const host = document.getElementById('game-container') || document.body;
@@ -2620,7 +2714,7 @@
         screen.innerHTML =
             '<div class="mini-lobby" id="mini-lobby">' +
             '<div class="mini-head"><button class="mb" id="mini-close">← 返回主菜单</button>' +
-            '<h2>后院游乐场</h2><span class="sub">10 个玩法 · 随时进来玩一局</span></div>' +
+            '<h2 id="mini-title">后院游乐场</h2><span class="sub" id="mini-sub">6 个玩法 · 随时进来玩一局</span></div>' +
             '<div class="mini-grid" id="mini-grid"></div>' +
             '<div class="mini-foot">点卡片直接开玩 · ESC 回主菜单</div>' +
             '</div>' +
@@ -2637,14 +2731,9 @@
         nameEl = screen.querySelector('#mini-name');
         ctx = canvas.getContext('2d');
 
-        gridEl.innerHTML = GAMES.map((g, i) =>
-            '<div class="mini-card" data-id="' + g.id + '">' +
-            '<span class="no">' + (i + 1 < 10 ? '0' + (i + 1) : i + 1) + '</span>' +
-            '<div class="ico"><img src="' + SPR[g.icon] + '" alt="' + g.name + '"' +
-            (g.ih ? ' style="height:' + g.ih + 'px"' : '') + '></div>' +
-            '<h3>' + g.name + '</h3><div class="tg">' + g.tag + '</div>' +
-            '<div class="tp">' + g.tip + '</div></div>'
-        ).join('');
+        titleEl = screen.querySelector('#mini-title');
+        subEl = screen.querySelector('#mini-sub');
+        renderLobby(GAMES, 3);
 
         gridEl.addEventListener('click', e => {
             const card = e.target.closest('.mini-card');
@@ -2739,23 +2828,30 @@
         raf = 0;
     }
 
-    function openLobby() {
+    function showLobby(kind) {
         ensureDom();
+        lobbyKind = kind;
+        const bubble = kind === 'bubble';
+        titleEl.textContent = bubble ? '猫尾草泡泡工坊' : '后院游乐场';
+        subEl.textContent = bubble ? '4 种泡泡玩法 · 同一个炮台，四种规矩' : '6 个玩法 · 随时进来玩一局';
+        renderLobby(bubble ? BUBBLE_GAMES : GAMES, bubble ? 2 : 3);
         screen.style.display = 'block';
         lobbyEl.style.display = 'flex';
         stageEl.style.display = 'none';
         active = null; activeMeta = null;
         startLoop();
     }
+    function openLobby() { showLobby('all'); }
+    function openBubble() { showLobby('bubble'); }
 
     function openGame(id) {
         ensureDom();
-        const meta = GAMES.filter(g => g.id === id)[0];
+        const meta = ALL_GAMES.filter(g => g.id === id)[0];
         if (!meta) return;
         screen.style.display = 'block';
         lobbyEl.style.display = 'none';
         stageEl.style.display = 'block';
-        nameEl.textContent = meta.name + ' · ESC 回大厅';
+        nameEl.textContent = meta.name + ' · ESC 回' + (lobbyKind === 'bubble' ? '工坊' : '大厅');
         if (!active || activeMeta !== meta) {
             active = new meta.cls();
             activeMeta = meta;
@@ -2768,9 +2864,7 @@
 
     function backToLobby() {
         active = null; activeMeta = null;
-        if (stageEl) stageEl.style.display = 'none';
-        if (lobbyEl) lobbyEl.style.display = 'flex';
-        stopLoop();
+        showLobby(lobbyKind);          // 从工坊进来的回工坊，从游乐场进来的回游乐场
     }
 
     function quit() {
@@ -2795,10 +2889,13 @@
 
     window.MiniGames = {
         openLobby: openLobby,
+        openBubble: openBubble,
         openGame: openGame,
         backToLobby: backToLobby,
         quit: quit,
-        games: GAMES.map(g => ({ id: g.id, name: g.name })),
+        games: ALL_GAMES.map(g => ({ id: g.id, name: g.name })),
+        miniGames: GAMES.map(g => ({ id: g.id, name: g.name })),
+        bubbleGames: BUBBLE_GAMES.map(g => ({ id: g.id, name: g.name })),
         levelCount: LEVELS.length,          // v4.0.139：给验收脚本遍历推箱子关卡用
         get active() { return active; },
         get isOpen() { return !!(screen && screen.style.display === 'block'); }
