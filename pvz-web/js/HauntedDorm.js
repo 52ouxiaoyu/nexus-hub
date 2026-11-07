@@ -5722,7 +5722,12 @@ class HauntedDorm {
         const cfg = isBoss
             ? { name: isFinal ? '尸潮领主' : '巨人僵尸', img: 'Zombies/Gargantuar/0.png',
                 hp: Math.round(bossHp * (isFinal ? 2 : 1)), speed: isFinal ? 150 : 170 } // v4.0.144：最终波领主 = 同波巨人 ×2 血、略慢
-            : { name: '小鬼僵尸', img: 'Zombies/Imp/0.gif', hp: Math.round(50 * Math.pow(2, lv - 1)), speed: 260 }; // v4.0.89：血量 ÷4（200→50）——玻璃大炮：咬人疼、但植物几下能清；v4.0.84：100→200（战力翻倍配合数量减少）
+            // v4.0.155（用户：小鬼的脚没有移动，是直接平移过去的）—— 以前引的 Imp/0.gif 是**单帧**静立图，
+            // 定格贴图被 JS 一路改 left/top，看起来就是"滑"过去。这个目录里本来就有完整的
+            // Imp/Zombie.gif（33 帧行走，1.32s 一个步态）和 Imp/ZombieAttack.gif（27 帧啃食），
+            // 换成动图，脚就真的在走了；啃门时再切攻击图。
+            : { name: '小鬼僵尸', img: 'Zombies/Imp/Zombie.gif', imgAtk: 'Zombies/Imp/ZombieAttack.gif',
+                hp: Math.round(50 * Math.pow(2, lv - 1)), speed: 260 }; // v4.0.89：血量 ÷4（200→50）——玻璃大炮：咬人疼、但植物几下能清；v4.0.84：100→200（战力翻倍配合数量减少）
         const p = basePoint || this._ghostSpawnPoint(); // v4.0.84：同一批共用同一生成点，才能排成一条横队
         // v4.0.84：成群小鬼排成横队——以生成点为中心向两侧错位（约 46px/只），不再全部叠在同一个坐标上
         let sx = p.x, sy = p.y;
@@ -5744,7 +5749,7 @@ class HauntedDorm {
         zEl1.className = 'entity avatar';
         const size = isBoss ? (isFinal ? 'width:160%; height:160%; transform:translate(-46%, -43%);'
                                         : 'width:130%; height:130%; transform:translate(-42%, -40%);') // v4.0.81：巨人正常体型（原 220% 巨型取消）
-                            : 'width:100%; height:100%; transform:translate(-3%, -25%);';
+                            : 'width:100%; height:100%; transform:translate(-20%, -30%);';   // v4.0.155：与 update 里转身用的偏移统一，出生第一帧不再跳位
         const barTop = isBoss ? 'top:-42px;' : 'top:-14px;';
         zEl1.innerHTML = `<img src="assets/images/${cfg.img}" style="${size}">` +
             (isBoss ? `<div class="lv-badge" style="background:${isFinal ? '#6a1b9a' : '#a00000'}; top:-36px;">${isFinal ? '尸潮领主' : '巨人'}</div>` : '') +
@@ -5756,6 +5761,15 @@ class HauntedDorm {
         zb.imgEl = zEl1.querySelector('img');
         zb.hpBg = zEl1.querySelector('.hp-bar-bg');
         zb.hpFg = zEl1.querySelector('.hp-bar-fg');
+    }
+
+    // v4.0.155：小鬼的「走 / 啃」两套动画。
+    // 只在状态真的变了才改 src —— 每帧重设同一个 src 会让 gif 从头重播，看起来反而更卡。
+    _setZombiePose(zb, pose) {
+        const cfg = zb.cfg;
+        if (!zb.imgEl || !cfg || !cfg.imgAtk || zb._pose === pose) return;
+        zb._pose = pose;
+        zb.imgEl.src = 'assets/images/' + (pose === 'atk' ? cfg.imgAtk : cfg.img);
     }
 
     _spawnBoss() { this._spawnMinion(true); }
@@ -7371,6 +7385,7 @@ class HauntedDorm {
 
             if (len > 1) {
                 dx /= len; dy /= len;
+                this._setZombiePose(zb, 'walk');   // v4.0.155：只要在挪动就播走路
 
 
                 // 【僵尸转身逻辑】正着走
@@ -7390,6 +7405,7 @@ class HauntedDorm {
                 const atkPlant = this.getPlantAt(probeX, probeY);
                 if (atkPlant && !atkPlant.def.ground && !zb.retreating && !(zb.garlicScareT > 0)) { // v4.0.33：被大蒜臭吓的僵尸径直走开不啃食
                     zb._didBite = true; // v4.0.118：正在啃 = 没卡死
+                    this._setZombiePose(zb, 'atk');   // v4.0.155：贴到东西就换成啃食动画
                     // 站定慢啃：每 2.4s 一口，一口一口咬
                     zb.biteT = (zb.biteT || 0) + dt;
                     if (zb.biteT >= BITE_CD) {

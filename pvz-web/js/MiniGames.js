@@ -645,6 +645,81 @@
         { c: '#e8c53a', p: 'kernel', n: '玉米' },
         { c: '#d94a3d', p: 'cherry', n: '樱桃' }   // v4.0.152：泡泡塔第 5 层起启用第 5 色
     ];
+
+    const _bubMix = (hex, mix, t) => {
+        const n = parseInt(hex.slice(1), 16);
+        const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+        const mr = (mix >> 16) & 255, mg = (mix >> 8) & 255, mb = mix & 255;
+        return 'rgb(' + Math.round(r + (mr - r) * t) + ',' +
+                       Math.round(g + (mg - g) * t) + ',' +
+                       Math.round(b + (mb - b) * t) + ')';
+    };
+
+    // 给 _bubMix 出来的 'rgb(r,g,b)' 挂透明度（透射光要用）
+    const _bubRGBA = (rgb, a) => rgb.replace('rgb(', 'rgba(').replace(')', ',' + a + ')');
+
+    /* v4.0.155（用户：泡泡太丑了，就是一个球球）——
+       旧版是「白色核心 + 纯色平涂 + 深色边 + 一圈白描边」，四个色阶挤在球心，
+       没有明暗结构，所以读起来是一颗塑料球 / 玻璃弹珠。
+       现在按「水晶球」的三件事重画：
+         ① 一条完整的明暗链 —— 光源在左上（亮白）→ 本色 → 右下（压暗）→ 边缘最暗；
+            球的体积感全在这条链上，不在描边。
+         ② 光分两层 —— 斜椭圆的大高光 + 肩上一粒硬亮点，而不是正中的一个圆点。
+         ③ 底部的光是「一片晕」不是「一条弧」—— 弧线会被读成球底咧了张嘴。
+       另外植物缩进球心 0.96R 居中当「标本」，旧版铺满整颗像贴纸。
+       三块场地 + 经典泡泡龙共用这一份，免得以后又分叉。 */
+    function paintBub(x, y, col, a, R) {
+        const c = BUB_COLORS[col] || BUB_COLORS[0];
+        const al = a == null ? 1 : a;
+        ctx.globalAlpha = al;
+
+        // ① 球体照明
+        const g = ctx.createRadialGradient(
+            x - R * 0.30, y - R * 0.34, R * 0.04,
+            x + R * 0.06, y + R * 0.12, R * 1.02
+        );
+        g.addColorStop(0, 'rgba(255,255,255,0.92)');
+        g.addColorStop(0.13, _bubMix(c.c, 0xffffff, 0.46));
+        g.addColorStop(0.42, c.c);
+        g.addColorStop(0.76, _bubMix(c.c, 0x000000, 0.20));
+        g.addColorStop(1, _bubMix(c.c, 0x000000, 0.44));
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill();
+
+        // ② 球心的植物（隔着球壁看，不盖住高光）
+        spr(c.p, x - R * 0.48, y - R * 0.48, R * 0.96, R * 0.96, 0.80);
+        ctx.globalAlpha = al;   // spr 会把 alpha 复位成 1，这里还回来
+
+        // ③ 透射光：光穿过泡壁在球体下方积成一片亮雾，颜色比本色更浅更艳。
+        //    这一层是「玻璃/果冻」和「实心塑料」的分界 —— 没有它，球再亮也是块塑料。
+        const tg = ctx.createRadialGradient(x - R * 0.02, y + R * 0.50, 0, x - R * 0.02, y + R * 0.50, R * 0.62);
+        tg.addColorStop(0, _bubRGBA(_bubMix(c.c, 0xffffff, 0.55), 0.40));
+        tg.addColorStop(0.55, _bubRGBA(_bubMix(c.c, 0xffffff, 0.25), 0.16));
+        tg.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = tg;
+        ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill();
+
+        // ④ 外缘亮边（泡壁对着光的那一圈，细，不能抢戏）
+        const lw = Math.max(1, R * 0.062);
+        ctx.strokeStyle = 'rgba(255,255,255,0.46)';
+        ctx.lineWidth = lw;
+        ctx.beginPath(); ctx.arc(x, y, R - lw * 0.5 - 0.3, 0, Math.PI * 2); ctx.stroke();
+
+        // ⑤ 主高光：斜椭圆（圆形高光会像塑料）
+        ctx.save();
+        ctx.translate(x - R * 0.33, y - R * 0.40);
+        ctx.rotate(-0.60);
+        ctx.fillStyle = 'rgba(255,255,255,0.82)';
+        ctx.beginPath(); ctx.ellipse(0, 0, R * 0.27, R * 0.135, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+
+        // ⑥ 高光肩上的一粒硬点
+        ctx.fillStyle = 'rgba(255,255,255,0.92)';
+        ctx.beginPath(); ctx.arc(x - R * 0.46, y - R * 0.46, Math.max(1, R * 0.075), 0, Math.PI * 2); ctx.fill();
+
+        ctx.globalAlpha = 1;
+    }
+
     /* ================================================================
      * 泡泡场地内核（v4.0.152）—— 机械龙攻城 / 泡泡对轰 / 泡泡塔 共用
      * 一块六边形网格 + 一个炮台 + 反弹球 + 三消 + 悬空掉落
@@ -1028,21 +1103,7 @@
             ctx.beginPath(); ctx.arc(ex, ey, 3, 0, Math.PI * 2); ctx.fill();
             ctx.restore();
         }
-        bub(x, y, col, a, rad) {
-            const c = BUB_COLORS[col] || BUB_COLORS[0];
-            const R = rad || this.R;
-            ctx.globalAlpha = a == null ? 1 : a;
-            const g = ctx.createRadialGradient(x - R * 0.32, y - R * 0.41, 2, x, y, R);
-            g.addColorStop(0, 'rgba(255,255,255,0.95)');
-            g.addColorStop(0.34, c.c);
-            g.addColorStop(1, 'rgba(20,26,34,0.55)');
-            ctx.fillStyle = g;
-            ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill();
-            spr(c.p, x - R * 0.52, y - R * 0.52, R * 1.04, R * 1.04, 0.92);
-            ctx.strokeStyle = 'rgba(255,255,255,0.32)'; ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.arc(x, y, R - 1, 0, Math.PI * 2); ctx.stroke();
-            ctx.globalAlpha = 1;
-        }
+        bub(x, y, col, a, rad) { paintBub(x, y, col, a, rad || this.R); }
         tomb(x, y) {
             const R = this.R;
             ctx.fillStyle = '#6d6a62';
@@ -1453,21 +1514,7 @@
             for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) if (this.g[r][c] >= 0) n++;
             return n;
         }
-        bub(x, y, col, a, rad) {
-            const c = BUB_COLORS[col] || BUB_COLORS[0];
-            const R = rad || this.R;      // v4.0.151：顶栏预览球用小一号半径
-            ctx.globalAlpha = a == null ? 1 : a;
-            const g = ctx.createRadialGradient(x - R * 0.32, y - R * 0.41, 2, x, y, R);
-            g.addColorStop(0, 'rgba(255,255,255,0.95)');
-            g.addColorStop(0.34, c.c);
-            g.addColorStop(1, 'rgba(20,26,34,0.55)');
-            ctx.fillStyle = g;
-            ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill();
-            spr(c.p, x - R * 0.52, y - R * 0.52, R * 1.04, R * 1.04, 0.92);
-            ctx.strokeStyle = 'rgba(255,255,255,0.32)'; ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.arc(x, y, R - 1, 0, Math.PI * 2); ctx.stroke();
-            ctx.globalAlpha = 1;
-        }
+        bub(x, y, col, a, rad) { paintBub(x, y, col, a, rad || this.R); }   // v4.0.155：共用肥皂泡实现
     }
 
     /* ================================================================

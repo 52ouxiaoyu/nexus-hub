@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1794050511">
-    <link rel="stylesheet" href="css/haunted-dorm.css?v=1794050511">
+    <link rel="stylesheet" href="css/style.css?v=1794051183">
+    <link rel="stylesheet" href="css/haunted-dorm.css?v=1794051183">
 </head>
 <body>
     <div id="game-container">
@@ -243,8 +243,10 @@
 
             /* ⑤ 一只小鬼从左边一溜烟跑过去 */
             #menu-egg .egg-imp { bottom: 4%; left: -150px; width: 126px; }
-            /* Imp/0.gif 这个素材本身是「朝左」的（脸在左边、后脑在右），
-               而彩蛋是从左往右跑 → 不镜像就成了倒着走。scaleX(-1) 让它朝前进方向。 */
+            /* Imp 的行走素材本身是「朝左」的（脸在左边、后脑在右），
+               而彩蛋是从左往右跑 → 不镜像就成了倒着走。scaleX(-1) 让它朝前进方向。
+               走路动画快、4.4 秒要走完 128vw，单靠 gif 步频会有点滑步 →
+               用 walk-bob 给整个人加一点上下起伏，把"滑"的感觉压下去。 */
             #menu-egg .egg-imp img { transform: scaleX(-1); filter: drop-shadow(0 6px 10px rgba(0,0,0,.55)); }
             #menu-egg .egg-imp.go { animation: eggImp 4.4s linear forwards; }
             @keyframes eggImp {
@@ -253,6 +255,12 @@
                 50%  { transform: translate(64vw, 2px); }
                 75%  { transform: translate(96vw, -8px); }
                 100% { transform: translate(128vw, 0); opacity: .9; }
+            }
+            /* 走路时整个人跟着步频轻轻起伏：4.4 秒要走 128vw，光靠 gif 的步频会显滑 */
+            #menu-egg .egg-imp.go img { animation: impBob .33s ease-in-out infinite alternate; }
+            @keyframes impBob {
+                0%   { transform: scaleX(-1) translateY(0); }
+                100% { transform: scaleX(-1) translateY(-3px); }
             }
 
             /* ===== v4.0.147 游戏内自动彩蛋 =====
@@ -380,11 +388,24 @@
             #btn-bubble .pkt-art.bubble { position: relative; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; }
             #btn-bubble .bt-cat { height: 60px; width: auto; image-rendering: pixelated; position: relative; z-index: 2;
                 filter: drop-shadow(0 3px 3px rgba(30,60,10,0.5)); transform: translateY(4px); }
+            /* v4.0.155：三颗泡泡从「纯色球」改成肥皂泡 —— 中间薄到能看穿、颜色全积在边缘，
+               再叠一块斜向高光和底下一弯反射。跟游戏内的 paintBub() 用同一套语言。 */
             #btn-bubble .bp { position: absolute; border-radius: 50%; width: 21px; height: 21px; z-index: 1;
-                box-shadow: inset -3px -3px 6px rgba(0,0,0,0.28), inset 4px 4px 7px rgba(255,255,255,0.6); }
-            #btn-bubble .bp1 { left: 21px; top: 18px; background: radial-gradient(circle at 34% 28%, #ff9a8a, #c22f22); }
-            #btn-bubble .bp2 { left: 52px;  top: 6px;  width: 16px; height: 16px; background: radial-gradient(circle at 34% 28%, #9fdcff, #2f74b8); }
-            #btn-bubble .bp3 { right: 21px; top: 20px; background: radial-gradient(circle at 34% 28%, #e9aaff, #7a3fb0); }
+                box-shadow: inset 0 0 0 1px rgba(255,255,255,0.62),
+                            inset -3px -3px 7px rgba(0,0,0,0.16),
+                            0 2px 6px rgba(0,0,0,0.30); }
+            #btn-bubble .bp1 { left: 21px; top: 18px; background:
+                radial-gradient(circle at 31% 26%, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.60) 12%, rgba(255,255,255,0) 34%),
+                radial-gradient(circle at 56% 82%, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0) 30%),
+                radial-gradient(circle at 46% 44%, rgba(255,150,132,0.32) 0%, rgba(255,122,100,0.60) 58%, #c22f22 96%); }
+            #btn-bubble .bp2 { left: 52px;  top: 6px;  width: 16px; height: 16px; background:
+                radial-gradient(circle at 31% 26%, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.60) 12%, rgba(255,255,255,0) 34%),
+                radial-gradient(circle at 56% 82%, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0) 30%),
+                radial-gradient(circle at 46% 44%, rgba(150,205,255,0.32) 0%, rgba(110,180,240,0.60) 58%, #2f74b8 96%); }
+            #btn-bubble .bp3 { right: 21px; top: 20px; background:
+                radial-gradient(circle at 31% 26%, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.60) 12%, rgba(255,255,255,0) 34%),
+                radial-gradient(circle at 56% 82%, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0) 30%),
+                radial-gradient(circle at 46% 44%, rgba(205,160,255,0.32) 0%, rgba(175,125,235,0.60) 58%, #7a3fb0 96%); }
             /* 工坊里的 4 张大卡：图标区撑满，名字更大 */
             .mini-grid.lg .mini-card .ico { height: auto; flex: 1 1 auto; }
             .mini-grid.lg .mini-card .ico img { height: 116px !important; }
@@ -1413,21 +1434,21 @@
         });
     })();
     </script>
-    <script src="js/InputManager.js?v=1794050511"></script>
-    <script src="js/Board.js?v=1794050511"></script>
-    <script src="js/entities/Entity.js?v=1794050511"></script>
-    <script src="js/entities/Plant.js?v=1794050511"></script>
-    <script src="js/entities/Zombie.js?v=1794050511"></script>
-    <script src="js/entities/Projectile.js?v=1794050511"></script>
-    <script src="js/entities/Sun.js?v=1794050511"></script>
-    <script src="js/managers/WaveManager.js?v=1794050511"></script>
-    <script src="js/managers/CollisionManager.js?v=1794050511"></script>
-    <script src="js/managers/EventManager.js?v=1794050511"></script>
-    <script src="js/GameLoop.js?v=1794050511"></script>
-    <script src="js/HelpGuide.js?v=1794050511"></script>
-    <script src="js/Achievements.js?v=1794050511"></script>
-    <script src="js/HauntedDorm.js?v=1794050511"></script>
-    <script src="js/MiniGames.js?v=1794050511"></script>
+    <script src="js/InputManager.js?v=1794051183"></script>
+    <script src="js/Board.js?v=1794051183"></script>
+    <script src="js/entities/Entity.js?v=1794051183"></script>
+    <script src="js/entities/Plant.js?v=1794051183"></script>
+    <script src="js/entities/Zombie.js?v=1794051183"></script>
+    <script src="js/entities/Projectile.js?v=1794051183"></script>
+    <script src="js/entities/Sun.js?v=1794051183"></script>
+    <script src="js/managers/WaveManager.js?v=1794051183"></script>
+    <script src="js/managers/CollisionManager.js?v=1794051183"></script>
+    <script src="js/managers/EventManager.js?v=1794051183"></script>
+    <script src="js/GameLoop.js?v=1794051183"></script>
+    <script src="js/HelpGuide.js?v=1794051183"></script>
+    <script src="js/Achievements.js?v=1794051183"></script>
+    <script src="js/HauntedDorm.js?v=1794051183"></script>
+    <script src="js/MiniGames.js?v=1794051183"></script>
     <script>
     /* ===== v4.0.126 主页惊喜：时间皮肤 + 动态彩蛋猫 ===== */
     (function () {
@@ -1720,7 +1741,9 @@
             peek:   { cls: 'egg-peek',   ms: 3200, html: '<img src="' + HEAD + '" alt="">' },
             brains: { cls: 'egg-brains', ms: 3800, text: 'BRAINS…' },
             sun:    { cls: 'egg-sun',    ms: 3400, html: '<img src="' + A + 'interface/Sun.gif" alt="">' },
-            imp:    { cls: 'egg-imp',    ms: 4400, html: '<img src="' + A + 'Zombies/Imp/0.gif" alt="">' }
+            // v4.0.155（用户：小鬼的脚没动，是直接平移过去的）—— 0.gif 是单帧静立图，
+            // 配上 eggImp 的纯 translate 动画就成了"滑行"。换成 Imp/Zombie.gif（33 帧走路），脚就在走。
+            imp:    { cls: 'egg-imp',    ms: 4400, html: '<img src="' + A + 'Zombies/Imp/Zombie.gif" alt="">' }
         };
         var keys = Object.keys(EGGS);
         // 抽签池：brains 放两份 —— 血字是五种里最有冲击力的，用户要「常看见」，
