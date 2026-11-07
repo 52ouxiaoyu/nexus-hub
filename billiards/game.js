@@ -1224,12 +1224,13 @@ function resolveSnookerShot() {
         respotSnookerColours(cols);            // 彩球阶段前打进就重摆
         snooker.onColour = false;
     } else {
-        gained = on.val;                       // 顺序阶段：进袋不重摆
+        gained = potted.includes(on.num) ? on.val : 0;  // 顺序阶段：只有真打进目标彩球才得分（v2.8.7 修复：打空也白得分）
     }
     snooker.scores[current] += gained;
 
-    // 终局：顺序阶段打进黑球——真实规则：只剩黑球后第一杆进球即终局（平分重摆黑球决胜）
-    if (on.category === 'colourN' && on.num === 21) {
+    // 终局：顺序阶段**合法打进黑球**才终局（v2.8.7 修复：旧版只要轮到黑球打一杆就结束）。
+    // 真实规则：黑球阶段打空（未进球未犯规）→ 换对手继续打黑球；平分则重摆黑球决胜
+    if (on.category === 'colourN' && on.num === 21 && potted.includes(21)) {
         const [s0, s1] = snooker.scores;
         if (s0 === s1) {
             blackTieBreak('平分！重摆黑球决胜');   // 官方规则：抽签先手 + 母球手中球
@@ -1816,7 +1817,7 @@ function scoreSnookerSim(res, on) {
     let gained = 0;
     if (on.category === 'red') gained = potted.filter(snIsRed).length;
     else if (on.category === 'colour') gained = potted.reduce((s, n) => s + snVal(n), 0);
-    else gained = on.val;
+    else gained = potted.includes(on.num) ? on.val : 0;   // 顺序阶段：真打进才得分（v2.8.7 与 resolveSnookerShot 同步修复）
     let val = 40 + gained * 65;
 
     // 走位：打完这杆后下一目标在母球终点的进球质量
