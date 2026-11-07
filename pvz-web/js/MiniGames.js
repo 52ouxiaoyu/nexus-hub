@@ -2,8 +2,8 @@
  * MiniGames.js — pvz-web 后院游乐场（v4.0.134）
  * 10 个独立玩法，全部运行在同一个 900×600 canvas 上：
  *   玉米方块(俄罗斯方块) / 僵尸地鼠(打地鼠) / 花园2048 / 猫尾草泡泡龙(泡泡射击)
- *   豌豆弹球(打砖块) / 植物消消乐(三消) / 寒冰推箱(推箱子) / 豌豆射击场(打飞靶)
- *   花园连连看(记忆配对) / 植物贪吃蛇(贪吃蛇)
+ *   豌豆弹球(打砖块) / 机械龙攻城(Boss 战) / 寒冰推箱(推箱子) / 泡泡对轰(双人)
+ *   花园连连看(记忆配对) / 泡泡塔(爬塔)
  * ESC 逐层返回（游戏 → 大厅 → 主菜单）。
  */
 (function () {
@@ -40,6 +40,7 @@
         cone: ZB + 'ConeheadZombie/0.gif',
         bucket: ZB + 'BucketheadZombie/0.gif',
         balloon: ZB + 'BalloonZombie/0.gif',
+        dragon: ZB + 'LGBOSS/1.gif',        // v4.0.152：机械龙攻城用的 Boss（464x400，14 帧）
         sun: 'assets/images/interface/Sun.gif'
     };
     const _im = Object.create(null);
@@ -641,8 +642,473 @@
         { c: '#5fbf35', p: 'peashooter', n: '豌豆' },
         { c: '#4aa8e0', p: 'snowpea', n: '寒冰' },
         { c: '#9b6ad6', p: 'puffshroom', n: '小喷菇' },
-        { c: '#e8c53a', p: 'kernel', n: '玉米' }
+        { c: '#e8c53a', p: 'kernel', n: '玉米' },
+        { c: '#d94a3d', p: 'cherry', n: '樱桃' }   // v4.0.152：泡泡塔第 5 层起启用第 5 色
     ];
+    /* ================================================================
+     * 泡泡场地内核（v4.0.152）—— 机械龙攻城 / 泡泡对轰 / 泡泡塔 共用
+     * 一块六边形网格 + 一个炮台 + 反弹球 + 三消 + 悬空掉落
+     * 单块场地自成一个对象，所以「泡泡对轰」能在同一帧里跑两块。
+     * ============================================================== */
+    const TOMB = 99;          // 墓碑块：不能同色消除，只能被贴着的爆破带走
+    class BubLane {
+        constructor(o) {
+            this.R = o.R; this.COLS = o.COLS; this.LEFT = o.LEFT; this.TOP = o.TOP;
+            this.ROWH = o.ROWH || o.R * Math.sqrt(3);
+            this.rows = o.rows; this.nColors = o.nColors || 4;
+            this.sx = o.sx; this.sy = o.sy; this.deadline = o.deadline;
+            this.ceilRows = o.ceilRows || 1;      // 顶上几行算「贴在天花板上」
+            this.missPush = o.missPush === true;
+            this.missLimit = o.missLimit || 8;
+            this.noClear = o.noClear === true;    // true = 清空不算通关（机械龙模式靠血量定胜负）
+            this.showAim = true;
+            this.reset(o.fillRows == null ? 4 : o.fillRows, o.gapEvery || 3);
+        }
+        reset(fillRows, gapEvery) {
+            this.g = Array.from({ length: this.rows }, () => new Array(this.COLS).fill(-1));
+            for (let r = 0; r < fillRows; r++) for (let c = 0; c < this.colsIn(r); c++) {
+                if (r === fillRows - 1 && c % gapEvery === 0) continue;
+                this.g[r][c] = (Math.random() * this.nColors) | 0;
+            }
+            this.shooter = { ang: -Math.PI / 2 };
+            this.ball = null;
+            this.cur = (Math.random() * this.nColors) | 0;
+            this.next = (Math.random() * this.nColors) | 0;
+            this.curSp = null; this.nextSp = null;
+            this.pops = []; this.drops = [];
+            this.score = 0; this.dead = false; this.cleared = false;
+            this.combo = 0; this.missStreak = 0;
+        }
+        get wallL() { return this.LEFT + this.R; }
+        get wallR() { return this.LEFT + this.COLS * this.R * 2 - this.R; }
+        colsIn(r) { return r % 2 ? this.COLS - 1 : this.COLS; }
+        cx(r, c) { return this.LEFT + this.R + c * this.R * 2 + (r % 2 ? this.R : 0); }
+        yOf(r) { return this.TOP + r * this.ROWH + this.R; }
+        inB(r, c) { return r >= 0 && r < this.rows && c >= 0 && c < this.colsIn(r); }
+        neighbors(r, c) {
+            const odd = r % 2 === 1;
+            return odd
+                ? [[r, c - 1], [r, c + 1], [r - 1, c], [r - 1, c + 1], [r + 1, c], [r + 1, c + 1]]
+                : [[r, c - 1], [r, c + 1], [r - 1, c - 1], [r - 1, c], [r + 1, c - 1], [r + 1, c]];
+        }
+        count() {
+            let n = 0;
+            for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) if (this.g[r][c] >= 0) n++;
+            return n;
+        }
+        lowest() {
+            for (let r = this.rows - 1; r >= 0; r--) if (this.g[r].some(v => v >= 0)) return r;
+            return -1;
+        }
+        /* ---------- 瞄准 ---------- */
+        aimLimit() {
+            let th = 0;
+            for (let r = 0; r <= this.rows - 2; r++) {
+                const dy = this.sy - this.yOf(r);
+                if (dy <= 0) continue;
+                const dl = Math.abs(this.cx(r, 0) - this.sx);
+                const dr = Math.abs(this.cx(r, this.colsIn(r) - 1) - this.sx);
+                th = Math.max(th, Math.atan2(Math.max(dl, dr), dy));
+            }
+            return Math.min(th + 0.02, 1.45);
+        }
+        aimAt(x, y) {
+            const th = this.aimLimit(), mid = -Math.PI / 2;
+            let d = Math.atan2(y - this.sy, x - this.sx) - mid;
+            d = Math.atan2(Math.sin(d), Math.cos(d));
+            if (d > Math.PI / 2) d = Math.PI / 2;
+            if (d < -Math.PI / 2) d = -Math.PI / 2;
+            this.shooter.ang = mid + Math.max(-th, Math.min(th, d));
+        }
+        nudge(d) {
+            const th = this.aimLimit(), mid = -Math.PI / 2;
+            this.shooter.ang = Math.max(mid - th, Math.min(mid + th, this.shooter.ang + d));
+        }
+        /* ---------- 射击 ---------- */
+        fire() {
+            if (this.ball || this.dead || this.cleared) return false;
+            const a = this.shooter.ang, sp = 780;
+            this.ball = {
+                x: this.sx, y: this.sy - 34, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+                col: this.cur, sp: this.curSp || null
+            };
+            return true;
+        }
+        advance() {
+            this.cur = this.next; this.curSp = this.nextSp || null;
+            const p = this.pickNext ? this.pickNext() : null;
+            if (p) { this.next = p.col; this.nextSp = p.sp || null; }
+            else { this.next = (Math.random() * this.nColors) | 0; this.nextSp = null; }
+        }
+        /* ---------- 每帧 ---------- */
+        update(dt) {
+            this.pops = this.pops.filter(p => (p.t -= dt) > 0);
+            this.drops = this.drops.filter(d => { d.v += 700 * dt; d.y += d.v * dt; return d.y < H + 40; });
+            if (!this.ball || this.dead || this.cleared) return;
+            const b = this.ball;
+            const steps = Math.max(1, Math.ceil((Math.abs(b.vx) + Math.abs(b.vy)) * dt / 6));
+            for (let i = 0; i < steps; i++) {
+                b.x += b.vx * dt / steps; b.y += b.vy * dt / steps;
+                if (b.x < this.wallL) { b.x = this.wallL; b.vx = Math.abs(b.vx); }
+                if (b.x > this.wallR) { b.x = this.wallR; b.vx = -Math.abs(b.vx); }
+                if (b.y < this.TOP + this.R * 0.55) { this.land(b); return; }
+                for (let r = 0; r < this.rows; r++) {
+                    for (let c = 0; c < this.colsIn(r); c++) {
+                        if (this.g[r][c] < 0) continue;
+                        const dx = b.x - this.cx(r, c), dy = b.y - this.yOf(r);
+                        if (dx * dx + dy * dy < (this.R * 1.82) * (this.R * 1.82)) { this.land(b); return; }
+                    }
+                }
+                if (b.y > H + 40) { this.ball = null; this.advance(); return; }
+            }
+        }
+        land(b) {
+            this.ball = null;
+            if (b.sp && this.onSpecial) {
+                this.onSpecial(this, b.sp, b.x, b.y);
+                this.afterLand(1, 0);
+                this.advance();
+                return;
+            }
+            const cell = this.findCell(b);
+            if (!cell) { this.advance(); return; }
+            this.g[cell[0]][cell[1]] = b.col;
+            const res = this.settle(cell[0], cell[1], b.col);
+            if (this.onLand) this.onLand(this, res);
+            this.afterLand(res.popped, res.dropped);
+            this.advance();
+        }
+        afterLand(popped, dropped) {
+            if (popped > 0) this.missStreak = 0;
+            else if (this.missPush && ++this.missStreak >= this.missLimit) {
+                this.missStreak = 0;
+                this.pushCeil(this.colsIn(0), null);
+            }
+            this.checkState();
+        }
+        checkState() {
+            if (this.dead || this.cleared) return;
+            if (this.count() === 0) {
+                if (!this.noClear) { this.cleared = true; if (this.onClear) this.onClear(this); }
+                return;
+            }
+            const low = this.lowest();
+            if (low >= 0 && this.yOf(low) + this.R >= this.deadline) {
+                this.dead = true;
+                if (this.onDead) this.onDead(this);
+            }
+        }
+        findCell(b) {
+            let best = null, bd = 1e9;
+            for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) {
+                if (this.g[r][c] >= 0) continue;
+                let ok = r === 0;
+                if (!ok) {
+                    for (const [nr, nc] of this.neighbors(r, c)) {
+                        if (nr < 0) { ok = true; break; }
+                        if (this.g[nr] && this.g[nr][nc] >= 0) { ok = true; break; }
+                    }
+                }
+                if (!ok) continue;
+                const dx = b.x - this.cx(r, c), dy = b.y - this.yOf(r);
+                const d = dx * dx + dy * dy;
+                if (d < bd) { bd = d; best = [r, c]; }
+            }
+            return best;
+        }
+        cluster(r0, c0) {
+            const col = this.g[r0][c0];
+            if (col < 0 || col === TOMB) return [];
+            const seen = new Set([r0 + ',' + c0]), st = [[r0, c0]], out = [[r0, c0]];
+            while (st.length) {
+                const [r, c] = st.pop();
+                for (const [nr, nc] of this.neighbors(r, c)) {
+                    if (!this.inB(nr, nc)) continue;
+                    if (this.g[nr][nc] !== col) continue;
+                    const k = nr + ',' + nc;
+                    if (seen.has(k)) continue;
+                    seen.add(k); out.push([nr, nc]); st.push([nr, nc]);
+                }
+            }
+            return out;
+        }
+        removeCells(cells, color) {
+            let n = 0;
+            for (const [r, c] of cells) {
+                const v = this.g[r][c];
+                if (v < 0) continue;
+                this.pops.push({ x: this.cx(r, c), y: this.yOf(r), t: 0.32, c: color == null ? v : color });
+                this.g[r][c] = -1; n++;
+            }
+            return n;
+        }
+        // 贴着被消掉的泡泡的墓碑跟着一起碎
+        clearTombsNear(cells) {
+            const hit = new Set();
+            for (const [r, c] of cells) {
+                for (const [nr, nc] of this.neighbors(r, c)) {
+                    if (this.inB(nr, nc) && this.g[nr][nc] === TOMB) hit.add(nr + ',' + nc);
+                }
+            }
+            let n = 0;
+            hit.forEach(k => {
+                const [r, c] = k.split(',').map(Number);
+                this.pops.push({ x: this.cx(r, c), y: this.yOf(r), t: 0.32, c: TOMB });
+                this.g[r][c] = -1; n++;
+            });
+            return n;
+        }
+        dropFloating() {
+            const keep = new Set(), q = [];
+            for (let r = 0; r < Math.min(this.ceilRows, this.rows); r++) {
+                for (let c = 0; c < this.colsIn(r); c++) {
+                    if (this.g[r][c] >= 0) { keep.add(r + ',' + c); q.push([r, c]); }
+                }
+            }
+            while (q.length) {
+                const [r, c] = q.pop();
+                for (const [nr, nc] of this.neighbors(r, c)) {
+                    if (!this.inB(nr, nc) || this.g[nr][nc] < 0) continue;
+                    const k = nr + ',' + nc;
+                    if (keep.has(k)) continue;
+                    keep.add(k); q.push([nr, nc]);
+                }
+            }
+            let n = 0;
+            for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) {
+                if (this.g[r][c] >= 0 && !keep.has(r + ',' + c)) {
+                    this.drops.push({ x: this.cx(r, c), y: this.yOf(r), v: 60, c: this.g[r][c] });
+                    this.g[r][c] = -1; n++;
+                }
+            }
+            return n;
+        }
+        settle(r, c, col) {
+            if (col < 0 || col === TOMB) return { popped: 0, dropped: 0, size: 1 };
+            const cl = this.cluster(r, c);
+            if (cl.length >= 3) {
+                this.removeCells(cl);
+                const tombs = this.clearTombsNear(cl);
+                const dropped = this.dropFloating();
+                this.score += cl.length * 10 + dropped * 15 + tombs * 20;
+                this.combo++;
+                return { popped: cl.length + tombs, dropped, size: cl.length };
+            }
+            this.combo = 0;
+            return { popped: 0, dropped: 0, size: cl.length };
+        }
+        /* ---------- 顶行下压 ---------- */
+        pushCeil(n, colorFn) {
+            for (let r = this.rows - 1; r >= 1; r--) {
+                this.g[r] = this.g[r - 1].slice();
+                // 奇数行只有 COLS-1 格，下移后会比偶数行少一个 → 补成 -1，
+                // 否则 undefined 会被当成「一粒看不见的球」（v4.0.151 踩过）
+                while (this.g[r].length < this.COLS) this.g[r].push(-1);
+                for (let c = this.colsIn(r); c < this.COLS; c++) {
+                    if (this.g[r][c] >= 0) {
+                        this.drops.push({ x: this.cx(r, c), y: this.yOf(r), v: 60, c: this.g[r][c] });
+                        this.g[r][c] = -1;
+                    }
+                }
+            }
+            this.g[0] = new Array(this.COLS).fill(-1);
+            const cols = [];
+            for (let c = 0; c < this.colsIn(0); c++) cols.push(c);
+            for (let i = cols.length - 1; i > 0; i--) {
+                const j = (Math.random() * (i + 1)) | 0;
+                const t = cols[i]; cols[i] = cols[j]; cols[j] = t;
+            }
+            const m = Math.min(n == null ? cols.length : n, cols.length);
+            for (let i = 0; i < m; i++) {
+                this.g[0][cols[i]] = colorFn ? colorFn() : ((Math.random() * this.nColors) | 0);
+            }
+            this.checkState();
+        }
+        /* ---------- 特殊球用到的批量清除 ---------- */
+        burst(x, y, rad) {
+            const list = [], r2 = rad * rad;
+            for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) {
+                if (this.g[r][c] < 0) continue;
+                const dx = this.cx(r, c) - x, dy = this.yOf(r) - y;
+                if (dx * dx + dy * dy <= r2) list.push([r, c]);
+            }
+            const n = this.removeCells(list);
+            this.dropFloating();
+            return n;
+        }
+        colorNear(x, y) {
+            let best = -1, bd = 1e9;
+            for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) {
+                const v = this.g[r][c];
+                if (v < 0 || v === TOMB) continue;
+                const dx = this.cx(r, c) - x, dy = this.yOf(r) - y;
+                const d = dx * dx + dy * dy;
+                if (d < bd) { bd = d; best = v; }
+            }
+            return best;
+        }
+        wipeColor(col) {
+            const list = [];
+            if (col < 0 || col === TOMB) return 0;
+            for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) {
+                if (this.g[r][c] === col) list.push([r, c]);
+            }
+            const n = this.removeCells(list);
+            this.dropFloating();
+            return n;
+        }
+        rowNear(y) {
+            let best = 0, bd = 1e9;
+            for (let r = 0; r < this.rows; r++) {
+                const d = Math.abs(this.yOf(r) - y);
+                if (d < bd) { bd = d; best = r; }
+            }
+            return best;
+        }
+        wipeRow(r) {
+            const list = [];
+            for (let c = 0; c < this.colsIn(r); c++) if (this.g[r][c] >= 0) list.push([r, c]);
+            const n = this.removeCells(list);
+            this.dropFloating();
+            return n;
+        }
+        /* ---------- 绘制 ---------- */
+        draw(withAim) {
+            for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) {
+                const v = this.g[r][c];
+                if (v < 0) continue;
+                const x = this.cx(r, c), y = this.yOf(r);
+                if (v === TOMB) this.tomb(x, y); else this.bub(x, y, v);
+            }
+            for (const p of this.pops) {
+                ctx.globalAlpha = Math.max(0, p.t / 0.32);
+                ctx.fillStyle = p.c === TOMB ? '#9a978d' : (BUB_COLORS[p.c] || BUB_COLORS[0]).c;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, this.R * (1.6 - p.t), 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+            for (const d of this.drops) {
+                if (d.c === TOMB) this.tomb(d.x, d.y); else this.bub(d.x, d.y, d.c);
+            }
+            if (this.ball) {
+                if (this.ball.sp) this.spBall(this.ball.x, this.ball.y, this.ball.sp);
+                else this.bub(this.ball.x, this.ball.y, this.ball.col);
+            } else if (withAim !== false && this.showAim && !this.dead && !this.cleared) {
+                this.drawAim();
+            }
+        }
+        drawAim() {
+            const a = this.shooter.ang, vx = Math.cos(a), vy = Math.sin(a);
+            if (vy > -0.02) return;
+            const ox = this.sx + vx * 30, oy = this.sy - 20 + vy * 30;
+            const lim2 = (this.R * 1.7) * (this.R * 1.7);
+            let px = ox, py = oy, ex = ox, ey = oy;
+            for (let i = 0; i < 200; i++) {
+                px += vx * 9; py += vy * 9; ex = px; ey = py;
+                if (px <= this.wallL || px >= this.wallR) break;
+                if (py <= this.TOP + this.R * 0.55) break;
+                const r0 = Math.max(0, Math.floor((py - this.TOP - this.R) / this.ROWH) - 1);
+                let hit = false;
+                for (let r = r0; r <= Math.min(this.rows - 1, r0 + 2) && !hit; r++) {
+                    for (let c = 0; c < this.colsIn(r); c++) {
+                        if (this.g[r][c] < 0) continue;
+                        const dx = px - this.cx(r, c), dy = py - this.yOf(r);
+                        if (dx * dx + dy * dy < lim2) { hit = true; break; }
+                    }
+                }
+                if (hit) break;
+            }
+            ctx.save();
+            ctx.strokeStyle = 'rgba(180,235,255,0.26)'; ctx.lineWidth = 2;
+            ctx.setLineDash([6, 9]);
+            ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ex, ey); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = 'rgba(180,235,255,0.32)';
+            ctx.beginPath(); ctx.arc(ex, ey, 3, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        }
+        bub(x, y, col, a, rad) {
+            const c = BUB_COLORS[col] || BUB_COLORS[0];
+            const R = rad || this.R;
+            ctx.globalAlpha = a == null ? 1 : a;
+            const g = ctx.createRadialGradient(x - R * 0.32, y - R * 0.41, 2, x, y, R);
+            g.addColorStop(0, 'rgba(255,255,255,0.95)');
+            g.addColorStop(0.34, c.c);
+            g.addColorStop(1, 'rgba(20,26,34,0.55)');
+            ctx.fillStyle = g;
+            ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill();
+            spr(c.p, x - R * 0.52, y - R * 0.52, R * 1.04, R * 1.04, 0.92);
+            ctx.strokeStyle = 'rgba(255,255,255,0.32)'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(x, y, R - 1, 0, Math.PI * 2); ctx.stroke();
+            ctx.globalAlpha = 1;
+        }
+        tomb(x, y) {
+            const R = this.R;
+            ctx.fillStyle = '#6d6a62';
+            ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#8e8a80';
+            rr(x - R * 0.42, y - R * 0.56, R * 0.84, R * 1.02, R * 0.16); ctx.fill();
+            ctx.fillStyle = '#4b4842';
+            ctx.fillRect(x - R * 0.07, y - R * 0.34, R * 0.14, R * 0.62);
+            ctx.fillRect(x - R * 0.24, y - R * 0.18, R * 0.48, R * 0.14);
+            ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.arc(x, y, R - 1, 0, Math.PI * 2); ctx.stroke();
+        }
+        spBall(x, y, sp, rad) {
+            const R = rad || this.R;
+            if (sp === 'bomb') {
+                const bg = ctx.createRadialGradient(x - R * 0.34, y - R * 0.4, R * 0.15, x, y, R);
+                bg.addColorStop(0, '#928e83'); bg.addColorStop(0.45, '#55524b'); bg.addColorStop(1, '#22221d');
+                ctx.fillStyle = bg;
+                ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#e0653a'; ctx.lineWidth = 2.5;
+                ctx.beginPath(); ctx.arc(x, y, R - 1.2, 0, Math.PI * 2); ctx.stroke();
+                // 镜面高光
+                ctx.save();
+                ctx.translate(x - R * 0.3, y - R * 0.34); ctx.rotate(-0.7);
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.beginPath(); ctx.ellipse(0, 0, R * 0.3, R * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+                // 火花
+                ctx.strokeStyle = '#f0a05a'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(x + R * 0.26, y - R * 0.8); ctx.quadraticCurveTo(x + R * 0.72, y - R * 1.15, x + R * 0.36, y - R * 1.5); ctx.stroke();
+                const sg = ctx.createRadialGradient(x + R * 0.34, y - R * 1.5, 0, x + R * 0.34, y - R * 1.5, R * 0.42);
+                sg.addColorStop(0, 'rgba(255,255,220,0.95)'); sg.addColorStop(0.4, 'rgba(255,214,74,0.85)'); sg.addColorStop(1, 'rgba(255,140,40,0)');
+                ctx.fillStyle = sg;
+                ctx.beginPath(); ctx.arc(x + R * 0.34, y - R * 1.5, R * 0.42, 0, Math.PI * 2); ctx.fill();
+                // 顶盖 + 导火索
+                ctx.fillStyle = '#b9b5a8';
+                rr(x - R * 0.2, y - R * 1.02, R * 0.4, R * 0.22, R * 0.08); ctx.fill();
+            } else if (sp === 'rainbow') {
+                const cs = ['#5fbf35', '#4aa8e0', '#9b6ad6', '#e8c53a'];
+                for (let i = 0; i < 4; i++) {
+                    ctx.beginPath(); ctx.moveTo(x, y);
+                    ctx.arc(x, y, R, i * Math.PI / 2, (i + 1) * Math.PI / 2);
+                    ctx.closePath(); ctx.fillStyle = cs[i]; ctx.fill();
+                }
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(x, y, R - 1, 0, Math.PI * 2); ctx.stroke();
+                ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                ctx.beginPath(); ctx.arc(x - R * 0.3, y - R * 0.35, R * 0.16, 0, Math.PI * 2); ctx.fill();
+            } else {
+                ctx.fillStyle = '#e8b93a';
+                ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#fff8dc';
+                ctx.beginPath();
+                ctx.moveTo(x + R * 0.12, y - R * 0.62);
+                ctx.lineTo(x - R * 0.34, y + R * 0.1);
+                ctx.lineTo(x + R * 0.02, y + R * 0.1);
+                ctx.lineTo(x - R * 0.12, y + R * 0.62);
+                ctx.lineTo(x + R * 0.36, y - R * 0.12);
+                ctx.lineTo(x + R * 0.02, y - R * 0.12);
+                ctx.closePath(); ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(x, y, R - 1, 0, Math.PI * 2); ctx.stroke();
+            }
+        }
+    }
+
     class Bubble extends Base {
         setup() {
             // v4.0.151（用户：整个界面都可以打，所有的地方都是可以打到的）——
@@ -1207,147 +1673,266 @@
     }
 
     /* ================================================================
-     * 6. 植物消消乐（三消）
+     * 6. 机械龙攻城（v4.0.152 替换「植物消消乐」）
+     * 头上一条机械龙在喷泡泡压你的场地，消掉的泡泡变成尖刺自动射回去
      * ============================================================== */
-    const M3 = [
-        { p: 'peashooter', c: '#79c23a' },
-        { p: 'sunflower', c: '#e8c53a' },
-        { p: 'wallnut', c: '#c79a58' },
-        { p: 'snowpea', c: '#4aa8e0' },
-        { p: 'cherry', c: '#cf4130' }
-    ];
-    class Match3 extends Base {
+    class DragonRaid extends Base {
         setup() {
-            this.N = 7; this.CELL = 58; this.GAP = 4;
-            this.bx = 176; this.by = 128;
-            this.g = Array.from({ length: 7 }, () => new Array(7).fill(0));
-            for (let r = 0; r < 7; r++) for (let c = 0; c < 7; c++) {
-                let v; let guard = 0;
-                do { v = (Math.random() * 5) | 0; guard++; } while (guard < 30 && this.badAt(r, c, v));
-                this.g[r][c] = v;
-            }
-            this.sel = null; this.time = 90; this.moves = 0; this.flash = [];
-            this.busy = 0;
+            this.lane = new BubLane({
+                R: 21, COLS: 19, LEFT: 51, TOP: 150, rows: 10,
+                sx: 450, sy: 556, deadline: 510, nColors: 4,
+                fillRows: 3, gapEvery: 3, ceilRows: 2, missPush: false
+            });
+            this.lane.noClear = true;      // 清空场地不算赢，只有把龙打死才算
+            this.lane.onLand = (l, res) => {
+                if (res.popped > 0) this.hurt(res.popped * 4 + Math.min(res.dropped, 8) * 3);
+            };
+            this.lane.onDead = () => this.end(false);
+
+            this.hpMax = 640; this.hp = this.hpMax;
+            this.phase = 1;
+            this.sprayT = 6.0; this.warn = 0;
+            this.flash = 0; this.shake = 0;
+            this.spikes = []; this.fx = [];
+            this.banner = ''; this.bannerT = 0;
+            this.dieT = 0;
         }
-        badAt(r, c, v) {
-            if (c >= 2 && this.g[r][c - 1] === v && this.g[r][c - 2] === v) return true;
-            if (r >= 2 && this.g[r - 1][c] === v && this.g[r - 2][c] === v) return true;
-            return false;
-        }
-        cellAt(x, y) {
-            const dc = Math.floor((x - this.bx) / (this.CELL + this.GAP));
-            const dr = Math.floor((y - this.by) / (this.CELL + this.GAP));
-            if (dc < 0 || dc > 6 || dr < 0 || dr > 6) return null;
-            return [dr, dc];
-        }
-        update(dt) {
-            if (this.over) return;
-            this.time -= dt;
-            if (this.time <= 0) { this.time = 0; this.end(true); }
-            this.flash = this.flash.filter(f => (f.t -= dt) > 0);
-            if (this.busy > 0) this.busy -= dt;
-        }
-        onDown(x, y) {
-            if (this.over || this.busy > 0) return;
-            const p = this.cellAt(x, y);
-            if (!p) return;
-            if (!this.sel) { this.sel = p; return; }
-            const [r0, c0] = this.sel, [r1, c1] = p;
-            if (r0 === r1 && c0 === c1) { this.sel = null; return; }
-            if (Math.abs(r0 - r1) + Math.abs(c0 - c1) !== 1) { this.sel = p; return; }
-            this.sel = null;
-            this.swap(r0, c0, r1, c1);
-        }
-        swap(r0, c0, r1, c1) {
-            const t = this.g[r0][c0]; this.g[r0][c0] = this.g[r1][c1]; this.g[r1][c1] = t;
-            const runs = this.findRuns();          // 返回 Set，判空必须用 size（length 恒 undefined → 每次交换都被还原）
-            if (!runs.size) { const q = this.g[r0][c0]; this.g[r0][c0] = this.g[r1][c1]; this.g[r1][c1] = q; return; }
-            this.moves++;
-            this.busy = 0.16;
-            this.resolve();
-        }
-        findRuns() {
-            const marks = new Set();
-            for (let r = 0; r < 7; r++) {
-                let run = 1;
-                for (let c = 1; c <= 7; c++) {
-                    if (c < 7 && this.g[r][c] === this.g[r][c - 1] && this.g[r][c] >= 0) run++;
-                    else {
-                        if (run >= 3) for (let i = 1; i <= run; i++) marks.add(r + ',' + (c - i));
-                        run = 1;
-                    }
-                }
-            }
-            for (let c = 0; c < 7; c++) {
-                let run = 1;
-                for (let r = 1; r <= 7; r++) {
-                    if (r < 7 && this.g[r][c] === this.g[r - 1][c] && this.g[r][c] >= 0) run++;
-                    else {
-                        if (run >= 3) for (let i = 1; i <= run; i++) marks.add((r - i) + ',' + c);
-                        run = 1;
-                    }
-                }
-            }
-            return marks;
-        }
-        resolve() {
-            let chain = 0;
-            while (true) {
-                const marks = this.findRuns();
-                if (!marks.size) break;
-                chain++;
-                const gain = marks.size * 10 * chain;
-                this.score += gain;
-                marks.forEach(k => {
-                    const [r, c] = k.split(',').map(Number);
-                    this.flash.push({ r, c, t: 0.3, p: M3[this.g[r][c]].p });
-                    this.g[r][c] = -1;
+
+        hurt(dmg) {
+            if (this.over || this.dieT > 0) return;
+            dmg = Math.max(1, Math.round(dmg));
+            const n = Math.max(1, Math.min(6, Math.round(dmg / 3)));
+            for (let i = 0; i < n; i++) {
+                this.spikes.push({
+                    x: this.lane.sx + (Math.random() - 0.5) * 70,
+                    y: this.lane.sy - 34,
+                    t: 0, dur: 0.26 + i * 0.045, dmg: i === 0 ? dmg : 0
                 });
-                // 重力
-                for (let c = 0; c < 7; c++) {
-                    const col = [];
-                    for (let r = 6; r >= 0; r--) if (this.g[r][c] >= 0) col.push(this.g[r][c]);
-                    for (let r = 6; r >= 0; r--) this.g[r][c] = col[6 - r] != null ? col[6 - r] : (Math.random() * 5) | 0;
-                }
+            }
+            this.hp = Math.max(0, this.hp - dmg);
+            this.flash = 0.3;
+            this.shake = Math.min(7, 2 + dmg * 0.35);
+            this.fx.push({ x: 400 + (Math.random() - 0.5) * 150, y: 120, s: '-' + dmg, t: 0.9, c: '#ffd166' });
+
+            const p = this.hp / this.hpMax;
+            const ph = p > 0.7 ? 1 : (p > 0.35 ? 2 : 3);
+            if (ph > this.phase) {
+                this.phase = ph;
+                this.banner = ph === 2 ? '机械龙拆掉护甲 —— 喷吐变快，开始丢墓碑！' : '机械龙暴怒了！';
+                this.bannerT = 2.2;
+                this.shake = 10;
+                this.sprayT = Math.min(this.sprayT, 2.8);
+            }
+            if (this.hp <= 0) {
+                this.dieT = 1.5;
+                this.banner = '机械龙被击落！';
+                this.bannerT = 2.2;
             }
         }
-        draw() {
-            bgGrass();
-            panel(this.bx - 14, this.by - 14, 7 * (this.CELL + this.GAP) + 14, 7 * (this.CELL + this.GAP) + 14, 0.45);
-            for (let r = 0; r < 7; r++) for (let c = 0; c < 7; c++) {
-                const x = this.bx + c * (this.CELL + this.GAP), y = this.by + r * (this.CELL + this.GAP);
-                ctx.fillStyle = 'rgba(255,255,255,0.06)'; rr(x, y, this.CELL, this.CELL, 10); ctx.fill();
-                const v = this.g[r][c]; if (v < 0) continue;
-                ctx.fillStyle = M3[v].c; rr(x + 1, y + 1, this.CELL - 2, this.CELL - 2, 10); ctx.fill();
-                spr(M3[v].p, x + 6, y + 6, this.CELL - 12, this.CELL - 12);
-                if (this.sel && this.sel[0] === r && this.sel[1] === c) {
-                    ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 3; rr(x + 1, y + 1, this.CELL - 2, this.CELL - 2, 10); ctx.stroke();
+
+        spray() {
+            const n = this.phase === 1 ? 5 : (this.phase === 2 ? 6 : 7);
+            this.lane.pushCeil(n, null);
+            if (this.phase >= 2) {
+                const k = this.phase >= 3 ? 2 : 1;
+                for (let i = 0; i < k; i++) {
+                    const c = (Math.random() * this.lane.colsIn(0)) | 0;
+                    if (this.lane.g[0][c] >= 0) this.lane.g[0][c] = TOMB;
                 }
             }
-            for (const f of this.flash) {
-                const x = this.bx + f.c * (this.CELL + this.GAP), y = this.by + f.r * (this.CELL + this.GAP);
-                ctx.globalAlpha = Math.max(0, f.t / 0.3);
-                ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x + this.CELL / 2, y + this.CELL / 2, this.CELL * 0.6 * (1 - f.t / 0.3), 0, Math.PI * 2); ctx.fill();
-                ctx.globalAlpha = 1;
+            this.lane.checkState();
+            this.sprayT = this.phase === 1 ? 6.6 : (this.phase === 2 ? 5.0 : 4.0);
+            this.warn = 0;
+            this.shake = Math.max(this.shake, 3);
+        }
+
+        update(dt) {
+            this.flash = Math.max(0, this.flash - dt);
+            this.shake = Math.max(0, this.shake - dt * 26);
+            this.bannerT = Math.max(0, this.bannerT - dt);
+            for (const s of this.spikes) s.t += dt;
+            this.spikes = this.spikes.filter(s => s.t < s.dur + 0.35);
+            for (const f of this.fx) { f.t -= dt; f.y -= dt * 34; }
+            this.fx = this.fx.filter(f => f.t > 0);
+            if (this.over) { this.lane.update(dt); return; }
+
+            this.lane.update(dt);
+
+            if (this.dieT > 0) {
+                this.dieT -= dt;
+                if (this.dieT <= 0) this.end(true);
+                return;
             }
-            const hx = 620;
-            txt('植物消消乐', hx, 140, 28, '#ffe9a8', 'left', 900);
-            txt('PLANT MATCH', hx, 168, 11, 'rgba(255,255,255,0.45)', 'left', 700);
-            panel(hx - 10, 190, 220, 92, 0.5);
-            txt('分数', hx, 214, 13, 'rgba(255,255,255,0.6)');
-            txt(String(this.score), hx, 250, 32, '#ffe066', 'left', 900);
-            panel(hx - 10, 294, 220, 76, 0.5);
-            txt('时间', hx, 318, 13, 'rgba(255,255,255,0.6)');
-            txt(Math.ceil(this.time) + 's', hx, 348, 26, this.time < 15 ? '#ff7a5a' : '#b7f06a', 'left', 900);
-            panel(hx - 10, 382, 220, 130, 0.42);
-            txt('点两个相邻植物交换', hx, 406, 13, '#dff0c4');
-            txt('三连即消 · 连锁加倍', hx, 432, 13, '#dff0c4');
-            txt('4 连会清更多', hx, 458, 13, 'rgba(255,255,255,0.55)');
-            if (this.over) this.overlay('时间到！', '分数 ' + this.score + ' · 步数 ' + this.moves, '#ffe066');
+            this.sprayT -= dt;
+            this.warn = this.sprayT < 1.3 ? Math.max(0, 1 - this.sprayT / 1.3) : 0;
+            if (this.sprayT <= 0) this.spray();
+        }
+
+        /* ---------- 绘制 ---------- */
+        draw() {
+            const g = ctx.createLinearGradient(0, 0, 0, H);
+            g.addColorStop(0, '#1b2338'); g.addColorStop(0.55, '#111a2c'); g.addColorStop(1, '#0a1019');
+            ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+            ctx.save();
+            if (this.shake > 0.2) {
+                ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
+            }
+            this.drawDragon();
+            this.drawField();
+            this.lane.draw();
+            this.drawShooter();
+            this.drawSpikes();
+            ctx.restore();
+
+            this.drawHud();
+            if (this.bannerT > 0) {
+                const a = Math.min(1, this.bannerT / 0.5);
+                ctx.save(); ctx.globalAlpha = a;
+                ctx.fillStyle = 'rgba(40,10,6,0.82)';
+                rr(150, 300, 600, 54, 14); ctx.fill();
+                ctx.strokeStyle = 'rgba(255,150,90,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+                txt(this.banner, 450, 327, 21, '#ffcf8a', 'center', 900);
+                ctx.restore();
+            }
+            if (this.over) {
+                if (this.win) this.overlay('机械龙被击落！', '分数 ' + this.lane.score + ' · 用时 ' + Math.round(this.t) + ' 秒', '#b7f06a');
+                else this.overlay('泡泡压到炮口了', '差一点：机械龙还剩 ' + Math.ceil(this.hp) + ' 血', '#ff8f6b');
+            }
+        }
+
+        drawDragon() {
+            const bob = Math.sin(this.t * 1.5) * 5;
+            const dw = 336, dh = 290, dx = 300, dy = -100 + bob;
+            const dead = this.dieT > 0;
+            const jx = dead ? (Math.random() - 0.5) * 10 : 0;
+            spr('dragon', dx + jx, dy, dw, dh, dead ? 0.55 : 1);
+            if (this.flash > 0) {
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                spr('dragon', dx + jx, dy, dw, dh, Math.min(0.85, this.flash * 2.4));
+                ctx.restore();
+            }
+            // 炮口预警光
+            const mx = 374, my = 129 + bob;
+            if (this.warn > 0.03) {
+                const rr0 = 26 + 30 * this.warn;
+                const rg = ctx.createRadialGradient(mx, my, 2, mx, my, rr0);
+                rg.addColorStop(0, 'rgba(255,190,110,' + (0.75 * this.warn) + ')');
+                rg.addColorStop(1, 'rgba(255,110,40,0)');
+                ctx.fillStyle = rg;
+                ctx.beginPath(); ctx.arc(mx, my, rr0, 0, Math.PI * 2); ctx.fill();
+            }
+            // 暴怒：眼睛泛红
+            if (this.phase >= 3) {
+                const a = 0.55 + Math.sin(this.t * 9) * 0.3;
+                ctx.fillStyle = 'rgba(255,60,40,' + a + ')';
+                ctx.beginPath(); ctx.arc(469, 95, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(506, 89, 6, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+
+        drawField() {
+            const l = this.lane;
+            ctx.fillStyle = 'rgba(8,12,20,0.62)';
+            ctx.fillRect(0, l.TOP - 10, W, H - l.TOP + 10);
+            ctx.fillStyle = 'rgba(120,170,255,0.035)';
+            ctx.fillRect(l.wallL, l.TOP - 10, l.wallR - l.wallL, H - l.TOP + 10);
+            ctx.strokeStyle = 'rgba(255,255,255,0.10)'; ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(l.wallL, l.TOP - 10); ctx.lineTo(l.wallL, l.sy - 6);
+            ctx.moveTo(l.wallR, l.TOP - 10); ctx.lineTo(l.wallR, l.sy - 6);
+            ctx.stroke();
+            ctx.strokeStyle = 'rgba(255,110,90,0.45)';
+            ctx.setLineDash([9, 9]); ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, l.deadline); ctx.lineTo(W, l.deadline); ctx.stroke();
+            ctx.setLineDash([]);
+            txt('顶到这条线就输', 20, l.deadline - 12, 11, 'rgba(255,150,140,0.55)', 'left', 600);
+        }
+
+        drawShooter() {
+            const l = this.lane, a = l.shooter.ang;
+            sprH('cattail', l.sx - 34, l.sy - 26, 62);
+            ctx.save();
+            ctx.translate(l.sx, l.sy - 20);
+            ctx.rotate(a + Math.PI / 2);
+            ctx.fillStyle = '#c9e08a';
+            rr(-6, -46, 12, 42, 6); ctx.fill();
+            ctx.restore();
+            const px = l.sx + Math.cos(a) * 70, py = l.sy - 20 + Math.sin(a) * 70;
+            if (l.curSp) l.spBall(px, py, l.curSp); else l.bub(px, py, l.cur, 0.82);
+        }
+
+        drawSpikes() {
+            for (const s of this.spikes) {
+                const k = Math.min(1, s.t / s.dur);
+                const x = s.x + (374 - s.x) * k;
+                const y = s.y + (129 - s.y) * k - Math.sin(k * Math.PI) * 26;
+                ctx.save();
+                ctx.globalAlpha = 1 - Math.max(0, (s.t - s.dur) / 0.35);
+                ctx.translate(x, y);
+                const ang = Math.atan2(129 - s.y, 374 - s.x);
+                ctx.rotate(ang);
+                ctx.fillStyle = '#b7f06a';
+                ctx.beginPath();
+                ctx.moveTo(11, 0); ctx.lineTo(-7, -5); ctx.lineTo(-3, 0); ctx.lineTo(-7, 5);
+                ctx.closePath(); ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        drawHud() {
+            const l = this.lane;
+            const x0 = 250, x1 = 650, y = 12, h = 14;
+            ctx.fillStyle = 'rgba(6,9,14,0.78)';
+            rr(x0 - 4, y - 4, x1 - x0 + 8, h + 8, 10); ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.09)';
+            rr(x0, y, x1 - x0, h, 6); ctx.fill();
+            const p = Math.max(0, this.hp / this.hpMax);
+            if (p > 0) {
+                const grd = ctx.createLinearGradient(x0, 0, x1, 0);
+                grd.addColorStop(0, '#ff4d3d'); grd.addColorStop(0.55, '#ff8f3d'); grd.addColorStop(1, '#ffd34a');
+                ctx.fillStyle = grd;
+                rr(x0, y, Math.max(3, (x1 - x0) * p), h, 6); ctx.fill();
+            }
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(x0 + (x1 - x0) * 0.35, y, 2, h);
+            ctx.fillRect(x0 + (x1 - x0) * 0.70, y, 2, h);
+
+            txt('机械龙', 244, y + h / 2, 13, 'rgba(255,225,200,0.9)', 'right', 800);
+            txt('第 ' + this.phase + ' 阶段', x1 - 10, y + h / 2, 11, 'rgba(255,255,255,0.92)', 'right', 800);
+            txt(Math.ceil(this.hp) + ' / ' + this.hpMax, 450, y + h / 2, 11.5, 'rgba(255,255,255,0.9)', 'center', 800);
+            txt('剩 ' + l.count() + ' 颗泡泡', 20, 60, 13, 'rgba(220,235,255,0.62)', 'left', 700);
+            txt('分数 ' + l.score, 880, 60, 13, 'rgba(220,235,255,0.62)', 'right', 700);
+
+            for (const f of this.fx) {
+                ctx.save();
+                ctx.globalAlpha = Math.min(1, f.t / 0.4);
+                txt(f.s, f.x, f.y, 20, f.c, 'center', 900);
+                ctx.restore();
+            }
+        }
+
+        /* ---------- 输入 ---------- */
+        onDown(x, y) {
+            if (this.over) { if (this.overT > 0.45) this.reset(); return; }
+            if (this.dieT > 0) return;
+            this.lane.aimAt(x, y);
+            this.lane.fire();
+        }
+        onMove(x, y) {
+            if (this.over || this.dieT > 0) return;
+            this.lane.aimAt(x, y);
+        }
+        onKey(down, k) {
+            if (!down || this.over) return;
+            const l = this.lane;
+            if (k === 'left' || k === 'a') l.nudge(-0.045);
+            if (k === 'right' || k === 'd') l.nudge(0.045);
+            if (k === 'space' || k === 'up') l.fire();
         }
     }
-
-    /* ================================================================
+/* ================================================================
      * 7. 寒冰推箱（推箱子）
      * ============================================================== */
     const LEVELS = [
@@ -1473,102 +2058,216 @@
     }
 
     /* ================================================================
-     * 8. 豌豆射击场（打飞靶）
+     * 7. 泡泡对轰（v4.0.152 替换「豌豆射击场」）
+     * 左右两块场地同屏：左边鼠标，右边键盘；消得多就往对面塞墓碑
      * ============================================================== */
-    class DuckHunt extends Base {
+    class BubbleDuel extends Base {
         setup() {
-            this.round = 1; this.maxRound = 3; this.shots = 10; this.roundScore = 0;
-            this.targets = []; this.sx = 450; this.sy = 300; this.wave = 0; this.spawnT = 0.4;
-            this.hits = 0; this.fired = 0; this.msg = ''; this.msgT = 0;
+            const mk = (left, sx) => {
+                const l = new BubLane({
+                    R: 21, COLS: 9, LEFT: left, TOP: 120, rows: 10,
+                    sx: sx, sy: 556, deadline: 480, nColors: 4,
+                    fillRows: 4, gapEvery: 3, ceilRows: 2, missPush: true, missLimit: 9
+                });
+                l.owner = left < 450 ? 'A' : 'B';
+                l.onLand = (ln, res) => this.onPop(ln, res);
+                l.onDead = (ln) => this.end(ln.owner === 'B');
+                l.onClear = (ln) => this.end(ln.owner === 'A');
+                return l;
+            };
+            this.la = mk(22, 211);
+            this.lb = mk(500, 689);
+            this.lb.showAim = false;
+            this.aiOn = true;
+            this.aiT = 2.4;
+            this.pending = [];
+            this.flashA = 0; this.flashB = 0;
+            this.msg = ''; this.msgT = 0;
         }
-        spawn() {
-            const high = Math.random() < 0.45;
-            const dir = Math.random() < 0.5 ? 1 : -1;
-            const sp = 95 + Math.random() * 55 + this.round * 18;
-            this.targets.push({
-                x: dir > 0 ? -70 : W + 70,
-                y: high ? 130 + Math.random() * 60 : 250 + Math.random() * 120,
-                vx: dir * sp, life: 9, high,
-                bob: Math.random() * 6.28
-            });
+
+        onPop(ln, res) {
+            const other = ln === this.la ? this.lb : this.la;
+            let n = 0;
+            if (res.popped >= 8) n = 3;
+            else if (res.popped >= 6) n = 2;
+            else if (res.popped >= 4) n = 1;
+            if (res.dropped >= 5) n += 1;
+            if (n > 0) this.pushGarbage(other, Math.min(4, n), ln);
         }
-        update(dt) {
-            if (this.over) return;
-            if (this.msgT > 0) this.msgT -= dt;
-            if (this.shots <= 0) {
-                if (this.targets.length === 0) {
-                    if (this.round >= this.maxRound) { this.end(this.score > 0); return; }
-                    this.round++; this.shots = 10; this.score += 0;
+
+        pushGarbage(to, n, from) {
+            this.pending.push({ to: to, n: n, t: 0.7 });
+            this.msg = (from === this.la ? '你' : '对手') + '塞过去 ' + n + ' 块墓碑';
+            this.msgT = 1.5;
+        }
+
+        applyGarbage(g) {
+            const l = g.to;
+            l.pushCeil(6 + g.n, null);
+            let done = 0;
+            for (let c = 0; c < l.colsIn(0) && done < g.n; c++) {
+                if (l.g[0][c] >= 0) { l.g[0][c] = TOMB; done++; }
+            }
+            l.checkState();
+            if (l === this.la) this.flashA = 0.6; else this.flashB = 0.6;
+        }
+
+        aiTick(dt) {
+            if (this.aiT > 0) { this.aiT -= dt; return; }
+            const l = this.lb;
+            if (l.ball || l.dead || l.cleared) return;
+            // 优先打「最下面的同色球」，没有就随便挑一颗
+            let best = null;
+            for (let r = l.rows - 1; r >= 0 && !best; r--) {
+                for (let c = 0; c < l.colsIn(r); c++) {
+                    if (l.g[r][c] === l.cur) { best = [r, c]; break; }
                 }
-                return;
             }
-            this.spawnT -= dt;
-            if (this.spawnT <= 0 && this.targets.length < 3) { this.spawn(); this.spawnT = 0.8 + Math.random() * 0.7; }
-            this.targets = this.targets.filter(t => {
-                t.x += t.vx * dt; t.bob += dt * 3; t.life -= dt;
-                return t.life > 0 && t.x > -120 && t.x < W + 120;
-            });
+            if (!best) {
+                for (let r = l.rows - 1; r >= 0 && !best; r--) {
+                    for (let c = 0; c < l.colsIn(r); c++) {
+                        if (l.g[r][c] >= 0) { best = [r, c]; break; }
+                    }
+                }
+            }
+            if (best) {
+                l.aimAt(l.cx(best[0], best[1]) + (Math.random() - 0.5) * 14, l.yOf(best[0]));
+                l.fire();
+            }
+            this.aiT = 1.55 + Math.random() * 0.9;
         }
-        onDown(x, y) {
+
+        update(dt) {
+            this.la.update(dt);
+            this.lb.update(dt);
+            this.flashA = Math.max(0, this.flashA - dt);
+            this.flashB = Math.max(0, this.flashB - dt);
+            this.msgT = Math.max(0, this.msgT - dt);
             if (this.over) return;
-            this.sx = x; this.sy = y;
-            if (this.shots <= 0) return;
-            this.shots--; this.fired++;
-            let hit = null;
-            for (const t of this.targets) {
-                if (Math.abs(t.x - x) < 52 && Math.abs(t.y - y) < 72) { hit = t; break; }
+
+            for (const g of this.pending) g.t -= dt;
+            const ready = this.pending.filter(g => g.t <= 0);
+            if (ready.length) {
+                this.pending = this.pending.filter(g => g.t > 0);
+                ready.forEach(g => this.applyGarbage(g));
             }
-            if (hit) {
-                this.targets = this.targets.filter(t => t !== hit);
-                const pts = Math.round((hit.high ? 120 : 70) + (this.round - 1) * 10);
-                this.score += pts; this.hits++;
-                this.msg = '+' + pts + (hit.high ? ' 高空气球！' : ''); this.msgT = 0.9;
-            } else {
-                this.msg = '打偏了'; this.msgT = 0.7;
-            }
+            if (this.aiOn) this.aiTick(dt);
         }
-        onMove(x, y) { this.sx = x; this.sy = y; }
-        onKey(down, k) {
-            if (!down || this.over) return;
-            if (k === 'space') this.onDown(this.sx, this.sy);
-            if (k === 'left') this.sx = Math.max(20, this.sx - 30);
-            if (k === 'right') this.sx = Math.min(W - 20, this.sx + 30);
-            if (k === 'up') this.sy = Math.max(20, this.sy - 26);
-            if (k === 'down') this.sy = Math.min(H - 20, this.sy + 26);
-        }
+
+        /* ---------- 绘制 ---------- */
         draw() {
             const g = ctx.createLinearGradient(0, 0, 0, H);
-            g.addColorStop(0, '#1c3b63'); g.addColorStop(0.6, '#2f5f7a'); g.addColorStop(1, '#152b1c');
+            g.addColorStop(0, '#1a2136'); g.addColorStop(1, '#0b111c');
             ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-            ctx.fillStyle = 'rgba(255,255,255,0.05)';
-            for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(120 + i * 180, 90 + (i % 2) * 26, 58, 0, Math.PI * 2); ctx.fill(); }
-            for (const t of this.targets) {
-                const y = t.y + Math.sin(t.bob) * 7;
-                const im = _im.balloon;
-                const h = 112, w = im && im.naturalWidth ? h * im.naturalWidth / im.naturalHeight : h * 0.8;
-                spr('balloon', t.x - w / 2, y - h / 2, w, h, Math.min(1, t.life));
+
+            this.drawPanel(this.la, '#5fbf35', '', this.flashA);
+            this.drawPanel(this.lb, '#e0553a', '', this.flashB);
+
+            // 中间 VS
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(450, 110); ctx.lineTo(450, 560); ctx.stroke();
+            ctx.restore();
+            txt('VS', 450, 150, 34, 'rgba(255,220,140,0.22)', 'center', 900);
+
+            this.drawSide(this.la);
+            this.drawSide(this.lb);
+
+            // 墓碑飞行的箭头
+            const fly = this.pending.length;
+            if (fly) {
+                const k = 1 - Math.max(0, this.pending[0].t) / 0.7;
+                const toA = this.pending[0].to === this.la;
+                const x = toA ? 560 - 220 * k : 340 + 220 * k;
+                ctx.save();
+                ctx.globalAlpha = 0.85;
+                this.la.tomb(x, 150);
+                ctx.restore();
             }
-            txt('豌豆射击场', 450, 54, 22, '#ffe9a8', 'center', 900);
-            txt('第 ' + this.round + ' / ' + this.maxRound + ' 轮', 78, 54, 15, 'rgba(255,255,255,0.75)', 'left', 700);
-            txt('分数 ' + this.score, 822, 54, 17, '#ffe066', 'right', 800);
-            txt('子弹 ' + this.shots, 822, 80, 13, this.shots > 0 ? 'rgba(255,255,255,0.6)' : '#ff8f6b', 'right', 700);
-            // 准星
-            ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 2.5;
-            ctx.beginPath(); ctx.arc(this.sx, this.sy, 22, 0, Math.PI * 2); ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(this.sx - 32, this.sy); ctx.lineTo(this.sx - 10, this.sy);
-            ctx.moveTo(this.sx + 10, this.sy); ctx.lineTo(this.sx + 32, this.sy);
-            ctx.moveTo(this.sx, this.sy - 32); ctx.lineTo(this.sx, this.sy - 10);
-            ctx.moveTo(this.sx, this.sy + 10); ctx.lineTo(this.sx, this.sy + 32);
-            ctx.stroke();
-            ctx.fillStyle = 'rgba(255,224,102,0.9)';
-            ctx.beginPath(); ctx.arc(this.sx, this.sy, 2.5, 0, Math.PI * 2); ctx.fill();
-            if (this.msgT > 0) txt(this.msg, 450, 500, 22, this.msg[0] === '+' ? '#b7f06a' : '#ff9a7a', 'center', 900);
-            if (this.shots <= 0) txt('本轮结束…', 450, 540, 18, 'rgba(255,255,255,0.7)', 'center', 700);
-            if (this.over) this.overlay('射击结束', '命中 ' + this.hits + ' / ' + this.fired + ' · 分数 ' + this.score, '#ffe066');
+
+            this.drawHud();
+            if (this.over) {
+                if (this.win) this.overlay('对手被埋了！', '分数 ' + this.la.score, '#b7f06a');
+                else this.overlay('你被泡泡埋了', '分数 ' + this.la.score + ' · 对手 ' + this.lb.score, '#ff8f6b');
+            }
+        }
+
+        drawPanel(l, color, label, flash) {
+            const x0 = l.LEFT - 12, w = l.COLS * l.R * 2 + 24;
+            ctx.save();
+            ctx.fillStyle = flash > 0 ? 'rgba(255,90,60,' + (0.10 + flash * 0.3) + ')' : 'rgba(255,255,255,0.045)';
+            rr(x0, l.TOP - 12, w, H - l.TOP + 2, 14); ctx.fill();
+            ctx.strokeStyle = flash > 0 ? 'rgba(255,120,80,0.7)' : 'rgba(255,255,255,0.10)';
+            ctx.lineWidth = 1.5; ctx.stroke();
+            ctx.restore();
+            ctx.strokeStyle = 'rgba(255,120,110,0.4)';
+            ctx.setLineDash([7, 7]); ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(x0, l.deadline); ctx.lineTo(x0 + w, l.deadline); ctx.stroke();
+            ctx.setLineDash([]);
+
+        }
+
+        drawSide(l) {
+            l.draw();
+            const a = l.shooter.ang;
+            sprH('cattail', l.sx - 30, l.sy - 24, 54);
+            ctx.save();
+            ctx.translate(l.sx, l.sy - 18);
+            ctx.rotate(a + Math.PI / 2);
+            ctx.fillStyle = '#c9e08a';
+            rr(-5, -40, 10, 36, 5); ctx.fill();
+            ctx.restore();
+            const px = l.sx + Math.cos(a) * 62, py = l.sy - 18 + Math.sin(a) * 62;
+            if (l.curSp) l.spBall(px, py, l.curSp); else l.bub(px, py, l.cur, 0.82);
+            // 下一颗
+            l.bub(l.sx + 96, l.sy - 6, l.next, 1, 13);
+            txt('下一颗', l.sx + 116, l.sy - 6, 11.5, 'rgba(255,255,255,0.42)', 'left', 600);
+        }
+
+        drawHud() {
+            txt('你  ' + this.la.score, 26, 54, 15, '#b7f06a', 'left', 800);
+            txt('剩 ' + this.la.count() + ' 颗', 26, 72, 12, 'rgba(255,255,255,0.4)', 'left', 600);
+            txt(this.lb.score + '  ' + (this.aiOn ? '电脑' : '对手'), 874, 54, 15, '#ff9d80', 'right', 800);
+            txt('剩 ' + this.lb.count() + ' 颗', 874, 72, 12, 'rgba(255,255,255,0.4)', 'right', 600);
+
+            txt('鼠标瞄准 · 点击发射', this.la.LEFT + 196, 94, 12, 'rgba(255,255,255,0.42)', 'center', 700);
+            txt(this.aiOn ? '← → 空格 · 按一下就接管' : '← → 调角度 · 空格发射',
+                this.lb.LEFT + 196, 94, 12, this.aiOn ? 'rgba(255,220,140,0.62)' : 'rgba(255,255,255,0.42)', 'center', 700);
+
+            if (this.msgT > 0) {
+                ctx.save();
+                ctx.globalAlpha = Math.min(1, this.msgT / 0.4);
+                txt(this.msg, 450, 566, 15, '#ffd166', 'center', 800);
+                ctx.restore();
+            }
+        }
+
+        /* ---------- 输入 ---------- */
+        onDown(x, y) {
+            if (this.over) { if (this.overT > 0.45) this.reset(); return; }
+            if (x >= 440) return;             // 右半场用键盘，别被鼠标误触
+            this.la.aimAt(x, y);
+            this.la.fire();
+        }
+        onMove(x, y) {
+            if (this.over || x >= 440) return;
+            this.la.aimAt(x, y);
+        }
+        onKey(down, k) {
+            if (!down || this.over) return;
+            if (k === 'left' || k === 'right' || k === 'space' || k === 'up') {
+                if (this.aiOn) {
+                    this.aiOn = false;
+                    this.lb.showAim = true;
+                    this.msg = '你已接管右侧炮台';
+                    this.msgT = 1.8;
+                }
+            }
+            if (k === 'left') this.lb.nudge(-0.05);
+            if (k === 'right') this.lb.nudge(0.05);
+            if (k === 'space' || k === 'up') this.lb.fire();
         }
     }
-
     /* ================================================================
      * 9. 花园连连看（记忆配对）
      * ============================================================== */
@@ -1646,89 +2345,205 @@
     }
 
     /* ================================================================
-     * 10. 僵尸贪吃蛇
+     * 8. 泡泡塔（v4.0.152 替换「植物贪吃蛇」）
+     * 一层一层往上打，每两层解锁一种特殊球；连击越高倍率越高
      * ============================================================== */
-    class Snake extends Base {
+    class BubbleTower extends Base {
         setup() {
-            this.C = 30; this.cols = 24; this.rows = 15;
-            this.ox = (W - this.cols * this.C) / 2; this.oy = 92;
-            this.snake = [{ x: 8, y: 7 }, { x: 7, y: 7 }, { x: 6, y: 7 }];
-            this.dir = { x: 1, y: 0 }; this.queue = [];
-            this.step = 0; this.iv = 0.19;
-            this.food = this.place();
-            this.walls = [];
-            for (let i = 0; i < 7; i++) {
-                const p = this.place();
-                if (p) this.walls.push(p);
-            }
-            this.grow = 0;
+            this.maxFloor = 8;
+            this.total = 0;
+            this.bestCombo = 0;
+            this.trans = 0;
+            this.pendingFloor = 0;
+            this.flashMsg = ''; this.flashT = 0;
+            this.loadFloor(1);
         }
-        place() {
-            for (let k = 0; k < 80; k++) {
-                const p = { x: (Math.random() * this.cols) | 0, y: (Math.random() * this.rows) | 0 };
-                if (this.snake && this.snake.some(s => s.x === p.x && s.y === p.y)) continue;
-                if (this.food && this.food.x === p.x && this.food.y === p.y) continue;
-                if (this.walls && this.walls.some(w => w.x === p.x && w.y === p.y)) continue;
-                if (p.x < 3 && p.y > 5) continue;
-                return p;
-            }
-            return null;
+
+        loadFloor(n) {
+            this.floor = n;
+            const colors = Math.min(5, 4 + Math.floor((n - 1) / 4));
+            const fillRows = Math.min(6, 2 + Math.ceil(n / 2));
+            this.lane = new BubLane({
+                R: 24, COLS: 18, LEFT: 18, TOP: 96, rows: 11,
+                sx: 450, sy: 556, deadline: 532, nColors: colors,
+                fillRows: fillRows, gapEvery: 2, ceilRows: 2, missPush: true, missLimit: 8
+            });
+            const l = this.lane;
+            l.specials = [];
+            if (n >= 2) l.specials.push('bomb');
+            if (n >= 4) l.specials.push('rainbow');
+            if (n >= 6) l.specials.push('bolt');
+            const chance = Math.min(0.22, 0.10 + 0.02 * Math.max(0, n - 2));
+            l.pickNext = () => {
+                if (l.specials.length && Math.random() < chance) {
+                    return { col: 0, sp: l.specials[(Math.random() * l.specials.length) | 0] };
+                }
+                return { col: (Math.random() * l.nColors) | 0, sp: null };
+            };
+            l.onLand = (ln, res) => this.onLand(res);
+            l.onSpecial = (ln, sp, x, y) => this.onSpecial(sp, x, y);
+            l.onClear = () => this.floorClear();
+            l.onDead = () => this.end(false);
+            this.combo = 0;
+            this.floorStart = this.total;
         }
+
+        onLand(res) {
+            if (res.popped > 0) {
+                this.combo++;
+                if (this.combo > this.bestCombo) this.bestCombo = this.combo;
+                if (this.combo >= 3) {
+                    this.flashMsg = '连击 x' + this.combo + '  +' + Math.round(res.popped * 10 * (this.combo - 1) * 0.25);
+                    this.flashT = 0.8;
+                    this.lane.score += Math.round(res.popped * 10 * (this.combo - 1) * 0.25);
+                }
+            } else this.combo = 0;
+        }
+
+        onSpecial(sp, x, y) {
+            const l = this.lane;
+            let n = 0;
+            if (sp === 'bomb') n = l.burst(x, y, l.R * 2.15);
+            else if (sp === 'rainbow') {
+                const c = l.colorNear(x, y);
+                if (c >= 0) n = l.wipeColor(c);
+            } else n = l.wipeRow(l.rowNear(y));
+            l.score += n * 12;
+            this.flashMsg = (sp === 'bomb' ? '炸弹球 · ' : sp === 'rainbow' ? '彩虹球 · ' : '闪电球 · ') + n + ' 颗';
+            this.flashT = 1.0;
+            this.combo = 0;
+        }
+
+        floorClear() {
+            if (this.trans > 0) return;
+            this.total += this.lane.score;
+            this.trans = 1.6;
+            this.pendingFloor = this.floor >= this.maxFloor ? 0 : this.floor + 1;
+        }
+
         update(dt) {
+            this.flashT = Math.max(0, this.flashT - dt);
+            if (this.trans > 0) {
+                this.trans -= dt;
+                this.lane.update(dt);
+                if (this.trans <= 0) {
+                    if (this.pendingFloor === 0) this.end(true);
+                    else this.loadFloor(this.pendingFloor);
+                }
+                return;
+            }
             if (this.over) return;
-            this.step += dt;
-            if (this.step < this.iv) return;
-            this.step = 0;
-            if (this.queue.length) this.dir = this.queue.shift();
-            const h = this.snake[0];
-            const nx = h.x + this.dir.x, ny = h.y + this.dir.y;
-            if (nx < 0 || ny < 0 || nx >= this.cols || ny >= this.rows) return this.end(false);
-            if (this.snake.some((s, i) => i > 0 && s.x === nx && s.y === ny)) return this.end(false);
-            if (this.walls.some(w => w.x === nx && w.y === ny)) return this.end(false);
-            this.snake.unshift({ x: nx, y: ny });
-            if (this.food && nx === this.food.x && ny === this.food.y) {
-                this.score += 10; this.grow += 1;
-                this.iv = Math.max(0.085, this.iv - 0.006);
-                this.food = this.place();
-            } else if (this.grow > 0) { this.grow--; }
-            else this.snake.pop();
+            this.lane.update(dt);
+        }
+
+        /* ---------- 绘制 ---------- */
+        draw() {
+            const g = ctx.createLinearGradient(0, 0, 0, H);
+            g.addColorStop(0, '#241a36'); g.addColorStop(0.5, '#171227'); g.addColorStop(1, '#0c0a14');
+            ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+            const l = this.lane;
+            ctx.fillStyle = 'rgba(10,8,20,0.55)';
+            ctx.fillRect(0, l.TOP - 8, W, H - l.TOP + 8);
+            ctx.fillStyle = 'rgba(180,140,255,0.035)';
+            ctx.fillRect(l.wallL, l.TOP - 8, l.wallR - l.wallL, H - l.TOP + 8);
+            ctx.strokeStyle = 'rgba(255,255,255,0.09)'; ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(l.wallL, l.TOP - 8); ctx.lineTo(l.wallL, l.sy - 6);
+            ctx.moveTo(l.wallR, l.TOP - 8); ctx.lineTo(l.wallR, l.sy - 6);
+            ctx.stroke();
+            ctx.strokeStyle = 'rgba(255,110,90,0.42)';
+            ctx.setLineDash([9, 9]); ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, l.deadline); ctx.lineTo(W, l.deadline); ctx.stroke();
+            ctx.setLineDash([]);
+
+            l.draw();
+
+            const a = l.shooter.ang;
+            sprH('cattail', l.sx - 34, l.sy - 26, 62);
+            ctx.save();
+            ctx.translate(l.sx, l.sy - 20);
+            ctx.rotate(a + Math.PI / 2);
+            ctx.fillStyle = '#c9e08a';
+            rr(-6, -46, 12, 42, 6); ctx.fill();
+            ctx.restore();
+            const px = l.sx + Math.cos(a) * 70, py = l.sy - 20 + Math.sin(a) * 70;
+            if (l.curSp) l.spBall(px, py, l.curSp); else l.bub(px, py, l.cur, 0.82);
+
+            this.drawHud();
+
+            if (this.trans > 0) {
+                ctx.save();
+                const a2 = Math.min(1, this.trans / 0.4);
+                ctx.globalAlpha = a2;
+                ctx.fillStyle = 'rgba(16,10,26,0.86)';
+                ctx.fillRect(0, 240, W, 110);
+                txt(this.pendingFloor === 0 ? '全部 8 层通关！' : '第 ' + this.floor + ' 层 · 通关',
+                    W / 2, 282, 34, '#ffe066', 'center', 900);
+                txt(this.pendingFloor === 0 ? '总分 ' + (this.total + l.score) :
+                    '本层 +' + l.score + ' · 准备进入第 ' + this.pendingFloor + ' 层',
+                    W / 2, 320, 17, '#e8f5cf', 'center', 700);
+                ctx.restore();
+            }
+
+            if (this.over) {
+                if (this.win) this.overlay('泡泡塔通关！', '8 层全清 · 总分 ' + (this.total + this.lane.score) + ' · 最高连击 x' + this.bestCombo, '#b7f06a');
+                else this.overlay('泡泡压到炮口了', '止步第 ' + this.floor + ' 层 · 总分 ' + (this.total + this.lane.score), '#ff8f6b');
+            }
+        }
+
+        drawHud() {
+            const l = this.lane;
+            txt('第 ' + this.floor + ' / ' + this.maxFloor + ' 层', 20, 60, 17, '#ffe9a8', 'left', 900);
+            // 层进度点
+            for (let i = 0; i < this.maxFloor; i++) {
+                const x = 20 + i * 15;
+                ctx.fillStyle = i < this.floor ? '#ffd166' : 'rgba(255,255,255,0.14)';
+                ctx.beginPath(); ctx.arc(x + 4, 80, 4.5, 0, Math.PI * 2); ctx.fill();
+            }
+            txt('分数 ' + (this.total + l.score), 450, 60, 15, 'rgba(255,255,255,0.72)', 'center', 800);
+            if (this.combo >= 2) txt('连击 x' + this.combo, 450, 80, 13, '#ffb86b', 'center', 800);
+
+            txt('剩 ' + l.count() + ' 颗', 880, 60, 14, 'rgba(255,255,255,0.55)', 'right', 700);
+            const sp = l.specials || [];
+            let sx = 878;
+            for (let i = sp.length - 1; i >= 0; i--) {
+                sx -= 28;
+                l.spBall(sx, 84, sp[i], 11);
+            }
+            if (sp.length) txt('特殊球', 878 - sp.length * 28 - 20, 84, 11, 'rgba(255,255,255,0.35)', 'right', 600);
+
+            if (this.flashT > 0) {
+                ctx.save();
+                ctx.globalAlpha = Math.min(1, this.flashT / 0.35);
+                const fw = 44 + this.flashMsg.length * 11;
+                ctx.fillStyle = 'rgba(12,8,22,0.78)';
+                rr(196 - fw / 2, 548, fw, 28, 14); ctx.fill();
+                ctx.strokeStyle = 'rgba(255,209,102,0.32)'; ctx.lineWidth = 1; ctx.stroke();
+                txt(this.flashMsg, 196, 562, 17, '#ffd166', 'center', 900);
+                ctx.restore();
+            }
+        }
+
+        /* ---------- 输入 ---------- */
+        onDown(x, y) {
+            if (this.over) { if (this.overT > 0.45) this.reset(); return; }
+            if (this.trans > 0) return;
+            this.lane.aimAt(x, y);
+            this.lane.fire();
+        }
+        onMove(x, y) {
+            if (this.over || this.trans > 0) return;
+            this.lane.aimAt(x, y);
         }
         onKey(down, k) {
-            if (!down || this.over) return;
-            const map = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1], a: [-1, 0], d: [1, 0], w: [0, -1], s: [0, 1] };
-            const m = map[k];
-            if (!m) return;
-            const last = this.queue.length ? this.queue[this.queue.length - 1] : this.dir;
-            if (last.x === -m[0] && last.y === -m[1]) return;
-            if (last.x === m[0] && last.y === m[1]) return;
-            if (this.queue.length < 3) this.queue.push({ x: m[0], y: m[1] });
-        }
-        draw() {
-            bgGrass();
-            ctx.fillStyle = 'rgba(8,18,6,0.55)';
-            rr(this.ox - 8, this.oy - 8, this.cols * this.C + 16, this.rows * this.C + 16, 14); ctx.fill();
-            ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
-            for (let c = 1; c < this.cols; c++) { ctx.beginPath(); ctx.moveTo(this.ox + c * this.C, this.oy); ctx.lineTo(this.ox + c * this.C, this.oy + this.rows * this.C); ctx.stroke(); }
-            for (let r = 1; r < this.rows; r++) { ctx.beginPath(); ctx.moveTo(this.ox, this.oy + r * this.C); ctx.lineTo(this.ox + this.cols * this.C, this.oy + r * this.C); ctx.stroke(); }
-            for (const w of this.walls) spr('wallnut', this.ox + w.x * this.C + 2, this.oy + w.y * this.C + 2, this.C - 4, this.C - 4);
-            if (this.food) spr('sun', this.ox + this.food.x * this.C + (this.C - 36) / 2, this.oy + this.food.y * this.C + (this.C - 36) / 2, 36, 36);
-            this.snake.forEach((s, i) => {
-                const x = this.ox + s.x * this.C, y = this.oy + s.y * this.C;
-                if (i === 0) {
-                    ctx.fillStyle = '#7fc23a'; rr(x + 1, y + 1, this.C - 2, this.C - 2, 9); ctx.fill();
-                    spr('peashooter', x + 2, y + 2, this.C - 4, this.C - 4);
-                } else {
-                    ctx.fillStyle = i % 2 ? '#5aa02a' : '#4c8c24';
-                    rr(x + 3, y + 3, this.C - 6, this.C - 6, 8); ctx.fill();
-                }
-            });
-            txt('植物贪吃蛇', 450, 56, 24, '#ffe9a8', 'center', 900);
-            txt('分数 ' + this.score + ' · 长度 ' + this.snake.length, 450, 552, 16, 'rgba(255,255,255,0.8)', 'center', 700);
-            txt('吃阳光变长 · 撞坚果墙 / 自己 / 边界就结束', 450, 578, 13, 'rgba(255,255,255,0.5)', 'center', 600);
-            if (this.over) this.overlay('蛇撞没了', '分数 ' + this.score + ' · 长度 ' + this.snake.length, '#ff8f6b');
+            if (!down || this.over || this.trans > 0) return;
+            const l = this.lane;
+            if (k === 'left' || k === 'a') l.nudge(-0.045);
+            if (k === 'right' || k === 'd') l.nudge(0.045);
+            if (k === 'space' || k === 'up') l.fire();
         }
     }
-
     /* ================= 游戏注册表 ================= */
     const GAMES = [
         { id: 'tetris', name: '玉米方块', tag: 'TETRIS', icon: 'cob', tip: '落玉米块消一行齐射一轮，撑越久分越高', cls: Tetris },
@@ -1736,11 +2551,11 @@
         { id: 'g2048', name: '花园 2048', tag: '2048', icon: 'wintermelon', tip: '同种植物滑到一起就升级融合', cls: Garden2048 },
         { id: 'bubble', name: '猫尾草泡泡龙', tag: 'BUBBLE', icon: 'cattail', tip: '同色三个爆破，别让泡泡压线', cls: Bubble },
         { id: 'breakout', name: '豌豆弹球', tag: 'BRICK', icon: 'lilypad', tip: '豌豆弹球砸砖，接住就继续', cls: Breakout },
-        { id: 'match3', name: '植物消消乐', tag: 'MATCH3', icon: 'tallnut', ih: 66, tip: '交换相邻植物，三连即消', cls: Match3 },
+        { id: 'dragon', name: '机械龙攻城', tag: 'BOSS', icon: 'dragon', tip: '消泡泡充能，尖刺射向头顶的机械龙', cls: DragonRaid },
         { id: 'sokoban', name: '寒冰推箱', tag: 'PUSH', icon: 'snowpea', tip: '把每块冰推到绿圈里', cls: Sokoban },
-        { id: 'duck', name: '豌豆射击场', tag: 'SHOOT', icon: 'spikeweed', ih: 48, tip: '打飞气球僵尸，越高分越多', cls: DuckHunt },
+        { id: 'duel', name: '泡泡对轰', tag: 'DUEL', icon: 'repeater', tip: '左右同屏对轰，消得多就给对面塞墓碑', cls: BubbleDuel },
         { id: 'memory', name: '花园连连看', tag: 'MEMORY', icon: 'cobcannon', tip: '翻牌配对同种植物', cls: Memory },
-        { id: 'snake', name: '植物贪吃蛇', tag: 'SNAKE', icon: 'pumpkin', tip: '吃阳光变长，别撞坚果墙', cls: Snake }
+        { id: 'tower', name: '泡泡塔', tag: 'TOWER', icon: 'tallnut', ih: 66, tip: '一层层往上打，每层解锁特殊球', cls: BubbleTower }
     ];
 
     /* ================= 管理器 ================= */
