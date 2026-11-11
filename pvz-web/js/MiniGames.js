@@ -45,6 +45,371 @@
     };
     const _im = Object.create(null);
 
+    /* ================================================================
+     * 音效引擎（v4.0.156）—— WebAudio 纯合成，不加载任何音频文件
+     * ----------------------------------------------------------------
+     * 之前整个泡泡工坊是静音的。原版素材库里没有「泡泡」「机械龙」这类声音，
+     * 与其硬塞一段僵尸呻吟（跟钢铁龙完全不搭），不如现合成两套音色：
+     *   泡泡/玻璃  → 中高频、短促、带气声，颗数越多越亮
+     *   机械龙    → 低频锯齿 + 颤音 + 金属噪声，闭着眼也听得出是另一回事
+     * 浏览器自动播放策略：AudioContext 必须在用户手势之后才能出声，
+     * 所以 ensure() 懒建，且每次调用都顺手 resume 一次（切标签回来也能恢复）。
+     * ================================================================ */
+    const SFX = (function () {
+        let ac = null, out = null, muted = false, nBuf = null;
+        const gate = Object.create(null);          // 每个音效名 → 上次播放时间，用来节流
+
+        function ensure() {
+            if (ac) { if (ac.state === 'suspended') { try { ac.resume(); } catch (e) {} } return ac; }
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return null;
+            try {
+                ac = new AC();
+                out = ac.createGain();
+                out.gain.value = 0.8;
+                out.connect(ac.destination);
+                // 预生成一段 1.2s 白噪声，所有气声/金属声都从它裁（避免每次 new Buffer）
+                const n = Math.floor(ac.sampleRate * 1.2);
+                nBuf = ac.createBuffer(1, n, ac.sampleRate);
+                const d = nBuf.getChannelData(0);
+                for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+            } catch (e) { ac = null; }
+            return ac;
+        }
+        // 节流：一帧里连锁消掉二十颗球，不该叠二十层「噼啪」糊成噪声
+        function allow(k, ms) {
+            if (muted || !ensure()) return false;
+            const t = performance.now();
+            if (gate[k] && t - gate[k] < ms) return false;
+            gate[k] = t;
+            return true;
+        }
+        // 单振荡器。f0→f1 指数滑（倍频程上是等距的，听感才是「滑上去」而不是「冲上去」）
+        function tone(o) {
+            const t = ac.currentTime + (o.d || 0);
+            const os = ac.createOscillator(), g = ac.createGain();
+            os.type = o.t || 'sine';
+            os.frequency.setValueAtTime(o.f0, t);
+            if (o.f1 && o.f1 !== o.f0) os.frequency.exponentialRampToValueAtTime(Math.max(18, o.f1), t + o.dur);
+            if (o.det) os.detune.value = o.det;
+            const v = Math.max(0.0004, o.v);
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(v, t + Math.min(o.dur * 0.7, o.atk || 0.008));
+            g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur);
+            let tail = g;
+            if (o.lp) {
+                const f = ac.createBiquadFilter();
+                f.type = 'lowpass'; f.frequency.value = o.lp; f.Q.value = 0.8;
+                g.connect(f); tail = f;
+            }
+            os.connect(g); tail.connect(out);
+            os.start(t); os.stop(t + o.dur + 0.03);
+        }
+        // 噪声段。type/f0/f1/q 决定它是「气声」(bandpass)、「风声」(lowpass) 还是「金属碎」(highpass)
+        function noise(o) {
+            const t = ac.currentTime + (o.d || 0);
+            const s = ac.createBufferSource();
+            s.buffer = nBuf;
+            s.playbackRate.value = o.rate || 1;
+            const f = ac.createBiquadFilter();
+            f.type = o.type || 'bandpass';
+            f.frequency.setValueAtTime(o.f0 || 1200, t);
+            if (o.f1 && o.f1 !== o.f0) f.frequency.exponentialRampToValueAtTime(Math.max(40, o.f1), t + o.dur);
+            f.Q.value = o.q == null ? 1 : o.q;
+            const g = ac.createGain();
+            const v = Math.max(0.0004, o.v);
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(v, t + (o.atk || 0.006));
+            g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur);
+            s.connect(f); f.connect(g); g.connect(out);
+            s.start(t); s.stop(t + o.dur + 0.02);
+        }
+        // 喉音：锯齿 + 低通 + 颤音（LFO 接到 frequency）。
+        // 纯 sine 滑音听着像汽笛，加上 4~7Hz 的颤音和深度渐变才像活物的嗓子。
+        function growl(o) {
+            const t = ac.currentTime + (o.d || 0);
+            const os = ac.createOscillator(), g = ac.createGain();
+            os.type = o.t || 'sawtooth';
+            os.frequency.setValueAtTime(o.f0, t);
+            os.frequency.exponentialRampToValueAtTime(Math.max(18, o.f1), t + o.dur);
+            if (o.det) os.detune.value = o.det;
+            const lfo = ac.createOscillator(), lg = ac.createGain();
+            lfo.frequency.setValueAtTime(o.vib || 6, t);
+            lg.gain.setValueAtTime(o.depth || 8, t);
+            if (o.depthTo) lg.gain.linearRampToValueAtTime(o.depthTo, t + o.dur);
+            lfo.connect(lg); lg.connect(os.frequency);
+            const lp = ac.createBiquadFilter();
+            lp.type = 'lowpass'; lp.frequency.value = o.lp || 2000; lp.Q.value = 0.9;
+            const v = Math.max(0.0004, o.v);
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(v, t + (o.atk || 0.05));
+            g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur);
+            os.connect(lp); lp.connect(g); g.connect(out);
+            os.start(t); os.stop(t + o.dur + 0.03);
+            lfo.start(t); lfo.stop(t + o.dur + 0.03);
+        }
+
+        const S = {
+            /* ---------- 通用 UI ---------- */
+            click() {
+                if (!allow('click', 60)) return;
+                tone({ t: 'triangle', f0: 720, f1: 980, dur: 0.07, v: 0.16 });
+                tone({ t: 'sine', f0: 1440, f1: 1900, dur: 0.05, v: 0.08, d: 0.02 });
+            },
+            win() {
+                if (!allow('win', 800)) return;
+                [523, 659, 784, 1046, 1318].forEach((f, i) => {
+                    tone({ t: 'triangle', f0: f, f1: f, dur: 0.38, v: 0.20, d: i * 0.10, atk: 0.012 });
+                    tone({ t: 'sine', f0: f * 2, f1: f * 2, dur: 0.22, v: 0.07, d: i * 0.10 });
+                });
+                tone({ t: 'sine', f0: 262, f1: 523, dur: 0.5, v: 0.14, d: 0.05, atk: 0.05 });
+            },
+            fail() {
+                if (!allow('fail', 800)) return;
+                [392, 330, 262, 196].forEach((f, i) => {
+                    tone({ t: 'triangle', f0: f, f1: f * 0.99, dur: 0.34, v: 0.20, d: i * 0.13, atk: 0.01 });
+                });
+                tone({ t: 'sine', f0: 98, f1: 62, dur: 1.1, v: 0.20, d: 0.42, atk: 0.04 });
+            },
+
+            /* ---------- 泡泡工坊：玻璃 / 水 ---------- */
+            // 发射：炮口「噗啾」—— 气声上扬 + 一点炮身闷响
+            fire(k) {
+                if (!allow('fire', 38)) return;
+                const v = 0.26 * (k == null ? 1 : k);
+                noise({ dur: 0.10, v: v * 0.55, f0: 700, f1: 2100, q: 1.5 });
+                tone({ t: 'sine', f0: 250, f1: 640, dur: 0.12, v: v * 0.75 });
+                tone({ t: 'triangle', f0: 118, f1: 86, dur: 0.08, v: v * 0.5 });
+            },
+            // 撞墙：泡泡轻磕玻璃壁
+            bounce(k) {
+                if (!allow('bounce', 50)) return;
+                const v = 0.15 * (k == null ? 1 : k);
+                noise({ dur: 0.04, v: v * 0.55, f0: 2600, q: 1.9 });
+                tone({ t: 'sine', f0: 780, f1: 520, dur: 0.05, v: v * 0.5 });
+            },
+            // 粘合：泡泡贴上去的「啵哒」—— 低频塌一下 + 极短的膜张力
+            stick(k) {
+                if (!allow('stick', 34)) return;
+                const v = 0.32 * (k == null ? 1 : k);
+                tone({ t: 'sine', f0: 205, f1: 92, dur: 0.14, v: v * 0.85, atk: 0.004 });
+                tone({ t: 'triangle', f0: 560, f1: 305, dur: 0.055, v: v * 0.30 });
+                noise({ dur: 0.05, v: v * 0.28, f0: 1300, q: 1.2 });
+            },
+            // 碎裂：爆破气声 + 一串玻璃叮。消得越多整体越高、叮得越多
+            pop(n, k) {
+                if (!allow('pop', 32)) return;
+                const nn = Math.max(3, Math.min(14, n || 3));
+                const v = (0.28 + Math.min(0.22, nn * 0.014)) * (k == null ? 1 : k);
+                const up = 1 + (nn - 3) * 0.055;
+                noise({ dur: 0.17, v: v * 0.75, f0: 1900 * up, f1: 620, q: 0.85 });
+                tone({ t: 'sine', f0: 340 * up, f1: 108, dur: 0.13, v: v * 0.8, atk: 0.003 });
+                const m = Math.min(5, 2 + (nn >> 1));
+                for (let i = 0; i < m; i++) {
+                    const f = (1250 + Math.random() * 900) * up;
+                    tone({ t: 'sine', f0: f, f1: f * 0.72, dur: 0.10, v: v * 0.25, d: 0.012 + i * 0.019 });
+                }
+            },
+            // 悬空掉落：一路往下漏气，颗粒越多漏得越长
+            drop(n, k) {
+                if (!allow('drop', 65)) return;
+                const v = 0.23 * (k == null ? 1 : k);
+                tone({ t: 'sine', f0: 640, f1: 150, dur: 0.42, v: v * 0.55, atk: 0.02 });
+                for (let i = 0; i < Math.min(4, Math.max(2, (n || 3) >> 1)); i++) {
+                    tone({ t: 'sine', f0: 480, f1: 205, dur: 0.16, v: v * 0.28, d: 0.05 + i * 0.075 });
+                }
+            },
+            // 顶行下压：齿轮咬合 + 整排砸下来的闷响
+            push(k) {
+                if (!allow('push', 220)) return;
+                const v = 0.32 * (k == null ? 1 : k);
+                tone({ t: 'sine', f0: 122, f1: 46, dur: 0.34, v: v * 0.9, atk: 0.006 });
+                noise({ dur: 0.20, v: v * 0.36, type: 'lowpass', f0: 620, q: 0.9 });
+                tone({ t: 'sawtooth', f0: 262, f1: 188, dur: 0.14, v: v * 0.15, lp: 900 });
+            },
+            // 危险线警报：两声下行短音，只在泡泡逼近炮口时响（1.5 秒内不重复）
+            danger() {
+                if (!allow('danger', 1500)) return;
+                tone({ t: 'square', f0: 880, f1: 880, dur: 0.09, v: 0.10, lp: 2800 });
+                tone({ t: 'square', f0: 660, f1: 660, dur: 0.13, v: 0.10, d: 0.15, lp: 2800 });
+            },
+            // 墓碑：石头摩擦 + 落地
+            tomb(k) {
+                if (!allow('tomb', 85)) return;
+                const v = 0.25 * (k == null ? 1 : k);
+                noise({ dur: 0.17, v: v * 0.62, type: 'lowpass', f0: 900, f1: 300, q: 0.8 });
+                tone({ t: 'triangle', f0: 208, f1: 118, dur: 0.13, v: v * 0.42 });
+            },
+            // 连击计数（塔/对轰用）：音高逐级上扬，最多升八度
+            combo(n, k) {
+                if (!allow('combo', 90)) return;
+                const st = Math.min(12, (n || 1) - 1);
+                const f = 620 * Math.pow(2, st / 12);
+                const v = 0.20 * (k == null ? 1 : k);
+                tone({ t: 'triangle', f0: f, f1: f, dur: 0.14, v: v });
+                tone({ t: 'sine', f0: f * 2, f1: f * 2, dur: 0.09, v: v * 0.45, d: 0.03 });
+            },
+
+            /* ---------- 机械龙：低频锯齿 + 金属噪声 ---------- */
+            // 受伤：短促低吼，每次音高随机一点，连打像在连着挨咬
+            dmg(k) {
+                if (!allow('dmg', 80)) return;
+                const v = 0.28 * (k == null ? 1 : k);
+                growl({ f0: 148 + Math.random() * 46, f1: 70, dur: 0.28, v: v * 0.8, vib: 27, depth: 20, lp: 1100, atk: 0.008 });
+                noise({ dur: 0.13, v: v * 0.32, f0: 620, q: 1.1 });
+            },
+            // 护甲被拆：金属断裂 + 一块大铁砸地
+            armor() {
+                if (!allow('armor', 380)) return;
+                noise({ dur: 0.55, v: 0.32, type: 'highpass', f0: 2600, f1: 1100, q: 0.7 });
+                [2450, 3100, 1780, 2690].forEach((f, i) => {
+                    tone({ t: 'triangle', f0: f, f1: f * 0.55, dur: 0.34, v: 0.15, d: i * 0.045, det: -8 });
+                });
+                tone({ t: 'sine', f0: 92, f1: 40, dur: 0.52, v: 0.30, d: 0.03 });
+            },
+            // 阶段咆哮：1.5 秒长吼，双层失谐 + 颤音加深 + 气流
+            roar() {
+                if (!allow('roar', 900)) return;
+                growl({ f0: 190, f1: 96, dur: 1.5, v: 0.38, vib: 5.5, depth: 26, depthTo: 46, lp: 1500, atk: 0.10 });
+                growl({ f0: 128, f1: 58, dur: 1.5, v: 0.28, vib: 3.2, depth: 14, det: -9, lp: 720, d: 0.02, atk: 0.12 });
+                noise({ dur: 1.3, v: 0.24, f0: 280, f1: 1500, q: 0.55, d: 0.06, atk: 0.35 });
+            },
+            // 蓄力喷吐：吸气的上扫，越近越急（炮口预警同步）
+            warn() {
+                if (!allow('warn', 1100)) return;
+                noise({ dur: 0.95, v: 0.22, f0: 420, f1: 2600, q: 2.2, atk: 0.62 });
+                tone({ t: 'sine', f0: 300, f1: 920, dur: 0.9, v: 0.11, atk: 0.55 });
+            },
+            // 喷吐：火柱呼啸 + 低频推力
+            spray() {
+                if (!allow('spray', 280)) return;
+                noise({ dur: 0.85, v: 0.32, f0: 1500, f1: 380, q: 0.7, atk: 0.03 });
+                noise({ dur: 0.70, v: 0.20, type: 'lowpass', f0: 700, f1: 200, q: 1.0, d: 0.02 });
+                tone({ t: 'sine', f0: 72, f1: 38, dur: 0.8, v: 0.22, d: 0.01, atk: 0.04 });
+            },
+            // 死亡哀嚎：2.6 秒从高一路塌到 33Hz，颤音越到后面越抖（嗓子里那口气散了）
+            death() {
+                if (!allow('death', 600)) return;
+                growl({ f0: 430, f1: 62, dur: 2.5, v: 0.40, vib: 6.5, depth: 22, depthTo: 64, lp: 1800, atk: 0.05 });
+                growl({ f0: 215, f1: 33, dur: 2.6, v: 0.32, vib: 4.1, depth: 12, det: -10, lp: 820, d: 0.03, atk: 0.06 });
+                noise({ dur: 1.5, v: 0.26, f0: 1400, f1: 180, q: 0.6, d: 1.15, atk: 0.3 });
+                tone({ t: 'square', f0: 320, f1: 40, dur: 0.9, v: 0.12, d: 1.7, lp: 900 });
+            },
+
+            /* ---------- 后院游乐场其余 6 个玩法 ---------- */
+            // 俄罗斯方块：落块闷响 / 消行上行
+            lock() {
+                if (!allow('lock', 45)) return;
+                tone({ t: 'sine', f0: 168, f1: 96, dur: 0.09, v: 0.20 });
+                noise({ dur: 0.05, v: 0.10, type: 'lowpass', f0: 900 });
+            },
+            line(n) {
+                if (!allow('line', 120)) return;
+                const base = 440 * Math.pow(2, Math.min(3, (n || 1) - 1) / 6);
+                for (let i = 0; i < 4; i++) {
+                    tone({ t: 'triangle', f0: base * Math.pow(2, i / 4), f1: base * Math.pow(2, i / 4), dur: 0.24, v: 0.17, d: i * 0.055 });
+                }
+                noise({ dur: 0.28, v: 0.13, f0: 2400, f1: 900, q: 0.9 });
+            },
+            // 地鼠：敲中「咚锵」/ 敲错下行
+            whack() {
+                if (!allow('whack', 60)) return;
+                tone({ t: 'sine', f0: 260, f1: 120, dur: 0.12, v: 0.26, atk: 0.003 });
+                tone({ t: 'triangle', f0: 1560, f1: 1240, dur: 0.09, v: 0.11, d: 0.01 });
+                noise({ dur: 0.06, v: 0.14, f0: 1800, q: 1.4 });
+            },
+            miss() {
+                if (!allow('miss', 120)) return;
+                tone({ t: 'square', f0: 220, f1: 150, dur: 0.16, v: 0.10, lp: 1600 });
+                tone({ t: 'square', f0: 160, f1: 110, dur: 0.18, v: 0.09, d: 0.09, lp: 1400 });
+            },
+            // 2048：合成音高随等级上升
+            merge(lv) {
+                if (!allow('merge', 40)) return;
+                const st = Math.min(20, (lv || 1));
+                const f = 330 * Math.pow(2, st / 12);
+                tone({ t: 'triangle', f0: f, f1: f * 1.5, dur: 0.13, v: 0.15 });
+                tone({ t: 'sine', f0: f * 2, f1: f * 3, dur: 0.10, v: 0.07, d: 0.02 });
+            },
+            // 打砖块：弹球撞砖 / 挡板
+            brick() {
+                if (!allow('brick', 40)) return;
+                tone({ t: 'square', f0: 620, f1: 380, dur: 0.06, v: 0.09, lp: 2200 });
+                noise({ dur: 0.05, v: 0.10, f0: 2200, q: 1.6 });
+            },
+            paddle() {
+                if (!allow('paddle', 60)) return;
+                tone({ t: 'sine', f0: 340, f1: 520, dur: 0.07, v: 0.16 });
+            },
+            // 推箱子：推进去 / 归位
+            box(ok) {
+                if (!allow('box', 70)) return;
+                noise({ dur: 0.14, v: 0.13, type: 'lowpass', f0: 640, f1: 380, q: 0.9 });
+                tone({ t: 'sine', f0: ok ? 300 : 150, f1: ok ? 520 : 105, dur: 0.13, v: 0.16 });
+            },
+            // 连连看：翻牌 / 配对成功
+            flip() {
+                if (!allow('flip', 50)) return;
+                noise({ dur: 0.05, v: 0.10, f0: 2000, q: 1.5 });
+                tone({ t: 'triangle', f0: 520, f1: 700, dur: 0.05, v: 0.10 });
+            },
+            match() {
+                if (!allow('match', 100)) return;
+                tone({ t: 'triangle', f0: 660, f1: 660, dur: 0.12, v: 0.16 });
+                tone({ t: 'triangle', f0: 990, f1: 990, dur: 0.16, v: 0.13, d: 0.07 });
+            },
+            // 泡泡塔的三颗特殊球：炸弹=闷爆、彩虹=上行、闪电=电流
+            special(kind) {
+                if (!allow('special', 120)) return;
+                if (kind === 'bomb') {
+                    noise({ dur: 0.42, v: 0.34, type: 'lowpass', f0: 1400, f1: 220, q: 0.9 });
+                    tone({ t: 'sine', f0: 150, f1: 38, dur: 0.42, v: 0.34, atk: 0.004 });
+                    for (let i = 0; i < 4; i++) {
+                        const f = 1600 + Math.random() * 1600;
+                        tone({ t: 'triangle', f0: f, f1: f * 0.4, dur: 0.2, v: 0.09, d: 0.05 + i * 0.04 });
+                    }
+                } else if (kind === 'rainbow') {
+                    [523, 659, 784, 1046, 1318, 1568].forEach((f, i) => {
+                        tone({ t: 'sine', f0: f, f1: f, dur: 0.26, v: 0.13, d: i * 0.045 });
+                    });
+                } else {
+                    noise({ dur: 0.30, v: 0.20, type: 'highpass', f0: 3000, f1: 1200, q: 0.8 });
+                    tone({ t: 'sawtooth', f0: 1400, f1: 180, dur: 0.28, v: 0.14, lp: 3200 });
+                    tone({ t: 'square', f0: 900, f1: 2600, dur: 0.12, v: 0.08, d: 0.05, lp: 3000 });
+                }
+            }
+        };
+
+        // 验收钩子：把一个 AnalyserNode 挂到总线上，用来量「到底有没有出声」
+        // （合成音效没法截图，只能量波形；隐藏音频设备时也是真实计算出来的采样）
+        S.probe = function () {
+            if (!ensure()) return null;
+            if (!S._an) {
+                S._an = ac.createAnalyser();
+                S._an.fftSize = 2048;
+                out.connect(S._an);
+            }
+            const d = new Float32Array(S._an.fftSize);
+            S._an.getFloatTimeDomainData(d);
+            let sum = 0, peak = 0;
+            for (let i = 0; i < d.length; i++) { const v = Math.abs(d[i]); sum += d[i] * d[i]; if (v > peak) peak = v; }
+            return { rms: Math.sqrt(sum / d.length), peak: peak };
+        };
+        S.state = function () {
+            return { ok: !!ac, ctx: ac ? ac.state : 'none', gain: out ? out.gain.value : -1, muted: muted };
+        };
+        S.setMuted = function (m) {
+            muted = !!m;
+            if (!muted) ensure();
+            if (out) out.gain.value = muted ? 0 : 0.8;
+            return muted;
+        };
+        S.isMuted = function () { return muted; };
+        S.unlock = function () { ensure(); };
+        S.toggle = function () { return S.setMuted(!muted); };
+        return S;
+    })();
+
     /* ================= 基础绘制工具 ================= */
     let ctx = null;
     function txt(s, x, y, size, color, align, weight) {
@@ -125,6 +490,7 @@
         end(win) {
             if (this.over) return;
             this.over = true; this.win = !!win; this.overT = 0;
+            if (win) SFX.win(); else SFX.fail();   // v4.0.156：通关/失败音（各玩法不必各写一遍）
         }
         overlay(title, sub, color) {
             ctx.fillStyle = 'rgba(6,14,5,0.74)'; ctx.fillRect(0, 0, W, H);
@@ -209,7 +575,9 @@
             for (let r = this.RO - 1; r >= 0; r--) {
                 if (this.board[r].every(v => v)) { this.board.splice(r, 1); this.board.unshift(new Array(this.CO).fill(null)); n++; r++; }
             }
+            SFX.lock();                             // v4.0.156：落块
             if (n) {
+                SFX.line(n);                        // 消行：一次消得越多，音阶起点越高
                 this.score += [0, 100, 300, 600, 1000][n];
                 this.lines += n;
                 this.dropIv = Math.max(150, 620 - Math.floor(this.lines / 10) * 55);
@@ -407,16 +775,20 @@
                 const top = this.riseTop(h);
                 if (Math.abs(x - h.x) > 78 || y < top || y > h.y - 20) continue;
                 if (h.type === 'sun') {
+                    SFX.miss();                     // v4.0.156：敲错植物
                     this.score = Math.max(0, this.score - 15); this.combo = 0;
                     this.floats.push({ x: h.x, y: top + 20, s: '-15 打错植物', t: 0.9, c: '#ff8f6b' });
                     h.st = 'idle'; h.up = 0;
                 } else {
                     h.hits--;
                     if (h.hits > 0) {
+                        SFX.whack();                // 铁桶弹开
                         this.floats.push({ x: h.x, y: top + 10, s: '铛！', t: 0.5, c: '#ffe066' });
                         h.t = Math.max(h.t, 0.7);
                     } else {
                         this.combo++; this.hits++;
+                        SFX.whack();
+                        if (this.combo >= 3) SFX.combo(this.combo);
                         const gain = h.val * (1 + Math.min(4, this.combo - 1) * 0.25);
                         this.score += Math.round(gain);
                         this.floats.push({ x: h.x, y: top + 6, s: '+' + Math.round(gain), t: 0.8, c: '#b7f06a' });
@@ -520,6 +892,7 @@
                 for (let i = 0; i < a.length - 1; i++) {
                     if (a[i] === a[i + 1] && a[i] < G2048_MAX) {
                         a[i]++; this.score += Math.pow(2, a[i]) * 2;
+                        SFX.merge(a[i]);            // v4.0.156：合成音高随等级往上爬
                         a.splice(i + 1, 1);
                     }
                 }
@@ -736,6 +1109,7 @@
             this.missPush = o.missPush === true;
             this.missLimit = o.missLimit || 8;
             this.noClear = o.noClear === true;    // true = 清空不算通关（机械龙模式靠血量定胜负）
+            this.sfxK = o.sfxK == null ? 1 : o.sfxK;   // v4.0.156：音效音量系数（对轰里 AI 那侧调低）
             this.showAim = true;
             this.reset(o.fillRows == null ? 4 : o.fillRows, o.gapEvery || 3);
         }
@@ -807,6 +1181,7 @@
                 x: this.sx, y: this.sy - 34, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
                 col: this.cur, sp: this.curSp || null
             };
+            SFX.fire(this.sfxK);
             return true;
         }
         advance() {
@@ -819,13 +1194,18 @@
         update(dt) {
             this.pops = this.pops.filter(p => (p.t -= dt) > 0);
             this.drops = this.drops.filter(d => { d.v += 700 * dt; d.y += d.v * dt; return d.y < H + 40; });
+            // v4.0.156：泡泡沉到危险线附近就催一下（节流 1.5s，只在玩家自己那侧响）
+            if (!this.dead && !this.cleared && this.sfxK >= 0.5) {
+                const low = this.lowest();
+                if (low >= 0 && this.yOf(low) + this.R > this.deadline - 58) SFX.danger();
+            }
             if (!this.ball || this.dead || this.cleared) return;
             const b = this.ball;
             const steps = Math.max(1, Math.ceil((Math.abs(b.vx) + Math.abs(b.vy)) * dt / 6));
             for (let i = 0; i < steps; i++) {
                 b.x += b.vx * dt / steps; b.y += b.vy * dt / steps;
-                if (b.x < this.wallL) { b.x = this.wallL; b.vx = Math.abs(b.vx); }
-                if (b.x > this.wallR) { b.x = this.wallR; b.vx = -Math.abs(b.vx); }
+                if (b.x < this.wallL) { b.x = this.wallL; b.vx = Math.abs(b.vx); SFX.bounce(this.sfxK); }
+                if (b.x > this.wallR) { b.x = this.wallR; b.vx = -Math.abs(b.vx); SFX.bounce(this.sfxK); }
                 if (b.y < this.TOP + this.R * 0.55) { this.land(b); return; }
                 for (let r = 0; r < this.rows; r++) {
                     for (let c = 0; c < this.colsIn(r); c++) {
@@ -840,6 +1220,7 @@
         land(b) {
             this.ball = null;
             if (b.sp && this.onSpecial) {
+                SFX.stick(this.sfxK);            // 特殊球也是「贴上去」才生效
                 this.onSpecial(this, b.sp, b.x, b.y);
                 this.afterLand(1, 0);
                 this.advance();
@@ -849,6 +1230,11 @@
             if (!cell) { this.advance(); return; }
             this.g[cell[0]][cell[1]] = b.col;
             const res = this.settle(cell[0], cell[1], b.col);
+            // v4.0.156：粘合声是「贴住」那一刻，碎裂声是「够三个」那一刻 —— 两者必居其一；
+            // 顺带掉下去的悬空球再补一层往下漏气的声音
+            if (res.popped > 0) SFX.pop(res.popped, this.sfxK);
+            else SFX.stick(this.sfxK);
+            if (res.dropped > 0) SFX.drop(res.dropped, this.sfxK);
             if (this.onLand) this.onLand(this, res);
             this.afterLand(res.popped, res.dropped);
             this.advance();
@@ -974,6 +1360,7 @@
         }
         /* ---------- 顶行下压 ---------- */
         pushCeil(n, colorFn) {
+            SFX.push(this.sfxK);
             for (let r = this.rows - 1; r >= 1; r--) {
                 this.g[r] = this.g[r - 1].slice();
                 // 奇数行只有 COLS-1 格，下移后会比偶数行少一个 → 补成 -1，
@@ -1240,13 +1627,22 @@
             if (this.over) return;
             this.pops = this.pops.filter(p => (p.t -= dt) > 0);
             this.drops = this.drops.filter(d => { d.v += 700 * dt; d.y += d.v * dt; return d.y < H + 40; });
+            // v4.0.156：泡泡快压到炮口时报警（节流 1.5s）
+            if (!this.ball) {
+                for (let r = this.rows - 1; r >= 0; r--) {
+                    if (this.g[r].some(v => v >= 0)) {
+                        if (this.yOf(r) + this.R > this.shooter.y - 82) SFX.danger();
+                        break;
+                    }
+                }
+            }
             if (!this.ball) return;
             const b = this.ball;
             const steps = Math.ceil((Math.abs(b.vx) + Math.abs(b.vy)) * dt / 6);
             for (let i = 0; i < steps; i++) {
                 b.x += b.vx * dt / steps; b.y += b.vy * dt / steps;
-                if (b.x < this.wallL) { b.x = this.wallL; b.vx = Math.abs(b.vx); }
-                if (b.x > this.wallR) { b.x = this.wallR; b.vx = -Math.abs(b.vx); }
+                if (b.x < this.wallL) { b.x = this.wallL; b.vx = Math.abs(b.vx); SFX.bounce(1); }
+                if (b.x > this.wallR) { b.x = this.wallR; b.vx = -Math.abs(b.vx); SFX.bounce(1); }
                 if (b.y < this.TOP + this.R * 0.55) { this.attach(b); return; }
                 // 命中已有泡泡
                 for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) {
@@ -1301,6 +1697,7 @@
             // v4.0.139：col < 0 说明点是空格（全场清空那一帧），不能再按 -1 做一次消除——
             // 否则 pops 里会塞进 c=-1，draw 里 BUB_COLORS[-1].c 直接抛异常
             if (col >= 0 && seen.size >= 3) {
+                SFX.pop(seen.size, 1);          // v4.0.156：够三个 = 碎裂
                 seen.forEach(k => {
                     const [r, c] = k.split(',').map(Number);
                     this.pops.push({ x: this.cx(r, c), y: this.yOf(r), t: 0.32, c: col });
@@ -1321,13 +1718,17 @@
                         keep.add(k); q.push([nr, nc]);
                     }
                 }
+                let dn = 0;
                 for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) {
                     if (this.g[r][c] >= 0 && !keep.has(r + ',' + c)) {
                         this.drops.push({ x: this.cx(r, c), y: this.yOf(r), v: 60, c: this.g[r][c] });
                         this.score += 15;
-                        this.g[r][c] = -1;
+                        this.g[r][c] = -1; dn++;
                     }
                 }
+                if (dn) SFX.drop(dn, 1);
+            } else if (col >= 0) {
+                SFX.stick(1);                   // v4.0.156：没够三个 = 只是粘住
             }
             // v4.0.138：清空全场 = 通关（原来只有输没有赢）
             let any = 0;
@@ -1349,7 +1750,7 @@
             if (this.ball || this.over) return;
             const a = this.shooter.ang, sp = 760;
             this.ball = { x: this.shooter.x, y: this.shooter.y - 34, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, col: this.cur };
-            this.score -= 0;
+            SFX.fire(1);
         }
         onDown(x, y) {
             if (this.over) return;
@@ -1484,6 +1885,7 @@
         }
         // 整体下移一行、顶部补一行新球；超出该行列数的球滚落
         pushRow() {
+            SFX.push(1);                        // v4.0.156：整排砸下来
             for (let r = this.rows - 1; r >= 1; r--) {
                 this.g[r] = this.g[r - 1].slice();
                 // v4.0.151：奇数行只有 COLS-1 格，整体下移后会比偶数行少一个元素，
@@ -1632,6 +2034,7 @@
                 b.vy = -Math.sqrt(Math.max(0, speed * speed - b.vx * b.vx));
             }
             b.y = this.py - b.r - 0.5;          // 必须推出去，否则下一步还判命中
+            SFX.paddle();
         }
         brickHit(b, k) {
             const cx = Math.min(Math.max(b.x, k.x), k.x + k.w);
@@ -1656,6 +2059,7 @@
                 const dot = b.vx * nx + b.vy * ny;
                 if (dot < 0) { b.vx -= 2 * dot * nx; b.vy -= 2 * dot * ny; }
             }
+            SFX.brick();                            // v4.0.156：撞砖的脆响
             if (k.type !== 'nut') {
                 k.hp--;
                 this.score += k.type === 'bucket' ? 30 : 10;
@@ -1780,6 +2184,7 @@
                 });
             }
             this.hp = Math.max(0, this.hp - dmg);
+            SFX.dmg(Math.min(1.5, 0.55 + dmg / 34));    // v4.0.156：每一下都是一声低吼，伤害越大越沉
             this.flash = 0.3;
             this.shake = Math.min(7, 2 + dmg * 0.35);
             this.fx.push({ x: 400 + (Math.random() - 0.5) * 150, y: 120, s: '-' + dmg, t: 0.9, c: '#ffd166' });
@@ -1788,6 +2193,8 @@
             const ph = p > 0.7 ? 1 : (p > 0.35 ? 2 : 3);
             if (ph > this.phase) {
                 this.phase = ph;
+                // v4.0.156：进第 2 阶段 = 护甲被拆（金属断裂），进第 3 阶段 = 暴怒长吼
+                if (ph === 2) SFX.armor(); else SFX.roar();
                 this.banner = ph === 2 ? '机械龙拆掉护甲 —— 喷吐变快，开始丢墓碑！' : '机械龙暴怒了！';
                 this.bannerT = 2.2;
                 this.shake = 10;
@@ -1795,12 +2202,14 @@
             }
             if (this.hp <= 0) {
                 this.dieT = 1.5;
+                SFX.death();                            // v4.0.156：坠落前的最后一声哀嚎
                 this.banner = '机械龙被击落！';
                 this.bannerT = 2.2;
             }
         }
 
         spray() {
+            SFX.spray();                                // v4.0.156：火柱呼啸
             const n = this.phase === 1 ? 5 : (this.phase === 2 ? 6 : 7);
             this.lane.pushCeil(n, null);
             if (this.phase >= 2) {
@@ -1813,6 +2222,7 @@
             this.lane.checkState();
             this.sprayT = this.phase === 1 ? 6.6 : (this.phase === 2 ? 5.0 : 4.0);
             this.warn = 0;
+            this._warnSfx = false;
             this.shake = Math.max(this.shake, 3);
         }
 
@@ -1835,6 +2245,8 @@
             }
             this.sprayT -= dt;
             this.warn = this.sprayT < 1.3 ? Math.max(0, 1 - this.sprayT / 1.3) : 0;
+            // v4.0.156：炮口开始发光时配一声长长的吸气（每次喷吐只响一次）
+            if (this.warn > 0.02 && !this._warnSfx) { this._warnSfx = true; SFX.warn(); }
             if (this.sprayT <= 0) this.spray();
         }
 
@@ -2109,17 +2521,20 @@
             const nx = this.px + dx, ny = this.py + dy;
             if (nx < 0 || ny < 0 || nx >= this.w || ny >= this.h) return;
             if (this.wall[ny][nx]) return;
+            let pushed = false;
             if (this.box[ny][nx]) {
                 const bx = nx + dx, by = ny + dy;
                 if (bx < 0 || by < 0 || bx >= this.w || by >= this.h) return;
                 if (this.wall[by][bx] || this.box[by][bx]) return;
                 this.box[ny][nx] = false; this.box[by][bx] = true;
+                pushed = true;
             }
             this.px = nx; this.py = ny; this.steps++;
+            SFX.box(pushed);                        // v4.0.156：推动冰块的摩擦声 / 空走的脚步
             if (this.done()) {
                 this.score += Math.max(50, 400 - this.steps * 4);
                 this.winLevel = true;
-                this.over = true; this.win = true; this.overT = 0;
+                this.end(true);                     // 走 end() 才有通关音
             }
         }
         onKey(down, k) {
@@ -2194,6 +2609,7 @@
             };
             this.la = mk(22, 211);
             this.lb = mk(500, 689);
+            this.lb.sfxK = 0.3;                 // v4.0.156：AI 那侧也有声，但只当背景，别跟玩家抢耳朵
             this.lb.showAim = false;
             this.aiOn = true;
             this.aiT = 2.4;
@@ -2209,7 +2625,7 @@
             else if (res.popped >= 6) n = 2;
             else if (res.popped >= 4) n = 1;
             if (res.dropped >= 5) n += 1;
-            if (n > 0) this.pushGarbage(other, Math.min(4, n), ln);
+            if (n > 0) { SFX.tomb(1); this.pushGarbage(other, Math.min(4, n), ln); }
         }
 
         pushGarbage(to, n, from) {
@@ -2419,10 +2835,12 @@
                 const cd = this.cards[i];
                 if (cd.up || cd.done) return;
                 cd.up = true; this.sel.push(i);
+                SFX.flip();                         // v4.0.156：翻牌
                 if (this.sel.length === 2) {
                     this.moves++;
                     const [a, b] = this.sel;
                     if (this.cards[a].k === this.cards[b].k) {
+                        SFX.match();
                         this.cards[a].done = this.cards[b].done = true;
                         this.matched++; this.score += 100; this.sel = [];
                         if (this.matched === 8) { this.end(true); }
@@ -2510,6 +2928,7 @@
                 this.combo++;
                 if (this.combo > this.bestCombo) this.bestCombo = this.combo;
                 if (this.combo >= 3) {
+                    SFX.combo(this.combo);      // v4.0.156：连击越高音越高
                     this.flashMsg = '连击 x' + this.combo + '  +' + Math.round(res.popped * 10 * (this.combo - 1) * 0.25);
                     this.flashT = 0.8;
                     this.lane.score += Math.round(res.popped * 10 * (this.combo - 1) * 0.25);
@@ -2518,6 +2937,7 @@
         }
 
         onSpecial(sp, x, y) {
+            SFX.special(sp);                    // v4.0.156：三颗特殊球各有自己的音色
             const l = this.lane;
             let n = 0;
             if (sp === 'bomb') n = l.burst(x, y, l.R * 2.15);
@@ -2728,12 +3148,34 @@
         '.mini-top .q{pointer-events:auto;background:rgba(20,12,4,0.62);border:2px solid rgba(255,225,150,0.45);',
         'color:#ffe9b8;border-radius:9px;padding:5px 13px;font-size:13.5px;font-weight:800;cursor:pointer;}',
         '.mini-top .q:hover{background:rgba(60,40,10,0.8);}',
+        '.mini-top .lg{display:flex;align-items:center;gap:8px;pointer-events:none;}',
+        '.mini-top .mu{pointer-events:auto;background:rgba(20,12,4,0.62);border:2px solid rgba(255,225,150,0.45);',
+        'color:#ffe9b8;border-radius:9px;padding:5px 12px;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:1px;}',
+        '.mini-top .mu:hover{background:rgba(60,40,10,0.8);}',
+        '.mini-head .mu{margin-left:auto;background:linear-gradient(180deg,#7a5a2a,#5a3f18);color:#ffe9b8;',
+        'border:2px solid #c9a45c;border-radius:10px;padding:7px 14px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:1px;}',
+        '.mini-head .mu:hover{filter:brightness(1.12);}',
+        '.mini-head .mu.off{opacity:.62;filter:grayscale(.5);}',
         '.mini-top .nm{color:rgba(255,255,255,0.72);font-size:13px;letter-spacing:2px;}'
     ].join('');
 
     /* v4.0.153：两个大厅共用一套 DOM —— 只换卡片集合、标题和列数。
        6 个玩法排 3 列 × 2 行，4 个泡泡玩法排 2 列 × 2 行（卡片更大，像精选）。 */
-    let lobbyKind = 'all', titleEl = null, subEl = null;
+    let lobbyKind = 'all', titleEl = null, subEl = null, muteBtn = null, muteBtn2 = null;
+    // v4.0.156：静音开关（大厅 + 关卡各一个按钮，M 键也能切）
+    function syncMute() {
+        const on = !SFX.isMuted();
+        [muteBtn, muteBtn2].forEach(b => {
+            if (!b) return;
+            b.textContent = on ? '声音 开' : '声音 关';
+            b.classList.toggle('off', !on);
+        });
+    }
+    function toggleMute() {
+        SFX.toggle();
+        syncMute();
+        if (!SFX.isMuted()) SFX.click();
+    }
     function renderLobby(list, cols) {
         gridEl.style.gridTemplateColumns = 'repeat(' + cols + ',1fr)';
         gridEl.style.gridTemplateRows = 'repeat(' + Math.ceil(list.length / cols) + ',1fr)';
@@ -2761,13 +3203,16 @@
         screen.innerHTML =
             '<div class="mini-lobby" id="mini-lobby">' +
             '<div class="mini-head"><button class="mb" id="mini-close">← 返回主菜单</button>' +
-            '<h2 id="mini-title">后院游乐场</h2><span class="sub" id="mini-sub">6 个玩法 · 随时进来玩一局</span></div>' +
+            '<h2 id="mini-title">后院游乐场</h2><span class="sub" id="mini-sub">6 个玩法 · 随时进来玩一局</span>' +
+            '<button class="mu" id="mini-mute-lobby">声音 开</button></div>' +
             '<div class="mini-grid" id="mini-grid"></div>' +
-            '<div class="mini-foot">点卡片直接开玩 · ESC 回主菜单</div>' +
+            '<div class="mini-foot">点卡片直接开玩 · M 静音 · ESC 回主菜单</div>' +
             '</div>' +
             '<div class="mini-stage" id="mini-stage">' +
             '<canvas id="mini-canvas" width="900" height="600"></canvas>' +
-            '<div class="mini-top"><button class="q" id="mini-quit">← 回大厅 (ESC)</button><div class="nm" id="mini-name"></div></div>' +
+            '<div class="mini-top"><button class="q" id="mini-quit">← 回大厅 (ESC)</button>' +
+            '<div class="lg"><div class="nm" id="mini-name"></div>' +
+            '<button class="mu" id="mini-mute">声音 开</button></div></div>' +
             '</div>';
         host.appendChild(screen);
 
@@ -2782,12 +3227,21 @@
         subEl = screen.querySelector('#mini-sub');
         renderLobby(GAMES, 3);
 
+        muteBtn = screen.querySelector('#mini-mute');
+        muteBtn2 = screen.querySelector('#mini-mute-lobby');
+        muteBtn.addEventListener('click', toggleMute);
+        muteBtn2.addEventListener('click', toggleMute);
+        syncMute();
+
         gridEl.addEventListener('click', e => {
             const card = e.target.closest('.mini-card');
-            if (card) openGame(card.dataset.id);
+            if (!card) return;
+            SFX.unlock();                    // 第一次点击才允许出声（浏览器策略）
+            SFX.click();
+            openGame(card.dataset.id);
         });
-        screen.querySelector('#mini-close').addEventListener('click', quit);
-        screen.querySelector('#mini-quit').addEventListener('click', backToLobby);
+        screen.querySelector('#mini-close').addEventListener('click', () => { SFX.click(); quit(); });
+        screen.querySelector('#mini-quit').addEventListener('click', () => { SFX.click(); backToLobby(); });
 
         canvas.addEventListener('mousedown', e => {
             if (!active) return;
@@ -2829,6 +3283,7 @@
         const k = normKey(e);
         if (['left', 'right', 'up', 'down', 'space'].indexOf(k) >= 0) e.preventDefault();
         e.stopPropagation();
+        if (k === 'm') { toggleMute(); return; }
         if (k === 'esc') {
             if (active) backToLobby(); else quit();
             return;
@@ -2895,6 +3350,7 @@
         ensureDom();
         const meta = ALL_GAMES.filter(g => g.id === id)[0];
         if (!meta) return;
+        SFX.unlock();
         screen.style.display = 'block';
         lobbyEl.style.display = 'none';
         stageEl.style.display = 'block';
@@ -2945,6 +3401,7 @@
         bubbleGames: BUBBLE_GAMES.map(g => ({ id: g.id, name: g.name })),
         levelCount: LEVELS.length,          // v4.0.139：给验收脚本遍历推箱子关卡用
         get active() { return active; },
+        sfx: SFX,                               // v4.0.156：验收脚本用（合成音效无法截图，改查调用）
         get isOpen() { return !!(screen && screen.style.display === 'block'); }
     };
 })();
