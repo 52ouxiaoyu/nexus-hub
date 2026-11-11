@@ -72,6 +72,14 @@
 - 豌豆链：tier1~9 ×2（1→256）、tier10~16 ×1.85（封顶 19300）；只改 DEFS `shoot.dmg`，别动弹数/射速
 - **平衡铁律**：僵尸血量必须与植物攻击力匹配（普通 50×2^(L-1) → 机甲 25600；小鬼 25×2^(lv-1)），保持「单株同级豌豆恒 50 发击杀」
 
+## 泡泡工坊音效（v4.0.156 起）
+- `MiniGames.js` 顶部内置 `SFX`（WebAudio 纯合成，零素材）：调用形如 `SFX.pop(颗数, 音量系数)`；**静音＝总线 gain 归零**，不拦调用
+- **两套音色不能混**：泡泡走中高频+气声（玻璃），机械龙走低频锯齿+LFO 颤音（`growl()` 把 LFO 接到 `oscillator.frequency`，纯 sine 滑音像汽笛）
+- `BubLane.sfxK` 是音量系数（对轰 AI 侧 0.3）；`f0→f1` 必须 exponentialRamp
+- 每个音效带 `gate[name]` 节流 30~90ms，别去掉（一帧连锁消 20 颗会糊成噪声）
+- 测音效只能量波形：`SFX.probe()`（AnalyserNode → RMS）；首次读全 0，先预热一次再测
+- 通关/失败音统一在 `Base.end()`，新增玩法别重复写
+
 ## 其他子游戏（只留铁律）
 - **tank-battle**：单文件 game.js，句柄 window._tankGame；击杀收敛 Tank.destroy(killer,damage)；Boss 覆写不调 super；数值集中 VITALS，伤害先扣 shieldHp；禁 shadowBlur；改 map.grid 必 markDirty()；测试清空敌人会触发 STAGE_CLEAR 停摆 → 留 frozen 敌人
 - **billiards**：G.aimDir 是快照 → 用 aimLine 端点反推、重定向必须 setAim()；POOL.state 只读；角袋圆心 (±(W/2+0.015),±(H/2+0.015)) r=0.081；双人 P1=WASD+空格 / P2=方向键+回车；`||默认值` 会顶掉 0 档
