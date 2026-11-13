@@ -32,20 +32,20 @@ const ROOT = '/Users/clawbox/nexus-hub/pvz-web';
     // ================= 1. 泡泡：绘制实现已收敛，且不再是「白核实心球」 =================
     console.log('\n【1】泡泡绘制（球体质感）');
     const srcCheck = await page.evaluate(() => {
-        window.MiniGames.openGame('bubble');
-        const classic = window.MiniGames.active.bub.toString();
+        window.MiniGames.openGame('farm');
+        const classic = window.MiniGames.active.lane.bub.toString();
         window.MiniGames.openGame('dragon');
         const lane = window.MiniGames.active.lane.bub.toString();
         window.MiniGames.openGame('tower');
         const tower = window.MiniGames.active.lane.bub.toString();
         return { classic: classic, lane: lane, tower: tower };
     });
-    ok(/paintBub/.test(srcCheck.classic), '经典泡泡龙的 bub() 走共享实现 paintBub');
+    ok(/paintBub/.test(srcCheck.classic), '泡泡牧场的 bub() 走共享实现 paintBub');
     ok(/paintBub/.test(srcCheck.lane) && /paintBub/.test(srcCheck.tower),
         'BubLane.bub() 也走同一份实现（三块场地不会分叉）');
 
     const px = await page.evaluate(() => {
-        window.MiniGames.openGame('bubble');
+        window.MiniGames.openGame('farm');
         const x = window.MiniGames.active;
         const c = document.getElementById('mini-canvas'), g2 = c.getContext('2d');
         g2.clearRect(0, 0, 900, 600);
@@ -60,7 +60,14 @@ const ROOT = '/Users/clawbox/nexus-hub/pvz-web';
 
         let white = 0, tot = 0, sum = 0, sum2 = 0;
         const hue = { green: 0, blue: 0, purple: 0, yellow: 0 };
-        for (let i = 0; i < d.length; i += 4) {
+        // v4.0.157：经典泡泡龙换成牧场后，草地底色会稀释色相统计（绿 14%、蓝紫不足 3%）。
+        // 改成只统计「泡泡所在的那几行」，背景不参与 —— 断言量的是球本身，不是场景。
+        const sy0 = Math.max(0, Math.round(x.lane.TOP - 10));
+        const sy1 = Math.min(H, Math.round(x.lane.TOP + x.lane.ROWH * 5));
+        const sx0 = Math.max(0, Math.round(x.lane.wallL));
+        const sx1 = Math.min(W, Math.round(x.lane.wallR));
+        for (let yy = sy0; yy < sy1; yy++) for (let xx = sx0; xx < sx1; xx++) {
+            const i = (yy * W + xx) * 4;
             const r2 = d[i], g3 = d[i + 1], b3 = d[i + 2];
             tot++;
             if (r2 > 245 && g3 > 245 && b3 > 245) white++;
@@ -82,8 +89,8 @@ const ROOT = '/Users/clawbox/nexus-hub/pvz-web';
         const mean = sum / tot, sd = Math.sqrt(sum2 / tot - mean * mean);
 
         // 第一颗球（r=0,c=0）：把球盘分成左上 / 右下两块，量明暗
-        const R = x.R, cx = x.shooter ? 0 : 0;
-        const c0x = x.LEFT + R, c0y = x.TOP + R;
+        const R = x.lane.R;
+        const c0x = x.lane.LEFT + R, c0y = x.lane.TOP + R;
         let lu = 0, nu = 0, ld = 0, nd = 0, peak = 0;
         for (let dy = -18; dy <= 18; dy++) for (let dx = -18; dx <= 18; dx++) {
             const q = at(c0x + dx, c0y + dy);
@@ -115,7 +122,7 @@ const ROOT = '/Users/clawbox/nexus-hub/pvz-web';
 
     // ================= 2. 四块场地都能正常绘制 =================
     console.log('\n【2】四块泡泡场地');
-    for (const id of ['bubble', 'dragon', 'duel', 'tower']) {
+    for (const id of ['farm', 'dragon', 'duel', 'tower']) {
         const r = await page.evaluate((gid) => {
             window.MiniGames.openGame(gid);
             const x = window.MiniGames.active;

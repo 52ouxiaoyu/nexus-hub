@@ -123,13 +123,13 @@ const ROOT = '/Users/clawbox/nexus-hub/pvz-web';
     await page.keyboard.press('KeyM');
     await sleep(120);
 
-    // ================= 4. 经典泡泡龙：发射/粘合/碎裂 =================
-    console.log('\n【4】经典泡泡龙');
+    // ================= 4. 泡泡牧场（v4.0.157 顶替经典泡泡龙）：发射/粘合/碎裂 =================
+    console.log('\n【4】泡泡牧场');
     const classic = await page.evaluate(async () => {
-        window.MiniGames.openGame('bubble');
+        window.MiniGames.openGame('farm');
         const g = window.MiniGames.active;
         window.__calls = {};
-        g.shoot();
+        g.lane.fire();
         await new Promise(r => setTimeout(r, 700));
         return { fire: __calls.fire || 0, stick: __calls.stick || 0, pop: __calls.pop || 0, bounce: __calls.bounce || 0 };
     });
@@ -138,7 +138,7 @@ const ROOT = '/Users/clawbox/nexus-hub/pvz-web';
         'stick=' + classic.stick + ' pop=' + classic.pop);
 
     const classicPop = await page.evaluate(async () => {
-        const g = window.MiniGames.active;
+        const g = window.MiniGames.active.lane;
         window.__calls = {};
         // 直接构造一次三连：找两颗同色相邻的格子，把中间补成同色
         let done = false;
@@ -153,8 +153,8 @@ const ROOT = '/Users/clawbox/nexus-hub/pvz-web';
                     for (const [mr, mc] of g.neighbors(r, c)) {
                         if (mr < 0 || mr >= g.rows || mc < 0 || mc >= g.colsIn(mr)) continue;
                         if (g.g[mr][mc] >= 0) continue;
-                        g.g[mr][mc] = col;
-                        g.resolve(mr, mc);
+                        // v4.0.157：SFX.pop 在 land() 里，不在 settle() 里 —— 必须走真实落地路径
+                        g.land({ x: g.cx(mr, mc), y: g.yOf(mr), vx: 0, vy: -100, col: col, sp: null });
                         done = true;
                         break;
                     }
@@ -168,9 +168,9 @@ const ROOT = '/Users/clawbox/nexus-hub/pvz-web';
     ok(classicPop.done === true && classicPop.pop >= 1, '三消触发碎裂声');
 
     const classicPush = await page.evaluate(() => {
-        const g = window.MiniGames.active;
+        const g = window.MiniGames.active.lane;
         window.__calls = {};
-        g.pushRow();
+        g.pushCeil(3);
         return __calls.push || 0;
     });
     ok(classicPush >= 1, '整排下压有声');
@@ -182,18 +182,18 @@ const ROOT = '/Users/clawbox/nexus-hub/pvz-web';
         const g = window.MiniGames.active;
         const out = {};
         window.__calls = {};
-        g.hurt(10);
+        g.hit(10, '测试');
         out.dmg = __calls.dmg || 0;
 
         window.__calls = {};
         g.hp = g.hpMax * 0.68;            // 掉到 70% 以下 → 第 2 阶段
-        g.hurt(16);
+        g.hit(16, '测试');
         out.armor = __calls.armor || 0;
         out.phase2 = g.phase;
 
         window.__calls = {};
         g.hp = g.hpMax * 0.30;            // 掉到 35% 以下 → 第 3 阶段
-        g.hurt(16);
+        g.hit(16, '测试');
         out.roar = __calls.roar || 0;
         out.phase3 = g.phase;
 
@@ -203,7 +203,7 @@ const ROOT = '/Users/clawbox/nexus-hub/pvz-web';
         out.push = __calls.push || 0;
 
         window.__calls = {};
-        g.hp = 4; g.hurt(20);             // 击杀
+        g.hp = 4; g.hit(20, '测试');            // 击杀
         out.death = __calls.death || 0;
         out.dieT = g.dieT;
         return out;

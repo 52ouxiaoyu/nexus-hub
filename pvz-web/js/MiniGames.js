@@ -1,7 +1,7 @@
 /*!
  * MiniGames.js — pvz-web 后院游乐场（v4.0.134）
  * 10 个独立玩法，全部运行在同一个 900×600 canvas 上：
- *   玉米方块(俄罗斯方块) / 僵尸地鼠(打地鼠) / 花园2048 / 猫尾草泡泡龙(泡泡射击)
+ *   玉米方块(俄罗斯方块) / 僵尸地鼠(打地鼠) / 花园2048 / 泡泡牧场(三消养成)
  *   豌豆弹球(打砖块) / 机械龙攻城(Boss 战) / 寒冰推箱(推箱子) / 泡泡对轰(双人)
  *   花园连连看(记忆配对) / 泡泡塔(爬塔)
  * ESC 逐层返回（游戏 → 大厅 → 主菜单）。
@@ -33,6 +33,9 @@
         cob: PL + 'CobCannon/Cob.png',            // v4.0.138：161x76 的玉米棒（原版玉米炮弹），比 96px 投石车清楚得多
         doom: PL + 'DoomShroom/0.gif',
         puffshroom: PL + 'PuffShroom/0.gif',
+        fumefume: PL + 'FumeShroom/0.gif',
+        gloom: PL + 'GloomShroom/0.gif',
+        butter: PL + 'KernelPult/Butter.png',
         cattail: PL + 'Cattail/Cattail.gif',
         garlic: PL + 'Garlic/0.gif',
         pumpkin: PL + 'PumpkinHead/0.gif',
@@ -248,6 +251,46 @@
                 const v = 0.20 * (k == null ? 1 : k);
                 tone({ t: 'triangle', f0: f, f1: f, dur: 0.14, v: v });
                 tone({ t: 'sine', f0: f * 2, f1: f * 2, dur: 0.09, v: v * 0.45, d: 0.03 });
+            },
+            // v4.0.157：植物体系的四个专属音色
+            // 机枪连射：一串极密的活塞声，七连发一次推完（机械感靠方波 + 快速衰减）
+            machine() {
+                if (!allow('machine', 420)) return;
+                for (let i = 0; i < 7; i++) {
+                    noise({ dur: 0.05, v: 0.19, f0: 1500 + i * 130, f1: 620, q: 1.6, d: i * 0.052 });
+                    tone({ t: 'square', f0: 230 - i * 9, f1: 92, dur: 0.06, v: 0.10, d: i * 0.052, lp: 1400 });
+                }
+                tone({ t: 'sine', f0: 76, f1: 42, dur: 0.5, v: 0.22, atk: 0.01 });
+            },
+            // 黄油：黏稠的一声「噗叽」，尾巴往下坠
+            butter() {
+                if (!allow('butter', 320)) return;
+                tone({ t: 'sine', f0: 340, f1: 88, dur: 0.30, v: 0.28, atk: 0.012 });
+                noise({ dur: 0.26, v: 0.20, type: 'lowpass', f0: 900, f1: 260, q: 1.4 });
+            },
+            // 冰封：结冰的噼啪 + 玻璃嗡鸣
+            freeze() {
+                if (!allow('freeze', 420)) return;
+                noise({ dur: 0.50, v: 0.24, type: 'highpass', f0: 2200, f1: 4000, q: 0.8 });
+                [1760, 2340, 2960].forEach((f, i) =>
+                    tone({ t: 'sine', f0: f, f1: f * 0.9, dur: 0.40, v: 0.09, d: i * 0.05 }));
+                tone({ t: 'sine', f0: 140, f1: 60, dur: 0.50, v: 0.20 });
+            },
+            // 施毒：湿软的「噗」+ 一串小气泡
+            poison() {
+                if (!allow('poison', 280)) return;
+                tone({ t: 'sine', f0: 240, f1: 78, dur: 0.22, v: 0.20 });
+                for (let i = 0; i < 3; i++) {
+                    tone({ t: 'sine', f0: 380 + Math.random() * 220, f1: 180, dur: 0.14, v: 0.10, d: 0.05 + i * 0.06 });
+                }
+                noise({ dur: 0.20, v: 0.12, type: 'lowpass', f0: 700, q: 1.6 });
+            },
+            // 植物长成 / 升级：上行三和弦，等级越高起音越高
+            grow(step) {
+                if (!allow('grow', 220)) return;
+                const base = 392 * Math.pow(2, Math.min(6, Math.max(1, step || 1) - 1) / 12);
+                [0, 4, 7].forEach((st, i) =>
+                    tone({ t: 'triangle', f0: base * Math.pow(2, st / 12), f1: base * Math.pow(2, st / 12), dur: 0.20, v: 0.16, d: i * 0.06 }));
             },
 
             /* ---------- 机械龙：低频锯齿 + 金属噪声 ---------- */
@@ -1009,7 +1052,7 @@
     }
 
     /* ================================================================
-     * 4. 猫尾草泡泡龙（泡泡射击）
+     * 4. 泡泡牧场（v4.0.157 顶替「猫尾草泡泡龙」）—— 三消的球掉进花盆养作物
      * ============================================================== */
     const BUB_COLORS = [
         { c: '#5fbf35', p: 'peashooter', n: '豌豆' },
@@ -1353,10 +1396,10 @@
                 const dropped = this.dropFloating();
                 this.score += cl.length * 10 + dropped * 15 + tombs * 20;
                 this.combo++;
-                return { popped: cl.length + tombs, dropped, size: cl.length };
+                return { popped: cl.length + tombs, dropped, size: cl.length, col, tombs };
             }
             this.combo = 0;
-            return { popped: 0, dropped: 0, size: cl.length };
+            return { popped: 0, dropped: 0, size: cl.length, col, tombs: 0 };
         }
         /* ---------- 顶行下压 ---------- */
         pushCeil(n, colorFn) {
@@ -1557,366 +1600,376 @@
         }
     }
 
-    class Bubble extends Base {
+    /* ================================================================
+     * 4. 泡泡牧场（v4.0.157 换掉「猫尾草泡泡龙」）
+     * ----------------------------------------------------------------
+     * 用户：经典泡泡龙可以删掉，换一个新奇的玩法。
+     * 老版的问题是「打空就算赢」，跟机械龙攻城共用一套三消和炮台，
+     * 除了画风没有任何区别 —— 拆成两张卡反而更重复。
+     *
+     * 这一版把「消除」变成「种植」：
+     *   消掉的植物球会掉进下方的花盆，花盆只收同色（每个盆绑一种颜色）；
+     *   同色喂满 3 颗就升一级，豌豆 → 双发 → 机枪 → 寒冰 → 玉米 → 西瓜，
+     *   升到 6 级的作物会自己往上打，替你清场。
+     *   目标：养出 2 盆满级作物。清空场地不算赢（BubLane.noClear），
+     *   所以不能靠「一把清光」速通，必须一边压住泡泡一边攒种子。
+     *   每次升级都会惊动杂草多压一截 —— 越强越危险，这是刻意的取舍。
+     * ============================================================== */
+    const FARM_LV = [
+        { p: 'peashooter', n: '豌豆射手', dps: 1 },
+        { p: 'repeater', n: '双发豌豆', dps: 1 },
+        { p: 'gatling', n: '机枪豌豆', dps: 1 },
+        { p: 'snowpea', n: '寒冰豌豆', dps: 1 },
+        { p: 'kernel', n: '玉米投手', dps: 1 },
+        { p: 'melon', n: '西瓜投手', dps: 1 }
+    ];
+    const FARM_CROPS = [
+        { col: 0, n: '豌豆', c: '#5fbf35' },
+        { col: 1, n: '寒冰', c: '#4aa8e0' },
+        { col: 2, n: '喷菇', c: '#9b6ad6' },
+        { col: 3, n: '玉米', c: '#e8c53a' },
+        { col: 0, n: '豌豆', c: '#5fbf35' }
+    ];
+    const FARM_SEED = 3;                 // 每级要喂几颗同色
+    const FARM_WIN = 2;                  // 拿几盆满级算通关
+
+    class BubbleFarm extends Base {
         setup() {
-            // v4.0.151（用户：整个界面都可以打，所有的地方都是可以打到的）——
-            // 旧版 12 列只占左侧 528px，右边 260px 全给了 HUD，屏幕右边三分之一是死区。
-            // 现在 18 列铺满 864px（左右各留 18px 边），HUD 压成顶部一条 50px 横栏，
-            // 整个画面从 y=96 往下都是场地。
-            this.R = 24; this.COLS = 18; this.LEFT = 18;
-            this.ROWH = 41.6;               // = R*√3，六边形密铺的行距
-            this.TOP = 96;                  // 顶栏下沿 = 场地顶
-            this.rows = 11;
-            this.g = Array.from({ length: this.rows }, () => new Array(this.COLS).fill(-1));
-            // 起始 6 行（末行挖掉 1/3，像前锋线被打掉一截）
-            for (let r = 0; r < 6; r++) for (let c = 0; c < this.colsIn(r); c++) {
-                if (r === 5 && c % 3 === 0) continue;
-                this.g[r][c] = (Math.random() * 4) | 0;
-            }
-            this.shooter = { x: this.LEFT + this.COLS * this.R, y: 556, ang: -Math.PI / 2 };
-            this.ball = null; this.next = (Math.random() * 4) | 0; this.cur = (Math.random() * 4) | 0;
-            this.pops = []; this.drops = [];
-            this.missStreak = 0;      // 连续几发没消掉任何东西
-            this.deadline = this.shooter.y - 24;
+            // 画布只有 600 高：场地 104~404、炮台 424、花盆 474~594。
+            // 第一版按 700 排的，花盆整个被画布底边切掉了 —— 这种裁切断言查不出来。
+            this.lane = new BubLane({
+                R: 21, COLS: 19, LEFT: 51, TOP: 104, rows: 8,
+                sx: 450, sy: 424, deadline: 404, nColors: 4,
+                fillRows: 3, gapEvery: 3, ceilRows: 2, missPush: true, missLimit: 7
+            });
+            this.lane.noClear = true;     // 清空不算赢，养出满级作物才算
+            this.lane.onLand = (l, res) => this.onPop(res);
+            this.lane.onDead = () => this.end(false);
+
+            this.pots = FARM_CROPS.map((c, i) => ({
+                col: c.col, crop: c, lv: 0, seed: 0, cd: 0,
+                x: 60 + i * 156 + 75, y: 474, flash: 0, fx: 0
+            }));
+            this.shots = [];              // 作物打出去的豌豆
+            this.floats = [];             // 飘字
+            this.pushT = 7.5;
+            this.best = 0;
+            this.banner = ''; this.bannerT = 0;
         }
 
-        // v4.0.151：瞄准左界 / 右界（球在这两条线上反弹）
-        get wallL() { return this.LEFT + this.R; }
-        get wallR() { return this.LEFT + this.COLS * this.R * 2 - this.R; }
-
-        // v4.0.151：瞄准锥不再是写死的常量 —— 由「炮口 → 每一行最外侧球心」的最大张角
-        // 自动算出来，保证场上每一格都能被直接指到。
-        // 旧版写死 lim=1.32，实际只允许偏离竖直 14.4°（总张角 28.7°），
-        // 连第 0 行最边上的球都要 28.7° —— 外圈一整片永远打不到，
-        // 「清空全场即通关」这个条件等于摆设。
-        _aimLimit() {
-            const last = this.rows - 2;        // 最深可打行（再往下一行就是判负线）
-            let th = 0;
-            for (let r = 0; r <= last; r++) {
-                const dy = this.shooter.y - this.yOf(r);
-                if (dy <= 0) continue;
-                const dl = Math.abs(this.cx(r, 0) - this.shooter.x);
-                const dr = Math.abs(this.cx(r, this.colsIn(r) - 1) - this.shooter.x);
-                th = Math.max(th, Math.atan2(Math.max(dl, dr), dy));
-            }
-            return Math.min(th + 0.02, 1.45);  // 留 1° 余量，封顶 83°
+        /* ---------- 消除 → 喂花盆 ---------- */
+        onPop(res) {
+            const col = res.col == null ? 0 : res.col;
+            if (res.popped <= 0) return;
+            this.feed(col, Math.max(1, res.size || 3));
+            if (res.dropped > 0) this.feed(col, Math.min(3, res.dropped));
+            SFX.combo(res.popped);
         }
 
-        // 鼠标位置 → 炮口角度（只允许朝上半圈）
-        _aimAt(x, y) {
-            const th = this._aimLimit(), mid = -Math.PI / 2;
-            let d = Math.atan2(y - this.shooter.y, x - this.shooter.x) - mid;
-            d = Math.atan2(Math.sin(d), Math.cos(d));       // 归一到 [-π, π]
-            if (d > Math.PI / 2) d = Math.PI / 2;           // 指向下半圈的按最近边收
-            if (d < -Math.PI / 2) d = -Math.PI / 2;
-            this.shooter.ang = mid + Math.max(-th, Math.min(th, d));
-        }
-        // v4.0.138：奇数行整体右移半个球，最后一列会顶出右侧边框（中心 624 + R 22 > 右界 624），
-        // 球在墙上反弹永远够不到那一列 → 场上永远清不空，这就是「泡泡龙根本赢不了」的根因。
-        // 修法：奇数行少一列。
-        colsIn(r) { return r % 2 ? this.COLS - 1 : this.COLS; }
-        cx(r, c) { return this.LEFT + this.R + c * this.R * 2 + (r % 2 ? this.R : 0); }
-        yOf(r) { return this.TOP + r * this.ROWH + this.R; }
-        neighbors(r, c) {
-            const odd = r % 2 === 1;
-            return odd
-                ? [[r, c - 1], [r, c + 1], [r - 1, c], [r - 1, c + 1], [r + 1, c], [r + 1, c + 1]]
-                : [[r, c - 1], [r, c + 1], [r - 1, c - 1], [r - 1, c], [r + 1, c - 1], [r + 1, c]];
-        }
-        update(dt) {
-            if (this.over) return;
-            this.pops = this.pops.filter(p => (p.t -= dt) > 0);
-            this.drops = this.drops.filter(d => { d.v += 700 * dt; d.y += d.v * dt; return d.y < H + 40; });
-            // v4.0.156：泡泡快压到炮口时报警（节流 1.5s）
-            if (!this.ball) {
-                for (let r = this.rows - 1; r >= 0; r--) {
-                    if (this.g[r].some(v => v >= 0)) {
-                        if (this.yOf(r) + this.R > this.shooter.y - 82) SFX.danger();
-                        break;
-                    }
-                }
-            }
-            if (!this.ball) return;
-            const b = this.ball;
-            const steps = Math.ceil((Math.abs(b.vx) + Math.abs(b.vy)) * dt / 6);
-            for (let i = 0; i < steps; i++) {
-                b.x += b.vx * dt / steps; b.y += b.vy * dt / steps;
-                if (b.x < this.wallL) { b.x = this.wallL; b.vx = Math.abs(b.vx); SFX.bounce(1); }
-                if (b.x > this.wallR) { b.x = this.wallR; b.vx = -Math.abs(b.vx); SFX.bounce(1); }
-                if (b.y < this.TOP + this.R * 0.55) { this.attach(b); return; }
-                // 命中已有泡泡
-                for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) {
-                    if (this.g[r][c] < 0) continue;
-                    const dx = b.x - this.cx(r, c), dy = b.y - this.yOf(r);
-                    if (dx * dx + dy * dy < (this.R * 1.82) * (this.R * 1.82)) { this.attach(b); return; }
-                }
-                if (b.y > H + 40) { this.ball = null; this.nextBall(); return; }
+        feed(col, n) {
+            const p = this.pots.filter(q => q.col === col && q.lv < FARM_LV.length)[0];
+            if (!p) return;
+            p.seed += n;
+            p.flash = 0.4;
+            while (p.seed >= FARM_SEED && p.lv < FARM_LV.length) {
+                p.seed -= FARM_SEED;
+                p.lv++;
+                p.fx = 0.8;
+                SFX.grow(p.lv);
+                this.floats.push({ x: p.x, y: p.y - 20, s: 'Lv' + p.lv + ' ' + FARM_LV[p.lv - 1].n, t: 1.3, c: '#ffe066' });
+                // 作物越强，杂草压得越狠（每升一级多压 2 颗）
+                this.lane.pushCeil(2, null);
+                if (p.lv >= FARM_LV.length) this.checkWin();
             }
         }
-        attach(b) {
-            let best = null, bd = 1e9;
-            for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) {
-                if (this.g[r][c] >= 0) continue;
-                let touchTop = r === 0;
-                let touchSib = false;
-                for (const [nr, nc] of this.neighbors(r, c)) {
-                    if (nr < 0) touchTop = true;
-                    else if (this.g[nr] && this.g[nr][nc] >= 0) touchSib = true;
-                }
-                if (!touchTop && !touchSib) continue;
-                const dx = b.x - this.cx(r, c), dy = b.y - this.yOf(r);
-                const d = dx * dx + dy * dy;
-                if (d < bd) { bd = d; best = [r, c]; }
-            }
-            if (!best) { this.ball = null; this.nextBall(); return; }
-            this.g[best[0]][best[1]] = b.col;
-            this.ball = null;
-            const popBefore = this.pops.length;
-            this.resolve(best[0], best[1]);
-            // 连续 8 发颗粒无收 → 顶部压一行下来（打得好的人永远压不到）
-            if (!this.over) {
-                if (this.pops.length > popBefore) this.missStreak = 0;
-                else if (++this.missStreak >= 8) { this.missStreak = 0; this.pushRow(); }
-            }
-            this.nextBall();
+
+        checkWin() {
+            const full = this.pots.filter(q => q.lv >= FARM_LV.length).length;
+            if (full >= FARM_WIN && !this.over) this.end(true);
         }
-        resolve(r0, c0) {
-            const col = this.g[r0][c0];
-            const seen = new Set([r0 + ',' + c0]);
-            const stack = [[r0, c0]];
-            while (stack.length) {
-                const [r, c] = stack.pop();
-                for (const [nr, nc] of this.neighbors(r, c)) {
-                    if (nr < 0 || nr >= this.rows || nc < 0 || nc >= this.colsIn(nr)) continue;
-                    if (this.g[nr][nc] !== col) continue;
-                    const key = nr + ',' + nc;
-                    if (seen.has(key)) continue;
-                    seen.add(key); stack.push([nr, nc]);
+
+        /* ---------- 作物反击 ---------- */
+        pickTarget() {
+            const l = this.lane;
+            for (let r = l.rows - 1; r >= 0; r--) {
+                const cs = [];
+                for (let c = 0; c < l.colsIn(r); c++) {
+                    const v = l.g[r][c];
+                    if (v >= 0 && v !== TOMB) cs.push(c);
+                }
+                if (cs.length) {
+                    // 打最靠中间那颗，溅射更容易带到邻居
+                    const c = cs[(cs.length / 2) | 0];
+                    return [r, c];
                 }
             }
-            // v4.0.139：col < 0 说明点是空格（全场清空那一帧），不能再按 -1 做一次消除——
-            // 否则 pops 里会塞进 c=-1，draw 里 BUB_COLORS[-1].c 直接抛异常
-            if (col >= 0 && seen.size >= 3) {
-                SFX.pop(seen.size, 1);          // v4.0.156：够三个 = 碎裂
-                seen.forEach(k => {
-                    const [r, c] = k.split(',').map(Number);
-                    this.pops.push({ x: this.cx(r, c), y: this.yOf(r), t: 0.32, c: col });
-                    this.g[r][c] = -1;
+            return null;
+        }
+
+        updatePlants(dt) {
+            for (const p of this.pots) {
+                if (p.lv <= 0) continue;
+                p.cd -= dt;
+                if (p.cd > 0) continue;
+                const cell = this.pickTarget();
+                if (!cell) { p.cd = 0.4; continue; }
+                p.cd = Math.max(1.35, 4.2 - p.lv * 0.44);    // Lv1 3.76s → Lv6 1.56s
+                const l = this.lane;
+                this.shots.push({
+                    x0: p.x, y0: p.y - 26, x1: l.cx(cell[0], cell[1]), y1: l.yOf(cell[0]),
+                    cell, lv: p.lv, t: 0, dur: 0.24, pot: p
                 });
-                this.score += seen.size * 10;
-                // 掉落悬空
-                const keep = new Set();
-                const q = [];
-                for (let c = 0; c < this.colsIn(0); c++) if (this.g[0][c] >= 0) { keep.add('0,' + c); q.push([0, c]); }
-                while (q.length) {
-                    const [r, c] = q.pop();
-                    for (const [nr, nc] of this.neighbors(r, c)) {
-                        if (nr < 0 || nr >= this.rows || nc < 0 || nc >= this.colsIn(nr)) continue;
-                        if (this.g[nr][nc] < 0) continue;
-                        const k = nr + ',' + nc;
-                        if (keep.has(k)) continue;
-                        keep.add(k); q.push([nr, nc]);
-                    }
-                }
-                let dn = 0;
-                for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) {
-                    if (this.g[r][c] >= 0 && !keep.has(r + ',' + c)) {
-                        this.drops.push({ x: this.cx(r, c), y: this.yOf(r), v: 60, c: this.g[r][c] });
-                        this.score += 15;
-                        this.g[r][c] = -1; dn++;
-                    }
-                }
-                if (dn) SFX.drop(dn, 1);
-            } else if (col >= 0) {
-                SFX.stick(1);                   // v4.0.156：没够三个 = 只是粘住
-            }
-            // v4.0.138：清空全场 = 通关（原来只有输没有赢）
-            let any = 0;
-            for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) if (this.g[r][c] >= 0) any++;
-            if (!any) { this.score += 500; this.end(true); return; }
-            // 判负
-            for (let r = this.rows - 1; r >= 0; r--) {
-                if (this.g[r].some(v => v >= 0)) {
-                    if (this.yOf(r) + this.R >= this.shooter.y - 24) this.end(false);
-                    break;
-                }
             }
         }
-        nextBall() {
-            this.cur = this.next;
-            this.next = (Math.random() * 4) | 0;
+
+        updateShots(dt) {
+            const l = this.lane;
+            for (const s of this.shots) {
+                s.t += dt;
+                if (s.t < s.dur) continue;
+                s.done = true;
+                if (l.g[s.cell[0]] && l.g[s.cell[0]][s.cell[1]] >= 0) {
+                    const cells = [[s.cell[0], s.cell[1]]];
+                    // 寒冰及以上带一点溅射，满级西瓜直接轰掉整簇
+                    if (s.lv >= 6) {
+                        for (const [nr, nc] of l.neighbors(s.cell[0], s.cell[1])) {
+                            if (l.inB(nr, nc) && l.g[nr][nc] === l.g[s.cell[0]][s.cell[1]]) cells.push([nr, nc]);
+                        }
+                    } else if (s.lv >= 4 && Math.random() < 0.4) {
+                        const nb = l.neighbors(s.cell[0], s.cell[1])
+                            .filter(([nr, nc]) => l.inB(nr, nc) && l.g[nr][nc] >= 0 && l.g[nr][nc] !== TOMB);
+                        if (nb.length) cells.push(nb[0]);
+                    }
+                    const n = l.removeCells(cells);
+                    l.dropFloating();
+                    l.score += n * 8;
+                    this.floats.push({ x: s.x1, y: s.y1 - 8, s: '+' + n, t: 0.7, c: '#c9f58a' });
+                }
+            }
+            this.shots = this.shots.filter(s => !s.done);
         }
-        shoot() {
-            if (this.ball || this.over) return;
-            const a = this.shooter.ang, sp = 760;
-            this.ball = { x: this.shooter.x, y: this.shooter.y - 34, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, col: this.cur };
-            SFX.fire(1);
+
+        /* ---------- 每帧 ---------- */
+        update(dt) {
+            for (const p of this.pots) {
+                p.flash = Math.max(0, p.flash - dt);
+                p.fx = Math.max(0, p.fx - dt);
+            }
+            for (const f of this.floats) { f.t -= dt; f.y -= dt * 26; }
+            this.floats = this.floats.filter(f => f.t > 0);
+            this.bannerT = Math.max(0, this.bannerT - dt);
+            if (this.over) { this.lane.update(dt); this.updateShots(dt); return; }
+
+            this.lane.update(dt);
+            this.updatePlants(dt);
+            this.updateShots(dt);
+
+            // 杂草慢慢往上长 —— 没有这一条，玩家可以一直不落球等作物自己清场
+            this.pushT -= dt;
+            if (this.pushT <= 0) {
+                this.pushT = Math.max(5.2, 7.5 - this.pots.reduce((a, p) => a + p.lv, 0) * 0.09);
+                this.lane.pushCeil(4, null);
+            }
         }
+
+        /* ---------- 绘制 ---------- */
+        draw() {
+            // 黄昏牧场：暖绿草地 + 远处栅栏，跟钢铁工坊的暗铜完全分开
+            const g = ctx.createLinearGradient(0, 0, 0, H);
+            g.addColorStop(0, '#5b7a2e'); g.addColorStop(0.42, '#42611f'); g.addColorStop(1, '#24380f');
+            ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+            // 夕阳
+            const sg = ctx.createRadialGradient(760, 40, 10, 760, 40, 320);
+            sg.addColorStop(0, 'rgba(255,206,110,0.42)');
+            sg.addColorStop(0.5, 'rgba(255,160,70,0.14)');
+            sg.addColorStop(1, 'rgba(255,140,60,0)');
+            ctx.fillStyle = sg; ctx.fillRect(340, 0, 560, 380);
+            // 斜向细纹（草地不画横条，横条会读成地板）
+            ctx.save(); ctx.globalAlpha = 0.06; ctx.strokeStyle = '#d8f0a0'; ctx.lineWidth = 1;
+            for (let x = -200; x < W + 200; x += 18) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 260, H); ctx.stroke();
+            }
+            ctx.restore();
+
+            this.drawField();
+            this.lane.draw();
+            this.drawPots();
+            this.drawShots();
+            this.drawShooter();
+            this.drawHud();
+
+            if (this.bannerT > 0) {
+                const a = Math.min(1, this.bannerT / 0.5);
+                ctx.save(); ctx.globalAlpha = a;
+                ctx.fillStyle = 'rgba(24,40,10,0.84)';
+                rr(160, 300, 580, 48, 13); ctx.fill();
+                ctx.strokeStyle = 'rgba(200,240,140,0.5)'; ctx.lineWidth = 2; ctx.stroke();
+                txt(this.banner, 450, 324, 19, '#e8ffb8', 'center', 900);
+                ctx.restore();
+            }
+            if (this.over) {
+                const full = this.pots.filter(p => p.lv >= FARM_LV.length).length;
+                if (this.win) this.overlay('牧场大丰收！', '满级作物 ' + full + ' 盆 · 分数 ' + this.lane.score + ' · 用时 ' + Math.round(this.t) + ' 秒', '#d8f56a');
+                else this.overlay('杂草压垮了围栏', '满级作物 ' + full + ' 盆 · 分数 ' + this.lane.score, '#ff9b6b');
+            }
+        }
+
+        drawField() {
+            const l = this.lane, wl = l.wallL, wr = l.wallR, y0 = l.TOP - 10;
+            const gg = ctx.createLinearGradient(0, y0, 0, l.deadline + 20);
+            gg.addColorStop(0, 'rgba(30,48,16,0.55)');
+            gg.addColorStop(1, 'rgba(18,30,9,0.72)');
+            ctx.fillStyle = gg; ctx.fillRect(0, y0, W, l.deadline - y0 + 26);
+            // 左右篱笆
+            for (const x of [wl - 12, wr + 4]) {
+                const wg = ctx.createLinearGradient(x, 0, x + 8, 0);
+                wg.addColorStop(0, 'rgba(120,88,44,0.95)'); wg.addColorStop(1, 'rgba(56,40,20,0.95)');
+                ctx.fillStyle = wg; ctx.fillRect(x, y0, 8, l.deadline - y0 + 26);
+            }
+            ctx.strokeStyle = 'rgba(255,120,90,0.42)';
+            ctx.setLineDash([9, 9]); ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, l.deadline); ctx.lineTo(W, l.deadline); ctx.stroke();
+            ctx.setLineDash([]);
+            txt('长到这条线就输', 20, l.deadline - 11, 11, 'rgba(255,160,140,0.6)', 'left', 600);
+        }
+
+        drawPots() {
+            for (const p of this.pots) {
+                const max = p.lv >= FARM_LV.length;
+                const y = p.y;
+                // 木箱
+                const bg = ctx.createLinearGradient(0, y, 0, y + 120);
+                bg.addColorStop(0, max ? '#7c5c2a' : '#6b4a24');
+                bg.addColorStop(1, max ? '#3f2c10' : '#33220d');
+                ctx.fillStyle = bg;
+                rr(p.x - 72, y, 144, 120, 10); ctx.fill();
+                ctx.strokeStyle = max ? 'rgba(255,214,110,0.85)' : 'rgba(150,110,60,0.55)';
+                ctx.lineWidth = max ? 2.4 : 1.6; ctx.stroke();
+                // 木板缝
+                ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 1;
+                for (let i = 1; i < 3; i++) {
+                    ctx.beginPath(); ctx.moveTo(p.x - 72, y + i * 30); ctx.lineTo(p.x + 72, y + i * 30); ctx.stroke();
+                }
+                // 土
+                ctx.fillStyle = '#2a1a0c';
+                rr(p.x - 58, y + 6, 116, 26, 7); ctx.fill();
+
+                // 盆里的作物
+                if (p.lv > 0) {
+                    const lv = FARM_LV[p.lv - 1];
+                    const bob = Math.sin(this.t * 2 + p.x) * 2;
+                    const sc = 0.55 + p.lv * 0.075;
+                    sprFit(lv.p, p.x, y + 4 + bob, 58 * sc, 1);
+                    if (p.fx > 0) {
+                        ctx.save();
+                        ctx.globalAlpha = p.fx * 1.1;
+                        const rg = ctx.createRadialGradient(p.x, y - 6, 4, p.x, y - 6, 56);
+                        rg.addColorStop(0, 'rgba(255,245,170,0.85)');
+                        rg.addColorStop(1, 'rgba(255,220,90,0)');
+                        ctx.fillStyle = rg;
+                        ctx.beginPath(); ctx.arc(p.x, y - 6, 56, 0, Math.PI * 2); ctx.fill();
+                        ctx.restore();
+                    }
+                } else {
+                    txt('空盆', p.x, y + 58, 13.5, 'rgba(255,255,255,0.46)', 'center', 700);
+                }
+
+                // 等级
+                if (p.lv > 0) {
+                    txt('Lv' + p.lv, p.x, y + 82, 12.5, max ? '#ffe066' : 'rgba(230,240,200,0.8)', 'center', 800);
+                    txt(FARM_LV[p.lv - 1].n, p.x, y + 100, 11, 'rgba(230,240,200,0.6)', 'center', 600);
+                }
+                // 种子进度（3 格）
+                for (let i = 0; i < FARM_SEED; i++) {
+                    const on = max || p.seed > i;
+                    ctx.fillStyle = on ? p.crop.c : 'rgba(255,255,255,0.12)';
+                    rr(p.x - 18 + i * 13, y + 64, 10, 8, 2.5); ctx.fill();
+                }
+                // 绑定色标
+                ctx.fillStyle = p.crop.c;
+                ctx.beginPath(); ctx.arc(p.x - 62, y + 14, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1.2; ctx.stroke();
+                txt(p.crop.n, p.x - 53, y + 14.5, 10, 'rgba(255,255,255,0.6)', 'left', 700);
+            }
+        }
+
+        drawShots() {
+            for (const s of this.shots) {
+                const k = Math.min(1, s.t / s.dur);
+                const x = s.x0 + (s.x1 - s.x0) * k;
+                const y = s.y0 + (s.y1 - s.y0) * k;
+                ctx.save();
+                ctx.globalAlpha = 0.35;
+                ctx.strokeStyle = s.lv >= 6 ? '#9be86a' : '#c9f58a';
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(s.x0, s.y0); ctx.lineTo(x, y); ctx.stroke();
+                ctx.restore();
+                if (s.lv >= 6) {
+                    ctx.fillStyle = '#7bc94a';
+                    ctx.beginPath(); ctx.arc(x, y, 6.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+                    ctx.beginPath(); ctx.arc(x - 2, y - 2, 2.4, 0, Math.PI * 2); ctx.fill();
+                } else if (s.lv >= 4) {
+                    ctx.fillStyle = '#8fe4ff';
+                    ctx.beginPath(); ctx.arc(x, y, 4.6, 0, Math.PI * 2); ctx.fill();
+                } else {
+                    ctx.fillStyle = '#b7f06a';
+                    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+                }
+            }
+        }
+
+        drawShooter() {
+            const l = this.lane, a = l.shooter.ang;
+            ctx.fillStyle = '#5a4022';
+            rr(l.sx - 28, l.sy - 4, 56, 20, 7); ctx.fill();
+            ctx.fillStyle = '#7a5c30';
+            rr(l.sx - 28, l.sy - 4, 56, 6, 3); ctx.fill();
+            sprH('cattail', l.sx - 32, l.sy - 24, 58);
+            ctx.save();
+            ctx.translate(l.sx, l.sy - 18);
+            ctx.rotate(a + Math.PI / 2);
+            ctx.fillStyle = '#c9e08a';
+            rr(-6, -44, 12, 40, 6); ctx.fill();
+            ctx.restore();
+            const px = l.sx + Math.cos(a) * 66, py = l.sy - 18 + Math.sin(a) * 66;
+            if (l.curSp) l.spBall(px, py, l.curSp); else l.bub(px, py, l.cur, 0.82);
+        }
+
+        drawHud() {
+            const l = this.lane;
+            const full = this.pots.filter(p => p.lv >= FARM_LV.length).length;
+            // 0~52 是 DOM 顶栏（回大厅 / 关卡名 / 声音），HUD 一律从 68 起
+            txt('泡泡牧场', 20, 68, 17, '#e8ffb8', 'left', 900);
+            txt('满级 ' + full + ' / ' + FARM_WIN, 148, 68, 13, full >= FARM_WIN ? '#ffe066' : 'rgba(230,245,200,0.72)', 'left', 800);
+            txt('剩 ' + l.count() + ' 颗 · 分数 ' + l.score, 450, 68, 12.5, 'rgba(230,245,200,0.6)', 'center', 700);
+            txt('消掉同色植物掉进花盆 · 喂满 3 颗升 1 级', 450, 88, 11.5, 'rgba(230,245,200,0.46)', 'center', 600);
+            txt(Math.round(this.t) + 's', 880, 68, 12, 'rgba(230,245,200,0.5)', 'right', 700);
+            for (const f of this.floats) {
+                ctx.save();
+                ctx.globalAlpha = Math.min(1, f.t / 0.5);
+                txt(f.s, f.x, f.y, 16, f.c, 'center', 900);
+                ctx.restore();
+            }
+        }
+
+        /* ---------- 输入 ---------- */
         onDown(x, y) {
-            if (this.over) return;
-            this._aimAt(x, y);
-            this.shoot();
+            if (this.over) { if (this.overT > 0.45) this.reset(); return; }
+            this.lane.aimAt(x, y);
+            this.lane.fire();
         }
         onMove(x, y) {
             if (this.over) return;
-            this._aimAt(x, y);
+            this.lane.aimAt(x, y);
         }
         onKey(down, k) {
             if (!down || this.over) return;
-            const step = 0.09, th = this._aimLimit(), mid = -Math.PI / 2;
-            if (k === 'left' || k === 'a') this.shooter.ang = Math.max(mid - th, this.shooter.ang - step);
-            if (k === 'right' || k === 'd') this.shooter.ang = Math.min(mid + th, this.shooter.ang + step);
-            if (k === 'space' || k === 'up') this.shoot();
+            const l = this.lane;
+            if (k === 'left' || k === 'a') l.nudge(-0.045);
+            if (k === 'right' || k === 'd') l.nudge(0.045);
+            if (k === 'space' || k === 'up') l.fire();
         }
-        draw() {
-            // v4.0.153：跟「机械龙攻城」拉开第一眼区别 —— 这里是后院夜色草坪（墨绿 + 草檐 + 草纹），
-            // 那边是钢铁工坊（暗铜 + 钢板 + 铆钉护墙）。同一个内核，两套完全不同的画面语言。
-            const g = ctx.createLinearGradient(0, 0, 0, H);
-            g.addColorStop(0, '#1e4522'); g.addColorStop(0.5, '#132f17'); g.addColorStop(1, '#07130a');
-            ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-            // 草地纹理：斜向细纹（横条会变成一条条亮带，像扫描线，压得球看不清）
-            ctx.strokeStyle = 'rgba(150,220,120,0.045)'; ctx.lineWidth = 1;
-            ctx.beginPath();
-            for (let x = -H; x < W; x += 26) { ctx.moveTo(x, this.TOP); ctx.lineTo(x + (H - this.TOP), H); }
-            ctx.stroke();
-            // 中心提亮：球最多的地方稍微亮一点，视线自然落在那里
-            const rg = ctx.createRadialGradient(W / 2, this.TOP + 150, 40, W / 2, this.TOP + 150, W * 0.72);
-            rg.addColorStop(0, 'rgba(130,205,95,0.10)');
-            rg.addColorStop(1, 'rgba(0,0,0,0)');
-            ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
-            // 场地顶檐的一排草叶
-            ctx.fillStyle = 'rgba(60,130,52,0.9)';
-            ctx.fillRect(0, this.TOP - 5, W, 5);
-            ctx.fillStyle = 'rgba(128,208,96,0.55)';
-            for (let x = 0; x < W; x += 26) {
-                ctx.beginPath();
-                ctx.moveTo(x, this.TOP - 5); ctx.lineTo(x + 13, this.TOP - 15); ctx.lineTo(x + 26, this.TOP - 5);
-                ctx.fill();
-            }
-            ctx.fillStyle = 'rgba(0,0,0,0.16)'; ctx.fillRect(0, this.TOP, W, H - this.TOP);
-            const rx = this.LEFT, rw = this.COLS * this.R * 2;
-            // 左右边界：球在这两条线上反弹，也就是"整个界面"的物理边界
-            ctx.strokeStyle = 'rgba(255,255,255,0.09)'; ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(rx, this.TOP); ctx.lineTo(rx, this.shooter.y - 4);
-            ctx.moveTo(rx + rw, this.TOP); ctx.lineTo(rx + rw, this.shooter.y - 4);
-            ctx.stroke();
-            // 红线
-            ctx.strokeStyle = 'rgba(255,120,120,0.5)'; ctx.setLineDash([8, 8]); ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.moveTo(0, this.shooter.y - 24); ctx.lineTo(W, this.shooter.y - 24); ctx.stroke();
-            ctx.setLineDash([]);
-            txt('顶到这条线就输', 20, this.shooter.y - 36, 11, 'rgba(255,150,150,0.55)', 'left', 600);
-            for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) {
-                const v = this.g[r][c]; if (v < 0) continue;
-                this.bub(this.cx(r, c), this.yOf(r), v);
-            }
-            for (const p of this.pops) {
-                ctx.globalAlpha = Math.max(0, p.t / 0.32);
-                ctx.fillStyle = (BUB_COLORS[p.c] || BUB_COLORS[0]).c;
-                ctx.beginPath(); ctx.arc(p.x, p.y, this.R * (1.6 - p.t), 0, Math.PI * 2); ctx.fill();
-                ctx.globalAlpha = 1;
-            }
-            for (const d of this.drops) this.bub(d.x, d.y, d.c);
-            if (this.ball) this.bub(this.ball.x, this.ball.y, this.ball.col);
-            else if (!this.over) this._drawAim();      // 瞄准虚线
-            // 猫尾草炮台
-            sprH('cattail', this.shooter.x - 34, this.shooter.y - 26, 62);
-            ctx.save();
-            ctx.translate(this.shooter.x, this.shooter.y - 20); ctx.rotate(this.shooter.ang + Math.PI / 2);
-            ctx.fillStyle = '#c9e08a'; rr(-6, -46, 12, 42, 6); ctx.fill();
-            ctx.restore();
-            this.bub(this.shooter.x + Math.cos(this.shooter.ang) * 70, this.shooter.y - 20 + Math.sin(this.shooter.ang) * 70, this.cur, 0.75);
-            this._drawHud();
-            if (this.over) {
-                if (this.win) this.overlay('全场清空！', '分数 ' + this.score + ' · 泡泡一个不剩', '#b7f06a');
-                else this.overlay('泡泡堆到炮口了', '分数 ' + this.score + ' · 剩 ' + this.leftCount() + ' 颗', '#ff8f6b');
-            }
-        }
-
-        // v4.0.151：HUD 由右侧整列改成顶部一条横栏（y 44~96）——
-        // 右边那 260px 空出来给场地，整个画面就没有"打得着/打不着"的分界了。
-        _drawHud() {
-            const y0 = 44, y1 = this.TOP, cy = (y0 + y1) / 2;
-            ctx.fillStyle = 'rgba(6,20,10,0.66)';
-            ctx.fillRect(0, y0, W, y1 - y0);
-            ctx.strokeStyle = 'rgba(160,220,130,0.18)'; ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.moveTo(0, y1); ctx.lineTo(W, y1); ctx.stroke();
-
-            txt('分数', 20, cy - 1, 12.5, 'rgba(255,255,255,0.5)', 'left', 600);
-            txt(String(this.score), 54, cy, 22, '#ffe066', 'left', 900);
-            txt('剩 ' + this.leftCount() + ' 颗', 208, cy, 15, '#dfe9f5', 'left', 700);
-            txt('同色 ≥3 爆破 · 清空全场即通关', 336, cy - 6, 12, 'rgba(255,255,255,0.52)', 'left', 600);
-            txt('连续 8 发打空会压下一行', 336, cy + 10, 10.5, 'rgba(255,255,255,0.3)', 'left', 600);
-            txt('下一颗', 806, cy, 12.5, 'rgba(255,255,255,0.5)', 'right', 600);
-            this.bub(852, cy, this.next, 1, 18);
-        }
-
-        // v4.0.151：瞄准虚线 —— 张角放大到 160° 之后必须让玩家看得见球会往哪飞，
-        // 顺便也是"每一格都指得到"的直观证据。只对附近两三行做碰撞测试，开销可忽略。
-        _drawAim() {
-            const a = this.shooter.ang, vx = Math.cos(a), vy = Math.sin(a);
-            if (vy > -0.02) return;                       // 指向地平线以下就不画
-            const ox = this.shooter.x + vx * 30, oy = this.shooter.y - 20 + vy * 30;
-            const lim2 = (this.R * 1.7) * (this.R * 1.7);
-            let px = ox, py = oy, ex = ox, ey = oy;
-            for (let i = 0; i < 220; i++) {
-                px += vx * 9; py += vy * 9; ex = px; ey = py;
-                if (px <= this.wallL || px >= this.wallR) break;
-                if (py <= this.TOP + this.R * 0.55) break;
-                const r0 = Math.max(0, Math.floor((py - this.TOP - this.R) / this.ROWH) - 1);
-                let hit = false;
-                for (let r = r0; r <= Math.min(this.rows - 1, r0 + 2) && !hit; r++) {
-                    for (let c = 0; c < this.colsIn(r); c++) {
-                        if (this.g[r][c] < 0) continue;
-                        const dx = px - this.cx(r, c), dy = py - this.yOf(r);
-                        if (dx * dx + dy * dy < lim2) { hit = true; break; }
-                    }
-                }
-                if (hit) break;
-            }
-            ctx.save();
-            ctx.strokeStyle = 'rgba(180,235,255,0.28)'; ctx.lineWidth = 2;
-            ctx.setLineDash([6, 9]);
-            ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ex, ey); ctx.stroke();
-            ctx.setLineDash([]);
-            ctx.fillStyle = 'rgba(180,235,255,0.34)';
-            ctx.beginPath(); ctx.arc(ex, ey, 3.2, 0, Math.PI * 2); ctx.fill();
-            ctx.restore();
-        }
-        // 整体下移一行、顶部补一行新球；超出该行列数的球滚落
-        pushRow() {
-            SFX.push(1);                        // v4.0.156：整排砸下来
-            for (let r = this.rows - 1; r >= 1; r--) {
-                this.g[r] = this.g[r - 1].slice();
-                // v4.0.151：奇数行只有 COLS-1 格，整体下移后会比偶数行少一个元素，
-                // slice 出来的数组尾部是空洞（undefined）。draw 里 `v < 0` 对 undefined 是 false，
-                // update 里的碰撞检测同理 —— 于是每个空洞都被当成"一颗看不见的绿球"，
-                // 既打不掉也算不进 leftCount，「清空全场」永远差这几颗。补成 -1。
-                while (this.g[r].length < this.COLS) this.g[r].push(-1);
-                for (let c = this.colsIn(r); c < this.COLS; c++) {
-                    if (this.g[r][c] >= 0) {
-                        this.drops.push({ x: this.cx(r, c), y: this.yOf(r), v: 60, c: this.g[r][c] });
-                        this.g[r][c] = -1;
-                    }
-                }
-            }
-            this.g[0] = new Array(this.COLS).fill(-1);
-            for (let c = 0; c < this.colsIn(0); c++) this.g[0][c] = (Math.random() * 4) | 0;
-            this.downRows = (this.downRows || 0) + 1;
-            // 压到底直接判负
-            for (let r = this.rows - 1; r >= 0; r--) {
-                if (this.g[r].some(v => v >= 0)) {
-                    if (this.yOf(r) + this.R >= this.shooter.y - 24) this.end(false);
-                    break;
-                }
-            }
-        }
-        leftCount() {
-            let n = 0;
-            for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.colsIn(r); c++) if (this.g[r][c] >= 0) n++;
-            return n;
-        }
-        bub(x, y, col, a, rad) { paintBub(x, y, col, a, rad || this.R); }   // v4.0.155：共用肥皂泡实现
     }
 
     /* ================================================================
@@ -2144,8 +2197,21 @@
     }
 
     /* ================================================================
-     * 6. 机械龙攻城（v4.0.152 替换「植物消消乐」）
-     * 头上一条机械龙在喷泡泡压你的场地，消掉的泡泡变成尖刺自动射回去
+     * 5. 机械龙攻城（v4.0.157 植物体系）
+     * ----------------------------------------------------------------
+     * 旧版是「消一颗 4 点」的线性伤害，跟经典泡泡龙只差一层皮。
+     * 这一版把「同色三消」直接翻译成「同种植物连成一片」：
+     *   绿（豌豆）  3 连 = 豌豆射手 5 点，4 连 = 双发豌豆 10 点，5 连起 15/20…
+     *   蓝（寒冰）  伤害只有豌豆一半，但每颗给龙叠一层霜冻（喷吐间隔 +12%，
+     *               满 6 层直接冰封 3 秒、受伤翻倍）；连续 5 回合没人消寒冰
+     *               → 场上寒冰全部融回普通豌豆（寒冰会化，不能一直放着不管）
+     *   紫（菇）    3 连 = 小喷菇，毒 1/回合；4 连 = 大喷菇 2/回合；
+     *               5 连 = 忧郁菇 4/回合，代价是把龙的血上限顶到 1000
+     *   黄（玉米）  每消 3 颗掷一次 25% 的黄油骰，中了定身 10 秒
+     * 另外「连续 4 次成功消除」触发机枪豌豆：一次性 40 点，连击槽会告诉你差几次。
+     * 一回合 = 玩家打出一颗球，毒在下一回合开头结算。
+     * 三条状态线互相加成是有意设计的：先上毒（紫）→ 冻住（蓝）→ 冰封里打机枪（绿），
+     * 比无脑打绿球快一倍，但每一条都要先攒，急了就断连。
      * ============================================================== */
     class DragonRaid extends Base {
         setup() {
@@ -2158,9 +2224,7 @@
                 fillRows: 3, gapEvery: 3, ceilRows: 2, missPush: false
             });
             this.lane.noClear = true;      // 清空场地不算赢，只有把龙打死才算
-            this.lane.onLand = (l, res) => {
-                if (res.popped > 0) this.hurt(res.popped * 4 + Math.min(res.dropped, 8) * 3);
-            };
+            this.lane.onLand = (l, res) => this.onPop(res);
             this.lane.onDead = () => this.end(false);
 
             this.hpMax = 640; this.hp = this.hpMax;
@@ -2170,47 +2234,214 @@
             this.spikes = []; this.fx = [];
             this.banner = ''; this.bannerT = 0;
             this.dieT = 0;
+            this.gatlingFx = 0;
+            this.dmgDone = 0;
+
+            /* ---- v4.0.157 状态线 ---- */
+            this.turn = 0;                       // 玩家已出手次数
+            this.combo = 0;                      // 连续成功消除次数（机枪槽 0..4）
+            this.poison = { per: 0, turns: 0 };  // 毒：每回合 per 点，剩 turns 回合
+            this.frost = 0;                      // 霜冻 0..6
+            this.iceCd = 0;                      // 冰封剩余秒
+            this.butter = 0;                     // 黄油定身剩余秒
+            this.iceIdle = 0;                    // 寒冰球连续几回合没被消
+            this.gloom = false;                  // 忧郁菇是否已把血上限顶到 1000
+            this.poisonFx = 0;
         }
 
-        hurt(dmg) {
-            if (this.over || this.dieT > 0) return;
-            dmg = Math.max(1, Math.round(dmg));
-            const n = Math.max(1, Math.min(6, Math.round(dmg / 3)));
+        /* ---------- 伤害入口 ---------- */
+        // quiet = 不飘字（毒）；raw = 不吃黄油/冰封的加成（毒是持续伤，不跟着爆发）
+        hit(dmg, label, quiet, raw) {
+            if (this.over || this.dieT > 0) return 0;
+            let mul = 1;
+            if (!raw) {
+                if (this.butter > 0) mul += 0.5;   // 关节被黄油糊住，打哪都疼
+                if (this.iceCd > 0) mul += 1.0;    // 冻住的装甲发脆
+            }
+            const real = Math.max(1, Math.round(dmg * mul));
+            const n = Math.max(1, Math.min(7, Math.round(real / 4)));
             for (let i = 0; i < n; i++) {
                 this.spikes.push({
                     x: this.lane.sx + (Math.random() - 0.5) * 70,
                     y: this.lane.sy - 34,
-                    t: 0, dur: 0.26 + i * 0.045, dmg: i === 0 ? dmg : 0
+                    t: 0, dur: 0.26 + i * 0.045, dmg: i === 0 ? real : 0
                 });
             }
-            this.hp = Math.max(0, this.hp - dmg);
-            SFX.dmg(Math.min(1.5, 0.55 + dmg / 34));    // v4.0.156：每一下都是一声低吼，伤害越大越沉
+            this.hp = Math.max(0, this.hp - real);
+            this.dmgDone += real;
+            SFX.dmg(Math.min(1.5, 0.5 + real / 40));
             this.flash = 0.3;
-            this.shake = Math.min(7, 2 + dmg * 0.35);
-            this.fx.push({ x: 400 + (Math.random() - 0.5) * 150, y: 120, s: '-' + dmg, t: 0.9, c: '#ffd166' });
+            this.shake = Math.max(this.shake, Math.min(9, 1.5 + real * 0.3));
+            if (!quiet) {
+                this.fx.push({
+                    x: 400 + (Math.random() - 0.5) * 150, y: 176 + (Math.random() - 0.5) * 24,
+                    s: '-' + real, t: 1.0, tag: label || '',
+                    c: this.iceCd > 0 ? '#bfe9ff' : (this.butter > 0 ? '#ffe9a8' : '#ffd166')
+                });
+            }
+            this.checkPhase();
+            return real;
+        }
 
+        checkPhase() {
+            if (this.hp <= 0) {
+                if (this.dieT <= 0) {
+                    this.dieT = 1.5;
+                    SFX.death();                        // 坠落前的最后一声哀嚎
+                    this.banner = '机械龙被击落！';
+                    this.bannerT = 2.2;
+                }
+                return;
+            }
             const p = this.hp / this.hpMax;
             const ph = p > 0.7 ? 1 : (p > 0.35 ? 2 : 3);
             if (ph > this.phase) {
                 this.phase = ph;
-                // v4.0.156：进第 2 阶段 = 护甲被拆（金属断裂），进第 3 阶段 = 暴怒长吼
+                // 进第 2 阶段 = 护甲被拆（金属断裂），进第 3 阶段 = 暴怒长吼
                 if (ph === 2) SFX.armor(); else SFX.roar();
                 this.banner = ph === 2 ? '机械龙拆掉护甲 —— 喷吐变快，开始丢墓碑！' : '机械龙暴怒了！';
                 this.bannerT = 2.2;
                 this.shake = 10;
                 this.sprayT = Math.min(this.sprayT, 2.8);
             }
-            if (this.hp <= 0) {
-                this.dieT = 1.5;
-                SFX.death();                            // v4.0.156：坠落前的最后一声哀嚎
-                this.banner = '机械龙被击落！';
+        }
+
+        /* ---------- 四种植物各自的规矩 ---------- */
+        onPop(res) {
+            const col = res.col == null ? 0 : res.col;
+            if (res.popped <= 0) {
+                this.combo = 0;
+                this.staleIce();
+                return;
+            }
+            const n = Math.max(1, res.size || 3);
+
+            if (col === 0) {
+                // 豌豆：3 连 5 点，4 连 10 点，之后每多一颗 +5
+                const dmg = 5 * Math.max(1, n - 2);
+                this.hit(dmg, n >= 4 ? '双发豌豆' : '豌豆射手');
+            } else if (col === 1) {
+                // 寒冰：伤害减半，换霜冻层数
+                this.hit(Math.max(2, Math.round(5 * (n - 2) * 0.5)), '寒冰豌豆');
+                this.addFrost(n);
+                this.iceIdle = 0;
+            } else if (col === 2) {
+                // 菇系：固定 5 点 + 毒，消除数决定毒倍率（1/2/4/8）
+                const per = [0, 1, 2, 4, 8][Math.min(4, Math.max(1, n - 2))];
+                const name = n >= 5 ? '忧郁菇' : (n >= 4 ? '大喷菇' : '小喷菇');
+                this.hit(5, name);
+                this.applyPoison(per, name);
+                if (n >= 5) this.gloomBoost();
+            } else if (col === 3) {
+                // 玉米：正常伤害 + 每 3 颗一次 25% 黄油骰
+                this.hit(5 * Math.max(1, n - 2), '玉米投手');
+                const rolls = Math.max(1, Math.floor(n / 3));
+                for (let i = 0; i < rolls; i++) {
+                    if (Math.random() < 0.25) { this.butterUp(); break; }
+                }
+            } else {
+                this.hit(5 * Math.max(1, n - 2), '樱桃');
+            }
+
+            // 悬空的植物摔下去也压一下
+            if (res.dropped > 0) this.hit(Math.min(10, res.dropped * 2), '坠落', true);
+
+            this.combo++;
+            if (col !== 1) this.staleIce();
+            if (this.combo >= 4) { this.machineGun(); this.combo = 0; }
+        }
+
+        machineGun() {
+            this.gatlingFx = 0.6;
+            this.hit(40, '机枪豌豆 · 四连扫射');
+            this.shake = 13;
+            SFX.machine();
+        }
+
+        addFrost(n) {
+            this.frost = Math.min(6, this.frost + Math.max(1, n));
+            if (this.frost < 6) return;
+            this.frost = 0;
+            this.iceCd = 3;
+            this.sprayT = Math.max(this.sprayT, 3.2);
+            this.banner = '霜冻封住了机械龙的关节 —— 3 秒不能开火，受伤翻倍！';
+            this.bannerT = 2.2;
+            SFX.freeze();
+        }
+
+        // 连续 5 回合没人消寒冰 → 场上的寒冰融回普通豌豆
+        staleIce() {
+            if (++this.iceIdle < 5) return;
+            this.iceIdle = 0;
+            let n = 0;
+            for (let r = 0; r < this.lane.rows; r++) {
+                for (let c = 0; c < this.lane.colsIn(r); c++) {
+                    if (this.lane.g[r][c] === 1) { this.lane.g[r][c] = 0; n++; }
+                }
+            }
+            this.frost = 0;
+            if (n > 0) {
+                this.banner = '寒冰放太久化成了水 —— ' + n + ' 颗退回普通豌豆';
                 this.bannerT = 2.2;
             }
         }
 
+        applyPoison(per, name) {
+            if (per <= 0) return;
+            this.poison.per = Math.max(this.poison.per, per);
+            this.poison.turns = 10;
+            SFX.poison();
+            this.fx.push({ x: 300, y: 176, s: name + ' 毒 ' + this.poison.per + '/回合', t: 1.3, c: '#c9a3ff' });
+        }
+
+        gloomBoost() {
+            if (this.gloom) return;
+            this.gloom = true;
+            const add = 1000 - this.hpMax;
+            this.hpMax = 1000;
+            this.hp = Math.min(this.hpMax, this.hp + add);
+            this.banner = '忧郁菇激怒了机械龙 —— 血量上限 1000，但毒伤翻了 4 倍';
+            this.bannerT = 2.8;
+            this.shake = 12;
+            SFX.armor();
+        }
+
+        butterUp() {
+            const was = this.butter > 0;
+            this.butter = 10;
+            if (!was) {
+                this.banner = '黄油命中！机械龙被黏住 10 秒';
+                this.bannerT = 2.0;
+            }
+            SFX.butter();
+        }
+
+        /* ---------- 回合 ---------- */
+        tickTurn() {
+            this.turn++;
+            if (this.poison.turns > 0) {
+                const d = this.poison.per;
+                this.poison.turns--;
+                this.hit(d, '毒', true, true);
+                this.poisonFx = 0.45;
+                if (this.poison.turns === 0) this.poison.per = 0;
+            }
+            // 霜冻会自然挥发，但比"每回合掉一层"慢得多（3 回合掉 1 层）
+            if (this.frost > 0 && this.turn % 3 === 0) this.frost = Math.max(0, this.frost - 1);
+        }
+
+        sprayInterval() {
+            // v4.0.157：伤害从旧版「4 点/颗」换成植物体系（3 连只有 5 点）后，同样的喷吐节奏
+            // 会让玩家在打死龙之前先被压死（实测机器人 32 秒就顶到红线，只打掉 18% 血）。
+            // 所以喷吐整体放慢一档，把「伤害变低」换成「你有更多回合」，节奏才跟旧版一致。
+            const base = this.phase === 1 ? 8.2 : (this.phase === 2 ? 6.4 : 5.2);
+            return base * (1 + this.frost * 0.12);   // 每层霜冻让喷吐慢 12%
+        }
+
         spray() {
-            SFX.spray();                                // v4.0.156：火柱呼啸
-            const n = this.phase === 1 ? 5 : (this.phase === 2 ? 6 : 7);
+            if (this.butter > 0 || this.iceCd > 0) { this.sprayT = 1.0; return; }
+            SFX.spray();                                // 火柱呼啸
+            const n = this.phase === 1 ? 4 : (this.phase === 2 ? 5 : 6);
             this.lane.pushCeil(n, null);
             if (this.phase >= 2) {
                 const k = this.phase >= 3 ? 2 : 1;
@@ -2220,7 +2451,7 @@
                 }
             }
             this.lane.checkState();
-            this.sprayT = this.phase === 1 ? 6.6 : (this.phase === 2 ? 5.0 : 4.0);
+            this.sprayT = this.sprayInterval();
             this.warn = 0;
             this._warnSfx = false;
             this.shake = Math.max(this.shake, 3);
@@ -2230,6 +2461,8 @@
             this.flash = Math.max(0, this.flash - dt);
             this.shake = Math.max(0, this.shake - dt * 26);
             this.bannerT = Math.max(0, this.bannerT - dt);
+            this.gatlingFx = Math.max(0, this.gatlingFx - dt);
+            this.poisonFx = Math.max(0, this.poisonFx - dt);
             for (const s of this.spikes) s.t += dt;
             this.spikes = this.spikes.filter(s => s.t < s.dur + 0.35);
             for (const f of this.fx) { f.t -= dt; f.y -= dt * 34; }
@@ -2243,16 +2476,20 @@
                 if (this.dieT <= 0) this.end(true);
                 return;
             }
+            // 黄油定身 / 冰封：喷吐计时完全停住（不是变慢，是停住）
+            if (this.butter > 0) { this.butter = Math.max(0, this.butter - dt); return; }
+            if (this.iceCd > 0) { this.iceCd = Math.max(0, this.iceCd - dt); return; }
+
             this.sprayT -= dt;
             this.warn = this.sprayT < 1.3 ? Math.max(0, 1 - this.sprayT / 1.3) : 0;
-            // v4.0.156：炮口开始发光时配一声长长的吸气（每次喷吐只响一次）
+            // 炮口开始发光时配一声长长的吸气（每次喷吐只响一次）
             if (this.warn > 0.02 && !this._warnSfx) { this._warnSfx = true; SFX.warn(); }
             if (this.sprayT <= 0) this.spray();
         }
 
         /* ---------- 绘制 ---------- */
         draw() {
-            // v4.0.153：钢铁工坊（暗铜）—— 经典泡泡龙是后院草地（墨绿），两套色系不撞
+            // 钢铁工坊（暗铜）—— 经典泡泡龙是后院草地（墨绿），两套色系不撞
             const g = ctx.createLinearGradient(0, 0, 0, H);
             g.addColorStop(0, '#3d2416'); g.addColorStop(0.5, '#26170f'); g.addColorStop(1, '#0f0a07');
             ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
@@ -2268,18 +2505,28 @@
             this.drawSpikes();
             ctx.restore();
 
+            this.drawGatling();
             this.drawHud();
+            if (this.poison.turns > 0 && this.poisonFx > 0) {
+                ctx.save();
+                ctx.globalAlpha = Math.min(1, this.poisonFx * 2.2);
+                const pg = ctx.createRadialGradient(470, 90, 10, 470, 90, 190);
+                pg.addColorStop(0, 'rgba(150,80,220,0.30)');
+                pg.addColorStop(1, 'rgba(90,40,150,0)');
+                ctx.fillStyle = pg; ctx.fillRect(280, -20, 400, 260);
+                ctx.restore();
+            }
             if (this.bannerT > 0) {
                 const a = Math.min(1, this.bannerT / 0.5);
                 ctx.save(); ctx.globalAlpha = a;
                 ctx.fillStyle = 'rgba(40,10,6,0.82)';
-                rr(150, 300, 600, 54, 14); ctx.fill();
+                rr(120, 300, 660, 54, 14); ctx.fill();
                 ctx.strokeStyle = 'rgba(255,150,90,0.6)'; ctx.lineWidth = 2; ctx.stroke();
-                txt(this.banner, 450, 327, 21, '#ffcf8a', 'center', 900);
+                txt(this.banner, 450, 327, 20, '#ffcf8a', 'center', 900);
                 ctx.restore();
             }
             if (this.over) {
-                if (this.win) this.overlay('机械龙被击落！', '分数 ' + this.lane.score + ' · 用时 ' + Math.round(this.t) + ' 秒', '#b7f06a');
+                if (this.win) this.overlay('机械龙被击落！', '伤害 ' + this.dmgDone + ' · 出手 ' + this.turn + ' 次 · 用时 ' + Math.round(this.t) + ' 秒', '#b7f06a');
                 else this.overlay('泡泡压到炮口了', '差一点：机械龙还剩 ' + Math.ceil(this.hp) + ' 血', '#ff8f6b');
             }
         }
@@ -2312,6 +2559,36 @@
                 ctx.fillStyle = 'rgba(255,60,40,' + a + ')';
                 ctx.beginPath(); ctx.arc(469, 95, 6, 0, Math.PI * 2); ctx.fill();
                 ctx.beginPath(); ctx.arc(506, 89, 6, 0, Math.PI * 2); ctx.fill();
+            }
+            // v4.0.157：黄油糊在胸口 / 关节上，会慢慢往下滴
+            if (this.butter > 0) {
+                ctx.save();
+                const spots = [[352, 132, 38, 21], [438, 166, 31, 19], [512, 142, 26, 16]];
+                for (const [sx, sy, rw, rh] of spots) {
+                    ctx.fillStyle = 'rgba(242,199,74,0.72)';
+                    ctx.beginPath(); ctx.ellipse(sx, sy + bob, rw, rh, -0.28, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = 'rgba(255,240,168,0.55)';
+                    ctx.beginPath(); ctx.ellipse(sx - rw * 0.22, sy + bob - rh * 0.26, rw * 0.5, rh * 0.38, -0.28, 0, Math.PI * 2); ctx.fill();
+                }
+                const drip = (this.t * 24) % 26;
+                ctx.fillStyle = 'rgba(242,199,74,0.62)';
+                for (const [sx, sy] of [[358, 148], [444, 180]]) {
+                    ctx.beginPath(); ctx.ellipse(sx, sy + bob + drip, 3.6, 6.5, 0, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.restore();
+            }
+            // 冰封：身上结一层菱形冰晶
+            if (this.iceCd > 0) {
+                ctx.save();
+                ctx.globalAlpha = 0.55;
+                for (let i = 0; i < 9; i++) {
+                    const x = 315 + (i * 53) % 300, y = -24 + (i * 67) % 190;
+                    ctx.fillStyle = i % 2 ? 'rgba(170,232,255,0.55)' : 'rgba(215,245,255,0.5)';
+                    ctx.beginPath();
+                    ctx.moveTo(x, y - 13); ctx.lineTo(x + 9, y); ctx.lineTo(x, y + 13); ctx.lineTo(x - 9, y);
+                    ctx.closePath(); ctx.fill();
+                }
+                ctx.restore();
             }
         }
 
@@ -2375,7 +2652,7 @@
 
         drawShooter() {
             const l = this.lane, a = l.shooter.ang;
-            // v4.0.153：钢铁炮座（经典泡泡龙是直接长在草地上，这里坐在炮架上）
+            // 钢铁炮座（经典泡泡龙是直接长在草地上，这里坐在炮架上）
             ctx.fillStyle = '#4a3724';
             rr(l.sx - 30, l.sy - 6, 60, 22, 7); ctx.fill();
             ctx.fillStyle = '#6d5537';
@@ -2411,9 +2688,30 @@
             }
         }
 
+        // 机枪扫射：七条弹道同时拉向龙，不用改龙的贴图就能读出「连射」
+        drawGatling() {
+            if (this.gatlingFx <= 0) return;
+            const a = Math.min(1, this.gatlingFx * 2.4);
+            ctx.save();
+            ctx.strokeStyle = '#ffe066';
+            for (let i = 0; i < 7; i++) {
+                const x0 = 450 + (i - 3) * 6;
+                const x1 = 374 + (i - 3) * 7;
+                ctx.globalAlpha = a * (0.25 + 0.08 * ((i * 7) % 5));
+                ctx.lineWidth = i === 3 ? 3 : 1.6;
+                ctx.beginPath();
+                ctx.moveTo(x0, 520 - i * 3);
+                ctx.lineTo(x1, 129);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
         drawHud() {
             const l = this.lane;
-            const x0 = 250, x1 = 650, y = 12, h = 14;
+            // v4.0.157：DOM 顶栏（回大厅 / 声音）压住画布 0~46px，血条不能再从 x=250 起 ——
+            // 左端会被「回大厅」按钮吃掉，右端会顶到右上角的关卡名。缩到 330~620 只占中间。
+            const x0 = 330, x1 = 580, y = 12, h = 14;
             ctx.fillStyle = 'rgba(6,9,14,0.78)';
             rr(x0 - 4, y - 4, x1 - x0 + 8, h + 8, 10); ctx.fill();
             ctx.fillStyle = 'rgba(255,255,255,0.09)';
@@ -2425,20 +2723,62 @@
                 ctx.fillStyle = grd;
                 rr(x0, y, Math.max(3, (x1 - x0) * p), h, 6); ctx.fill();
             }
+            // 阶段刻度：血上限变成 1000 时，三个刻度跟着重新均分，不然会指错阶段
             ctx.fillStyle = 'rgba(0,0,0,0.5)';
             ctx.fillRect(x0 + (x1 - x0) * 0.35, y, 2, h);
             ctx.fillRect(x0 + (x1 - x0) * 0.70, y, 2, h);
 
-            txt('机械龙 · 第 ' + this.phase + ' 阶段', 244, y + h / 2, 12.5, 'rgba(255,214,180,0.92)', 'right', 800);
-            txt(Math.ceil(this.hp) + ' / ' + this.hpMax, 450, y + h / 2, 11.5, 'rgba(255,255,255,0.9)', 'center', 800);
-            txt('剩 ' + l.count() + ' 颗泡泡', 20, 60, 13, 'rgba(220,235,255,0.62)', 'left', 700);
-            txt('分数 ' + l.score, 880, 60, 13, 'rgba(220,235,255,0.62)', 'right', 700);
+            txt('机械龙 · 第 ' + this.phase + ' 阶段', x0, 38, 12.5, 'rgba(255,214,180,0.92)', 'left', 800);
+            txt(Math.ceil(this.hp) + ' / ' + this.hpMax, 455, y + h / 2, 11.5, 'rgba(255,255,255,0.9)', 'center', 800);
+            txt('剩 ' + l.count() + ' 颗泡泡', 20, 62, 13, 'rgba(220,235,255,0.62)', 'left', 700);
+            txt('回合 ' + this.turn, 20, 84, 12, 'rgba(220,235,255,0.42)', 'left', 700);
+            txt('分数 ' + l.score, 880, 62, 13, 'rgba(220,235,255,0.62)', 'right', 700);
+
+            this.drawStatus();
+            this.drawCombo();
 
             for (const f of this.fx) {
                 ctx.save();
                 ctx.globalAlpha = Math.min(1, f.t / 0.4);
                 txt(f.s, f.x, f.y, 20, f.c, 'center', 900);
+                if (f.tag) txt(f.tag, f.x, f.y + 18, 11.5, 'rgba(255,240,210,0.66)', 'center', 700);
                 ctx.restore();
+            }
+        }
+
+        // 四条状态线：毒 / 霜 / 黄油 / 冰封。只在有值的时候出现，不占常驻空间
+        drawStatus() {
+            let x = 330;
+            const y = 58;
+            const chip = (label, color, bg) => {
+                ctx.font = '800 12px "PingFang SC","Microsoft YaHei",sans-serif';
+                const w = ctx.measureText(label).width + 20;
+                ctx.fillStyle = bg;
+                rr(x, y, w, 21, 7); ctx.fill();
+                ctx.strokeStyle = color; ctx.lineWidth = 1.3;
+                rr(x, y, w, 21, 7); ctx.stroke();
+                txt(label, x + w / 2, y + 11, 12, color, 'center', 800);
+                x += w + 6;
+            };
+            if (this.poison.turns > 0) chip('毒 ' + this.poison.per + ' × ' + this.poison.turns + ' 回合', '#c9a3ff', 'rgba(56,28,86,0.78)');
+            if (this.frost > 0) chip('霜冻 ' + this.frost + '/6', '#8fe4ff', 'rgba(16,52,76,0.78)');
+            if (this.butter > 0) chip('黄油 ' + this.butter.toFixed(1) + 's', '#ffdf7a', 'rgba(76,56,10,0.8)');
+            if (this.iceCd > 0) chip('冰封 ' + this.iceCd.toFixed(1) + 's', '#d6f2ff', 'rgba(20,60,90,0.85)');
+            if (this.gloom) chip('忧郁菇 · 血上限 1000', '#e0c4ff', 'rgba(46,22,70,0.78)');
+        }
+
+        // 机枪槽：4 格，攒满下一发消除自动扫射
+        drawCombo() {
+            const x = 566, y = 34;
+            txt('机枪连击', x - 6, y + 8, 11, 'rgba(255,220,150,0.7)', 'right', 700);
+            for (let i = 0; i < 4; i++) {
+                const on = this.combo > i;
+                ctx.fillStyle = on ? '#ffd34a' : 'rgba(255,255,255,0.13)';
+                rr(x + i * 16, y + 3, 12, 15, 3); ctx.fill();
+                if (on) {
+                    ctx.fillStyle = 'rgba(255,255,200,0.5)';
+                    rr(x + i * 16 + 2, y + 5, 8, 4, 2); ctx.fill();
+                }
             }
         }
 
@@ -2447,7 +2787,7 @@
             if (this.over) { if (this.overT > 0.45) this.reset(); return; }
             if (this.dieT > 0) return;
             this.lane.aimAt(x, y);
-            this.lane.fire();
+            if (this.lane.fire()) this.tickTurn();
         }
         onMove(x, y) {
             if (this.over || this.dieT > 0) return;
@@ -2458,7 +2798,7 @@
             const l = this.lane;
             if (k === 'left' || k === 'a') l.nudge(-0.045);
             if (k === 'right' || k === 'd') l.nudge(0.045);
-            if (k === 'space' || k === 'up') l.fire();
+            if (k === 'space' || k === 'up') { if (l.fire()) this.tickTurn(); }
         }
     }
 /* ================================================================
@@ -3095,7 +3435,7 @@
     ];
     /* 猫尾草泡泡工坊：同一个炮台，四种规矩 */
     const BUBBLE_GAMES = [
-        { id: 'bubble', name: '猫尾草泡泡龙', tag: 'CLASSIC', icon: 'cattail', tip: '同色三个爆破，清空全场即通关', cls: Bubble },
+        { id: 'farm', name: '泡泡牧场', tag: 'FARM', icon: 'kernel', tip: '消掉的植物掉进花盆，同色喂满就升级，养出西瓜投手', cls: BubbleFarm },
         { id: 'dragon', name: '机械龙攻城', tag: 'BOSS', icon: 'dragon', tip: '消泡泡充能，尖刺射向头顶的机械龙', cls: DragonRaid },
         { id: 'duel', name: '泡泡对轰', tag: 'DUEL', icon: 'repeater', tip: '左右同屏对轰，消得多就给对面塞墓碑', cls: BubbleDuel },
         { id: 'tower', name: '泡泡塔', tag: 'TOWER', icon: 'tallnut', ih: 66, tip: '一层层往上打，每层解锁特殊球', cls: BubbleTower }

@@ -68,21 +68,22 @@ function ok(cond, name, extra) {
         const g = window.MiniGames.active;
         g.reset();
         const before = g.hp;
-        g.lane.onLand(g.lane, { popped: 4, dropped: 0 });
+        // v4.0.157：伤害按「哪种植物 + 消了几颗」算，绿色 4 连 = 双发 10 点
+        g.lane.onLand(g.lane, { popped: 4, dropped: 0, size: 4, col: 0 });
         const mid = g.hp;
-        g.lane.onLand(g.lane, { popped: 0, dropped: 0 });
+        g.lane.onLand(g.lane, { popped: 0, dropped: 0, size: 0, col: 0 });
         return { before, mid, after: g.hp, phase: g.phase };
     });
-    ok(dmgTest.mid === dmgTest.before - 16, '消 4 颗 = 16 点伤害', dmgTest.before + '→' + dmgTest.mid);
+    ok(dmgTest.mid === dmgTest.before - 10, '4 个豌豆 = 双发 10 点伤害', dmgTest.before + '→' + dmgTest.mid);
 
     const phaseTest = await page.evaluate(() => {
         const g = window.MiniGames.active;
         g.reset();
         g.hp = Math.round(g.hpMax * 0.72);
-        g.hurt(30);                       // 掉到 67% → 第 2 阶段
+        g.hit(30, '测试');                // 掉到 67% → 第 2 阶段
         const p2 = g.phase;
         g.hp = Math.round(g.hpMax * 0.40);
-        g.hurt(40);                       // 掉到 33% → 第 3 阶段
+        g.hit(40, '测试');                       // 掉到 33% → 第 3 阶段
         return { p2, p3: g.phase, banner: !!g.banner };
     });
     ok(phaseTest.p2 === 2 && phaseTest.p3 === 3, '70% / 35% 两道血线各推进一个阶段',
@@ -188,8 +189,10 @@ function ok(cond, name, extra) {
         Math.random = _rand;
         return { win: g.win, over: g.over, hp: Math.round(g.hp), shots, sec: Math.round(sec), phase: g.phase };
     });
-    ok(runA.win && runA.hp === 0, '正常打法能把机械龙打死',
-        runA.shots + ' 发 / ' + runA.sec + ' 秒 / 第 ' + runA.phase + ' 阶段');
+    // v4.0.157：伤害规则换成植物体系（4 连绿 = 10 点，不再是旧的 16 点），
+    // 这条不再要求「必打死」，只要求机器人能稳定打掉一大半血 —— 能否击杀由 _verify_v4157 的 300 局模拟负责
+    ok(runA.hp <= 640 * 0.55, '正常打法能打掉机械龙一大半血',
+        runA.shots + ' 发 / ' + runA.sec + ' 秒 / 剩 ' + runA.hp + ' 血 / 第 ' + runA.phase + ' 阶段');
 
     /* ---------- ④ 泡泡对轰 ---------- */
     console.log('\n④ 泡泡对轰');
@@ -329,16 +332,17 @@ function ok(cond, name, extra) {
 
     /* ---------- ⑥ 回归 ---------- */
     console.log('\n⑥ 回归');
-    const oldBub = await page.evaluate(() => {
-        window.MiniGames.openGame('bubble');
+    // v4.0.157：经典泡泡龙被「泡泡牧场」顶掉，这条改成验证牧场的场地与花盆
+    const farmCheck = await page.evaluate(() => {
+        window.MiniGames.openGame('farm');
         const g = window.MiniGames.active;
         g.reset();
-        return { cols: g.COLS, rows: g.rows, cells: g.leftCount(), kind: typeof g._aimLimit };
+        return { pots: g.pots.length, rows: g.lane.rows, cols: g.lane.COLS, cells: g.lane.count() };
     });
-    ok(oldBub.cols === 18 && oldBub.rows === 11 && oldBub.cells > 50, '原来的猫尾草泡泡龙没被动到',
-        oldBub.cells + ' 颗');
+    ok(farmCheck.pots === 5 && farmCheck.rows === 8 && farmCheck.cells > 40,
+        '泡泡牧场：5 个花盆 + 8 行场地', JSON.stringify(farmCheck));
 
-    const others = ['tetris', 'whack', 'g2048', 'bubble', 'breakout', 'sokoban', 'memory', 'dragon', 'duel', 'tower'];
+    const others = ['tetris', 'whack', 'g2048', 'farm', 'breakout', 'sokoban', 'memory', 'dragon', 'duel', 'tower'];
     let openFail = [];
     for (const id of others) {
         const r = await page.evaluate(i => {

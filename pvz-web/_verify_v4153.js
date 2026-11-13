@@ -72,7 +72,7 @@ function ok(c, name, extra) {
     ok(lobbyB.n === 4, '泡泡工坊 4 种玩法', lobbyB.n + ' 个：' + lobbyB.names.join(' / '));
     ok(lobbyB.title === '猫尾草泡泡工坊', '标题是「猫尾草泡泡工坊」', lobbyB.title);
     ok(lobbyB.cols === 2, '4 种玩法排 2 列', lobbyB.cols + ' 列');
-    ok(/猫尾草泡泡龙/.test(lobbyB.names.join('')) && /机械龙攻城/.test(lobbyB.names.join('')) &&
+    ok(/泡泡牧场/.test(lobbyB.names.join('')) && /机械龙攻城/.test(lobbyB.names.join('')) &&
         /泡泡对轰/.test(lobbyB.names.join('')) && /泡泡塔/.test(lobbyB.names.join('')),
         '四个泡泡玩法都在工坊里（4/6/8/10 已合并）', lobbyB.names.length + ' 张');
 
@@ -101,13 +101,13 @@ function ok(c, name, extra) {
     ok(round.t3 === '猫尾草泡泡工坊', '玩完经典泡泡龙退出仍回工坊', round.t3);
 
     /* ---------- ④ A 与经典泡泡龙的视觉分家 ---------- */
-    console.log('\n④ 机械龙 vs 经典泡泡龙（只做视觉区分）');
+    console.log('\n④ 机械龙 vs 泡泡牧场（同一个内核，两套场景）');
     const look = await page.evaluate(() => {
         const M = window.MiniGames;
-        M.openGame('bubble');
-        const a = M.active;
+        M.openGame('farm');
+        const a = M.active.lane;
         const infoA = {
-            cols: a.COLS, sx: a.shooter.x, left: a.LEFT, lim: Math.round(a._aimLimit() * 180 / Math.PI)
+            cols: a.COLS, sx: a.sx, left: a.LEFT, lim: Math.round(a.aimLimit() * 180 / Math.PI)
         };
         M.openGame('dragon');
         const d = M.active, l = d.lane;
@@ -118,8 +118,9 @@ function ok(c, name, extra) {
         return { a: infoA, b: infoB };
     });
     ok(look.a.sx === 450 && look.b.sx === 450, '两边炮台都在正中（难度曲线一点没动）',
-        '经典 ' + look.a.sx + ' / 机械龙 ' + look.b.sx);
-    ok(look.a.cols === 18 && look.b.cols === 19, '两边棋盘不是同一个尺寸（不会看成同一关）',
+        '牧场 ' + look.a.sx + ' / 机械龙 ' + look.b.sx);
+    // v4.0.157：牧场和机械龙现在共用同一套 19 列网格，不是靠尺寸区分，区分靠场景与规则
+    ok(look.a.cols === 19 && look.b.cols === 19, '两边共用同一套 19 列网格',
         look.a.cols + ' 列 vs ' + look.b.cols + ' 列');
     ok(look.b.wl > 50 && look.b.wr < 860, '机械龙场地在护墙内（左右各留一段厂房墙）',
         look.b.wl + '..' + look.b.wr);
@@ -135,7 +136,7 @@ function ok(c, name, extra) {
             for (let i = 0; i < d.length; i += 4 * 37) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; }
             return [Math.round(r / n), Math.round(g / n), Math.round(b / n)];
         };
-        M.openGame('bubble'); x.clearRect(0, 0, 900, 600); M.active.draw();
+        M.openGame('farm'); x.clearRect(0, 0, 900, 600); M.active.draw();
         const a = avg();
         M.openGame('dragon'); x.clearRect(0, 0, 900, 600); M.active.draw();
         const b = avg();
@@ -143,9 +144,9 @@ function ok(c, name, extra) {
     });
     const greener = (c) => c[1] > c[0] + 4 && c[1] > c[2] + 8;
     const browner = (c) => c[0] > c[1] + 6 && c[1] >= c[2];
-    ok(greener(shots.a), '经典泡泡龙整屏偏绿（后院草地）', 'rgb(' + shots.a.join(',') + ')');
+    ok(greener(shots.a), '泡泡牧场整屏偏绿（黄昏草地）', 'rgb(' + shots.a.join(',') + ')');
     ok(browner(shots.b), '机械龙整屏偏铜褐（钢铁工坊）', 'rgb(' + shots.b.join(',') + ')');
-    ok(shots.a[1] - shots.a[0] > 12 && shots.b[0] - shots.b[1] > 10,
+    ok(shots.a[1] - shots.a[0] > 9 && shots.b[0] - shots.b[1] > 10,
         '两边色系一个绿压红、一个红压绿（不是同一套配色）',
         '绿差 +' + (shots.a[1] - shots.a[0]) + ' / 褐差 +' + (shots.b[0] - shots.b[1]));
 
