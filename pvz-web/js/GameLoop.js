@@ -309,67 +309,71 @@ window.PVZ_ICE_ULT_TYPES = new Set([
 //   wrap      南瓜套罐数量
 //   golden    金罐数量
 const VASE_LEVELS = [
-    // —— 教学区：3 只普通僵尸，植物管够 ——
-    { n: 1, name: '罐子练习场', lvl: 1, total: 15, p: 9, q: 3, z: 3, hp: 0.85, wrap: 0, golden: 0,
-      hint: '绿罐给植物、紫罐放僵尸。先把五行都守住，再开紫罐',
-      plants: ['peashooter', 'repeater', 'peashooter', 'wallnut', 'snowpea', 'snowpea', 'sun', 'repeater', 'peashooter'],
-      qs: ['s', 'p:peashooter', 'p:wallnut'],
+    // v4.0.158 配比重做（用户：植物不要这么多；以问号罐为主，不要总是僵尸罐和植物罐）：
+    //   每关都是「问号罐 > 僵尸罐 > 植物罐」，植物罐压到 4~5 个；
+    //   问号罐里既有植物也有僵尸 —— 赌错就是贴脸来一只，赌对就是白赚火力。
+    //   plants/qs/zombies 三条队列长度必须等于 p/q/z，setupVases 会自检。
+    // —— 教学区：僵尸少、植物够铺满五行，但信息不再白给 ——
+    { n: 1, name: '罐子练习场', lvl: 1, total: 15, p: 4, q: 8, z: 3, hp: 0.90, wrap: 0, golden: 0,
+      hint: '问号罐占了大半 —— 先砸绿罐攒火力，手里的牌够了再赌问号',
+      plants: ['peashooter', 'repeater', 'wallnut', 'sun'],
+      qs: ['s', 'p:peashooter', 'p:wallnut', 's', 'p:repeater', 'p:snowpea', 's', 'p:repeater'],
       zombies: ['normal', 'normal', 'normal'] },
 
-    { n: 2, name: '路障初现', lvl: 1, total: 16, p: 10, q: 3, z: 3, hp: 0.86, wrap: 0, golden: 0,
+    { n: 2, name: '路障初现', lvl: 1, total: 16, p: 4, q: 9, z: 3, hp: 0.90, wrap: 0, golden: 0,
       hint: '路障比普通僵尸硬一倍，一行最好摆两株',
-      plants: ['peashooter', 'repeater', 'repeater', 'wallnut', 'snowpea', 'snowpea', 'peashooter', 'sun', 'potatomine', 'threepeater'],
-      qs: ['p:repeater', 's', 'p:wallnut'],
+      plants: ['peashooter', 'repeater', 'wallnut', 'sun'],
+      qs: ['p:repeater', 's', 'p:wallnut', 'p:peashooter', 's', 'p:threepeater', 's', 'p:snowpea', 'p:repeater'],
       zombies: ['normal', 'conehead', 'conehead'] },
 
-    { n: 3, name: '问号之夜', lvl: 2, total: 17, p: 10, q: 4, z: 3, hp: 0.87, wrap: 0, golden: 0,
-      hint: '黄罐里可能藏僵尸，先砸绿罐攒好火力再赌黄罐',
-      plants: ['peashooter', 'repeater', 'repeater', 'repeater', 'wallnut', 'snowpea', 'peashooter', 'sun', 'chomper', 'threepeater'],
-      qs: ['p:repeater', 'z:imp', 's', 'p:wallnut'],
+    { n: 3, name: '问号之夜', lvl: 2, total: 17, p: 4, q: 10, z: 3, hp: 0.92, wrap: 0, golden: 0,
+      hint: '问号罐里也藏着僵尸了 —— 开罐前先想好这条线守不守得住',
+      plants: ['peashooter', 'repeater', 'wallnut', 'sun'],
+      qs: ['p:repeater', 'p:wallnut', 's', 'p:threepeater', 'z:imp', 'p:snowpea', 's', 'p:chomper', 'p:repeater', 's'],
       zombies: ['normal', 'conehead', 'conehead'] },
 
-    { n: 4, name: '路障之墙', lvl: 2, total: 18, p: 11, q: 3, z: 4, hp: 0.88, wrap: 1, golden: 0,
+    // —— 进阶区：金罐登场，问号罐里的僵尸开始要命 ——
+    { n: 4, name: '路障之墙', lvl: 2, total: 18, p: 4, q: 10, z: 4, hp: 0.94, wrap: 1, golden: 0,
       hint: '四只路障各走一行 —— 一行两株才打得动，坚果能拖时间',
-      plants: ['peashooter', 'repeater', 'repeater', 'wallnut', 'wallnut', 'snowpea', 'threepeater', 'sun', 'potatomine', 'chomper', 'repeater'],
-      qs: ['p:sunflower', 's', 'p:wallnut'],
+      plants: ['peashooter', 'repeater', 'wallnut', 'sun'],
+      qs: ['p:repeater', 's', 'p:wallnut', 'p:threepeater', 's', 'p:snowpea', 'z:imp', 'p:repeater', 'p:chomper', 'p:repeater'],
       zombies: ['conehead', 'conehead', 'conehead', 'normal'] },
 
-    // —— 进阶区：金罐登场，僵尸开始成群 ——
-    { n: 5, name: '金罐试炼', lvl: 3, total: 19, p: 11, q: 3, z: 5, hp: 0.90, wrap: 1, golden: 1,
+    { n: 5, name: '金罐试炼', lvl: 3, total: 19, p: 4, q: 10, z: 5, hp: 0.96, wrap: 1, golden: 1,
       hint: '金罐必出高阶植物（金光是提示），砸到就是白赚一株',
-      plants: ['peashooter', 'repeater', 'repeater', 'wallnut', 'wallnut', 'snowpea', 'threepeater', 'sun', 'potatomine', 'repeater', 'chomper'],
-      qs: ['p:repeater', 's', 'p:snowpea'],
+      plants: ['peashooter', 'repeater', 'wallnut', 'sun'],
+      qs: ['p:repeater', 'p:wallnut', 's', 'p:snowpea', 'z:imp', 'p:threepeater', 'p:repeater', 'p:repeater', 'p:chomper', 'p:repeater'],
       zombies: ['normal', 'conehead', 'conehead', 'newspaper', 'conehead'] },
 
-    { n: 6, name: '三线压制', lvl: 3, total: 21, p: 12, q: 3, z: 6, hp: 0.92, wrap: 2, golden: 0,
+    { n: 6, name: '三线压制', lvl: 3, total: 21, p: 5, q: 11, z: 5, hp: 0.98, wrap: 2, golden: 0,
       hint: '三线射手一株管三行，放在第 1 列收益最大',
-      plants: ['peashooter', 'repeater', 'repeater', 'wallnut', 'snowpea', 'threepeater', 'snowpea', 'sun', 'potatomine', 'repeater', 'chomper', 'gatlingpea'],
-      qs: ['p:threepeater', 's', 'p:wallnut'],
-      zombies: ['normal', 'conehead', 'buckethead', 'newspaper', 'conehead', 'imp'] },
+      plants: ['peashooter', 'repeater', 'wallnut', 'sun', 'snowpea'],
+      qs: ['p:repeater', 'p:repeater', 'p:threepeater', 'p:wallnut', 's', 'z:imp', 'p:gatlingpea', 'p:repeater', 'p:chomper', 's', 'p:repeater'],
+      zombies: ['normal', 'conehead', 'buckethead', 'newspaper', 'conehead'] },
 
-    { n: 7, name: '寒冰之墙', lvl: 4, total: 22, p: 12, q: 4, z: 6, hp: 0.94, wrap: 2, golden: 0,
+    { n: 7, name: '寒冰之墙', lvl: 4, total: 22, p: 5, q: 11, z: 6, hp: 1.00, wrap: 2, golden: 0,
       hint: '寒冰豌豆能减速一半，铁桶也要走慢一倍',
-      plants: ['snowpea', 'repeater', 'snowpea', 'wallnut', 'wallnut', 'repeater', 'threepeater', 'sun', 'potatomine', 'repeater', 'chomper', 'snowpea'],
-      qs: ['p:snowpea', 'p:wallnut', 's', 'p:repeater'],
+      plants: ['snowpea', 'repeater', 'wallnut', 'sun', 'wallnut'],
+      qs: ['p:snowpea', 'p:repeater', 'p:repeater', 'p:threepeater', 'z:imp', 'p:wallnut', 's', 'p:repeater', 'p:chomper', 'p:gatlingpea', 'p:repeater'],
       zombies: ['normal', 'conehead', 'buckethead', 'buckethead', 'conehead', 'newspaper'] },
 
-    // —— 残局区：精英出现，但植物供给同步拉高 ——
-    { n: 8, name: '南瓜壳阵', lvl: 4, total: 23, p: 12, q: 4, z: 7, hp: 0.96, wrap: 3, golden: 1,
+    // —— 残局区：植物罐只剩 5 个，全靠问号罐赌火力 ——
+    { n: 8, name: '南瓜壳阵', lvl: 4, total: 23, p: 5, q: 12, z: 6, hp: 1.00, wrap: 3, golden: 1,
       hint: '带南瓜壳的罐子砸开后壳会留在原地，等于白送一道墙',
-      plants: ['repeater', 'peashooter', 'repeater', 'wallnut', 'wallnut', 'snowpea', 'threepeater', 'gatlingpea', 'potatomine', 'repeater', 'chomper', 'gatlingpea'],
-      qs: ['p:wallnut', 'p:repeater', 's', 'p:snowpea'],
-      zombies: ['normal', 'conehead', 'buckethead', 'buckethead', 'conehead', 'newspaper', 'imp'] },
+      plants: ['repeater', 'peashooter', 'wallnut', 'sun', 'snowpea'],
+      qs: ['p:repeater', 's', 's', 'p:threepeater', 'z:imp', 'p:gatlingpea', 'p:repeater', 'p:repeater', 'p:chomper', 'p:snowpea', 's', 'p:repeater'],
+      zombies: ['normal', 'conehead', 'buckethead', 'buckethead', 'conehead', 'newspaper'] },
 
-    { n: 9, name: '铁桶洪流', lvl: 5, total: 25, p: 13, q: 4, z: 8, hp: 0.98, wrap: 2, golden: 1,
+    { n: 9, name: '铁桶洪流', lvl: 5, total: 25, p: 5, q: 12, z: 8, hp: 1.05, wrap: 2, golden: 1,
       hint: '两只铁桶分批来 —— 每行都要有火力，别把宝压在一行',
-      plants: ['repeater', 'peashooter', 'repeater', 'wallnut', 'wallnut', 'snowpea', 'threepeater', 'gatlingpea', 'potatomine', 'repeater', 'chomper', 'gatlingpea', 'snowpea'],
-      qs: ['p:repeater', 'p:wallnut', 's', 'p:threepeater'],
+      plants: ['repeater', 'peashooter', 'wallnut', 'sun', 'wallnut'],
+      qs: ['p:repeater', 'p:wallnut', 's', 'p:threepeater', 'z:imp', 'p:gatlingpea', 's', 'p:repeater', 'p:chomper', 'p:snowpea', 'p:melonpult', 'p:repeater'],
       zombies: ['normal', 'conehead', 'buckethead', 'buckethead', 'conehead', 'newspaper', 'imp', 'normal'] },
 
-    { n: 10, name: '终极尸潮', lvl: 5, total: 26, p: 13, q: 4, z: 9, hp: 1.00, wrap: 2, golden: 1,
+    { n: 10, name: '终极尸潮', lvl: 5, total: 26, p: 5, q: 12, z: 9, hp: 1.08, wrap: 2, golden: 1,
       hint: '三只铁桶铺满五行 —— 每行都要有输出，火力堆一行必崩',
-      plants: ['repeater', 'peashooter', 'wallnut', 'repeater', 'gatlingpea', 'snowpea', 'threepeater', 'gatlingpea', 'potatomine', 'repeater', 'chomper', 'snowpea', 'melonpult'],
-      qs: ['p:repeater', 'p:threepeater', 's', 'p:jalapeno'],
+      plants: ['repeater', 'peashooter', 'wallnut', 'sun', 'gatlingpea'],
+      qs: ['p:repeater', 'p:wallnut', 's', 'p:threepeater', 'z:imp', 'p:gatlingpea', 'p:melonpult', 'p:chomper', 'p:repeater', 'p:snowpea', 's', 'p:repeater'],
       zombies: ['normal', 'conehead', 'buckethead', 'buckethead', 'conehead', 'buckethead', 'imp', 'normal', 'conehead'] }
 ];
 
@@ -436,12 +440,10 @@ class Game {
         
         const speedBtn = document.getElementById('btn-speed');
         if (speedBtn) {
-            speedBtn.addEventListener('click', () => {
-                if (this.gameSpeed === 1) this.gameSpeed = 2;
-                else if (this.gameSpeed === 2) this.gameSpeed = 5;
-                else this.gameSpeed = 1;
-                speedBtn.innerText = `Speed: ${this.gameSpeed}x`;
-            });
+            // v4.0.158：文案只由 _syncSpeedLabel 写 —— 旧版这里写的是 "Speed: Nx"，
+            // 而 HTML 初始文案是「倍速: 1x」，于是第一次点击就变英文、之后再也不回中文。
+            speedBtn.addEventListener('click', () => this.cycleGameSpeed());
+            this._syncSpeedLabel();
         }
 
         // ===== v3.43.0 左下角暂停键（经典/融合/砸罐子/我是僵尸通用）=====
@@ -653,7 +655,11 @@ class Game {
         VASE_LEVELS.forEach(lv => {
             const stars = prog[lv.n] || 0;
             const b = document.createElement('button');
-            b.className = 'vlm-cell diff-' + lv.diff + (stars ? ' done' : '');
+            // v4.0.158：v4.0.150 把关卡字段从 diff 改成 lvl 后这里一直取到 undefined，
+            // 十张卡就全成了同一个颜色（CSS 只定义了 .vlm-cell.diff-hard / .diff-hell）。
+            // 用与 _startVaseLevel 完全一致的映射补回来。
+            b.className = 'vlm-cell diff-' + (lv.lvl >= 4 ? 'hell' : (lv.lvl >= 3 ? 'hard' : 'easy'))
+                + (stars ? ' done' : '');
             b.dataset.level = String(lv.n);
             b.title = lv.hint;
             b.innerHTML =
@@ -2446,6 +2452,20 @@ class Game {
         if (top) top.appendChild(chip);
     }
 
+    // v4.0.158：倍速按钮的唯一入口 —— 1x → 2x → 5x → 1x 循环，文案永远是中文
+    cycleGameSpeed() {
+        this.gameSpeed = this.gameSpeed === 1 ? 2 : (this.gameSpeed === 2 ? 5 : 1);
+        this._syncSpeedLabel();
+    }
+
+    // 倍速按钮文案的唯一来源。HTML 初始值也是「倍速: 1x」，两边必须同一个写法，
+    // 否则会出现「1x 是中文、切走再切回来变英文」的精分（v4.0.158 修复）
+    _syncSpeedLabel() {
+        const btn = document.getElementById('btn-speed');
+        if (!btn) return;
+        btn.innerText = `倍速: ${this.gameSpeed}x`;
+    }
+
     // v3.35.0：Speed 按钮按模式归位 —— 我是僵尸=回顶栏末尾（原始位置）；
     // 其它模式（砸罐子/经典/融合）留在右上角 corner-hud（v3.33.0 用户指定布局）
     _layoutSpeedButton() {
@@ -2600,50 +2620,54 @@ class Game {
     }
 
     // 三档难度的完整配置：罐子数量 / 类型抽签桶 / 问号罐出僵尸概率 / 植物罐出植物概率 / 僵尸池 / 僵尸血量倍率
+    // 三档难度的完整配置：罐子数量 / 类型抽签桶 / 问号罐出僵尸概率 / 植物罐出植物概率 / 僵尸池 / 僵尸血量倍率
+    // v4.0.158 配比重做（用户：以问号罐为主，不要总是僵尸罐和植物罐；植物不要这么多）：
+    //   三档抽签桶都改成「问号罐过半」，植物罐压到 1~6 个 —— 火力要靠赌问号罐赌出来。
+    //   plantMin/Max 是硬夹子（重排后按它校准），所以数值就是「这档到底给几个绿罐」。
     _vaseDiffCfg() {
         const d = this.vaseDifficulty || 'hard';
         const map = {
             easy: {
-                key: 'easy', label: '简单', totalMin: 18, totalMax: 22, // v4.0.90：16~20→18~22（罐多些、节奏紧凑）
-                plantMin: 6, plantMax: 11, // v4.0.90：8~14→6~11（植物罐少些，别让植物白送）
-                bag: ['plant','plant','plant','plant','plant','plant','plant','plant','plant',
-                      'question','question','question',
-                      'zombie','zombie','zombie'], // 植物罐绝对多数 9/15=60%, 僵尸罐保有 3
-                qZombie: 0.3,   // v4.0.90：0.25→0.3（简单也提提难度）
-                qSun: 0.15,      // v3.43.0 问号罐 15% 直接开出一撮阳光(50) —— 图鉴承诺的"惊喜"正式实装
-                pCard: 0.75,     // v3.16.0 植物罐 75% 植物 / 25% 阳光
+                key: 'easy', label: '简单', totalMin: 18, totalMax: 22,
+                plantMin: 4, plantMax: 6,   // v4.0.158：11→4~6（植物罐从 51% 压到 ~25%）
+                bag: ['plant','plant','plant',
+                      'question','question','question','question','question','question','question',
+                      'zombie','zombie','zombie'], // 20 罐里约 3 绿 / 11 问号 / 3 紫
+                qZombie: 0.30,   // 问号罐 30% 是僵尸
+                qSun: 0.12,      // 问号罐 12% 直接开出一撮阳光(50)
+                pCard: 0.75,     // 植物罐 75% 植物 / 25% 阳光
                 plantPerm: 0.85, // 植物罐砸出的植物 85% 永久 / 15% 一次性(炸弹)
                 qPerm: 0.72,     // 问号罐砸出的植物 72% 永久 / 28% 一次性
                 zPool: ['normal','normal','normal','normal','normal','normal','conehead','conehead','flag'],
-                hpMul: 1.1       // v4.0.90：1.0→1.1（简单僵尸也硬一点；三档 1.1/1.15/1.4 差距拉近）
+                hpMul: 1.15
             },
             hard: {
                 key: 'hard', label: '困难', totalMin: 22, totalMax: 26,
-                plantMin: 5, plantMax: 9, // v3.62.0 植物罐保底 5~9（原 3~7；用户：困难比地狱还难，调低）
-                bag: ['plant','plant','plant','plant','plant','plant','plant',
-                      'question','question','question','question','question','question',
-                      'zombie','zombie','zombie','zombie','zombie','zombie','zombie'], // v3.62.0 植物罐 +1（7/20）
-                qZombie: 0.45,   // v4.0.90：0.4→0.45（困难提提）
-                qSun: 0.12,      // v3.43.0 问号罐 12% 开出阳光(50)
-                pCard: 0.75,   // v3.16.0 植物罐 75% 植物 / 25% 阳光
-                plantPerm: 0.85, // v3.62.0 植物罐砸出的植物 85% 永久（原 80%）
-                qPerm: 0.68,     // v3.62.0 问号罐砸出的植物 68% 永久 / 32% 一次性（原 62%）
+                plantMin: 3, plantMax: 5,   // v4.0.158：5~9→3~5
+                bag: ['plant','plant',
+                      'question','question','question','question','question','question','question','question','question',
+                      'zombie','zombie','zombie'],
+                qZombie: 0.44,
+                qSun: 0.10,
+                pCard: 0.75,
+                plantPerm: 0.85,
+                qPerm: 0.68,
                 zPool: ['normal','normal','normal','normal','conehead','conehead','buckethead','flag','polevaulting','newspaper'],
-                hpMul: 1.15      // v4.0.90：1.0→1.15（困难僵尸加硬；三档 1.1/1.15/1.4）
+                hpMul: 1.25
             },
             hell: {
                 key: 'hell', label: '地狱', totalMin: 26, totalMax: 28,
-                plantMin: 1, plantMax: 5, // v3.41.0 植物罐保底 1~5：地狱的植物金贵
-                bag: ['plant','plant',
-                      'question','question','question','question','question','question','question','question','question','question','question','question','question',
-                      'zombie','zombie','zombie','zombie','zombie','zombie'], // 问号罐拉满 14/20=70%, 才有地狱色彩
-                qZombie: 0.55,   // v4.0.90：0.6→0.55（地狱略降，三档 0.3/0.45/0.55 更均衡）
-                qSun: 0.10,      // v3.43.0 问号罐 10% 开出阳光(50)
-                pCard: 0.75,     // v3.16.0 植物罐 75% 植物 / 25% 阳光
-                plantPerm: 0.9,  // 地狱植物金贵: 植物罐砸出的植物 90% 永久 / 10% 一次性
-                qPerm: 0.72,     // 问号罐砸出的植物 72% 永久 / 28% 一次性
+                plantMin: 1, plantMax: 3,   // v4.0.158：植物金贵到极点，全靠问号罐
+                bag: ['plant',
+                      'question','question','question','question','question','question','question','question','question','question','question',
+                      'zombie','zombie','zombie','zombie'],
+                qZombie: 0.52,
+                qSun: 0.08,
+                pCard: 0.75,
+                plantPerm: 0.9,
+                qPerm: 0.72,
                 zPool: ['normal','normal','normal','conehead','conehead','buckethead','buckethead','newspaper','polevaulting','flag','screendoor'],
-                hpMul: 1.4       // v4.0.90：1.45→1.4（略降，缩小与困难差距）
+                hpMul: 1.45
             }
         };
         return map[d] || map.hard;
@@ -5029,6 +5053,53 @@ class Game {
             }
         }
 
+        // v4.0.158：前排问号罐里的僵尸必须挪到后排去。
+        // 问号罐是 4.0.158 的主力罐型（占一半以上），里面也藏僵尸 —— 而它按设计钉在前中排，
+        // 于是「前排问号罐砸开 → 僵尸直接出现在 col 1~3」等于必死剧本（实测第 8 关因此打不过：
+        // 小鬼贴着房子刷出来，一行两株射手也来不及）。
+        // 处理：**交换罐子位置，不换内容**。问号罐彼此长得一模一样，换位玩家看不出差别；
+        // 而绿罐一旦被塞进僵尸内容就会打破「绿罐=植物/阳光」的视觉承诺，绝不能那么干。
+        // 目标优先挑后排（col≥6）的问号罐（换位零痕迹），不够再退到 col≥4。
+        // 必须跑在下面「进攻植物保底」之前 —— 换位会把僵尸挪进新的行，保底得有机会补上火力。
+        {
+            // 候选排序：先问号罐（换位零痕迹）→ 绿罐 → 僵尸罐。
+            // 僵尸罐也算候选：把它换到前排等于「把暗雷变成明牌」—— 前排照样有僵尸，但红线脉动着，
+            // 玩家看得见、来得及防，这正是砸罐子该有的紧张感。
+            const rank = x => x.content.kind !== 'zombie' ? (x.type === 'question' ? 0 : 1) : 2;
+            const poolAt = minCol => this.vases
+                .filter(v => !v.golden && v.col >= minCol && v.content &&
+                    (v.content.kind !== 'zombie' || v.type === 'zombie'))
+                .sort((a, b) => rank(a) - rank(b) || b.col - a.col);
+            const place = v => {
+                if (!v.element) return;
+                const cx = this.board.offsetX + v.col * this.board.cellWidth + this.board.cellWidth / 2;
+                const cy = this.board.offsetY + v.row * this.board.cellHeight + this.board.cellHeight / 2 + 12;
+                v.element.style.left = cx + 'px';
+                v.element.style.top = cy + 'px';
+                v.element.style.zIndex = Math.floor(cy) - 1;
+            };
+            let pool = poolAt(6);
+            let dragged = 0;        // 本局已经往前排挪了几个「僵尸罐」（明牌）—— 每局最多 1 个
+            for (const v of this.vases) {
+                if (v.golden || v.type !== 'question' || v.col >= 4) continue;   // 金罐/僵尸罐是明牌，允许靠前
+                if (!v.content || v.content.kind !== 'zombie') continue;
+                if (!pool.length) pool = poolAt(4);
+                const t = pool.shift();
+                // 没有后排罐可换（地狱档绿罐只剩 1~3 个、后排常常一格不剩），或者换过来的是一只
+                // 僵尸罐而本局已经前移过一个 —— 都不再折腾：把这颗暗雷直接摊成植物。
+                // 少一只僵尸总比「一排贴脸明牌」好，这是砸罐子唯一不能拿来赌的地方。
+                if (!t || (rank(t) === 2 && dragged >= 1)) {
+                    v.content = { kind: 'plant', type: this._rollVasePlantContent('question') };
+                    continue;
+                }
+                if (rank(t) === 2) dragged++;
+                const tr = t.row, tc = t.col;
+                t.row = v.row; t.col = v.col;
+                v.row = tr; v.col = tc;
+                place(t); place(v);
+            }
+        }
+
         // ===== v3.77.0 可解性保底：每局进攻植物数量达标（不用铲子/手套也能完整走完一局）=====
         // 用户实测出现"整局只有一株豌豆"的必败局。根因：地狱植物罐保底 1~5 且 25% 开阳光、
         // 问号罐 60% 出僵尸 —— 极端随机可以几乎不产出可作战植物。逐级补足：
@@ -5039,7 +5110,7 @@ class Game {
         //   ⑤ 僵尸罐 → 植物罐（极端兜底，僵尸罐至少保 1 个）
         // 金罐融合株不计入下限（属额外惊喜）；一次性炸弹也不计入（爆炸后无持续火力）。
         if (!L) {
-            const ATK_MIN = { easy: 6, hard: 4, hell: 3 }[cfg.key] ?? 4;
+            const ATK_MIN = { easy: 5, hard: 4, hell: 3 }[cfg.key] ?? 4;   // v4.0.158：简单 6→5（绿罐变少，别把问号罐全改成植物）
             const atkSet = this._vaseAttackerSet();
             const isAtkCard = v => v.content && v.content.kind === 'plant' && atkSet.has(v.content.type);
             const countAtk = () => this.vases.filter(v => !v.golden && isAtkCard(v)).length;
@@ -5084,6 +5155,27 @@ class Game {
                 }
                 v.content = { kind: 'plant', type: this._pickVaseAttacker() };
                 guard++;
+            }
+        }
+
+        // v4.0.158：关卡模式同样要「按行保底进攻植物」，但必须确定性 ——
+        // 手工关的内容队列按 (行,列) 顺序发，重排后会出现「这一行有僵尸、却一株输出都没有」的死行
+        // （实测第 2 关第 3 行：2 只僵尸 vs 1 棵不能打的植物，等于开局就输）。
+        // 这里只改「有僵尸却没输出」的行，且只把该行的阳光内容换成进攻植物 ——
+        // 用 (关卡号, 行) 决定换成什么，重开同一关结果完全一致，不破坏三星标准。
+        if (L) {
+            const atkSet = this._vaseAttackerSet();
+            const atkPool = this._vaseAttackerPool();
+            for (let r = 0; r < this.board.rows; r++) {
+                const inRow = this.vases.filter(v => v.row === r && !v.golden && v.content);
+                const hasZ = inRow.some(v => v.content.kind === 'zombie');
+                const hasAtk = inRow.some(v => v.content.kind === 'plant' && atkSet.has(v.content.type));
+                if (!hasZ || hasAtk) continue;
+                // 优先把阳光换成输出（阳光只是买路灯花的钱，少一撮不影响可解性）
+                const target = inRow.find(v => v.content.kind === 'sun')
+                    || inRow.find(v => v.content.kind === 'plant' && !atkSet.has(v.content.type));
+                if (!target) continue;
+                target.content = { kind: 'plant', type: atkPool[(L.n * 3 + r) % atkPool.length] };
             }
         }
 

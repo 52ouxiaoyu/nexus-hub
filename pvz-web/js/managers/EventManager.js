@@ -96,7 +96,11 @@ class EventManager {
                 setTimeout(() => { overlay.style.opacity = '0'; setTimeout(()=>overlay.remove(), 1000); }, 5000);
             }},
             { msg: '⏩ 时光：岁月如梭！', color: '#aaffaa', exec: g => {
-                g.gameSpeed = 4; setTimeout(() => g.gameSpeed = 1, 4000);
+                // v4.0.158：临时加速结束后还原「玩家自己选的倍速」，旧版一律压回 1x，
+                // 玩家明明开着 5x，中一次事件就被偷偷降回 1x（按钮上也不显示，很难发现）
+                const prev = g.gameSpeed;
+                g.gameSpeed = 4;
+                setTimeout(() => { g.gameSpeed = prev; }, 4000);
             }},
             { msg: '🐢 迟缓：时间泥沼！', color: '#4444ff', exec: g => {
                 // v3.80.3 根因修复：旧版 setSlow(10) 后用 setTimeout(thaw,6000) 强制解冻——

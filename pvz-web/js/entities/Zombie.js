@@ -1692,7 +1692,11 @@ class Zombie extends Entity {
                         z.y = z.game.board.offsetY + z.row * z.game.board.cellHeight + z.game.board.cellHeight / 2 - 20;
                     };
                     const adjRowOf = (z) => {
-                        const up = z.row > 0, down = z.row < z.game.board.rows - 1;
+                        // v4.0.158：砸罐子模式罐子只会摆在第 1~4 行，第 0 行是「死行」——
+                        // 大蒜把僵尸顶到第 0 行，那一行永远不会有植物，僵尸等于直接走进房子。
+                        // 实测第 8 关金罐开出的「金蒜坚果」把僵尸顶到第 0 行 → 该关恒定必败。
+                        const minRow = (z.game && z.game.vaseMode) ? 1 : 0;
+                        const up = z.row > minRow, down = z.row < z.game.board.rows - 1;
                         if (up && down) return z.row + (Math.random() < 0.5 ? -1 : 1);
                         if (up) return z.row - 1;
                         if (down) return z.row + 1;
@@ -1891,7 +1895,9 @@ class Zombie extends Entity {
             this._garlicHits++;
             if (this._garlicHits >= 4) {
                 this._garlicHits = 0;
-                const up = this.row > 0, down = this.row < this.game.board.rows - 1;
+                // v4.0.158：砸罐子第 0 行没有罐子也没有植物，被顶到那一行等于白送 —— 下限锁在第 1 行
+                const minRow = this.game && this.game.vaseMode ? 1 : 0;
+                const up = this.row > minRow, down = this.row < this.game.board.rows - 1;
                 const nr = (up && down) ? this.row + (Math.random() < 0.5 ? -1 : 1) : (up ? this.row - 1 : (down ? this.row + 1 : this.row));
                 if (nr !== this.row) {
                     this.row = nr;

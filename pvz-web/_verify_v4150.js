@@ -42,7 +42,7 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, screendoor: 5200
         table.map(l => l.lvl).join('>'));
     ok(table.every((l, i) => i === 0 || l.hp >= table[i - 1].hp), '血量倍率逐关不降',
         table.map(l => l.hp.toFixed(2)).join('>'));
-    ok(table.every(l => l.hp <= 1.05), '血量倍率封顶 1.05（旧版地狱 1.4 已废）',
+    ok(table.every(l => l.hp <= 1.10), '血量倍率封顶 1.10（4.0.158 起后段关提到 1.08）',
         'max=' + Math.max(...table.map(l => l.hp)));
     const hpTotal = table.map(l => ({
         n: l.n,
@@ -51,10 +51,13 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, screendoor: 5200
     ok(hpTotal.every((x, i) => i === 0 || x.sum >= hpTotal[i - 1].sum * 0.95),
         '单关僵尸总血量基本单调递增（允许 ±5% 抖动）',
         hpTotal.map(x => x.n + ':' + Math.round(x.sum)).join(' '));
-    ok(table.every(l => l.p >= 9), '每关植物罐 ≥ 9（旧版第 7 关起只有 6 个 = 必死）',
+    // v4.0.158 用户：植物不要这么多、以问号罐为主 —— 绿罐压到 4~5，问号罐必须是最大的一类
+    ok(table.every(l => l.p >= 4 && l.p <= 5), '每关绿罐只剩 4~5 个',
         table.map(l => l.n + ':' + l.p).join(' '));
-    ok(table.every(l => l.p >= 5 + 3), '植物罐数 ≥ 五行 + 3（够铺满每条线）');
-    ok(table[9].p >= 13 && table[9].z >= 9, '终关供给 13 植物 / 9 僵尸', `p=${table[9].p} z=${table[9].z}`);
+    ok(table.every(l => l.q > l.z && l.q > l.p), '每关问号罐都是最多的一类',
+        table.map(l => l.n + ':' + l.q + '/' + l.p + '/' + l.z).join(' '));
+    ok(table.every(l => l.q / l.total >= 0.45), '问号罐占比 ≥ 45%',
+        table.map(l => l.n + ':' + Math.round(l.q / l.total * 100) + '%').join(' '));
 
     // ---------- ② 关卡弹窗：刻度而不是抽象档位 ----------
     console.log('\n② 关卡选择弹窗');
@@ -99,8 +102,8 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, screendoor: 5200
         };
     });
     ok(l1.level === 1 && l1.vases === 15, '第 1 关 15 个罐子', 'n=' + l1.vases);
-    ok(l1.types.plant === 9 && l1.types.question === 3 && l1.types.zombie === 3,
-        '类型配额 9/3/3 精确落地', JSON.stringify(l1.types));
+    ok(l1.types.plant === 4 && l1.types.question === 8 && l1.types.zombie === 3,
+        '类型配额 4/8/3 精确落地（问号罐为主）', JSON.stringify(l1.types));
     ok(l1.zombies === 3, '剩余僵尸罐角标 = 3');
     ok(!l1.hudAct, 'HUD 上没有行动点芯片');
     ok(l1.hudZ, 'HUD 保留剩余僵尸罐芯片');
@@ -133,7 +136,7 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, screendoor: 5200
         const z = g.entities.filter(e => e instanceof Zombie).pop();
         return z ? { type: z.type, hp: z.hp, maxHp: z.maxHp } : null;
     });
-    ok(hp1 && hp1.hp === Math.round(200 * 0.85), '第 1 关普通僵尸 = 200 × 0.85 = 170',
+    ok(hp1 && hp1.hp === Math.round(200 * 0.90), '第 1 关普通僵尸 = 200 × 0.90 = 180',
         hp1 && `${hp1.type} ${hp1.hp}`);
 
     const hp10 = await p.evaluate(async () => {
@@ -146,9 +149,9 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, screendoor: 5200
         g.smashVase(v.row, v.col);
         await new Promise(r => setTimeout(r, 200));
         const z = g.entities.filter(e => e instanceof Zombie && e.type === 'buckethead').pop();
-        return { found: true, hp: z ? z.hp : 0, expect: Math.round(1300 * 1.00) };
+        return { found: true, hp: z ? z.hp : 0, expect: Math.round(1300 * 1.08) };
     });
-    ok(hp10.found && hp10.hp === hp10.expect, '第 10 关铁桶 = 1300 × 1.00 = 1300',
+    ok(hp10.found && hp10.hp === hp10.expect, '第 10 关铁桶 = 1300 × 1.08 = 1404',
         hp10.found ? hp10.hp + '/' + hp10.expect : '没找到铁桶罐');
 
     // ---------- ⑥ 确定性 ----------
@@ -333,23 +336,27 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, screendoor: 5200
                 }
                 return -1;
             };
-            for (let row = 0; row < 5 && atkTypes.length; row++) {
+            // v4.0.158：只有「有罐子的行」才可能出僵尸（setupVases 的落点从 r=1 起），
+            // 机器人原来从 row 0 开始铺，等于把一株植物扔进一条永远不来僵尸的道 —— 白送一株，测出来的难度虚高
+            const liveRows = [0, 1, 2, 3, 4].filter(r => g.vases.some(v => v.row === r));
+            for (const row of liveRows) {
+                if (!atkTypes.length) break;
                 const c = plantAt(row, atkTypes.shift(), [0, 1, 2, 3, 4]);
                 if (c >= 0) { rowAtk[row]++; rowMap[row].push('atk@' + c); }
             }
             while (atkTypes.length) {
-                const row = [0, 1, 2, 3, 4].sort((a, b) => rowAtk[a] - rowAtk[b])[0];
+                const row = liveRows.slice().sort((a, b) => rowAtk[a] - rowAtk[b])[0];
                 const c = plantAt(row, atkTypes.shift(), [0, 1, 2, 3, 4]);
                 if (c < 0) break;
                 rowAtk[row]++; rowMap[row].push('atk@' + c);
             }
             wallTypes.forEach(t => {
-                const row = [0, 1, 2, 3, 4].sort((a, b) => rowAtk[b] - rowAtk[a] || a - b)[0];
+                const row = liveRows.slice().sort((a, b) => rowAtk[b] - rowAtk[a] || a - b)[0];
                 const c = plantAt(row, t, [5, 6, 4, 7, 3]);
                 if (c >= 0) rowMap[row].push('wall@' + c);
             });
             otherTypes.forEach(t => {
-                const row = [0, 1, 2, 3, 4].sort((a, b) => rowAtk[b] - rowAtk[a] || a - b)[0];
+                const row = liveRows.slice().sort((a, b) => rowAtk[b] - rowAtk[a] || a - b)[0];
                 const c = plantAt(row, t, [0, 0, 1, 2]);
                 if (c >= 0) rowMap[row].push('other@' + c);
             });
