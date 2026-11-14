@@ -1640,7 +1640,8 @@
             this.lane = new BubLane({
                 R: 21, COLS: 19, LEFT: 51, TOP: 104, rows: 8,
                 sx: 450, sy: 424, deadline: 404, nColors: 4,
-                fillRows: 3, gapEvery: 3, ceilRows: 2, missPush: true, missLimit: 7
+                // v4.0.159：missLimit 7→6（失误缓冲少一次）
+                fillRows: 3, gapEvery: 3, ceilRows: 2, missPush: true, missLimit: 6
             });
             this.lane.noClear = true;     // 清空不算赢，养出满级作物才算
             this.lane.onLand = (l, res) => this.onPop(res);
@@ -1652,7 +1653,7 @@
             }));
             this.shots = [];              // 作物打出去的豌豆
             this.floats = [];             // 飘字
-            this.pushT = 7.5;
+            this.pushT = 6.8;   // v4.0.159：首轮杂草 7.5→6.8s
             this.best = 0;
             this.banner = ''; this.bannerT = 0;
         }
@@ -1677,8 +1678,8 @@
                 p.fx = 0.8;
                 SFX.grow(p.lv);
                 this.floats.push({ x: p.x, y: p.y - 20, s: 'Lv' + p.lv + ' ' + FARM_LV[p.lv - 1].n, t: 1.3, c: '#ffe066' });
-                // 作物越强，杂草压得越狠（每升一级多压 2 颗）
-                this.lane.pushCeil(2, null);
+                // 作物越强，杂草压得越狠（v4.0.159：每升一级多压 3 颗）
+                this.lane.pushCeil(3, null);
                 if (p.lv >= FARM_LV.length) this.checkWin();
             }
         }
@@ -1767,7 +1768,8 @@
             // 杂草慢慢往上长 —— 没有这一条，玩家可以一直不落球等作物自己清场
             this.pushT -= dt;
             if (this.pushT <= 0) {
-                this.pushT = Math.max(5.2, 7.5 - this.pots.reduce((a, p) => a + p.lv, 0) * 0.09);
+                // v4.0.159：底噪 7.5→6.8s、下限 5.2→4.8s（升级也会让杂草长更快，别指望拖时间）
+                this.pushT = Math.max(4.8, 6.8 - this.pots.reduce((a, p) => a + p.lv, 0) * 0.09);
                 this.lane.pushCeil(4, null);
             }
         }
@@ -2227,7 +2229,7 @@
             this.lane.onLand = (l, res) => this.onPop(res);
             this.lane.onDead = () => this.end(false);
 
-            this.hpMax = 640; this.hp = this.hpMax;
+            this.hpMax = 700; this.hp = this.hpMax;   // v4.0.159：640→700
             this.phase = 1;
             this.sprayT = 6.0; this.warn = 0;
             this.flash = 0; this.shake = 0;
@@ -2434,7 +2436,8 @@
             // v4.0.157：伤害从旧版「4 点/颗」换成植物体系（3 连只有 5 点）后，同样的喷吐节奏
             // 会让玩家在打死龙之前先被压死（实测机器人 32 秒就顶到红线，只打掉 18% 血）。
             // 所以喷吐整体放慢一档，把「伤害变低」换成「你有更多回合」，节奏才跟旧版一致。
-            const base = this.phase === 1 ? 8.2 : (this.phase === 2 ? 6.4 : 5.2);
+            // v4.0.159：8.2 / 6.4 / 5.2 → 7.4 / 5.8 / 4.8（血量同时 640→700，别只加压不加血）
+            const base = this.phase === 1 ? 7.4 : (this.phase === 2 ? 5.8 : 4.8);
             return base * (1 + this.frost * 0.12);   // 每层霜冻让喷吐慢 12%
         }
 
@@ -2952,7 +2955,7 @@
             this.lb.sfxK = 0.3;                 // v4.0.156：AI 那侧也有声，但只当背景，别跟玩家抢耳朵
             this.lb.showAim = false;
             this.aiOn = true;
-            this.aiT = 2.4;
+            this.aiT = 1.8;   // v4.0.159：AI 首手 2.4→1.8s
             this.pending = [];
             this.flashA = 0; this.flashB = 0;
             this.msg = ''; this.msgT = 0;
@@ -3007,7 +3010,7 @@
                 l.aimAt(l.cx(best[0], best[1]) + (Math.random() - 0.5) * 14, l.yOf(best[0]));
                 l.fire();
             }
-            this.aiT = 1.55 + Math.random() * 0.9;
+            this.aiT = 1.35 + Math.random() * 0.8;   // v4.0.159：1.55~2.45s → 1.35~2.15s
         }
 
         update(dt) {
@@ -3236,11 +3239,12 @@
 
         loadFloor(n) {
             this.floor = n;
-            const colors = Math.min(5, 4 + Math.floor((n - 1) / 4));
+            // v4.0.159：5 色从第 5 层提前到第 3 层（4 + floor(n/3)）
+            const colors = Math.min(5, 4 + Math.floor(n / 3));
             const fillRows = Math.min(6, 2 + Math.ceil(n / 2));
             this.lane = new BubLane({
                 R: 24, COLS: 18, LEFT: 18, TOP: 96, rows: 11,
-                sx: 450, sy: 556, deadline: 532, nColors: colors,
+                sx: 450, sy: 556, deadline: 522, nColors: colors,
                 fillRows: fillRows, gapEvery: 2, ceilRows: 2, missPush: true, missLimit: 8
             });
             const l = this.lane;

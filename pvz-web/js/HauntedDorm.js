@@ -326,7 +326,7 @@ class HauntedDorm {
     // v4.0.146（用户「波次稍微缩短，就改为第 7 波吧」）：10 波 → 7 波，间隔 75s → 60s，一局约 6.5 分钟见分晓。
     static get WAVE_MAX() { return 7; }
     // v4.0.146：波间隔单独抽常量，改节奏只动这一处
-    static get WAVE_GAP() { return 60000; }
+    static get WAVE_GAP() { return 56000; }   // v4.0.159：60→56s
     // v4.0.36：真人僵尸玩家血量倍率——AI 植物火力（豌豆/投掷/地刺/毁灭菇真伤）对 500 血玩家几秒融化（用户实报），
     // 仅放大真人玩家血池，AI 僵尸小怪不变；所有伤害源按数值照扣，等效生存 ×3，地图中心 %回血自动同步放大
     static get PLAYER_HP_MUL() { return 3; }
@@ -376,7 +376,7 @@ class HauntedDorm {
         // v4.0.19：小推车（最后防线）+ 存活三选一祝福
         // v4.0.30：小推车最终形态=存活奖励（祝福发放），不再地图散落；僵尸玩家开局 10 秒禁行动给 AI 布防窗口
         this.mowers = [];
-        this.zombieFreezeT = this.isZombieFaction ? 10 : 0;
+        this.zombieFreezeT = this.isZombieFaction ? 8 : 0;   // v4.0.159：观察期 10→8s
         // v4.0.61：僵尸阵营指挥——G 键循环切换优先猎杀目标；H 键号令尸潮（60s CD）
         this.commandTarget = null;
         this.waveOrderCd = 0;
@@ -391,7 +391,7 @@ class HauntedDorm {
 
         // v4.0.20：尸潮波次 + 昼夜循环 + 内鬼模式
         this.waveN = 0;               // 已到来的尸潮波数
-        this.waveAt = 40000;          // v4.0.91：开局第一波 75000→40000（用户"开局一次僵尸都碰不到"）；v4.0.146：后续波 75s→60s（WAVE_GAP）
+        this.waveAt = 32000;          // v4.0.159：40→32s 首波提前；v4.0.91：开局第一波 75000→40000（用户"开局一次僵尸都碰不到"）；v4.0.146：后续波 75s→60s（WAVE_GAP）
         this.waveWarned = false;      // 是否已播报「一大波僵尸正在接近」
         this.isNight = false;         // v4.0.46：作息反转后开局即白天——阳光系白天醒着产出（夜晚开局会 90s 零收入死局）；白天 60s
         this.dnNext = 60000;          // 下一次昼夜切换时间（开局白天 60s）
@@ -1151,7 +1151,7 @@ class HauntedDorm {
         // v4.0.19：祝福计时归零
         this.blessingAt = 90000;
         this.aiBlessAt = 90000;
-        this.zombieFreezeT = this.isZombieFaction ? 10 : 0;
+        this.zombieFreezeT = this.isZombieFaction ? 8 : 0;   // v4.0.159：观察期 10→8s
         this.survivorKills = 0;   // v4.0.117：尸潮解锁进度随局重置
         this._frozenTipAt = 0;
         if (this.blessing) { this.blessing = null; if (this.blessEl) this.blessEl.style.display = 'none'; }

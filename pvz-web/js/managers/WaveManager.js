@@ -2,18 +2,22 @@ class WaveManager {
     constructor(game) {
         this.game = game;
         this.timeElapsed = 0;
-        this.nextSpawnTime = 25; // First zombie in 25 seconds
-        this.spawnInterval = 20; // 20 seconds before the second zombie
+        // v4.0.159：经典冒险加难 —— 首波 25→15s、第二只间隔 20→16s（开局不再空转 40 秒）
+        this.nextSpawnTime = 15; // First zombie in 15 seconds
+        this.spawnInterval = 16; // 16 seconds before the second zombie
         this.waveCount = 0;
+        this.raidAt = 45;        // v4.0.159 第一次小队突袭（秒）
     }
 
     // v3.11.1：经典/融合「再玩一局」原地重开时，把刷怪节奏恢复到开局状态
     // （此前 spawnInterval 只减不增、timeElapsed 累计，重开后高级僵尸立刻出现）
     reset() {
         this.timeElapsed = 0;
-        this.nextSpawnTime = 25; // First zombie in 25 seconds
-        this.spawnInterval = 20; // 20 seconds before the second zombie
+        // v4.0.159：经典冒险加难 —— 首波 25→15s、第二只间隔 20→16s（开局不再空转 40 秒）
+        this.nextSpawnTime = 15; // First zombie in 15 seconds
+        this.spawnInterval = 16; // 16 seconds before the second zombie
         this.waveCount = 0;
+        this.raidAt = 45;        // v4.0.159 第一次小队突袭（秒）
     }
 
     update(deltaTime) {
@@ -22,19 +26,28 @@ class WaveManager {
         if (this.game.vsMode) return; // v3.81.0 双人对战：僵尸全部由僵尸方玩家购买释放，不自然刷怪
         this.timeElapsed += deltaTime;
 
+        // v4.0.159 经典冒险「小队突袭」：只加数量会拉长对局、不加压力 ——
+        // 真正逼出决策的是「同一瞬间好几条线都要救」。每 90 秒挑 2~3 个不同行同帧各出一只，
+        // 你必须当场决定先救哪条线。融合进化自己有一套更陡的曲线，不叠这个。
+        if (!this.game.fusionMode && this.timeElapsed >= this.raidAt) {
+            this.raidAt = this.timeElapsed + 90;
+            this._squadRaid();
+        }
+
         if (this.timeElapsed >= this.nextSpawnTime) {
             if (this.game.fusionMode) {
                 // —— v3.58.0 融合进化难度×2（用户爸爸指定）——
                 // ①间隔衰减加倍：每次 -1.0（原 -0.5），下限 5s→2.5s——前中期刷怪速率约翻倍；
                 // ②后期（≥420s，7 分钟）改「尸潮制」：一次上一波 18~24 只（"上一次大概上 20 多个"），
                 //   波与波之间用间隔下限 10s 拉开，真的"一波一波上、一批一批上"。前期节奏不变软。
-                this.spawnInterval = Math.max(2.5, this.spawnInterval - 1.0);
-                if (this.timeElapsed >= 420) {
+                // v4.0.159：衰减 1.0→1.1/s、下限 2.5→2.2s；尸潮 420→390s 提前
+                this.spawnInterval = Math.max(2.2, this.spawnInterval - 1.1);
+                if (this.timeElapsed >= 390) {
                     // v4.0.61 波次制渐进（用户确认六模式意见③"统一波次制防曲线陡跳"）：
                     // 旧版 420s 直接从"几只"跳到 18~24 只大波（曲线陡跳）；
                     // 改为数量随场龄渐进——420s 首波 10~12 只，此后每过 60s 涨 4 只，封顶 24，
                     // 波间仍 10s 下限，观感是"一波比一波大"，不再突然暴涨
-                    const ageStep = Math.floor((this.timeElapsed - 420) / 60);
+                    const ageStep = Math.floor((this.timeElapsed - 390) / 60);
                     const count = Math.min(24, 10 + ageStep * 4 + Math.floor(Math.random() * 3));
                     for (let i = 0; i < count; i++) this.spawnZombie();
                     this._showHugeWaveNote(count);
@@ -46,20 +59,48 @@ class WaveManager {
                 // v4.0.61 经典冒险后期同款尸潮制（用户确认六模式意见②"群刷+预警"）：
                 // 600s 起"一大波僵尸"12~16 只，波间 10s 间隔——后期不再一只只磨，
                 // 有预警横幅、有波次感，与融合模式的尸潮观感一致
-                if (this.timeElapsed >= 600) {
-                    const count = 12 + Math.floor(Math.random() * 5); // 12~16 只
+                // v4.0.159：600→480s 提前成波；数量 12~16→10~14（经典池僵尸更弱，只提前不加量）
+                if (this.timeElapsed >= 480) {
+                    const count = 10 + Math.floor(Math.random() * 5); // 10~14 只
                     for (let i = 0; i < count; i++) this.spawnZombie();
                     this._showHugeWaveNote(count);
                     this.waveCount++;
                     this.nextSpawnTime = this.timeElapsed + Math.max(10, this.spawnInterval);
                     return;
                 }
-                this.spawnInterval = Math.max(5, this.spawnInterval - 0.5); // Gradually speeds up, minimum 5 seconds
+                // v4.0.159：递减 -0.5→-0.65/s，下限仍 5s（约 3 分钟就到最快节奏）
+                this.spawnInterval = Math.max(5, this.spawnInterval - 0.65);
             }
             this.spawnZombie();
             this.waveCount++;
             this.nextSpawnTime = this.timeElapsed + this.spawnInterval;
         }
+    }
+
+    // v4.0.159 小队突袭：随机挑 2~3 个不同行，同帧各出一只
+    _squadRaid() {
+        const rows = [];
+        for (let r = 0; r < this.game.board.rows; r++) rows.push(r);
+        for (let i = rows.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            const t = rows[i]; rows[i] = rows[j]; rows[j] = t;
+        }
+        const n = Math.min(rows.length, 2 + Math.floor(Math.random() * 2)); // 2~3 路
+        for (let i = 0; i < n; i++) this.spawnZombie(rows[i]);
+        this._showRaidNote(n);
+    }
+
+    _showRaidNote(n) {
+        try {
+            const note = document.createElement('div');
+            note.textContent = '⚠ 小队僵尸突袭！（' + n + ' 路同时来袭）';
+            note.style.cssText = 'position:absolute;left:50%;top:26%;transform:translateX(-50%);' +
+                'z-index:5000;pointer-events:none;white-space:nowrap;' +
+                'font:bold 26px/1.4 "Hiragino Sans GB",sans-serif;color:#e65100;' +
+                'text-shadow:0 2px 6px rgba(0,0,0,.5), 0 0 2px #fff;';
+            this.game.container.appendChild(note);
+            setTimeout(() => note.remove(), 2200);
+        } catch (e) { /* 横幅失败不影响出兵 */ }
     }
 
     // v3.58.0 尸潮预警横幅（复刻原版"一大波僵尸正在接近！"的红色大字）
@@ -76,8 +117,11 @@ class WaveManager {
         } catch (e) { /* 横幅失败不影响刷怪 */ }
     }
     
-    spawnZombie() {
-        const row = Math.floor(Math.random() * this.game.board.rows);
+    // v4.0.159：rowOverride 用于小队突袭（指定行同时出兵）；不传则沿用随机行
+    spawnZombie(rowOverride) {
+        const row = (rowOverride == null)
+            ? Math.floor(Math.random() * this.game.board.rows)
+            : (rowOverride % this.game.board.rows);
         
         let coneChance = 0, bucketChance = 0, footballChance = 0;
         let poleChance = 0, newsChance = 0, screenChance = 0;

@@ -1058,7 +1058,8 @@ class Game {
     _vsAiPlantThink(dt) {
         if (!this.vsAiMode || this.vsPlayerSide !== 'zombie' || this.vsMode !== true || this.state !== 'PLAYING') return;
         this._vsAiTimer = (this._vsAiTimer || 0) + dt;
-        if (this._vsAiTimer < 2.0) return;
+        // v4.0.159：AI 思考间隔 2.0→1.5s（出手更密，人机不再白送发育时间）
+        if (this._vsAiTimer < 1.5) return;
         this._vsAiTimer = 0;
         if (this.playTime < 8) return; // 开局 8 秒安全期（给玩家僵尸起步时间）
         const afford = this.vsPlantSeeds.filter(s => this.sunCount >= s.cost && (this.cooldowns[s.type] || 0) <= 0);
@@ -1325,7 +1326,8 @@ class Game {
     _vsAiThink(dt) {
         if (!this.vsAiMode || this.vsMode !== true || this.state !== 'PLAYING') return;
         this._vsAiTimer = (this._vsAiTimer || 0) + dt;
-        if (this._vsAiTimer < 2.0) return;
+        // v4.0.159：AI 思考间隔 2.0→1.5s（出手更密，人机不再白送发育时间）
+        if (this._vsAiTimer < 1.5) return;
         this._vsAiTimer = 0;
         if (this.playTime < 15) return; // 植物方 15 秒安全发育期（v4.0.97 用户：10 秒不够），AI 同步遵守
         const costs = this.vsZombieCost();
@@ -1884,13 +1886,14 @@ class Game {
             // v3.56.0：三档难度微降（用户"我是僵尸的难度微微调低一点"）——初始阳光上调
             // v4.0.61：用户再次反馈困难/地狱太难 → 困难 480→520、地狱 280→320（"稍微调低一点点"）
             // v4.0.90：用户"我是僵尸太难，难度均衡一点" → 三档阳光继续拉近：简单 650→700、困难 520→580、地狱 320→460（地狱最受益）
-            easy: { key: 'easy', label: '简单', sun: 700, plantTier: 0,
+            // v4.0.159：三档阳光各 -40（700/580/460 → 660/540/430），敌阵强度不变
+            easy: { key: 'easy', label: '简单', sun: 660, plantTier: 0,
                 unlock: ['normal', 'conehead', 'polevaulting', 'sunhead', 'imp'] },
-            hard: { key: 'hard', label: '困难', sun: 580, plantTier: 1,
+            hard: { key: 'hard', label: '困难', sun: 540, plantTier: 1,
                 unlock: ['normal', 'conehead', 'polevaulting', 'newspaper', 'buckethead', 'sunhead', 'imp'] },
             // v3.42.0：地狱加难（用户"有点简单"）——初始阳光 250→200；v3.56.0 微调回 280；v3.62.0→320；v4.0.90→460（拉近困难档）
             // v4.0.131：地狱加 dancing 常驻（舞王融合配方 danceking/discopaper 需要）
-            hell: { key: 'hell', label: '地狱', sun: 460, plantTier: 2,
+            hell: { key: 'hell', label: '地狱', sun: 430, plantTier: 2,
                 unlock: ['normal', 'conehead', 'polevaulting', 'newspaper', 'buckethead', 'sunhead', 'imp', 'dancing'] }
         };
         const cfg = map[d] || map.easy;
@@ -2639,7 +2642,7 @@ class Game {
                 plantPerm: 0.85, // 植物罐砸出的植物 85% 永久 / 15% 一次性(炸弹)
                 qPerm: 0.72,     // 问号罐砸出的植物 72% 永久 / 28% 一次性
                 zPool: ['normal','normal','normal','normal','normal','normal','conehead','conehead','flag'],
-                hpMul: 1.15
+                hpMul: 1.20   // v4.0.159：1.15→1.20
             },
             hard: {
                 key: 'hard', label: '困难', totalMin: 22, totalMax: 26,
@@ -2653,7 +2656,7 @@ class Game {
                 plantPerm: 0.85,
                 qPerm: 0.68,
                 zPool: ['normal','normal','normal','normal','conehead','conehead','buckethead','flag','polevaulting','newspaper'],
-                hpMul: 1.25
+                hpMul: 1.30   // v4.0.159：1.25→1.30
             },
             hell: {
                 key: 'hell', label: '地狱', totalMin: 26, totalMax: 28,
@@ -2667,7 +2670,7 @@ class Game {
                 plantPerm: 0.9,
                 qPerm: 0.72,
                 zPool: ['normal','normal','normal','conehead','conehead','buckethead','buckethead','newspaper','polevaulting','flag','screendoor'],
-                hpMul: 1.45
+                hpMul: 1.50   // v4.0.159：1.45→1.50
             }
         };
         return map[d] || map.hard;
