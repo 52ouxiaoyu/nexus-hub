@@ -103,6 +103,20 @@
 3. 只数僵尸只数不够，得掂量硬度（1 只路障 538 血 ≠ 0 只）；最终策略：有僵尸的行先各 1 株→再各补第 2 株→剩下按 `rowZ - atk*1.6` 倾斜
 4. 判死前先 dump：wrap `_revealZombieFromVase` 记 `type@r?c?[罐型]` + 打印 `board.grid`。掉壳后 `this.type='normal'`（Zombie.js 1174~1221），路障/铁桶会伪装成「凭空出现的普通僵尸」；崩盘行往往是「一株植物都没有」
 
+## 全模式难度锚点（v4.0.159 实测打分）
+七模式难度（五维加权）：守屋 8.0 > 融合 6.9 > 我是僵尸 6.2 > 砸罐子/双人 5.9 > 泡泡 5.0 > 经典 4.9
+- **经典冒险没有小推车**（`mower` 只在 HauntedDorm）→ 漏一只即判负，比原版还严；它"简单"纯粹是节奏慢
+- 加难方向 = 加**同步性**（小队突袭 90s 一次、2~3 行同帧），不是加数量；只加数量只拉长对局
+- 泡泡四子玩法旋钮：牧场 `missLimit`/`pushT`/升级 `pushCeil(3)`；机械龙 `hpMax`+`sprayInterval()`；对轰 `aiT`；塔 `colors=4+floor(n/3)`+`deadline`
+- **动血量必须同步动节奏**（反过来也一样），否则平衡会单边崩
+- 守屋难度旋钮只有 `WAVE_MAX`/`WAVE_GAP`/`waveAt`/`zombieFreezeT` 四个，没有难度档
+
+### 验收脚本三个坑（v4.0.159 又踩一遍）
+1. `new WaveManager(g)` 测尸潮：`raidAt=45` 会抢先触发突袭污染采样 → 先 `raidAt=1e9`，且 `nextSpawnTime` 要小才进刷怪分支
+2. 小游戏 `pushT`/`aiT` 是实时倒计时，读到的不是初始值 → 断言写区间，不写等值
+3. `startGame()` **不隐藏 `#start-menu`**；截图走真实入口 `#btn-adventure` → 10 张 `.chooser-card` → `#btn-lets-rock`
+4. 突袭次数按 `_squadRaid` 调用计数，不要按"同秒出生聚簇"（普通出兵同秒会污染）
+
 ## 其他子游戏（只留铁律）
 - **tank-battle**：单文件 game.js，句柄 window._tankGame；击杀收敛 Tank.destroy(killer,damage)；Boss 覆写不调 super；数值集中 VITALS，伤害先扣 shieldHp；禁 shadowBlur；改 map.grid 必 markDirty()；测试清空敌人会触发 STAGE_CLEAR 停摆 → 留 frozen 敌人
 - **billiards**：G.aimDir 是快照 → 用 aimLine 端点反推、重定向必须 setAim()；POOL.state 只读；角袋圆心 (±(W/2+0.015),±(H/2+0.015)) r=0.081；双人 P1=WASD+空格 / P2=方向键+回车；`||默认值` 会顶掉 0 档
