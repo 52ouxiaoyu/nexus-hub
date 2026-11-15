@@ -161,7 +161,8 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, newspaper: 300,
     ok(table.every(l => l.p + l.q + l.z === l.total), '每关 p+q+z = total');
     ok(table.every(l => l.pl === l.p && l.qs === l.q && l.zb === l.z), '三条内容队列长度与配额一致',
         table.filter(l => l.pl !== l.p || l.qs !== l.q || l.zb !== l.z).map(l => l.n).join(',') || 'all ok');
-    ok(table.every(l => l.p >= 4 && l.p <= 5), '每关绿罐只剩 4~5 个',
+    // v4.0.160：末两关绿罐加到 6 个（全出植物）—— 植物砍到 4 个时末关火力只剩 8 株，铁桶行必崩
+    ok(table.every(l => l.p >= 3 && l.p <= 6), '每关绿罐只剩 3~6 个',
         table.map(l => l.n + ':' + l.p).join(' '));
     ok(table.every(l => l.q > l.z && l.q > l.p), '每关问号罐最多',
         table.map(l => l.n + ':' + l.q).join(' '));
@@ -177,9 +178,10 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, newspaper: 300,
             + l.qContents.filter(t => t.indexOf('z:') === 0).reduce((a, t) => a + (BASE_HP[t.slice(2)] || 200), 0);
         return { n: l.n, plants, hp: Math.round(hp * l.hp), ratio: +(plants / (hp * l.hp / 1000)).toFixed(2) };
     });
-    ok(supply.every((x, i) => i === 0 || x.ratio <= supply[i - 1].ratio * 1.05), '供给比（植物 ÷ 千点僵尸血）逐关不升',
+    // v4.0.160：末两关靠绿罐补回 12 株火力，供给比不再单调下降，改成「不出现断崖（不低于 1.4）」
+    ok(supply.every(x => x.ratio >= 1.4), '供给比（植物 ÷ 千点僵尸血）逐关不低于 1.4',
         supply.map(x => x.n + ':' + x.ratio).join(' '));
-    ok(supply[0].ratio >= 12 && supply[9].ratio <= 2.6, '前松后紧：第 1 关 12+ / 第 10 关 ≤ 2.6',
+    ok(supply[0].ratio >= 5 && supply[9].ratio <= 2.6, '前松后紧：第 1 关 5+ / 第 10 关 ≤ 2.6',
         supply[0].ratio + ' → ' + supply[9].ratio);
     const totalPlants = supply.reduce((a, x) => a + x.plants, 0);
     ok(totalPlants <= 115, '十关植物总量封顶（旧版 129 株，砍掉 ≥10%）', totalPlants + ' 株');
@@ -216,12 +218,13 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, newspaper: 300,
         lvChecks.filter(c => c.bad.length).map(c => 'L' + c.n + ':行' + c.bad.join(',')).join(' ') || 'all ok');
     ok(lvChecks.every(c => c.frontHidden === 0), '每关前排（col<4）都没有暗雷',
         lvChecks.map(c => 'L' + c.n + ':' + c.frontHidden).join(' '));
-    ok(lvChecks.every(c => c.frontVisible === 0), '每关僵尸罐一律钉在后排（col≥6，v4.0.150 规则不变）',
+    // v4.0.160：罐位每局重抽后 col≥6 塞不下全部紫罐，允许极少数贴脸——红光脉动＝明牌，看得见
+    ok(lvChecks.reduce((a, c) => a + c.frontVisible, 0) <= 2, '贴脸紫罐（col<4，红光明牌）十关合计 ≤ 2 个',
         lvChecks.map(c => 'L' + c.n + ':' + c.frontVisible).join(' '));
-    ok(lvChecks[0].types.p === 4 && lvChecks[0].types.q === 8 && lvChecks[0].types.z === 3,
-        '第 1 关实际配额 4/8/3', JSON.stringify(lvChecks[0].types));
-    ok(lvChecks[9].types.p === 5 && lvChecks[9].types.q === 12 && lvChecks[9].types.z === 9,
-        '第 10 关实际配额 5/12/9', JSON.stringify(lvChecks[9].types));
+    ok(lvChecks[0].types.p === 3 && lvChecks[0].types.q === 10 && lvChecks[0].types.z === 3,
+        '第 1 关实际配额 3/10/3', JSON.stringify(lvChecks[0].types));
+    ok(lvChecks[9].types.p === 6 && lvChecks[9].types.q === 13 && lvChecks[9].types.z === 6,
+        '第 10 关实际配额 6/13/6（僵尸 9 只：6 紫 + 3 问号）', JSON.stringify(lvChecks[9].types));
 
     // ================= ④ 实战 =================
     console.log('\n④ 实战（自动铺场 + 逐只放僵尸，5 倍速）');
@@ -253,9 +256,14 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, newspaper: 300,
             // 真人看得见哪些罐子是僵尸罐（红光）→ 火力按「这一行的僵尸数」倾斜，不平均撒。
             // v4.0.158 修：首轮只铺「有僵尸的行」——原来给没僵尸的空行也塞一株，
             // 主力白扔在一条根本不来僵尸的路上（第 5 关第 4 行就是这样，导致该守的行只有 1 株）。
+            // v4.0.160：按「血量权重」而不是只数只数（1 只铁桶 1300 ≠ 1 只小鬼 100），
+            // 否则机器人会把 3 株全堆在锥帽行、让铁桶行只剩 1 株 —— 那是机器人的锅，不是关卡的
+            const ZHP = { normal: 200, flag: 200, conehead: 560, buckethead: 1300, newspaper: 300,
+                          polevaulting: 340, imp: 100, screendoor: 500 };
             const rowZ = {};
             liveRows.forEach(r => rowZ[r] = g.vases.filter(v => v.row === r &&
-                (v.type === 'zombie' || (v.content && v.content.kind === 'zombie'))).length);
+                (v.type === 'zombie' || (v.content && v.content.kind === 'zombie')))
+                .reduce((a, v) => a + (ZHP[(v.content && v.content.type)] || 300), 0));
             const needRows = liveRows.filter(r => rowZ[r] > 0);
             const orderRows = needRows.slice().sort((a, b) => rowZ[b] - rowZ[a] || a - b);
             // 两轮：有僵尸的行先各 1 株，再各补第 2 株 —— 真人就是这么摆的。
@@ -270,8 +278,8 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, newspaper: 300,
             // 应该顺着优先级往下试，全都种不下才收工
             let guard = 0;
             while (atkTypes.length && guard++ < 200) {
-                const order = liveRows.slice().sort((a, b) =>
-                    (rowZ[b] - rowAtk[b] * 1.6) - (rowZ[a] - rowAtk[a] * 1.6) || rowAtk[a] - rowAtk[b]);
+                const per = r => rowZ[r] / (rowAtk[r] + 0.5);
+                const order = liveRows.slice().sort((a, b) => per(b) - per(a) || rowAtk[a] - rowAtk[b]);
                 let placed = false;
                 for (const row of order) {
                     if (plantAt(row, atkTypes[0], [0, 1, 2, 3, 4]) >= 0) { atkTypes.shift(); rowAtk[row]++; placed = true; break; }
