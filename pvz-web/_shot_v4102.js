@@ -1,3 +1,4 @@
+// ⚠️ 已废弃（v4.0.161）：双人对战的「天使 / 内鬼」死亡变身系统已按用户要求删除，本脚本所测功能不复存在。
 // v4.0.102 截图：P1 死亡变天使在场上 + 变身播报
 const path = require('path');
 const puppeteer = require('puppeteer');

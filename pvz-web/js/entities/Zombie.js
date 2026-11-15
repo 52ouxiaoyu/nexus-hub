@@ -1433,8 +1433,8 @@ class Zombie extends Entity {
                     this.game.zombieEatBrain(this.row, this);
                 } else if (this.game.vsMode) {
                     // v3.81.0 双人对战：僵尸进屋 = 僵尸方获胜
-                    // v4.0.102：改走 _vsZombieReachHouse——植物方玩家首次进屋=「死亡」获得天使/内鬼变身机会（不直接判负）
-                    if (!this.hypnotized) this.game._vsZombieReachHouse(this);
+                    // v4.0.161（用户要求）：删掉「变身苟一次」——那一路被攻破，植物方当场判负
+                    if (!this.hypnotized) this.game.vsZombieWin();
                 } else {
                     this.game.gameOver();
                 }

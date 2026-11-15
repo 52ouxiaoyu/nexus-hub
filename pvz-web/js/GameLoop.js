@@ -1297,7 +1297,6 @@ class Game {
         this.zombieMode = false;
         this.vsMode = true;
         this.vsSpawnRow = 0; // v3.82.0 亮起行复位到第一排
-        this.initVsFate();   // v4.0.102：天使/内鬼死亡变身系统
         
         // 深拷贝种卡数据，以免污染全局植物库
         this.selectedSeeds = this.vsPlantSeeds.map(s => Object.assign({}, s)); 
@@ -1423,7 +1422,8 @@ class Game {
     }
 
     // 胜负检测：僵尸方破产（场上无活僵尸 + 脑子买不起最便宜的僵尸，持续 2.5s）
-    // v4.0.102：僵尸方玩家存活时破产 = 「第一次死亡」（变身机会）；已变身/等待中破产 = 植物方胜
+    // v4.0.161（用户要求）：删掉 v4.0.102 的「天使/内鬼」变身 —— 破产就是判负，
+    // 不再给僵尸方「第一次死亡 + 变身内鬼翻盘」的第二次机会。
     _checkVsEnd(dt) {
         if (this.state !== 'PLAYING') return;
         const hasZombie = this.entities.some(e => e instanceof Zombie && !e.isDead && e.state !== 'DYING' && !e.hypnotized);
@@ -1433,18 +1433,11 @@ class Game {
             ? Math.min(...this.vsZombiePicks.map(t => costs[t]))
             : Math.min(...Object.values(costs));
 
-        // v4.0.102：僵尸方玩家已死亡/变身（非内鬼在场）后，攒下的脑子不再救场——僵尸阵营彻底无力即植物方胜
-        const p2Human = this._vsSideHuman ? this._vsSideHuman('p2') : true;
-        const f2 = this.vsFate ? this.vsFate.p2 : null;
-        const brainCounts = !(p2Human && f2 && f2.state !== 'alive');
-
-        if (hasZombie || (brainCounts && this.zombieSun >= minCost)) { this._vsWinTimer = 0; return; }
+        if (hasZombie || this.zombieSun >= minCost) { this._vsWinTimer = 0; return; }
         this._vsWinTimer = (this._vsWinTimer || 0) + dt;
         if (this._vsWinTimer >= 2.5) {
             this._vsWinTimer = 0;
-            if (p2Human && f2 && f2.state === 'alive') this._vsTriggerDeath('p2');
-            // f2.state==='dead'：等待变身中（20s 超时由 _updateVsFate 判负），僵尸全灭不立即结算
-            else if (!(p2Human && f2 && f2.state === 'dead')) this.vsPlantWin();
+            this.vsPlantWin();
         }
     }
 
@@ -1560,301 +1553,13 @@ class Game {
         this._vsEndOverlay('🌻 植物方获胜！', '僵尸大军破产覆没', '#2e6b1e');
     }
 
-    // ===== v4.0.102 双人对战：天使/内鬼（死亡变身）=====
-    // 规则（用户定案）：①植物方=僵尸走进房子（防线破）→「第一次死亡」，僵尸方=破产 → 死亡，不直接判负；
-    // ②死亡后按键变身：P1(植物方) N=天使/M=内鬼，P2(僵尸方) 主键盘1=天使/2=内鬼；变身前原指挥权失效（当摆设）；
-    // ③天使=N捕获(100%定身最近僵尸，功德6→定身5s)+M疾跑6s，双 CD 20s；内鬼=M(P1)/1(P2)狂暴（6s 挠植物伤害翻倍+移速×1.5，CD 30s），
-    //   内鬼像僵尸一样挠植物、僵尸不打内鬼（同阵营）；④形态被杀=对方阵营直接获胜；死亡后 20 秒不变身=判负；⑤人机模式 AI 侧不变身照旧判负。
-    initVsFate() {
-        if (this.vsFate) { this._vsFateCleanup(); }
-        this.vsFate = {
-            p1: { state: 'alive', waitT: 0, ent: null },   // p1=植物方玩家（双人为 P1，人机模式 vsPlayerSide='plant' 时为真人）
-            p2: { state: 'alive', waitT: 0, ent: null }    // p2=僵尸方玩家
-        };
-        this._vsKeys = { p1: {}, p2: {} };
-        if (!this._vsKeyupBound) {
-            this._vsKeyupBound = true;
-            window.addEventListener('keyup', (e) => {
-                if (!this.vsFate) return;
-                const c = e.code;
-                const m1 = { KeyW: 'up', KeyA: 'left', KeyS: 'down', KeyD: 'right' };
-                const m2 = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
-                if (m1[c]) this._vsKeys.p1[m1[c]] = false;
-                if (m2[c]) this._vsKeys.p2[m2[c]] = false;
-            });
-        }
-        // 形态状态条（血量/CD/等待倒计时）
-        if (!this._vsFateHud) {
-            this._vsFateHud = document.createElement('div');
-            this._vsFateHud.style.cssText = 'position:absolute; top:52px; left:50%; transform:translateX(-50%); z-index:620; display:none; font-size:13px; font-weight:bold; text-shadow:2px 2px 0 #000; pointer-events:none; font-family:"Kaiti SC","STKaiti",serif; white-space:nowrap;';
-            this.container.appendChild(this._vsFateHud);
-        }
-    }
-
-    _vsSideHuman(side) {
-        if (!this.vsAiMode) return true;
-        // side('p1'=植物方/'p2'=僵尸方) 映射到 vsPlayerSide('plant'/'zombie')
-        return (side === 'p1' ? 'plant' : 'zombie') === this.vsPlayerSide;
-    }
-
-    // 变身系统是否消费该键（InputManager 键盘 handler 最先调用；true=吃掉）
-    _vsFateKeydown(e) {
-        if (!this.vsMode || !this.vsFate || this.state !== 'PLAYING' || this.paused) return false;
-        const c = e.code;
-        const m1 = { KeyW: 'up', KeyA: 'left', KeyS: 'down', KeyD: 'right' };
-        const m2 = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
-        if (m1[c]) this._vsKeys.p1[m1[c]] = true;
-        if (m2[c]) this._vsKeys.p2[m2[c]] = true;
-        const f1 = this.vsFate.p1, f2 = this.vsFate.p2;
-        const h1 = this._vsSideHuman('p1'), h2 = this._vsSideHuman('p2');
-        let consumed = false;
-        if (h1 && f1.state === 'dead' && !e.repeat) {
-            if (c === 'KeyN') { this._vsBecome('p1', 'angel'); consumed = true; }
-            else if (c === 'KeyM') { this._vsBecome('p1', 'traitor'); consumed = true; }
-        } else if (h1 && f1.state === 'angel' && !e.repeat) {
-            if (c === 'KeyN') { this._vsAngelCapture('p1'); consumed = true; }
-            else if (c === 'KeyM') { this._vsAngelSpeed('p1'); consumed = true; }
-        } else if (h1 && f1.state === 'traitor' && !e.repeat) {
-            if (c === 'KeyM') { this._vsRage('p1'); consumed = true; }
-        }
-        if (!consumed && h2 && f2.state === 'dead' && !e.repeat) {
-            if (c === 'Digit1') { this._vsBecome('p2', 'angel'); consumed = true; }
-            else if (c === 'Digit2') { this._vsBecome('p2', 'traitor'); consumed = true; }
-        } else if (!consumed && h2 && f2.state === 'angel' && !e.repeat) {
-            if (c === 'Digit1') { this._vsAngelCapture('p2'); consumed = true; }
-            else if (c === 'Digit2') { this._vsAngelSpeed('p2'); consumed = true; }
-        } else if (!consumed && h2 && f2.state === 'traitor' && !e.repeat) {
-            if (c === 'Digit1') { this._vsRage('p2'); consumed = true; }
-        }
-        if (consumed) { e.preventDefault(); return true; }
-        // P2 变身/等待中：方向键归形态移动，不再移动亮起行（并阻止页面滚动）
-        if (h2 && f2.state !== 'alive' && m2[c]) { e.preventDefault(); return true; }
-        // P1 变身/等待中：主键盘数字不再选植物卡（已无指挥权）
-        if (h1 && f1.state !== 'alive' && /^Digit[1-8]$/.test(c)) return true;
-        return false;
-    }
-
-    _vsTriggerDeath(side) {
-        const f = this.vsFate[side];
-        if (!f || f.state !== 'alive') return;
-        f.state = 'dead';
-        f.waitT = 20; // 20 秒内不变身 = 判负（防挂机僵局）
-        const who = side === 'p1' ? 'P1（植物方）' : 'P2（僵尸方）';
-        const keys = side === 'p1' ? 'N=😇天使 / M=😈内鬼' : '主键盘 1=😇天使 / 2=😈内鬼';
-        this.showAnnouncement(`💀 ${who}阵亡！按 ${keys} 变身继续战斗（20 秒内选择，超时判负）`, '#ff6a6a');
-        this.audioManager.play('lose');
-    }
-
-    _vsBecome(side, kind) {
-        const f = this.vsFate[side];
-        if (!f || f.state !== 'dead') return;
-        const b = this.board;
-        const isP1 = side === 'p1';
-        const ent = {
-            side, kind,
-            x: kind === 'angel' ? b.offsetX + 36 : b.offsetX + b.cols * b.cellWidth - 60,
-            y: b.offsetY + Math.floor(b.rows / 2) * b.cellHeight + b.cellHeight / 2 - 20,
-            hp: kind === 'angel' ? 800 : 1500,
-            maxHp: kind === 'angel' ? 800 : 1500,
-            capCd: 0, spdCd: 0, rageCd: 0, rageT: 0, merit: 0,
-            invT: 2.5, biteAcc: 0, chompAcc: 0, el: null, barEl: null
-        };
-        // DOM 实体（贴图严格用原版素材：天使=向日葵+金色光环；内鬼=VsTraitor 僵尸实体+😈标签）
-        if (kind === 'traitor') {
-            // 内鬼=僵尸阵营实体（继承 Zombie）：可被植物/子弹攻击、可被捕获冰冻、僵尸不咬自己人
-            const zb = new VsTraitor(this, side);
-            this.entities.push(zb);
-            f.ent = zb;
-            f.state = 'traitor';
-            this.showAnnouncement(`😈 ${isP1 ? 'P1' : 'P2'} 化作内鬼！走近植物把它挠碎（【${isP1 ? 'M' : '1'}】狂暴：6 秒伤害翻倍+加速）——僵尸是你自己人，不会打你；被植物消灭=植物方获胜！`, '#ff6a6a');
-            this.audioManager.play('evillaugh.mp3');
-            return;
-        }
-        const el = document.createElement('div');
-        el.style.cssText = 'position:absolute; width:70px; height:80px; pointer-events:none;';
-        const img = document.createElement('img');
-        img.src = 'assets/images/Plants/SunFlower/SunFlower1.gif?v=1794716724';
-        img.style.cssText = 'width:70px; filter:drop-shadow(0 0 12px #ffd700) drop-shadow(0 0 22px #ffd700);';
-        el.appendChild(img);
-        const barBg = document.createElement('div');
-        barBg.style.cssText = 'position:absolute; left:8px; top:-10px; width:54px; height:6px; background:#333; border:1px solid #000; border-radius:3px;';
-        const bar = document.createElement('div');
-        bar.style.cssText = 'width:100%; height:100%; background:#ffd700; border-radius:2px;';
-        barBg.appendChild(bar);
-        el.appendChild(barBg);
-        const tag = document.createElement('div');
-        tag.style.cssText = 'position:absolute; top:-26px; left:50%; transform:translateX(-50%); font-size:12px; font-weight:bold; white-space:nowrap; text-shadow:1px 1px 0 #000; font-family:"Kaiti SC","STKaiti",serif;';
-        tag.innerText = `😇 天使 ${isP1 ? 'P1' : 'P2'}`;
-        tag.style.color = '#ffd700';
-        el.appendChild(tag);
-        this.entityLayer.appendChild(el);
-        ent.el = el; ent.barEl = bar;
-        f.ent = ent;
-        f.state = 'angel';
-        this.showAnnouncement(`😇 ${isP1 ? 'P1' : 'P2'} 化作天使！【${isP1 ? 'N' : '1'}】捕获定身僵尸、【${isP1 ? 'M' : '2'}】疾跑——只有一条命，被咬死=僵尸方获胜！`, '#ffd700');
-        this.audioManager.play('points.mp3');
-    }
-
-    // 僵尸走进房子（Zombie.js 调用）：P1 首次=死亡变身机会；已变身/出局=僵尸消失不判负
-    _vsZombieReachHouse(zb) {
-        if (!this.vsFate) { this.vsZombieWin(); return; }
-        if (!this._vsSideHuman('p1')) { this.vsZombieWin(); return; } // 人机模式 AI 植物方不变身，照旧判负
-        const f = this.vsFate.p1;
-        if (f.state === 'alive') { this._vsTriggerDeath('p1'); return; }
-        // P1 已变身/等待变身：僵尸进屋=悄然消失（胜负改由形态生死决定）
-        if (zb && !zb.isDead && zb.state !== 'DYING') {
-            zb.state = 'DYING';
-            if (zb.element) zb.element.src = zb.dieSrc || zb.walkSrc;
-            setTimeout(() => { zb.isDead = true; }, 600);
-        }
-    }
-
-    _vsAngelCapture(side) {
-        const f = this.vsFate[side];
-        const ent = f && f.ent;
-        if (!ent || ent.kind !== 'angel' || ent.capCd > 0) return;
-        // 100% 命中：定身最近的僵尸阵营单位（普通僵尸/内鬼），功德 6 → 定身 5s
-        let best = null, bd = Infinity;
-        for (const e of this.entities) {
-            if (!(e instanceof Zombie) || e.isDead || e.state === 'DYING' || e.hypnotized) continue;
-            const d = Math.hypot(e.x - ent.x, (e.y || 0) - ent.y);
-            if (d < bd) { bd = d; best = e; }
-        }
-        if (!best) { this.showAnnouncement('场上没有僵尸可捕获', '#8fa8ff'); return; } // 空放不耗 CD
-        const dur = ent.merit >= 6 ? 5 : 3;
-        best.freezeTimer = Math.max(best.freezeTimer || 0, dur);
-        best.eatTarget = null;
-        ent.capCd = 20;
-        ent.merit++;
-        this.showAnnouncement(`🔒 天使捕获！定身 ${dur} 秒（⭐功德 ${ent.merit}${ent.merit === 6 ? '——定身升至 5 秒！' : ''}）`, '#7fd8ff');
-        this.audioManager.play('frozen.mp3');
-    }
-
-    _vsAngelSpeed(side) {
-        const f = this.vsFate[side];
-        const ent = f && f.ent;
-        if (!ent || ent.kind !== 'angel' || ent.spdCd > 0) return;
-        ent.spdBuffT = 6;
-        ent.spdCd = 20;
-        this.showAnnouncement('💨 天使疾跑！（6 秒）', '#ffd700');
-        this.audioManager.play('readysetplant.mp3');
-    }
-
-    _vsRage(side) {
-        const f = this.vsFate[side];
-        const ent = f && f.ent;
-        if (!ent || !(ent instanceof VsTraitor) || ent.rageCd > 0) return;
-        ent.rageT = 6;
-        ent.rageCd = 30;
-        this.showAnnouncement(`🔥 内鬼狂暴！（6 秒伤害翻倍+加速）`, '#ff5252');
-        this.audioManager.play('evillaugh.mp3');
-    }
-
-    _vsFateHudRefresh() {
-        if (!this.vsFate || !this._vsFateHud) return;
-        const any = this.vsFate.p1.state !== 'alive' || this.vsFate.p2.state !== 'alive';
-        this._vsFateHud.style.display = any ? 'block' : 'none';
-        if (!any) return;
-        const fmt = (side) => {
-            const f = this.vsFate[side];
-            const who = side === 'p1' ? 'P1' : 'P2';
-            if (f.state === 'alive') return `<span style="color:#bbbbbb;">${who} 存活</span>`;
-            if (f.state === 'dead') return `<span style="color:#ff6a6a;">${who} 阵亡！${Math.ceil(f.waitT)}s 内按 ${side === 'p1' ? 'N/M' : '1/2'} 变身</span>`;
-            const e = f.ent;
-            const kindTxt = f.state === 'angel' ? '😇天使' : '😈内鬼';
-            const rage = e.rageT > 0 ? `🔥狂暴${Math.ceil(e.rageT)}s ` : '';
-            const cds = f.state === 'angel'
-                ? `捕${Math.ceil(e.capCd)} 跑${Math.ceil(e.spdCd)}`
-                : `狂${Math.ceil(e.rageCd)}`;
-            return `<span style="color:${f.state === 'angel' ? '#ffd700' : '#ff6a6a'};">${who} ${kindTxt} ❤${Math.max(0, Math.ceil(e.hp))} ${rage}CD:${cds}</span>`;
-        };
-        this._vsFateHud.innerHTML = fmt('p1') + ' ／ ' + fmt('p2');
-    }
-
-    _updateVsFate(dt) {
-        if (!this.vsFate || this.state !== 'PLAYING') return;
-        const b = this.board;
-        const minX = 26, maxX = b.offsetX + b.cols * b.cellWidth + 40;
-        const minY = b.offsetY - 30, maxY = b.offsetY + b.rows * b.cellHeight + 6;
-        for (const side of ['p1', 'p2']) {
-            const f = this.vsFate[side];
-            if (!this._vsSideHuman(side)) continue;
-            // 等待变身倒计时（内鬼实体自治，这里只管等待与天使）
-            if (f.state === 'dead') {
-                f.waitT -= dt;
-                if (f.waitT <= 0) {
-                    this._vsEndOverlay(side === 'p1' ? '🧟 僵尸方获胜！' : '🌻 植物方获胜！',
-                        `${side === 'p1' ? 'P1' : 'P2'} 阵亡后 20 秒内未选择形态`, side === 'p1' ? '#7a2a18' : '#2e6b1e');
-                    return;
-                }
-            }
-            const ent = f.ent;
-            if (!ent || f.state !== 'angel') continue; // 内鬼由 VsTraitor.update 自治
-            // 天使被咬死 → 僵尸方直接获胜（先于一切处理判定，防止 hp<=0 被 continue 跳过）
-            if (ent.hp <= 0) {
-                this._vsEndOverlay('🧟 僵尸方获胜！', `😇 ${side === 'p1' ? 'P1' : 'P2'} 的天使被僵尸咬死了`, '#7a2a18');
-                return;
-            }
-            // 天使移动
-            const keys = this._vsKeys[side];
-            let vx = 0, vy = 0;
-            if (keys.left) vx -= 1; if (keys.right) vx += 1;
-            if (keys.up) vy -= 1; if (keys.down) vy += 1;
-            if (vx || vy) {
-                const len = Math.hypot(vx, vy) || 1;
-                const spd = ent.spdBuffT > 0 ? 600 : 240;
-                ent.x += (vx / len) * spd * dt;
-                ent.y += (vy / len) * spd * dt;
-            }
-            ent.x = Math.max(minX, Math.min(maxX, ent.x));
-            ent.y = Math.max(minY, Math.min(maxY, ent.y));
-            if (ent.invT > 0) ent.invT -= dt;
-            if (ent.capCd > 0) ent.capCd -= dt;
-            if (ent.spdCd > 0) ent.spdCd -= dt;
-            if (ent.spdBuffT > 0) ent.spdBuffT -= dt;
-            // 渲染
-            ent.el.style.left = (ent.x - 35) + 'px';
-            ent.el.style.top = (ent.y - 46) + 'px';
-            ent.el.style.zIndex = String(Math.floor(ent.y) + 2);
-            ent.el.style.opacity = ent.invT > 0 ? '0.55' : '1';
-            ent.barEl.style.width = Math.max(0, ent.hp / ent.maxHp * 100) + '%';
-            // 天使：被僵尸咬（僵尸照常行军，贴身即咬；内鬼是自己人不会咬天使）
-            if (ent.invT <= 0) {
-                for (const z of this.entities) {
-                    if (!(z instanceof Zombie) || z.isDead || z.state === 'DYING' || z.hypnotized) continue;
-                    if (Math.hypot(z.x - ent.x, (z.y || 0) - ent.y) < 48) {
-                        z._vsBiteAcc = (z._vsBiteAcc || 0) + dt;
-                        if (z._vsBiteAcc >= 0.6) {
-                            z._vsBiteAcc = 0;
-                            ent.hp -= 50;
-                            this.audioManager.play('chomp');
-                        }
-                    }
-                }
-            }
-            // 天使被咬死 → 僵尸方直接获胜
-            if (ent.hp <= 0) {
-                this._vsEndOverlay('🧟 僵尸方获胜！', `😇 ${side === 'p1' ? 'P1' : 'P2'} 的天使被僵尸咬死了`, '#7a2a18');
-                return;
-            }
-        }
-        this._vsFateHudRefresh();
-    }
-    _vsFateCleanup() {
-        if (!this.vsFate) return;
-        for (const side of ['p1', 'p2']) {
-            const f = this.vsFate[side];
-            if (f.ent && f.state === 'angel' && f.ent.el && f.ent.el.parentNode) f.ent.el.parentNode.removeChild(f.ent.el);
-        }
-        if (this._vsFateHud && this._vsFateHud.parentNode) this._vsFateHud.style.display = 'none';
-    }
-
-    // 内鬼阵亡回调（VsTraitor 死亡检测触发）：植物方直接获胜
-    _vsOnTraitorDead(traitor) {
-        if (this.state !== 'PLAYING') return;
-        const who = traitor._vsSide === 'p1' ? 'P1' : 'P2';
-        this._vsEndOverlay('🌻 植物方获胜！', `😈 ${who} 的内鬼被植物消灭了`, '#2e6b1e');
-    }
+    // ===== v4.0.161（用户要求）删除「天使 / 内鬼」死亡变身系统 =====
+    // 上一版（v4.0.102）把双人对战做成：植物方被攻进房子 / 僵尸方破产 = 「第一次死亡」，
+    // 20 秒内按 N/M（P1）或 1/2（P2）变身天使或内鬼继续打。用户实测后确认这是当时理解错误：
+    //   · 双人对战就该一局定胜负 —— 那一路被僵尸攻破，植物方当场判负，不用等几秒变身；
+    //   · 僵尸方破产同理，直接植物方获胜，不再给「变内鬼翻盘」的第二次机会。
+    // 相关实现（initVsFate / _vsBecome / _vsAngelCapture / _vsAngelSpeed / _vsRage /
+    // _vsTriggerDeath / _updateVsFate / 状态条 HUD / VsTraitor 实体类）已全部移除。
 
     restartVs() {
         this.audioManager.play('btn');
@@ -1870,8 +1575,6 @@ class Game {
         }
         this.pendingZombie = null;
         this._vsWinTimer = 0;
-        this._vsFateCleanup(); // v4.0.102：清理天使/内鬼实体与状态条
-        this.vsFate = null;
         const bar = document.getElementById('vs-bottom-bar');
         if (bar) bar.style.display = 'none';
         this._hideVsRowHighlight();
@@ -3017,46 +2720,46 @@ class Game {
     initUI() {
         // Just define the seeds, don't populate the top bar yet
         this.seeds = [
-            { type: 'sunflower', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/SunFlower.png?v=1794716724' },
-            { type: 'twinsunflower', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/TwinSunflower.png?v=1794716724' },
-            { type: 'sunshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/SunShroom.png?v=1794716724' },
-            { type: 'peashooter', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Peashooter.png?v=1794716724' },
-            { type: 'repeater', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/Repeater.png?v=1794716724' },
-            { type: 'threepeater', cost: 325, cooldown: 7.5, img: 'assets/images/Card/Plants/Threepeater.png?v=1794716724' },
-            { type: 'gatlingpea', cost: 550, cooldown: 50, img: 'assets/images/Card/Plants/GatlingPea.png?v=1794716724' },
-            { type: 'snowpea', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/SnowPea.png?v=1794716724' },
-            { type: 'splitpea', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/SplitPea.png?v=1794716724' },
-            { type: 'torchwood', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/Torchwood.png?v=1794716724' },
-            { type: 'wallnut', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/WallNut.png?v=1794716724' },
-            { type: 'cherrybomb', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/CherryBomb.png?v=1794716724' },            { type: 'squash', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/Squash.png?v=1794716724' },
-            { type: 'jalapeno', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/Jalapeno.png?v=1794716724' },
-            { type: 'potatomine', cost: 25, cooldown: 30, img: 'assets/images/Card/Plants/PotatoMine.png?v=1794716724' },
-            { type: 'chomper', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/Chomper.png?v=1794716724' },
-            { type: 'tallnut', cost: 125, cooldown: 30, img: 'assets/images/Card/Plants/TallNut.png?v=1794716724' },
-            { type: 'puffshroom', cost: 0, cooldown: 7.5, img: 'assets/images/Card/Plants/PuffShroom.png?v=1794716724' },
-            { type: 'fumeshroom', cost: 75, cooldown: 7.5, img: 'assets/images/Card/Plants/FumeShroom.png?v=1794716724' },
-            { type: 'scaredyshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/ScaredyShroom.png?v=1794716724' },
-            { type: 'gloomshroom', cost: 225, cooldown: 7.5, img: 'assets/images/Card/Plants/GloomShroom.png?v=1794716724' },
-            { type: 'spikerock', cost: 225, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikerock.png?v=1794716724' },
-            { type: 'cattail', cost: 275, cooldown: 7.5, img: 'assets/images/Card/Plants/Cattail.png?v=1794716724' },
-            { type: 'melonpult', cost: 500, cooldown: 7.5, img: 'assets/images/Card/Plants/MelonPult.png?v=1794716724' },{ type: 'iceshroom', cost: 75, cooldown: 50, img: 'assets/images/Card/Plants/IceShroom.png?v=1794716724' },
-            { type: 'doomshroom', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/DoomShroom.png?v=1794716724' },
-            { type: 'spikeweed', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikeweed.png?v=1794716724' },
-            { type: 'garlic', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/Garlic.png?v=1794716724' },
+            { type: 'sunflower', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/SunFlower.png?v=1794724820' },
+            { type: 'twinsunflower', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/TwinSunflower.png?v=1794724820' },
+            { type: 'sunshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/SunShroom.png?v=1794724820' },
+            { type: 'peashooter', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Peashooter.png?v=1794724820' },
+            { type: 'repeater', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/Repeater.png?v=1794724820' },
+            { type: 'threepeater', cost: 325, cooldown: 7.5, img: 'assets/images/Card/Plants/Threepeater.png?v=1794724820' },
+            { type: 'gatlingpea', cost: 550, cooldown: 50, img: 'assets/images/Card/Plants/GatlingPea.png?v=1794724820' },
+            { type: 'snowpea', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/SnowPea.png?v=1794724820' },
+            { type: 'splitpea', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/SplitPea.png?v=1794724820' },
+            { type: 'torchwood', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/Torchwood.png?v=1794724820' },
+            { type: 'wallnut', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/WallNut.png?v=1794724820' },
+            { type: 'cherrybomb', cost: 150, cooldown: 50, img: 'assets/images/Card/Plants/CherryBomb.png?v=1794724820' },            { type: 'squash', cost: 50, cooldown: 30, img: 'assets/images/Card/Plants/Squash.png?v=1794724820' },
+            { type: 'jalapeno', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/Jalapeno.png?v=1794724820' },
+            { type: 'potatomine', cost: 25, cooldown: 30, img: 'assets/images/Card/Plants/PotatoMine.png?v=1794724820' },
+            { type: 'chomper', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/Chomper.png?v=1794724820' },
+            { type: 'tallnut', cost: 125, cooldown: 30, img: 'assets/images/Card/Plants/TallNut.png?v=1794724820' },
+            { type: 'puffshroom', cost: 0, cooldown: 7.5, img: 'assets/images/Card/Plants/PuffShroom.png?v=1794724820' },
+            { type: 'fumeshroom', cost: 75, cooldown: 7.5, img: 'assets/images/Card/Plants/FumeShroom.png?v=1794724820' },
+            { type: 'scaredyshroom', cost: 25, cooldown: 7.5, img: 'assets/images/Card/Plants/ScaredyShroom.png?v=1794724820' },
+            { type: 'gloomshroom', cost: 225, cooldown: 7.5, img: 'assets/images/Card/Plants/GloomShroom.png?v=1794724820' },
+            { type: 'spikerock', cost: 225, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikerock.png?v=1794724820' },
+            { type: 'cattail', cost: 275, cooldown: 7.5, img: 'assets/images/Card/Plants/Cattail.png?v=1794724820' },
+            { type: 'melonpult', cost: 500, cooldown: 7.5, img: 'assets/images/Card/Plants/MelonPult.png?v=1794724820' },{ type: 'iceshroom', cost: 75, cooldown: 50, img: 'assets/images/Card/Plants/IceShroom.png?v=1794724820' },
+            { type: 'doomshroom', cost: 125, cooldown: 50, img: 'assets/images/Card/Plants/DoomShroom.png?v=1794724820' },
+            { type: 'spikeweed', cost: 100, cooldown: 7.5, img: 'assets/images/Card/Plants/Spikeweed.png?v=1794724820' },
+            { type: 'garlic', cost: 50, cooldown: 7.5, img: 'assets/images/Card/Plants/Garlic.png?v=1794724820' },
             // ===== v3.6.0 经典模式新增 4 植物（数值取 PVZ1 原版；融合模式选卡仍过滤为 15 基础牌，不受影响）=====
-            { type: 'wintermelon', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/WinterMelon.png?v=1794716724' },
-            { type: 'starfruit', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/Starfruit.png?v=1794716724' },
-            { type: 'hypnoshroom', cost: 75, cooldown: 30, img: 'assets/images/Card/Plants/HypnoShroom.png?v=1794716724' },
-            { type: 'pumpkinhead', cost: 125, cooldown: 30, img: 'assets/images/Card/Plants/PumpkinHead.png?v=1794716724' },
+            { type: 'wintermelon', cost: 200, cooldown: 7.5, img: 'assets/images/Card/Plants/WinterMelon.png?v=1794724820' },
+            { type: 'starfruit', cost: 125, cooldown: 7.5, img: 'assets/images/Card/Plants/Starfruit.png?v=1794724820' },
+            { type: 'hypnoshroom', cost: 75, cooldown: 30, img: 'assets/images/Card/Plants/HypnoShroom.png?v=1794724820' },
+            { type: 'pumpkinhead', cost: 125, cooldown: 30, img: 'assets/images/Card/Plants/PumpkinHead.png?v=1794724820' },
             // ===== v3.10.0 投手两兄弟，v3.11.0 调价（破甲 + 黄油定身很值钱，不再按原版 100 阳光卖）=====
             // 抛射物可破甲：越过路障/铁桶/报纸/铁门直接打僵尸本体，护甲不脱落。
             // 玉米投手另有 20% 概率投出黄油（定身 3 秒）。
-            { type: 'cabbagepult', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/CabbagePult.png?v=1794716724' },
-            { type: 'kernelpult', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/KernelPult.png?v=1794716724' },
+            { type: 'cabbagepult', cost: 150, cooldown: 7.5, img: 'assets/images/Card/Plants/CabbagePult.png?v=1794724820' },
+            { type: 'kernelpult', cost: 175, cooldown: 7.5, img: 'assets/images/Card/Plants/KernelPult.png?v=1794724820' },
             // ===== v3.65.0 玉米加农炮入经典（原为三玉米投手融合专属）：500 阳光直接种植，占两格 =====
-            { type: 'cobcannon', cost: 500, cooldown: 50, img: 'assets/images/Card/Plants/CobCannon.png?v=1794716724' },
+            { type: 'cobcannon', cost: 500, cooldown: 50, img: 'assets/images/Card/Plants/CobCannon.png?v=1794724820' },
             // ===== v3.24.0 植物盲盒：500 阳光，种下随机开出"经典冒险+融合进化"全植物池中的一株 =====
-            { type: 'plantbox', cost: 500, cooldown: 5, img: 'assets/images/Card/Plants/PlantBox.png?v=1794716724' }
+            { type: 'plantbox', cost: 500, cooldown: 5, img: 'assets/images/Card/Plants/PlantBox.png?v=1794724820' }
         ];
         // The top bar will be populated in startGame() after selection
     }
@@ -3099,7 +2802,7 @@ class Game {
             { a: 'snowpea', b: 'wallnut', result: '寒冰坚果', img: 'assets/images/Plants/WallNut/WallNut.gif', filter: 'hue-rotate(180deg) saturate(1.5) brightness(1.2)', css: false },
             { a: 'peashooter', b: 'cherrybomb', result: '樱桃射手', img: 'assets/images/Plants/Peashooter/Peashooter.gif', filter: 'hue-rotate(-45deg) saturate(2.0)', css: false },
             { a: 'sunflower', b: 'doomshroom', result: '毁灭向日葵', img: 'assets/images/Plants/SunFlower/SunFlower1.gif', filter: 'grayscale(0.8) brightness(0.6) sepia(1) hue-rotate(240deg) saturate(3)', css: false },
-            { a: 'melonpult', b: 'iceshroom', result: '冰西瓜投手', img: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1794716724', css: false },
+            { a: 'melonpult', b: 'iceshroom', result: '冰西瓜投手', img: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1794724820', css: false },
             { a: 'repeater', b: 'spikeweed', result: '猫尾草', img: 'assets/images/Plants/Cattail/Cattail.gif', css: false },
             { a: 'fumeshroom', b: 'fumeshroom', result: '忧郁菇', img: 'assets/images/Plants/GloomShroom/GloomShroom.gif', css: false },
             { a: 'spikeweed', b: 'spikeweed', result: '钢地刺', img: 'assets/images/Plants/Spikerock/Spikerock.gif', css: false },
@@ -3109,16 +2812,16 @@ class Game {
             { a: 'splitpea', b: 'sunflower', result: '杨桃', img: 'assets/images/Plants/Starfruit/Starfruit.gif', css: false },
             { a: 'puffshroom', b: 'garlic', result: '魅惑菇', img: 'assets/images/Plants/HypnoShroom/HypnoShroom.gif', css: false },
             { a: 'wallnut', b: 'tallnut', result: '南瓜壳（可套在任意植物上）', img: 'assets/images/Plants/PumpkinHead/PumpkinHead.gif', css: false },
-            { a: 'melonpult', b: 'cattail', result: '西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/MelonPult/MelonPult.png?v=1794716724', overTransform: 'translate(-5px, -30px) scale(0.7)' },
-            { a: 'wintermelon', b: 'cattail', result: '冰西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1794716724', overTransform: 'translate(-5px, -30px) scale(0.7)' },
+            { a: 'melonpult', b: 'cattail', result: '西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/MelonPult/MelonPult.png?v=1794724820', overTransform: 'translate(-5px, -30px) scale(0.7)' },
+            { a: 'wintermelon', b: 'cattail', result: '冰西瓜猫尾草', base: 'assets/images/Plants/Cattail/Cattail.gif', over: 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1794724820', overTransform: 'translate(-5px, -30px) scale(0.7)' },
             // ===== v3.10.0 以卷心菜投手 / 玉米投手为基础的新融合 =====
             // v3.11.0：下面两条的 overClip / overTransform 与 Plant.js 内的实机分支**完全同步**
             // （此前图鉴写的是旧的"左上角对齐 + 整块上移"版本，与实机不是同一套，图鉴和游戏里长得不一样）
-            { a: 'cabbagepult', b: 'kernelpult', result: '双料投手（3/4 投卷心菜、1/4 投黄油定身 3 秒）', base: 'assets/images/Plants/KernelPult/KernelPult.png?v=1794716724', over: 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1794716724', overClip: 'polygon(0 0, 48% 0, 48% 50%, 0 50%)', overTransform: 'translate(37px, 8px)' },
-            { a: 'cabbagepult', b: 'wallnut', result: '卷心菜堡垒（坚果肉盾 + 继续投掷，4000 耐久）', base: 'assets/images/Plants/WallNut/WallNut.gif', over: 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1794716724', overClip: 'polygon(0 0, 46% 0, 46% 46%, 0 46%)', overTransform: 'translate(26px, -4px)' },
-            { a: 'cabbagepult', b: 'iceshroom', result: '寒冰卷心菜（破甲 + 命中减速 10 秒）', img: 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1794716724', filter: 'brightness(112%) hue-rotate(120deg) saturate(1.7)', css: false },
-            { a: 'kernelpult', b: 'jalapeno', result: '爆米花投手（破甲 + 命中 3×3 溅射）', img: 'assets/images/Plants/KernelPult/KernelPult.png?v=1794716724', filter: 'hue-rotate(-18deg) saturate(1.9) brightness(1.18)', css: false },
-            { a: 'kernelpult', b: 'kernelpult', result: '玉米加农炮（需两株横向相邻 + 第三株融合；占两格，充能后点击开镜、按 M 发射）', img: 'assets/images/Plants/CobCannon/CobCannon.png?v=1794716724', css: false },
+            { a: 'cabbagepult', b: 'kernelpult', result: '双料投手（3/4 投卷心菜、1/4 投黄油定身 3 秒）', base: 'assets/images/Plants/KernelPult/KernelPult.png?v=1794724820', over: 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1794724820', overClip: 'polygon(0 0, 48% 0, 48% 50%, 0 50%)', overTransform: 'translate(37px, 8px)' },
+            { a: 'cabbagepult', b: 'wallnut', result: '卷心菜堡垒（坚果肉盾 + 继续投掷，4000 耐久）', base: 'assets/images/Plants/WallNut/WallNut.gif', over: 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1794724820', overClip: 'polygon(0 0, 46% 0, 46% 46%, 0 46%)', overTransform: 'translate(26px, -4px)' },
+            { a: 'cabbagepult', b: 'iceshroom', result: '寒冰卷心菜（破甲 + 命中减速 10 秒）', img: 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1794724820', filter: 'brightness(112%) hue-rotate(120deg) saturate(1.7)', css: false },
+            { a: 'kernelpult', b: 'jalapeno', result: '爆米花投手（破甲 + 命中 3×3 溅射）', img: 'assets/images/Plants/KernelPult/KernelPult.png?v=1794724820', filter: 'hue-rotate(-18deg) saturate(1.9) brightness(1.18)', css: false },
+            { a: 'kernelpult', b: 'kernelpult', result: '玉米加农炮（需两株横向相邻 + 第三株融合；占两格，充能后点击开镜、按 M 发射）', img: 'assets/images/Plants/CobCannon/CobCannon.png?v=1794724820', css: false },
             // ===== v3.36.0 新增融合 =====
             // ===== v3.37.0：删除 v3.36.0 的「坚果×2=高坚果 / 小喷菇+大喷菇=忧郁菇 / 樱桃+寒冰菇=寒冰炸弹」——
             // 与已有配方/直选重复（忧郁菇=大喷菇×2 已有、寒冰炸弹=寒冰射手+樱桃已有、高坚果本就可直选），
@@ -3132,7 +2835,7 @@ class Game {
             { a: 'starfruit', b: 'starfruit', result: '十芒杨桃（十方向齐射星光，每颗 40）', img: 'assets/images/Plants/Starfruit/Starfruit.gif', filter: 'saturate(1.6) brightness(1.2) hue-rotate(15deg)', css: false },
             { a: 'potatomine', b: 'jalapeno', result: '烈焰地雷（布好后触发整行 1800 烈焰）', img: 'assets/images/Plants/PotatoMine/PotatoMine.gif', filter: 'hue-rotate(-30deg) saturate(2.2) brightness(1.15)', css: false },
             { a: 'squash', b: 'cherrybomb', result: '爆炸弹跳（跃起压扁，落点 3×3 爆炸）', base: 'assets/images/Plants/Squash/Squash.gif', baseTransform: 'scale(1.18) translate(0px, -72px)', baseFilter: 'hue-rotate(-35deg) saturate(1.9)' },
-            { a: 'kernelpult', b: 'snowpea', result: '冰玉米投手（玉米粒减速，黄油定身保留）', img: 'assets/images/Plants/KernelPult/KernelPult.png?v=1794716724', filter: 'brightness(1.15) hue-rotate(160deg) saturate(1.8)', css: false },
+            { a: 'kernelpult', b: 'snowpea', result: '冰玉米投手（玉米粒减速，黄油定身保留）', img: 'assets/images/Plants/KernelPult/KernelPult.png?v=1794724820', filter: 'brightness(1.15) hue-rotate(160deg) saturate(1.8)', css: false },
             { a: 'spikeweed', b: 'torchwood', result: '火焰地刺（灼烧刺 80/0.75s；僵尸啃不到只有冰车能碾，镇守行不结冰）', img: 'assets/images/Plants/Spikeweed/Spikeweed.gif', filter: 'sepia(1) saturate(3) hue-rotate(-25deg) brightness(1.15)', css: false },
             { a: 'repeater', b: 'torchwood', result: '火焰双发（2 连发火焰豌豆 40×2；每第 8 轮过热爆发 6 连发 60×6，v3.50 降频与局内一致）', img: 'assets/images/Plants/Repeater/Repeater.gif', filter: 'sepia(1) saturate(2.6) hue-rotate(-20deg) brightness(1.12)', css: false },
             { a: 'twinsunflower', b: 'twinsunflower', result: '四头向日葵（每轮 100 阳光；每 60 秒全场降阳光雨 6 颗）', base: 'assets/images/Plants/TwinSunflower/TwinSunflower1.gif', baseTransform: 'scale(1.3)', baseFilter: 'saturate(1.35) brightness(1.12)', over: 'assets/images/Plants/TwinSunflower/TwinSunflower1.gif', overTransform: 'translate(10px, 6px) scaleX(-1) scale(1.3)' },
@@ -3178,8 +2881,8 @@ class Game {
                     'fumeshroom': 'assets/images/Plants/FumeShroom/FumeShroom.gif',
                     'spikeweed': 'assets/images/Plants/Spikeweed/Spikeweed.gif',
                     'tallnut': 'assets/images/Plants/TallNut/TallNut.gif',
-                    'melonpult': 'assets/images/Plants/MelonPult/MelonPult.png?v=1794716724',
-                    'wintermelon': 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1794716724',
+                    'melonpult': 'assets/images/Plants/MelonPult/MelonPult.png?v=1794724820',
+                    'wintermelon': 'assets/images/Plants/WinterMelon/WinterMelon.png?v=1794724820',
                     'cattail': 'assets/images/Plants/Cattail/Cattail.gif',
                     'gloomshroom': 'assets/images/Plants/GloomShroom/GloomShroom.gif',
                     'spikerock': 'assets/images/Plants/Spikerock/Spikerock.gif',
@@ -3189,8 +2892,8 @@ class Game {
                     'starfruit': 'assets/images/Plants/Starfruit/Starfruit.gif',
                     'hypnoshroom': 'assets/images/Plants/HypnoShroom/HypnoShroom.gif',
                     'pumpkinhead': 'assets/images/Plants/PumpkinHead/PumpkinHead.gif',
-                    'cabbagepult': 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1794716724',
-                    'kernelpult': 'assets/images/Plants/KernelPult/KernelPult.png?v=1794716724',
+                    'cabbagepult': 'assets/images/Plants/CabbagePult/CabbagePult.png?v=1794724820',
+                    'kernelpult': 'assets/images/Plants/KernelPult/KernelPult.png?v=1794724820',
                     // v3.59.0：补齐缺失的 5 类材料缩略图（此前这 16 条配方在配方书里材料格是空白）
                     'torchwood': 'assets/images/Plants/Torchwood/Torchwood.gif',
                     'gatlingpea': 'assets/images/Plants/GatlingPea/GatlingPea.gif',
@@ -4720,8 +4423,7 @@ class Game {
         // 我是僵尸：每帧胜负检测（僵尸全灭且阳光不足 → 判负；吃脑胜利在 Zombie.js 触发）
         if (this.zombieMode) this._checkZombieEnd(deltaTime);
         if (this.vsMode) {
-            this._checkVsEnd(deltaTime); // v3.81.0 双人对战：僵尸方破产 → 植物方胜
-            this._updateVsFate(deltaTime); // v4.0.102：天使/内鬼死亡变身系统
+            this._checkVsEnd(deltaTime); // v3.81.0 双人对战：僵尸方破产 → 植物方胜（v4.0.161 起不再有变身）
         }
         if (this.vsMode && this.vsAiMode) {
             // v4.0.94 人机对战：按阵营托管另一边（玩家=植物→AI僵尸；玩家=僵尸→AI植物）
@@ -5015,7 +4717,7 @@ class Game {
                           : vType === 'zombie' ? 'Vase_Zombie.png'
                           : 'Vase_Question.png';
             const img = document.createElement('img');
-            img.src = 'assets/images/Vase/' + sprite + '?v=1794716724'; // v= 占位,bump_version 替换为新 cache-buster
+            img.src = 'assets/images/Vase/' + sprite + '?v=1794724820'; // v= 占位,bump_version 替换为新 cache-buster
             img.className = 'entity vase-entity';
             img.style.pointerEvents = 'none';
             if (isGolden) img.style.filter = 'drop-shadow(0 0 7px rgba(255, 210, 60, 0.95))'; // 金罐常驻金光
@@ -5270,7 +4972,7 @@ class Game {
                     v.pumpkinHp = 4000;
                     v.pumpkinMaxHp = 4000;
                     const ov = document.createElement('img');
-                    ov.src = 'assets/images/Plants/PumpkinHead/shield_full.png?v=1794716724'; // v= 占位,bump_version 替换
+                    ov.src = 'assets/images/Plants/PumpkinHead/shield_full.png?v=1794724820'; // v= 占位,bump_version 替换
                     ov.className = 'entity vase-pumpkin';
                     ov.style.pointerEvents = 'none';
                     ov.style.width = '97px';
@@ -5287,7 +4989,7 @@ class Game {
                     v.pumpkinEl = ov;
                     // v3.13.2：背壁层画在罐子身后，壳顶洞口里看到的是南瓜内壁而非草地
                     const back = document.createElement('img');
-                    back.src = 'assets/images/Plants/PumpkinHead/Pumpkin_back.gif?v=1794716724'; // v= 占位,bump_version 替换
+                    back.src = 'assets/images/Plants/PumpkinHead/Pumpkin_back.gif?v=1794724820'; // v= 占位,bump_version 替换
                     back.className = 'entity vase-pumpkin-back';
                     back.style.pointerEvents = 'none';
                     back.style.width = '97px';
@@ -6422,116 +6124,6 @@ class Game {
     }
 }
 
-
-
-// ===== v4.0.102 双人对战：内鬼形态（僵尸阵营场上实体，继承 Zombie）=====
-// 继承收益：被植物/子弹自动索敌攻击（instanceof Zombie + row/x）、可被天使捕获冻结（freezeTimer）、
-// 僵尸不咬自己人（啃食只找植物格）、破产判定自动把内鬼算作僵尸方战力。
-// 自治：update 完全重写——键盘移动（P2 方向键 / P1 WASD）+ 挠植物 + 狂暴计时 + 死亡判定。
-class VsTraitor extends Zombie {
-    constructor(game, side) {
-        super(game, Math.floor(game.board.rows / 2), 'normal');
-        this._vsSide = side;
-        this._vsKind = 'traitor';
-        this.hp = 1500; this.maxHp = 1500;
-        this.rageT = 0; this.rageCd = 0;
-        this.chompAcc = 0;
-        this.x = game.board.offsetX + game.board.cols * game.board.cellWidth - 60;
-        this.y = game.board.offsetY + this.row * game.board.cellHeight + game.board.cellHeight / 2 - 20;
-        // 😈 标签 + 血条（独立 DOM，随本体同步移动）
-        const who = side === 'p1' ? 'P1' : 'P2';
-        this._tagEl = document.createElement('div');
-        this._tagEl.textContent = '😈 内鬼 ' + who;
-        this._tagEl.style.cssText = 'position:absolute; font-size:12px; font-weight:bold; color:#ff6a6a; white-space:nowrap; text-shadow:1px 1px 0 #000; pointer-events:none; font-family:"Kaiti SC","STKaiti",serif; z-index:6000;';
-        this._barBg = document.createElement('div');
-        this._barBg.style.cssText = 'position:absolute; width:54px; height:6px; background:#333; border:1px solid #000; border-radius:3px; pointer-events:none; z-index:6000;';
-        this._barEl = document.createElement('div');
-        this._barEl.style.cssText = 'width:100%; height:100%; background:#7a2a18; border-radius:2px;';
-        this._barBg.appendChild(this._barEl);
-        game.entityLayer.appendChild(this._tagEl);
-        game.entityLayer.appendChild(this._barBg);
-    }
-
-    update(deltaTime) {
-        const g = this.game;
-        // 死亡判定（照父类核心：倒地 → 回调判胜负）
-        if (this.hp <= 0 && this.state !== 'DYING') {
-            this.state = 'DYING';
-            if (this.element) this.element.src = this.dieSrc || this.walkSrc;
-            if (g._vsOnTraitorDead) g._vsOnTraitorDead(this);
-            setTimeout(() => { this.isDead = true; if (this._tagEl && this._tagEl.parentNode) this._tagEl.remove(); if (this._barBg && this._barBg.parentNode) this._barBg.remove(); }, 1200);
-        }
-        if (this.state === 'DYING') {
-            this._syncDom();
-            return;
-        }
-        // 冻结（天使捕获）/黄油：定身不挠
-        if (this.freezeTimer > 0) {
-            this.freezeTimer = Math.max(0, this.freezeTimer - deltaTime);
-            if (this.element) this.element.style.filter = 'hue-rotate(160deg) saturate(2) brightness(1.2)';
-            this._syncDom();
-            return;
-        }
-        if (this.element) this.element.style.filter = '';
-        if (this.rageCd > 0) this.rageCd -= deltaTime;
-        if (this.rageT > 0) this.rageT -= deltaTime;
-        // 键盘移动（内鬼阵营：原 P2 用方向键；人机僵尸玩家同）
-        const keys = (g.vsFate && g._vsKeys) ? g._vsKeys[this._vsSide] : null;
-        const side = this._vsSide;
-        let vx = 0, vy = 0;
-        if (keys) {
-            const km = side === 'p2'
-                ? { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown' }
-                : { left: 'KeyA', right: 'KeyD', up: 'KeyW', down: 'KeyS' };
-            if (keys.left || keys[km.left]) vx -= 1;
-            if (keys.right || keys[km.right]) vx += 1;
-            if (keys.up || keys[km.up]) vy -= 1;
-            if (keys.down || keys[km.down]) vy += 1;
-        }
-        if (vx || vy) {
-            const len = Math.hypot(vx, vy) || 1;
-            const spd = this.rageT > 0 ? 180 : 120;
-            this.x += (vx / len) * spd * deltaTime;
-            this.y += (vy / len) * spd * deltaTime;
-        }
-        const b = g.board;
-        this.x = Math.max(26, Math.min(b.offsetX + b.cols * b.cellWidth + 40, this.x));
-        this.y = Math.max(b.offsetY - 30, Math.min(b.offsetY + b.rows * b.cellHeight + 6, this.y));
-        // 行归属动态更新（植物/子弹按行索敌）
-        this.row = Math.max(0, Math.min(b.rows - 1, Math.floor((this.y - b.offsetY) / b.cellHeight)));
-        // 挠植物（像僵尸一样啃当前格）
-        const col = Math.floor((this.x - b.offsetX) / b.cellWidth);
-        const pl = (this.row >= 0 && this.row < b.rows && col >= 0 && col < b.cols) ? b.grid[this.row][col] : null;
-        if (pl && !pl.isDead && pl.hp > 0) {
-            this.chompAcc += deltaTime;
-            if (this.chompAcc >= 0.5) {
-                this.chompAcc = 0;
-                pl.hp -= this.rageT > 0 ? 100 : 50;
-                g.audioManager.play('chomp');
-                // 挠死后经济转移由 Plant.update 死亡分支自动走 vsOnPlantDeath
-            }
-        } else this.chompAcc = 0;
-        this._syncDom();
-    }
-
-    _syncDom() {
-        // .entity 的 CSS 基准是中心对齐（translate(-50%,-50%)）——left/top 直接给中心坐标
-        if (this.element) {
-            this.element.style.left = this.x + 'px';
-            this.element.style.top = (this.y + this.yOffset) + 'px';
-            this.element.style.zIndex = String(Math.floor(this.y) + 2);
-        }
-        if (this._tagEl) {
-            this._tagEl.style.left = (this.x - 32) + 'px';
-            this._tagEl.style.top = (this.y - 72) + 'px';
-        }
-        if (this._barBg) {
-            this._barBg.style.left = (this.x - 27) + 'px';
-            this._barBg.style.top = (this.y - 58) + 'px';
-            this._barEl.style.width = Math.max(0, this.hp / this.maxHp * 100) + '%';
-        }
-    }
-}
 
 // Start game when page loads
 window.onload = () => {
