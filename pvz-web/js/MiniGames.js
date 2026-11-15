@@ -1273,19 +1273,33 @@
             this.missLimit = o.missLimit || 8;
             this.noClear = o.noClear === true;    // true = 清空不算通关（机械龙模式靠血量定胜负）
             this.sfxK = o.sfxK == null ? 1 : o.sfxK;   // v4.0.156：音效音量系数（对轰里 AI 那侧调低）
+            // v4.0.163：按色权重抽签（牧场里豌豆有两个盆，四色均分明显吃亏）
+            this.colW = o.colW || null;
             this.showAim = true;
             this.reset(o.fillRows == null ? 4 : o.fillRows, o.gapEvery || 3);
+        }
+        /* v4.0.163（用户：豌豆有两个盆，爆率偏低 → 调到 30%）——
+           四色均分时每个盆都吃 25%，但豌豆色要喂满两盆（共 36 颗）才算一份收成，
+           另三色各只要 18 颗，豌豆色天然落后。改成按权重抽。没给 colW 就是旧的均分。 */
+        randCol() {
+            const w = this.colW;
+            if (!w) return (Math.random() * this.nColors) | 0;
+            let s = 0;
+            for (let i = 0; i < w.length; i++) s += w[i];
+            let r = Math.random() * s;
+            for (let i = 0; i < w.length; i++) { r -= w[i]; if (r < 0) return i; }
+            return w.length - 1;
         }
         reset(fillRows, gapEvery) {
             this.g = Array.from({ length: this.rows }, () => new Array(this.COLS).fill(-1));
             for (let r = 0; r < fillRows; r++) for (let c = 0; c < this.colsIn(r); c++) {
                 if (r === fillRows - 1 && c % gapEvery === 0) continue;
-                this.g[r][c] = (Math.random() * this.nColors) | 0;
+                this.g[r][c] = this.randCol();
             }
             this.shooter = { ang: -Math.PI / 2 };
             this.ball = null;
-            this.cur = (Math.random() * this.nColors) | 0;
-            this.next = (Math.random() * this.nColors) | 0;
+            this.cur = this.randCol();
+            this.next = this.randCol();
             this.curSp = null; this.nextSp = null;
             this.pops = []; this.drops = [];
             this.score = 0; this.dead = false; this.cleared = false;
@@ -1351,7 +1365,7 @@
             this.cur = this.next; this.curSp = this.nextSp || null;
             const p = this.pickNext ? this.pickNext() : null;
             if (p) { this.next = p.col; this.nextSp = p.sp || null; }
-            else { this.next = (Math.random() * this.nColors) | 0; this.nextSp = null; }
+            else { this.next = this.randCol(); this.nextSp = null; }
         }
         /* ---------- 每帧 ---------- */
         update(dt) {
@@ -1545,7 +1559,7 @@
             }
             const m = Math.min(n == null ? cols.length : n, cols.length);
             for (let i = 0; i < m; i++) {
-                this.g[0][cols[i]] = colorFn ? colorFn() : ((Math.random() * this.nColors) | 0);
+                this.g[0][cols[i]] = colorFn ? colorFn() : this.randCol();
             }
             this.checkState();
         }
@@ -1750,6 +1764,10 @@
         { col: 3, n: '玉米', c: '#e8c53a' },
         { col: 0, n: '豌豆', c: '#5fbf35' }
     ];
+    // v4.0.163（用户：豌豆在牧场里有两个盆，爆率偏低，调到 30%）
+    // 豌豆色要喂满两盆才算一份收成，四色均分（各 25%）时它天然落后。
+    // 现在豌豆 30%，其余三色平分剩下的 70%（各约 23.3%），总和仍是 1，不改变三消难度。
+    const FARM_COL_W = [0.30, 0.70 / 3, 0.70 / 3, 0.70 / 3];
     const FARM_SEED = 3;                 // 每级要喂几颗同色
     const FARM_WIN = 2;                  // 拿几盆满级算通关
 
@@ -1759,7 +1777,7 @@
             // 第一版按 700 排的，花盆整个被画布底边切掉了 —— 这种裁切断言查不出来。
             this.lane = new BubLane({
                 R: 21, COLS: 19, LEFT: 51, TOP: 104, rows: 8,
-                sx: 450, sy: 424, deadline: 404, nColors: 4,
+                sx: 450, sy: 424, deadline: 404, nColors: 4, colW: FARM_COL_W,
                 // v4.0.159：missLimit 7→6（失误缓冲少一次）
                 fillRows: 3, gapEvery: 3, ceilRows: 2, missPush: true, missLimit: 6
             });
