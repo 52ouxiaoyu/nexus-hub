@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plants vs Zombies - Web Clone</title>
-    <link rel="stylesheet" href="css/style.css?v=1794724820">
-    <link rel="stylesheet" href="css/haunted-dorm.css?v=1794724820">
+    <link rel="stylesheet" href="css/style.css?v=1794730637">
+    <link rel="stylesheet" href="css/haunted-dorm.css?v=1794730637">
 </head>
 <body>
     <div id="game-container">
@@ -68,14 +68,15 @@
         
         <!-- Seed Chooser UI -->
         <div id="seed-chooser" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 1500; flex-direction: column; align-items: center; justify-content: center; display: none;">
-            <div style="background-color: #6b4a2b; padding: 25px; border-radius: 15px; border: 4px solid #3c2a11; box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.8); width: 650px;">
-                <h2 style="color: #f5deb3; text-align: center; margin-bottom: 15px; text-shadow: 2px 2px 2px black; font-family: monospace; font-size: 24px;">选择你的植物 (<span id="chooser-count">0</span>/12)</h2>
-                <div id="chooser-grid" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 25px; max-height: 350px; overflow-y: auto; background-color: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; box-shadow: inset 0 0 10px black;">
+            <!-- v4.0.162：平涂圆角 + 等宽字体 → 木框羊皮纸（外深木 / 内金线 / 上缘受光） -->
+            <div style="padding: 26px 26px 22px; width: 660px; border-radius: 10px; border: 4px solid #3a250c; background: repeating-linear-gradient(93deg, rgba(150,112,52,0.06) 0 2px, rgba(255,255,255,0) 2px 6px), linear-gradient(180deg, #f4e5c2 0%, #e7d4a4 55%, #d6bd83 100%); box-shadow: inset 0 0 0 3px rgba(206,170,98,0.9), inset 0 3px 10px rgba(255,252,232,0.5), 0 6px 0 #2a1a06, 0 14px 32px rgba(0,0,0,0.75);">
+                <h2 style="color: #4a3414; text-align: center; margin: 0 0 16px; font-size: 25px; letter-spacing: 3px; font-family: 'Kaiti SC','STKaiti','KaiTi',serif; font-weight: 900; text-shadow: 0 1px 0 rgba(255,252,230,0.8);">选择你的植物 (<span id="chooser-count">0</span>/12)</h2>
+                <div id="chooser-grid" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 25px; max-height: 350px; overflow-y: auto; padding: 15px; border-radius: 7px; border: 2px solid #4a3212; background: radial-gradient(ellipse 70% 50% at 40% 20%, #6d8f45 0%, #4e6b2c 60%, #3b5220 100%); box-shadow: inset 0 4px 12px rgba(10,20,4,0.55);">
                     <!-- Seeds will be injected here -->
                 </div>
                 <div style="display: flex; justify-content: center; gap: 20px;">
-                    <button id="btn-back" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 30px; font-size: 18px; font-family: monospace; font-weight: bold; color: white; cursor: pointer; border-radius: 10px; text-shadow: 1px 1px 2px black;">返回</button>
-                    <button id="btn-lets-rock" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 40px; font-size: 20px; font-family: monospace; font-weight: bold; color: white; cursor: pointer; border-radius: 10px; opacity: 0.5; text-shadow: 1px 1px 2px black;" disabled>Let's Rock!</button>
+                    <button id="btn-back" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 30px; font-size: 18px; font-family: 'Kaiti SC','STKaiti','KaiTi',serif; font-weight: 900; letter-spacing: 2px; color: #ffeec4; cursor: pointer; border-radius: 6px; text-shadow: 1px 1px 0 #2a1a06;">返回</button>
+                    <button id="btn-lets-rock" style="background-image: url('assets/images/interface/ShovelBack.png'); background-size: 100% 100%; border: none; padding: 10px 40px; font-size: 20px; font-family: 'Kaiti SC','STKaiti','KaiTi',serif; font-weight: 900; letter-spacing: 2px; color: #ffeec4; cursor: pointer; border-radius: 6px; opacity: 0.5; text-shadow: 1px 1px 0 #2a1a06;" disabled>Let's Rock!</button>
                 </div>
             </div>
         </div>
@@ -1435,21 +1436,21 @@
         });
     })();
     </script>
-    <script src="js/InputManager.js?v=1794724820"></script>
-    <script src="js/Board.js?v=1794724820"></script>
-    <script src="js/entities/Entity.js?v=1794724820"></script>
-    <script src="js/entities/Plant.js?v=1794724820"></script>
-    <script src="js/entities/Zombie.js?v=1794724820"></script>
-    <script src="js/entities/Projectile.js?v=1794724820"></script>
-    <script src="js/entities/Sun.js?v=1794724820"></script>
-    <script src="js/managers/WaveManager.js?v=1794724820"></script>
-    <script src="js/managers/CollisionManager.js?v=1794724820"></script>
-    <script src="js/managers/EventManager.js?v=1794724820"></script>
-    <script src="js/GameLoop.js?v=1794724820"></script>
-    <script src="js/HelpGuide.js?v=1794724820"></script>
-    <script src="js/Achievements.js?v=1794724820"></script>
-    <script src="js/HauntedDorm.js?v=1794724820"></script>
-    <script src="js/MiniGames.js?v=1794724820"></script>
+    <script src="js/InputManager.js?v=1794730637"></script>
+    <script src="js/Board.js?v=1794730637"></script>
+    <script src="js/entities/Entity.js?v=1794730637"></script>
+    <script src="js/entities/Plant.js?v=1794730637"></script>
+    <script src="js/entities/Zombie.js?v=1794730637"></script>
+    <script src="js/entities/Projectile.js?v=1794730637"></script>
+    <script src="js/entities/Sun.js?v=1794730637"></script>
+    <script src="js/managers/WaveManager.js?v=1794730637"></script>
+    <script src="js/managers/CollisionManager.js?v=1794730637"></script>
+    <script src="js/managers/EventManager.js?v=1794730637"></script>
+    <script src="js/GameLoop.js?v=1794730637"></script>
+    <script src="js/HelpGuide.js?v=1794730637"></script>
+    <script src="js/Achievements.js?v=1794730637"></script>
+    <script src="js/HauntedDorm.js?v=1794730637"></script>
+    <script src="js/MiniGames.js?v=1794730637"></script>
     <script>
     /* ===== v4.0.126 主页惊喜：时间皮肤 + 动态彩蛋猫 ===== */
     (function () {

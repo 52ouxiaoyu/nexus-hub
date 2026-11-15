@@ -501,19 +501,140 @@
         if (r > 1) h = box / r; else w = box * r;
         return spr(k, cx - w / 2, cy - h / 2, w, h, alpha);
     }
-    function bgGrass() {
-        const g = ctx.createLinearGradient(0, 0, 0, H);
-        g.addColorStop(0, '#2f5a20'); g.addColorStop(0.45, '#3f6f26'); g.addColorStop(1, '#274a19');
-        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-        ctx.save(); ctx.globalAlpha = 0.10; ctx.strokeStyle = '#c9ee8f'; ctx.lineWidth = 1;
-        for (let y = 90; y < H; y += 46) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
-        ctx.restore();
+    /* ================================================================
+     * v4.0.162 手绘材质工具箱（程序化生成，不新增任何图片素材）
+     * ----------------------------------------------------------------
+     * 用户：这是 PVZ 题材，元素要有「一丝现实画风」，不能是 Q 版 / 扁平。
+     * 原版 PVZ 的画面靠三件事撑质感，这三件都不需要美术资源：
+     *   ① 颗粒 —— 纯色上盖一层细噪点，颜色就不再是"电脑算出来的"
+     *   ② 暗角 —— 四周压暗，视线被收进画面中心
+     *   ③ 笔触 —— 草是一根根画的、钢板是刮出来的，不是平涂斜纹
+     * 纹理全部离屏烘焙一次（bake），之后每帧只 drawImage，不增加逐帧开销。
+     * 随机数用固定种子的 LCG —— 同一张纹理每次刷新长得一样，不会闪。
+     * ============================================================== */
+    function lcg(seed) {
+        let s = seed >>> 0;
+        return function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
     }
-    function panel(x, y, w, h, a) {
+    const _tex = Object.create(null);
+    function bake(key, w, h, fn) {
+        if (_tex[key]) return _tex[key];
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        try { fn(cv.getContext('2d'), w, h); } catch (e) { /* 纹理失败不能影响游戏 */ }
+        _tex[key] = cv;
+        return cv;
+    }
+    // 一批带弧度的短线：草叶 / 刮痕 / 木纹都靠它
+    function texBrush(c, R, x0, y0, w, h, n, color, o) {
+        o = o || {};
+        c.save();
+        c.strokeStyle = color; c.lineWidth = o.lw || 1; c.lineCap = 'round';
+        c.globalAlpha = o.a == null ? 0.12 : o.a;
+        for (let i = 0; i < n; i++) {
+            const x = x0 + R() * w, y = y0 + R() * h;
+            const len = (o.len || 24) * (0.45 + R());
+            const ang = (o.ang == null ? -1.35 : o.ang) + (R() - 0.5) * (o.spread || 0.9);
+            const dx = Math.cos(ang) * len, dy = Math.sin(ang) * len;
+            c.beginPath(); c.moveTo(x, y);
+            c.quadraticCurveTo(x + dx * 0.45 + (R() - 0.5) * 7, y + dy * 0.55, x + dx, y + dy);
+            c.stroke();
+        }
+        c.restore();
+    }
+    // 一层细噪点（覆盖在整块背景上，靠 overlay 而不是直接糊一层灰）
+    function texGrain(c, w, h, R, a) {
+        const g = c.createImageData(w, h);
+        for (let i = 0; i < g.data.length; i += 4) {
+            const v = 64 + R() * 128;
+            g.data[i] = g.data[i + 1] = g.data[i + 2] = v | 0;
+            g.data[i + 3] = 255;
+        }
+        const t = document.createElement('canvas');
+        t.width = w; t.height = h;
+        t.getContext('2d').putImageData(g, 0, 0);
+        c.save();
+        c.globalCompositeOperation = 'overlay';
+        c.globalAlpha = a == null ? 0.16 : a;
+        c.drawImage(t, 0, 0);
+        c.restore();
+    }
+
+    function bgGrass() {
+        ctx.drawImage(bake('grass', W, H, function (c, w, h) {
+            const g = c.createLinearGradient(0, 0, 0, h);
+            g.addColorStop(0, '#38661f'); g.addColorStop(0.42, '#487c2a'); g.addColorStop(1, '#264616');
+            c.fillStyle = g; c.fillRect(0, 0, w, h);
+            // 修剪条纹：原版草坪是一条条割出来的，不是纯渐变
+            for (let i = 0; i < 6; i++) {
+                c.fillStyle = i % 2 ? 'rgba(255,255,200,0.05)' : 'rgba(8,26,4,0.07)';
+                c.fillRect(0, i * h / 6, w, h / 6);
+            }
+            const R = lcg(20261115);
+            texBrush(c, R, 0, 0, w, h, 780, '#16350c', { a: 0.30, len: 15, lw: 1.3 });
+            texBrush(c, R, 0, 0, w, h, 640, '#a6d968', { a: 0.15, len: 13, lw: 1.1 });
+            for (let i = 0; i < 110; i++) {
+                const x = R() * w, y = R() * h;
+                c.fillStyle = R() > 0.7 ? 'rgba(255,247,196,0.55)' : 'rgba(208,236,142,0.38)';
+                c.beginPath(); c.arc(x, y, 1.1 + R() * 1.4, 0, Math.PI * 2); c.fill();
+            }
+            const lg = c.createRadialGradient(w * 0.24, h * 0.12, 20, w * 0.24, h * 0.12, w * 0.78);
+            lg.addColorStop(0, 'rgba(255,255,196,0.13)'); lg.addColorStop(1, 'rgba(255,255,196,0)');
+            c.fillStyle = lg; c.fillRect(0, 0, w, h);
+            texGrain(c, w, h, R, 0.13);
+        }), 0, 0);
+    }
+    // 整屏后处理：细颗粒（overlay）+ 径向暗角。o 可覆盖强度。
+    let _grainPat = null;
+    function paintedPass(w, h, o) {
+        o = o || {};
+        if (!_grainPat) {
+            const t = bake('__grain128', 128, 128, function (c, tw, th) {
+                const R = lcg(777001);
+                const im = c.createImageData(tw, th);
+                for (let i = 0; i < im.data.length; i += 4) {
+                    const v = 64 + R() * 128;
+                    im.data[i] = im.data[i + 1] = im.data[i + 2] = v | 0;
+                    im.data[i + 3] = 255;
+                }
+                c.putImageData(im, 0, 0);
+            });
+            _grainPat = ctx.createPattern(t, 'repeat');
+        }
         ctx.save();
-        ctx.fillStyle = 'rgba(10,22,8,' + (a == null ? 0.55 : a) + ')';
-        rr(x, y, w, h, 16); ctx.fill();
-        ctx.strokeStyle = 'rgba(190,225,140,0.28)'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.globalCompositeOperation = 'overlay';
+        ctx.globalAlpha = o.grain == null ? 0.055 : o.grain;
+        ctx.fillStyle = _grainPat;
+        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
+
+        const vg = ctx.createRadialGradient(w * 0.5, h * 0.46, h * 0.30, w * 0.5, h * 0.52, h * 1.02);
+        vg.addColorStop(0, 'rgba(0,0,0,0)');
+        vg.addColorStop(0.62, 'rgba(12,7,2,' + (o.mid == null ? 0.03 : o.mid) + ')');
+        vg.addColorStop(1, 'rgba(12,7,2,' + (o.edge == null ? 0.16 : o.edge) + ')');
+        ctx.fillStyle = vg;
+        ctx.fillRect(0, 0, w, h);
+    }
+    /* v4.0.162：半透明黑圆角 → 木牌。
+       这是 10 个玩法的侧栏 / 场地框共用的一层，改这一处全都很着变：
+       外深木边 + 内金线 + 上缘受光 + 底部压暗，就是原版 PVZ 按钮的立体做法。 */
+    function panel(x, y, w, h, a) {
+        const al = a == null ? 0.55 : a;
+        ctx.save();
+        ctx.globalAlpha = Math.min(0.92, 0.42 + al * 0.55);
+        const g = ctx.createLinearGradient(0, y, 0, y + h);
+        g.addColorStop(0, '#4a3316'); g.addColorStop(0.5, '#33230e'); g.addColorStop(1, '#1e1408');
+        ctx.fillStyle = g;
+        rr(x, y, w, h, 10); ctx.fill();
+        // 内金线
+        ctx.strokeStyle = 'rgba(198,158,90,0.55)'; ctx.lineWidth = 1.6;
+        rr(x + 3, y + 3, w - 6, h - 6, 8); ctx.stroke();
+        // 外暗边
+        ctx.strokeStyle = 'rgba(12,8,2,0.75)'; ctx.lineWidth = 2.4;
+        rr(x, y, w, h, 10); ctx.stroke();
+        // 上缘受光（一道 1px 的亮线就够，多了像塑料）
+        ctx.strokeStyle = 'rgba(255,226,168,0.22)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x + 6, y + 1.6); ctx.lineTo(x + w - 6, y + 1.6); ctx.stroke();
         ctx.restore();
     }
 
@@ -1054,12 +1175,14 @@
     /* ================================================================
      * 4. 泡泡牧场（v4.0.157 顶替「猫尾草泡泡龙」）—— 三消的球掉进花盆养作物
      * ============================================================== */
+    // v4.0.162：五个色都往「颜料」而不是「霓虹」偏 —— 原版 PVZ 的绿是橄榄绿、
+    // 蓝是灰蓝，纯 saturated 的 #5fbf35 一看就是网页色值，不是画出来的
     const BUB_COLORS = [
-        { c: '#5fbf35', p: 'peashooter', n: '豌豆' },
-        { c: '#4aa8e0', p: 'snowpea', n: '寒冰' },
-        { c: '#9b6ad6', p: 'puffshroom', n: '小喷菇' },
-        { c: '#e8c53a', p: 'kernel', n: '玉米' },
-        { c: '#d94a3d', p: 'cherry', n: '樱桃' }   // v4.0.152：泡泡塔第 5 层起启用第 5 色
+        { c: '#7cb43f', p: 'peashooter', n: '豌豆' },
+        { c: '#5f9ec0', p: 'snowpea', n: '寒冰' },
+        { c: '#9668b8', p: 'puffshroom', n: '小喷菇' },
+        { c: '#dcb93f', p: 'kernel', n: '玉米' },
+        { c: '#c6503c', p: 'cherry', n: '樱桃' }   // v4.0.152：泡泡塔第 5 层起启用第 5 色
     ];
 
     const _bubMix = (hex, mix, t) => {
@@ -1074,64 +1197,61 @@
     // 给 _bubMix 出来的 'rgb(r,g,b)' 挂透明度（透射光要用）
     const _bubRGBA = (rgb, a) => rgb.replace('rgb(', 'rgba(').replace(')', ',' + a + ')');
 
-    /* v4.0.155（用户：泡泡太丑了，就是一个球球）——
-       旧版是「白色核心 + 纯色平涂 + 深色边 + 一圈白描边」，四个色阶挤在球心，
-       没有明暗结构，所以读起来是一颗塑料球 / 玻璃弹珠。
-       现在按「水晶球」的三件事重画：
-         ① 一条完整的明暗链 —— 光源在左上（亮白）→ 本色 → 右下（压暗）→ 边缘最暗；
-            球的体积感全在这条链上，不在描边。
-         ② 光分两层 —— 斜椭圆的大高光 + 肩上一粒硬亮点，而不是正中的一个圆点。
-         ③ 底部的光是「一片晕」不是「一条弧」—— 弧线会被读成球底咧了张嘴。
-       另外植物缩进球心 0.96R 居中当「标本」，旧版铺满整颗像贴纸。
-       三块场地 + 经典泡泡龙共用这一份，免得以后又分叉。 */
+    /* v4.0.162（用户：元素不该是 Q 版，要有一丝现实画风）——
+       上一版（v4.0.155）把它做成了「水晶球」：白到发亮的核心 + 一颗硬白点 + 满圈白描边。
+       那是弹珠台 / 手游的语法 —— 原版 PVZ 里没有一颗元素是这样的。
+       现在按原版手绘的三条规矩重画：
+         ① 体积靠**大块低频明暗**，不靠高光点。所以整颗球只有一个左上→右下的两段渐变，
+            亮度差压到 0.3 以内（旧版从纯白落到 0.44 黑，等于塑料反光）。
+         ② 每个形体都有**深色轮廓**。原版素材（豌豆、坚果、僵尸）无一例外带暗描边，
+            这一条是「手绘」和「扁平矢量」的分界，缺了它怎么调都像手游。
+         ③ 高光是**一道短弧 + 一团柔光**，不是圆点。圆点会被读成玻璃弹珠的镜面反射。
+       另外植物从 0.96R 缩到 0.82R 之后反而更像"标本" —— 泡壁留出来的那一圈
+       才是泡泡的厚度，旧版铺满整颗像贴纸。 */
     function paintBub(x, y, col, a, R) {
         const c = BUB_COLORS[col] || BUB_COLORS[0];
         const al = a == null ? 1 : a;
         ctx.globalAlpha = al;
 
-        // ① 球体照明
-        const g = ctx.createRadialGradient(
-            x - R * 0.30, y - R * 0.34, R * 0.04,
-            x + R * 0.06, y + R * 0.12, R * 1.02
-        );
-        g.addColorStop(0, 'rgba(255,255,255,0.92)');
-        g.addColorStop(0.13, _bubMix(c.c, 0xffffff, 0.46));
-        g.addColorStop(0.42, c.c);
-        g.addColorStop(0.76, _bubMix(c.c, 0x000000, 0.20));
-        g.addColorStop(1, _bubMix(c.c, 0x000000, 0.44));
+        // ① 泡体：两段低频明暗
+        const g = ctx.createLinearGradient(x - R * 0.55, y - R * 0.62, x + R * 0.42, y + R * 0.78);
+        g.addColorStop(0, _bubMix(c.c, 0xfff6d8, 0.34));
+        g.addColorStop(0.46, c.c);
+        g.addColorStop(1, _bubMix(c.c, 0x201608, 0.22));
         ctx.fillStyle = g;
         ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill();
 
-        // ② 球心的植物（隔着球壁看，不盖住高光）
-        spr(c.p, x - R * 0.48, y - R * 0.48, R * 0.96, R * 0.96, 0.80);
+        // ② 标本：植物缩到 0.82R，留出泡壁的厚度
+        spr(c.p, x - R * 0.44, y - R * 0.44, R * 0.88, R * 0.88, 1);
         ctx.globalAlpha = al;   // spr 会把 alpha 复位成 1，这里还回来
 
-        // ③ 透射光：光穿过泡壁在球体下方积成一片亮雾，颜色比本色更浅更艳。
-        //    这一层是「玻璃/果冻」和「实心塑料」的分界 —— 没有它，球再亮也是块塑料。
-        const tg = ctx.createRadialGradient(x - R * 0.02, y + R * 0.50, 0, x - R * 0.02, y + R * 0.50, R * 0.62);
-        tg.addColorStop(0, _bubRGBA(_bubMix(c.c, 0xffffff, 0.55), 0.40));
-        tg.addColorStop(0.55, _bubRGBA(_bubMix(c.c, 0xffffff, 0.25), 0.16));
-        tg.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.fillStyle = tg;
-        ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill();
+        // ③ 泡液：极淡的同色雾，统一色调，让植物像"浸在里面"而不是贴上去
+        ctx.fillStyle = _bubRGBA(_bubMix(c.c, 0xffffff, 0.12), 0.16);
+        ctx.beginPath(); ctx.arc(x, y, R * 0.97, 0, Math.PI * 2); ctx.fill();
 
-        // ④ 外缘亮边（泡壁对着光的那一圈，细，不能抢戏）
-        const lw = Math.max(1, R * 0.062);
-        ctx.strokeStyle = 'rgba(255,255,255,0.46)';
+        // ④ 深色轮廓（手绘感的关键，缺了它就是扁平矢量）
+        const lw = Math.max(1.1, R * 0.088);
+        ctx.strokeStyle = _bubRGBA(_bubMix(c.c, 0x14100a, 0.58), 0.46);
         ctx.lineWidth = lw;
-        ctx.beginPath(); ctx.arc(x, y, R - lw * 0.5 - 0.3, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y, R - lw * 0.5, 0, Math.PI * 2); ctx.stroke();
 
-        // ⑤ 主高光：斜椭圆（圆形高光会像塑料）
+        // ⑤ 背光侧压一道暗弧（右下）：没有它球体是平的
+        ctx.strokeStyle = 'rgba(18,12,4,0.22)';
+        ctx.lineWidth = lw * 1.6;
+        ctx.beginPath(); ctx.arc(x, y, R - lw * 1.2, Math.PI * 0.12, Math.PI * 0.88); ctx.stroke();
+
+        // ⑥ 高光：一道短弧 + 一团柔光（不是白点）
         ctx.save();
-        ctx.translate(x - R * 0.33, y - R * 0.40);
-        ctx.rotate(-0.60);
-        ctx.fillStyle = 'rgba(255,255,255,0.82)';
-        ctx.beginPath(); ctx.ellipse(0, 0, R * 0.27, R * 0.135, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = 'rgba(255,252,232,0.60)';
+        ctx.lineWidth = Math.max(1.2, R * 0.10);
+        ctx.beginPath(); ctx.arc(x, y, R * 0.62, Math.PI * 1.06, Math.PI * 1.44); ctx.stroke();
         ctx.restore();
-
-        // ⑥ 高光肩上的一粒硬点
-        ctx.fillStyle = 'rgba(255,255,255,0.92)';
-        ctx.beginPath(); ctx.arc(x - R * 0.46, y - R * 0.46, Math.max(1, R * 0.075), 0, Math.PI * 2); ctx.fill();
+        const hg = ctx.createRadialGradient(x - R * 0.34, y - R * 0.40, 0, x - R * 0.34, y - R * 0.40, R * 0.32);
+        hg.addColorStop(0, 'rgba(255,255,240,0.40)');
+        hg.addColorStop(1, 'rgba(255,255,240,0)');
+        ctx.fillStyle = hg;
+        ctx.beginPath(); ctx.arc(x - R * 0.34, y - R * 0.40, R * 0.32, 0, Math.PI * 2); ctx.fill();
 
         ctx.globalAlpha = 1;
     }
@@ -1777,21 +1897,34 @@
         /* ---------- 绘制 ---------- */
         draw() {
             // 黄昏牧场：暖绿草地 + 远处栅栏，跟钢铁工坊的暗铜完全分开
-            const g = ctx.createLinearGradient(0, 0, 0, H);
-            g.addColorStop(0, '#5b7a2e'); g.addColorStop(0.42, '#42611f'); g.addColorStop(1, '#24380f');
-            ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-            // 夕阳
-            const sg = ctx.createRadialGradient(760, 40, 10, 760, 40, 320);
-            sg.addColorStop(0, 'rgba(255,206,110,0.42)');
-            sg.addColorStop(0.5, 'rgba(255,160,70,0.14)');
-            sg.addColorStop(1, 'rgba(255,140,60,0)');
-            ctx.fillStyle = sg; ctx.fillRect(340, 0, 560, 380);
-            // 斜向细纹（草地不画横条，横条会读成地板）
-            ctx.save(); ctx.globalAlpha = 0.06; ctx.strokeStyle = '#d8f0a0'; ctx.lineWidth = 1;
-            for (let x = -200; x < W + 200; x += 18) {
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 260, H); ctx.stroke();
-            }
-            ctx.restore();
+            // v4.0.162：纯渐变 + 斜纹平铺太像渲染图 → 改成烘焙一张草叶纹理
+            ctx.drawImage(bake('farm', W, H, function (c, w, h) {
+                const g = c.createLinearGradient(0, 0, 0, h);
+                g.addColorStop(0, '#6f8f36'); g.addColorStop(0.42, '#4f7324'); g.addColorStop(1, '#2a4311');
+                c.fillStyle = g; c.fillRect(0, 0, w, h);
+                // 夕阳
+                const sg = c.createRadialGradient(760, 40, 10, 760, 40, 320);
+                sg.addColorStop(0, 'rgba(255,206,110,0.40)');
+                sg.addColorStop(0.5, 'rgba(255,160,70,0.13)');
+                sg.addColorStop(1, 'rgba(255,140,60,0)');
+                c.fillStyle = sg; c.fillRect(340, 0, 560, 380);
+                const R = lcg(4160001);
+                // 远处木栅栏：只留一条压暗的剪影，别抢泡泡的戏
+                c.save();
+                c.globalAlpha = 0.30; c.fillStyle = '#1d2a0c';
+                for (let x = -10; x < w + 20; x += 34) c.fillRect(x, 52, 11, 74);
+                c.fillRect(0, 66, w, 7); c.fillRect(0, 100, w, 6);
+                c.restore();
+                texBrush(c, R, 0, 60, w, h - 60, 900, '#153007', { a: 0.30, len: 17, lw: 1.4 });
+                texBrush(c, R, 0, 60, w, h - 60, 760, '#c6e884', { a: 0.17, len: 15, lw: 1.2 });
+                for (let i = 0; i < 120; i++) {
+                    const x = R() * w, y = 80 + R() * (h - 80);
+                    c.fillStyle = R() > 0.68 ? 'rgba(255,238,168,0.45)' : 'rgba(196,228,132,0.30)';
+                    c.beginPath(); c.arc(x, y, 1 + R() * 1.6, 0, Math.PI * 2); c.fill();
+                }
+                // 颗粒只补"材质"，太强会把饱和的绿压成灰绿
+                texGrain(c, w, h, R, 0.07);
+            }), 0, 0);
 
             this.drawField();
             this.lane.draw();
@@ -1818,9 +1951,10 @@
 
         drawField() {
             const l = this.lane, wl = l.wallL, wr = l.wallR, y0 = l.TOP - 10;
+            // v4.0.162：0.55/0.72 把刚烘焙好的草叶纹理全糊住了，降到 0.26/0.40
             const gg = ctx.createLinearGradient(0, y0, 0, l.deadline + 20);
-            gg.addColorStop(0, 'rgba(30,48,16,0.55)');
-            gg.addColorStop(1, 'rgba(18,30,9,0.72)');
+            gg.addColorStop(0, 'rgba(26,42,14,0.18)');
+            gg.addColorStop(1, 'rgba(14,24,7,0.30)');
             ctx.fillStyle = gg; ctx.fillRect(0, y0, W, l.deadline - y0 + 26);
             // 左右篱笆
             for (const x of [wl - 12, wr + 4]) {
@@ -1839,19 +1973,32 @@
             for (const p of this.pots) {
                 const max = p.lv >= FARM_LV.length;
                 const y = p.y;
-                // 木箱
-                const bg = ctx.createLinearGradient(0, y, 0, y + 120);
-                bg.addColorStop(0, max ? '#7c5c2a' : '#6b4a24');
-                bg.addColorStop(1, max ? '#3f2c10' : '#33220d');
-                ctx.fillStyle = bg;
-                rr(p.x - 72, y, 144, 120, 10); ctx.fill();
-                ctx.strokeStyle = max ? 'rgba(255,214,110,0.85)' : 'rgba(150,110,60,0.55)';
-                ctx.lineWidth = max ? 2.4 : 1.6; ctx.stroke();
-                // 木板缝
-                ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 1;
-                for (let i = 1; i < 3; i++) {
-                    ctx.beginPath(); ctx.moveTo(p.x - 72, y + i * 30); ctx.lineTo(p.x + 72, y + i * 30); ctx.stroke();
-                }
+                // 木箱（v4.0.162：平涂渐变 → 木纹贴图 + 上缘受光 + 底部厚边）
+                ctx.save();
+                rr(p.x - 72, y, 144, 120, 8);
+                ctx.clip();
+                ctx.drawImage(bake('potwood', 160, 140, function (c, w, h) {
+                    const bg = c.createLinearGradient(0, 0, 0, h);
+                    bg.addColorStop(0, '#7a5a2c'); bg.addColorStop(0.55, '#5c401c'); bg.addColorStop(1, '#33220d');
+                    c.fillStyle = bg; c.fillRect(0, 0, w, h);
+                    const R = lcg(4160004);
+                    // 木板拼缝
+                    c.strokeStyle = 'rgba(0,0,0,0.30)'; c.lineWidth = 2;
+                    for (let i = 1; i < 3; i++) { c.beginPath(); c.moveTo(0, i * 40); c.lineTo(w, i * 40); c.stroke(); }
+                    c.strokeStyle = 'rgba(255,224,160,0.10)'; c.lineWidth = 1;
+                    for (let i = 1; i < 3; i++) { c.beginPath(); c.moveTo(0, i * 40 + 2); c.lineTo(w, i * 40 + 2); c.stroke(); }
+                    // 木纹
+                    texBrush(c, R, 0, 0, w, h, 130, '#2a1a08', { a: 0.16, len: 40, lw: 1.2, ang: 0.02, spread: 0.35 });
+                    texBrush(c, R, 0, 0, w, h, 90, '#d4a868', { a: 0.09, len: 34, lw: 1, ang: 0.02, spread: 0.35 });
+                    texGrain(c, w, h, R, 0.13);
+                }), p.x - 72, y, 144, 120);
+                ctx.restore();
+                // 上缘受光 + 外缘暗描边
+                ctx.strokeStyle = 'rgba(255,226,168,0.30)'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(p.x - 68, y + 2); ctx.lineTo(p.x + 68, y + 2); ctx.stroke();
+                ctx.strokeStyle = max ? 'rgba(255,214,110,0.85)' : 'rgba(28,16,6,0.62)';
+                ctx.lineWidth = max ? 2.4 : 2;
+                rr(p.x - 72, y, 144, 120, 8); ctx.stroke();
                 // 土
                 ctx.fillStyle = '#2a1a0c';
                 rr(p.x - 58, y + 6, 116, 26, 7); ctx.fill();
@@ -1873,7 +2020,7 @@
                         ctx.restore();
                     }
                 } else {
-                    txt('空盆', p.x, y + 58, 13.5, 'rgba(255,255,255,0.46)', 'center', 700);
+                    txt('空盆', p.x, y + 58, 13.5, 'rgba(255,236,196,0.62)', 'center', 800);
                 }
 
                 // 等级
@@ -2493,9 +2640,37 @@
         /* ---------- 绘制 ---------- */
         draw() {
             // 钢铁工坊（暗铜）—— 经典泡泡龙是后院草地（墨绿），两套色系不撞
-            const g = ctx.createLinearGradient(0, 0, 0, H);
-            g.addColorStop(0, '#3d2416'); g.addColorStop(0.5, '#26170f'); g.addColorStop(1, '#0f0a07');
-            ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+            // v4.0.162：补钢板接缝、烟熏斑与刮痕，纯渐变读起来像一张贴纸
+            ctx.drawImage(bake('forge', W, H, function (c, w, h) {
+                const g = c.createLinearGradient(0, 0, 0, h);
+                g.addColorStop(0, '#3f2517'); g.addColorStop(0.5, '#27180f'); g.addColorStop(1, '#0e0906');
+                c.fillStyle = g; c.fillRect(0, 0, w, h);
+                const R = lcg(4160002);
+                // 钢板接缝
+                c.save();
+                c.strokeStyle = 'rgba(0,0,0,0.30)'; c.lineWidth = 2;
+                for (let y = 96; y < h; y += 118) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+                c.strokeStyle = 'rgba(255,214,150,0.07)'; c.lineWidth = 1;
+                for (let y = 98; y < h; y += 118) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+                c.restore();
+                // 铆钉
+                for (let y = 108; y < h; y += 118) for (let x = 26; x < w; x += 74) {
+                    c.fillStyle = 'rgba(0,0,0,0.35)';
+                    c.beginPath(); c.arc(x, y, 3.1, 0, Math.PI * 2); c.fill();
+                    c.fillStyle = 'rgba(255,222,164,0.22)';
+                    c.beginPath(); c.arc(x - 0.7, y - 0.8, 2.1, 0, Math.PI * 2); c.fill();
+                }
+                // 烟熏斑（大块低频，不是噪点）
+                for (let i = 0; i < 26; i++) {
+                    const x = R() * w, y = R() * h, r = 40 + R() * 150;
+                    const sg2 = c.createRadialGradient(x, y, 0, x, y, r);
+                    sg2.addColorStop(0, 'rgba(8,5,3,0.30)'); sg2.addColorStop(1, 'rgba(8,5,3,0)');
+                    c.fillStyle = sg2; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+                }
+                texBrush(c, R, 0, 0, w, h, 300, '#f0c88a', { a: 0.05, len: 30, lw: 1, ang: -0.35, spread: 1.4 });
+                texBrush(c, R, 0, 0, w, h, 220, '#050301', { a: 0.18, len: 24, lw: 1.2, ang: -0.35, spread: 1.4 });
+                texGrain(c, w, h, R, 0.15);
+            }), 0, 0);
 
             ctx.save();
             if (this.shake > 0.2) {
@@ -3032,9 +3207,37 @@
 
         /* ---------- 绘制 ---------- */
         draw() {
-            const g = ctx.createLinearGradient(0, 0, 0, H);
-            g.addColorStop(0, '#1a2136'); g.addColorStop(1, '#0b111c');
-            ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+            // v4.0.162：夜色石庭 —— 石砖缝 + 苔痕 + 火光，别再是纯色渐变
+            ctx.drawImage(bake('duel', W, H, function (c, w, h) {
+                const g = c.createLinearGradient(0, 0, 0, h);
+                g.addColorStop(0, '#1c2438'); g.addColorStop(1, '#0a1019');
+                c.fillStyle = g; c.fillRect(0, 0, w, h);
+                const R = lcg(4160003);
+                // 石砖：错缝铺，砖缝压暗、砖面上缘提亮
+                const bw = 96, bh = 52;
+                c.save();
+                for (let r = 0, y = 96; y < h + bh; r++, y += bh) {
+                    const off = (r % 2) * (bw / 2);
+                    for (let x = -bw; x < w + bw; x += bw) {
+                        c.fillStyle = 'rgba(255,255,255,' + (0.012 + R() * 0.018) + ')';
+                        c.fillRect(x + off + 2, y + 2, bw - 4, bh - 4);
+                        c.fillStyle = 'rgba(0,0,0,0.16)';
+                        c.fillRect(x + off + 2, y + bh - 7, bw - 4, 5);
+                    }
+                }
+                c.strokeStyle = 'rgba(0,0,0,0.22)'; c.lineWidth = 2;
+                for (let y = 96; y < h; y += bh) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+                c.restore();
+                // 苔痕 + 地面反光
+                for (let i = 0; i < 18; i++) {
+                    const x = R() * w, y = 120 + R() * (h - 120), r = 34 + R() * 90;
+                    const mg = c.createRadialGradient(x, y, 0, x, y, r);
+                    mg.addColorStop(0, 'rgba(70,100,52,0.16)'); mg.addColorStop(1, 'rgba(70,100,52,0)');
+                    c.fillStyle = mg; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+                }
+                texBrush(c, R, 0, 0, w, h, 190, '#9fb8d8', { a: 0.045, len: 26, lw: 1, ang: -1.2, spread: 1.2 });
+                texGrain(c, w, h, R, 0.15);
+            }), 0, 0);
 
             this.drawPanel(this.la, '#5fbf35', '', this.flashA);
             this.drawPanel(this.lb, '#e0553a', '', this.flashB);
@@ -3319,12 +3522,36 @@
 
         /* ---------- 绘制 ---------- */
         draw() {
-            const g = ctx.createLinearGradient(0, 0, 0, H);
-            g.addColorStop(0, '#241a36'); g.addColorStop(0.5, '#171227'); g.addColorStop(1, '#0c0a14');
-            ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+            // v4.0.162：夜塔石砖（同样是烘焙纹理，不再是纯紫渐变）
+            ctx.drawImage(bake('towerbg', W, H, function (c, w, h) {
+                const g = c.createLinearGradient(0, 0, 0, h);
+                g.addColorStop(0, '#2a1f3e'); g.addColorStop(0.5, '#1a1429'); g.addColorStop(1, '#0b0912');
+                c.fillStyle = g; c.fillRect(0, 0, w, h);
+                const R = lcg(4160005);
+                const bw = 104, bh = 54;
+                for (let r = 0, y = -20; y < h + bh; r++, y += bh) {
+                    const off = (r % 2) * (bw / 2);
+                    for (let x = -bw; x < w + bw; x += bw) {
+                        c.fillStyle = 'rgba(196,170,255,' + (0.030 + R() * 0.045) + ')';
+                        c.fillRect(x + off + 3, y + 3, bw - 6, bh - 6);
+                        c.fillStyle = 'rgba(0,0,0,0.30)';
+                        c.fillRect(x + off + 3, y + bh - 8, bw - 6, 5);
+                        // 砖缝竖向暗线：光靠横向缝读不出"砖"
+                        c.fillStyle = 'rgba(0,0,0,0.20)';
+                        c.fillRect(x + off, y + 3, 3, bh - 6);
+                    }
+                }
+                // 塔外透进来的一点冷光
+                const lg = c.createRadialGradient(w * 0.5, -40, 20, w * 0.5, -40, 520);
+                lg.addColorStop(0, 'rgba(150,180,255,0.10)'); lg.addColorStop(1, 'rgba(150,180,255,0)');
+                c.fillStyle = lg; c.fillRect(0, 0, w, h);
+                texBrush(c, R, 0, 0, w, h, 160, '#c9b6ff', { a: 0.045, len: 26, lw: 1, ang: -1.4, spread: 1.1 });
+                texGrain(c, w, h, R, 0.14);
+            }), 0, 0);
 
             const l = this.lane;
-            ctx.fillStyle = 'rgba(10,8,20,0.55)';
+            // v4.0.162：0.55 会把刚烘焙好的砖纹全糊平，降到 0.32
+            ctx.fillStyle = 'rgba(10,8,20,0.32)';
             ctx.fillRect(0, l.TOP - 8, W, H - l.TOP + 8);
             ctx.fillStyle = 'rgba(180,140,255,0.035)';
             ctx.fillRect(l.wallL, l.TOP - 8, l.wallR - l.wallL, H - l.TOP + 8);
@@ -3455,12 +3682,21 @@
         'font-family:"PingFang SC","Microsoft YaHei",sans-serif;}',
         '#mini-screen *{box-sizing:border-box;}',
         '.mini-lobby{position:absolute;inset:0;padding:14px 16px 10px;display:flex;flex-direction:column;',
-        'background:radial-gradient(circle at 50% 0%,#3f7a2a 0%,#25491a 55%,#152b0f 100%);}',
+        /* v4.0.162：纯渐变像网页背景 —— 叠一层草地斑块 + 暗角，边缘压下去 */
+        'background:radial-gradient(ellipse 60% 46% at 22% 8%,rgba(214,255,150,0.16) 0%,rgba(214,255,150,0) 70%),',
+        'radial-gradient(ellipse 70% 60% at 78% 96%,rgba(0,0,0,0.32) 0%,rgba(0,0,0,0) 70%),',
+        'radial-gradient(circle at 50% 0%,#3f7a2a 0%,#25491a 55%,#152b0f 100%);}',
         '.mini-lobby::before{content:"";position:absolute;inset:0;pointer-events:none;',
         'background:repeating-linear-gradient(90deg,rgba(255,255,255,0.03) 0 2px,transparent 2px 68px);}',
+        /* 暗角：一圈往内收，画面不再是"平的" */
+        '.mini-lobby::after{content:"";position:absolute;inset:0;pointer-events:none;',
+        'box-shadow:inset 0 0 150px 40px rgba(6,14,4,0.55),inset 0 40px 60px -30px rgba(6,14,4,0.6);}',
         '.mini-head{position:relative;display:flex;align-items:center;gap:14px;height:56px;flex:0 0 56px;}',
-        '.mini-head .mb{background:linear-gradient(180deg,#7a5a2a,#5a3f18);color:#ffe9b8;border:2px solid #c9a45c;',
-        'border-radius:10px;padding:7px 16px;font-size:15px;font-weight:800;cursor:pointer;letter-spacing:1px;}',
+        '.mini-head .mb{background:repeating-linear-gradient(92deg,rgba(80,50,14,0.16) 0 2px,rgba(255,255,255,0) 2px 7px),',
+        'linear-gradient(180deg,#96692c 0%,#6d4a1c 52%,#4c3210 100%);color:#ffeec4;border:2px solid #2f1d07;',
+        'border-radius:7px;padding:7px 16px;font-size:15px;font-weight:800;cursor:pointer;letter-spacing:1px;',
+        'box-shadow:inset 0 2px 0 rgba(255,231,168,0.42),inset 0 -3px 0 rgba(0,0,0,0.32),0 3px 0 #241505,0 5px 10px rgba(0,0,0,0.45);}',
+        '.mini-head .mb:active,.mini-head .mu:active{transform:translateY(2px);box-shadow:inset 0 2px 0 rgba(255,231,168,0.35),0 1px 0 #241505;}',
         '.mini-head .mb:hover{filter:brightness(1.12);}',
         '.mini-head h2{font-family:"Kaiti SC","STKaiti","KaiTi",serif;font-size:30px;color:#fff3c4;letter-spacing:5px;',
         'text-shadow:2px 2px 0 #2c1a08,0 0 18px rgba(160,230,90,0.35);font-weight:900;}',
@@ -3468,17 +3704,28 @@
         '.mini-grid{position:relative;flex:1;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(2,1fr);',
         'gap:11px;margin-top:8px;padding-bottom:2px;}',
         '.mini-card{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;',
-        'padding:9px 8px 8px;border-radius:14px;cursor:pointer;overflow:hidden;text-align:center;justify-content:center;',
-        'background:linear-gradient(180deg,#f6e7bd 0%,#e8d49b 100%);border:3px solid #6b4a22;',
-        'box-shadow:inset 0 0 0 2px rgba(255,255,255,0.4),0 6px 14px rgba(0,0,0,0.35);',
+        'padding:9px 8px 8px;border-radius:8px;cursor:pointer;overflow:hidden;text-align:center;justify-content:center;',
+        /* v4.0.162：扁平圆角 → 羊皮纸（斜向纤维纹）+ 深木框 + 上缘受光 + 底部厚边（原版按钮的立体做法） */
+        'background:repeating-linear-gradient(93deg,rgba(150,112,52,0.06) 0 2px,rgba(255,255,255,0) 2px 6px),',
+        'linear-gradient(180deg,#f4e5c2 0%,#e6d3a2 46%,#d2b87c 100%);border:4px solid #4a3212;',
+        /* 双框：外深木 + 内金线，这是原版 PVZ 按钮的标准做法 */
+        'box-shadow:inset 0 0 0 3px rgba(206,170,98,0.92),inset 0 3px 8px rgba(255,252,232,0.55),',
+        'inset 0 -4px 10px rgba(96,66,24,0.28),0 5px 0 #35230b,0 9px 16px rgba(0,0,0,0.45);',
         'transition:transform .12s ease,box-shadow .12s ease;}',
-        '.mini-card:hover{transform:translateY(-4px);box-shadow:inset 0 0 0 2px rgba(255,255,255,0.5),0 12px 20px rgba(0,0,0,0.5);}',
+        '.mini-card::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:0.13;',
+        'mix-blend-mode:multiply;border-radius:4px;',
+        'background-image:url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'140\' height=\'140\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'3\'/%3E%3C/filter%3E%3Crect width=\'140\' height=\'140\' filter=\'url(%23n)\'/%3E%3C/svg%3E");}',
+        '.mini-card:hover{transform:translateY(-3px);',
+        'box-shadow:inset 0 0 0 3px rgba(230,198,124,0.95),inset 0 3px 8px rgba(255,252,232,0.6),',
+        'inset 0 -4px 10px rgba(96,66,24,0.3),0 8px 0 #35230b,0 14px 22px rgba(0,0,0,0.5);}',
         '.mini-card:active{transform:translateY(-1px) scale(0.99);}',
         '.mini-card .ico{height:70px;width:100%;display:flex;align-items:center;justify-content:center;',
-        'background:linear-gradient(180deg,#c7ea9d,#a6d377);border:2px solid #55703a;border-radius:10px;overflow:hidden;}',
+        'background:radial-gradient(ellipse 80% 60% at 40% 24%,#d8f0b0 0%,#b3d986 55%,#8fb968 100%);',
+        'border:2px solid #4b6330;border-radius:6px;overflow:hidden;',
+        'box-shadow:inset 0 3px 7px rgba(26,44,12,0.35),inset 0 -2px 0 rgba(255,255,255,0.28);}',
         '.mini-card .ico img{height:60px;width:auto;max-width:100%;object-fit:contain;image-rendering:auto;filter:drop-shadow(0 2px 2px rgba(20,50,10,0.45));}',
-        '.mini-card h3{font-family:"Kaiti SC","STKaiti","KaiTi",serif;font-size:17px;color:#4a3414;margin-top:6px;',
-        'letter-spacing:2px;font-weight:900;white-space:nowrap;}',
+        '.mini-card h3{font-family:"Kaiti SC","STKaiti","KaiTi",serif;font-size:17px;color:#43300f;margin-top:6px;',
+        'letter-spacing:2px;font-weight:900;white-space:nowrap;text-shadow:0 1px 0 rgba(255,250,230,0.75);}',
         '.mini-card .tg{font-size:9.5px;letter-spacing:1.5px;color:#7a5c22;background:rgba(255,255,255,0.5);',
         'border-radius:8px;padding:1px 7px;margin-top:2px;font-family:monospace;font-weight:700;}',
         '.mini-card .tp{font-size:10.5px;line-height:1.35;color:#6d5626;margin-top:5px;padding:0 2px;}',
@@ -3489,15 +3736,21 @@
         '.mini-stage canvas{position:absolute;inset:0;width:900px;height:600px;display:block;}',
         '.mini-top{position:absolute;left:0;top:0;right:0;height:46px;display:flex;align-items:center;',
         'justify-content:space-between;padding:0 12px;pointer-events:none;}',
-        '.mini-top .q{pointer-events:auto;background:rgba(20,12,4,0.62);border:2px solid rgba(255,225,150,0.45);',
-        'color:#ffe9b8;border-radius:9px;padding:5px 13px;font-size:13.5px;font-weight:800;cursor:pointer;}',
+        '.mini-top .q{pointer-events:auto;background:repeating-linear-gradient(92deg,rgba(80,50,14,0.16) 0 2px,rgba(255,255,255,0) 2px 7px),',
+        'linear-gradient(180deg,#8d6329 0%,#63421a 55%,#432c0e 100%);border:2px solid #2b1a06;',
+        'color:#ffeec4;border-radius:7px;padding:5px 13px;font-size:13.5px;font-weight:800;cursor:pointer;',
+        'box-shadow:inset 0 2px 0 rgba(255,231,168,0.38),inset 0 -2px 0 rgba(0,0,0,0.3),0 3px 0 #221304;}',
         '.mini-top .q:hover{background:rgba(60,40,10,0.8);}',
         '.mini-top .lg{display:flex;align-items:center;gap:8px;pointer-events:none;}',
-        '.mini-top .mu{pointer-events:auto;background:rgba(20,12,4,0.62);border:2px solid rgba(255,225,150,0.45);',
-        'color:#ffe9b8;border-radius:9px;padding:5px 12px;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:1px;}',
+        '.mini-top .mu{pointer-events:auto;background:repeating-linear-gradient(92deg,rgba(80,50,14,0.16) 0 2px,rgba(255,255,255,0) 2px 7px),',
+        'linear-gradient(180deg,#8d6329 0%,#63421a 55%,#432c0e 100%);border:2px solid #2b1a06;',
+        'color:#ffeec4;border-radius:7px;padding:5px 12px;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:1px;',
+        'box-shadow:inset 0 2px 0 rgba(255,231,168,0.38),inset 0 -2px 0 rgba(0,0,0,0.3),0 3px 0 #221304;}',
         '.mini-top .mu:hover{background:rgba(60,40,10,0.8);}',
-        '.mini-head .mu{margin-left:auto;background:linear-gradient(180deg,#7a5a2a,#5a3f18);color:#ffe9b8;',
-        'border:2px solid #c9a45c;border-radius:10px;padding:7px 14px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:1px;}',
+        '.mini-head .mu{margin-left:auto;background:repeating-linear-gradient(92deg,rgba(80,50,14,0.16) 0 2px,rgba(255,255,255,0) 2px 7px),',
+        'linear-gradient(180deg,#96692c 0%,#6d4a1c 52%,#4c3210 100%);color:#ffeec4;border:2px solid #2f1d07;',
+        'border-radius:7px;padding:7px 14px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:1px;',
+        'box-shadow:inset 0 2px 0 rgba(255,231,168,0.42),inset 0 -3px 0 rgba(0,0,0,0.32),0 3px 0 #241505,0 5px 10px rgba(0,0,0,0.45);}',
         '.mini-head .mu:hover{filter:brightness(1.12);}',
         '.mini-head .mu.off{opacity:.62;filter:grayscale(.5);}',
         '.mini-top .nm{color:rgba(255,255,255,0.72);font-size:13px;letter-spacing:2px;}'
@@ -3659,6 +3912,8 @@
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.clearRect(0, 0, W, H);
             try { active.draw(); } catch (err) { console.error('[mini draw]', (err && err.stack) || err); }
+            // v4.0.162：颗粒 + 暗角，统一 10 个玩法的画面质感（纯色不再"干净"得像网页）
+            try { paintedPass(W, H, active && active.paintOpt); } catch (err) { }
         }
         raf = requestAnimationFrame(tick);
     }
