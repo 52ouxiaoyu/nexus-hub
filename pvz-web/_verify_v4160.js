@@ -114,11 +114,12 @@ const ok = (cond, label, extra) => {
   });
   const qs = stats.acc.qPlant + stats.acc.qZombie + stats.acc.qSun;
   const pr = stats.acc.qPlant / qs, zr = stats.acc.qZombie / qs, sr = stats.acc.qSun / qs;
-  ok(pr >= 0.40 && pr <= 0.55, `问号罐植物占比 ${(pr * 100).toFixed(1)}% 在 40~55%`,
+  // v4.0.164：植物总量砍到 4~8 株后，问号罐的植物配额也随之下调（火力主要来自绿罐/金罐）
+  ok(pr >= 0.27 && pr <= 0.35, `问号罐植物占比 ${(pr * 100).toFixed(1)}% 在 27~35%`,
     `植物 ${stats.acc.qPlant} / 僵尸 ${stats.acc.qZombie} / 阳光 ${stats.acc.qSun}`);
   // 8 局 × 10 关的采样本身有 ±2% 抖动（暗雷摊成植物会把僵尸换成植物），下限留到 22%
-  ok(zr >= 0.22 && zr <= 0.40, `问号罐僵尸占比 ${(zr * 100).toFixed(1)}% 在 22~40%`);
-  ok(sr >= 0.12 && sr <= 0.32, `问号罐阳光占比 ${(sr * 100).toFixed(1)}% 在 12~32%`);
+  ok(zr >= 0.15 && zr <= 0.25, `问号罐僵尸占比 ${(zr * 100).toFixed(1)}% 在 15~25%`);
+  ok(sr >= 0.44 && sr <= 0.56, `问号罐阳光占比 ${(sr * 100).toFixed(1)}% 在 44~56%`);
   ok(stats.acc.frontHidden === 0, '前排（col<4）问号罐暗雷 = 0', 'n=' + stats.acc.frontHidden);
   // col≥6 只有 3 列，一关 25~26 个罐根本塞不下全部紫罐 —— 真判据是「贴脸（col<4）」有多少
   const deepRatio = stats.acc.deepZ / Math.max(1, stats.acc.allZ);
@@ -132,7 +133,7 @@ const ok = (cond, label, extra) => {
 
   /* 植物总量对比：每关平均植物数应在 7~14 之间（不再出现 16+ 的白给局） */
   const avgPlants = stats.perLv.reduce((a, x) => a + x.plants, 0) / 10;
-  ok(avgPlants >= 7 && avgPlants <= 13, `十关平均植物 ${avgPlants.toFixed(1)} 株/关（7~13）`);
+  ok(avgPlants >= 4 && avgPlants <= 8, `十关平均植物 ${avgPlants.toFixed(1)} 株/关（4~8，用户硬要求）`);
 
   /* ============ ⑥ 金罐 ============ */
   console.log('\n⑥ 金罐必出（golden:1 的四关）');
@@ -158,7 +159,7 @@ const ok = (cond, label, extra) => {
     const r = await fetch('js/HelpGuide.js');
     return await r.text();
   });
-  ok(/4\.0\.160 起问号罐里/.test(helpSrc), '帮助文档写了问号罐「植物四成半/僵尸三成/阳光两成半」');
+  ok(/问号罐里「三成植物 \/ 两成僵尸 \/ 一半阳光」/.test(helpSrc), '帮助文档写了问号罐「三成植物/两成僵尸/一半阳光」');
   ok(/每局重新抽签/.test(helpSrc), '帮助文档写了「每关罐位每局重新抽签」');
   const panelTxt = await p.evaluate(async () => {
     const g = window._pvzGame;

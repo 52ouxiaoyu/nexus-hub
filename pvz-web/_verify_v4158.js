@@ -14,7 +14,8 @@ const ok = (cond, label, extra) => {
 };
 
 const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, newspaper: 300,
-    polevaulting: 500, imp: 100, flag: 200, backup: 200, hammerzombie: 560, screendoor: 5200 };
+    polevaulting: 500, imp: 100, flag: 200, backup: 200, hammerzombie: 560, screendoor: 5200,
+    football: 2240, ironcone: 1500, dancing: 500 };
 
 (async () => {
     const b = await puppeteer.launch({
@@ -161,8 +162,8 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, newspaper: 300,
     ok(table.every(l => l.p + l.q + l.z === l.total), '每关 p+q+z = total');
     ok(table.every(l => l.pl === l.p && l.qs === l.q && l.zb === l.z), '三条内容队列长度与配额一致',
         table.filter(l => l.pl !== l.p || l.qs !== l.q || l.zb !== l.z).map(l => l.n).join(',') || 'all ok');
-    // v4.0.160：末两关绿罐加到 6 个（全出植物）—— 植物砍到 4 个时末关火力只剩 8 株，铁桶行必崩
-    ok(table.every(l => l.p >= 3 && l.p <= 6), '每关绿罐只剩 3~6 个',
+    // v4.0.164：植物总量（绿罐 + 问号罐 + 金罐）严格 4~8 株，绿罐压到 2~4 个
+    ok(table.every(l => l.p >= 2 && l.p <= 4), '每关绿罐只剩 2~4 个',
         table.map(l => l.n + ':' + l.p).join(' '));
     ok(table.every(l => l.q > l.z && l.q > l.p), '每关问号罐最多',
         table.map(l => l.n + ':' + l.q).join(' '));
@@ -178,13 +179,16 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, newspaper: 300,
             + l.qContents.filter(t => t.indexOf('z:') === 0).reduce((a, t) => a + (BASE_HP[t.slice(2)] || 200), 0);
         return { n: l.n, plants, hp: Math.round(hp * l.hp), ratio: +(plants / (hp * l.hp / 1000)).toFixed(2) };
     });
-    // v4.0.160：末两关靠绿罐补回 12 株火力，供给比不再单调下降，改成「不出现断崖（不低于 1.4）」
-    ok(supply.every(x => x.ratio >= 1.4), '供给比（植物 ÷ 千点僵尸血）逐关不低于 1.4',
+    // v4.0.164（用户：砸罐子完全输不了）—— 供给比从「≥1.4（火力管够）」反转为「越往后越饿」：
+    // 第 1 关还有 4.5 株/千点血，第 10 关只剩 1.0 出头，玩家必须靠省植物、靠坚果挡、靠顺序规划。
+    ok(supply.every(x => x.ratio <= 5.2), '供给比（植物 ÷ 千点僵尸血）不超过 5.2（不再白给）',
         supply.map(x => x.n + ':' + x.ratio).join(' '));
-    ok(supply[0].ratio >= 5 && supply[9].ratio <= 2.6, '前松后紧：第 1 关 5+ / 第 10 关 ≤ 2.6',
+    ok(supply[0].ratio >= 4.0 && supply[9].ratio <= 1.3, '前松后紧：第 1 关 4+ / 第 10 关 ≤ 1.3',
         supply[0].ratio + ' → ' + supply[9].ratio);
+    ok(supply.every((x, i) => i === 0 || x.ratio <= supply[i - 1].ratio + 0.45),
+        '供给比逐关不回升（允许 ±0.45 的布局抖动）', supply.map(x => x.n + ':' + x.ratio).join(' '));
     const totalPlants = supply.reduce((a, x) => a + x.plants, 0);
-    ok(totalPlants <= 115, '十关植物总量封顶（旧版 129 株，砍掉 ≥10%）', totalPlants + ' 株');
+    ok(totalPlants <= 80, '十关植物总量 ≤80 株（v4.0.163 是 105 株，用户要求砍到 4~8/关）', totalPlants + ' 株');
 
     // 关卡实机：配额 / 每行有输出 / 僵尸不贴脸
     const lvChecks = await p.evaluate(async () => {
@@ -214,22 +218,27 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, newspaper: 300,
         }
         return out;
     });
-    ok(lvChecks.every(c => c.bad.length === 0), '每关「有僵尸的行」都有进攻植物',
+    // v4.0.164：植物只剩 4~8 株，"某行的罐子全是僵尸罐"时没有可换的落脚点，只能靠玩家插卡
+    ok(lvChecks.reduce((a, c) => a + c.bad.length, 0) <= 3, '十关「有僵尸却没输出」的行合计 ≤3',
         lvChecks.filter(c => c.bad.length).map(c => 'L' + c.n + ':行' + c.bad.join(',')).join(' ') || 'all ok');
     ok(lvChecks.every(c => c.frontHidden === 0), '每关前排（col<4）都没有暗雷',
         lvChecks.map(c => 'L' + c.n + ':' + c.frontHidden).join(' '));
     // v4.0.160：罐位每局重抽后 col≥6 塞不下全部紫罐，允许极少数贴脸——红光脉动＝明牌，看得见
     ok(lvChecks.reduce((a, c) => a + c.frontVisible, 0) <= 2, '贴脸紫罐（col<4，红光明牌）十关合计 ≤ 2 个',
         lvChecks.map(c => 'L' + c.n + ':' + c.frontVisible).join(' '));
-    ok(lvChecks[0].types.p === 3 && lvChecks[0].types.q === 10 && lvChecks[0].types.z === 3,
-        '第 1 关实际配额 3/10/3', JSON.stringify(lvChecks[0].types));
-    ok(lvChecks[9].types.p === 6 && lvChecks[9].types.q === 13 && lvChecks[9].types.z === 6,
-        '第 10 关实际配额 6/13/6（僵尸 9 只：6 紫 + 3 问号）', JSON.stringify(lvChecks[9].types));
+    ok(lvChecks[0].types.p === 2 && lvChecks[0].types.q === 9 && lvChecks[0].types.z === 3,
+        '第 1 关实际配额 2/9/3', JSON.stringify(lvChecks[0].types));
+    ok(lvChecks[9].types.p === 4 && lvChecks[9].types.q === 13 && lvChecks[9].types.z === 6,
+        '第 10 关实际配额 4/13/6（僵尸 9 只：6 紫 + 3 问号）', JSON.stringify(lvChecks[9].types));
+    ok(lvChecks.every(c => c.plants >= 4 && c.plants <= 8), '每关植物严格 4~8 株（含金罐）',
+        lvChecks.map(c => 'L' + c.n + ':' + c.plants).join(' '));
 
     // ================= ④ 实战 =================
     console.log('\n④ 实战（自动铺场 + 逐只放僵尸，5 倍速）');
     for (const lvNo of [1, 10]) {
-        const r = await p.evaluate(async (lvNo) => {
+        // v4.0.164：植物砍到 4~8 株后，末关会有真输的局（这正是用户要的难度）——
+        // 断言改成「最多试 3 局能赢一局」，否则脚本会随机红
+        const playLv = async (lvNo) => p.evaluate(async (lvNo) => {
             const g = window._pvzGame;
             g._startVaseLevel(lvNo);
             await new Promise(r => setTimeout(r, 900));
@@ -313,7 +322,10 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, newspaper: 300,
             g.gameSpeed = 1;
             return res;
         }, lvNo);
-        ok(r.win, `第 ${lvNo} 关：新配比下仍然打得赢`, `星级=${r.stars} 损失=${r.lost} 分路输出=${JSON.stringify(r.rowAtk)}`);
+        let r = null, tries = 0;
+        while (tries < 3) { tries++; r = await playLv(lvNo); if (r.win) break; }
+        ok(r.win, `第 ${lvNo} 关：新配比下仍然打得赢（最多 3 局）`,
+            `第 ${tries} 局 星级=${r.stars} 损失=${r.lost} 分路输出=${JSON.stringify(r.rowAtk)}`);
         if (lvNo === 10) await p.screenshot({ path: '/Users/clawbox/nexus-hub/pvz-web/_v4158_lv10.png' });
     }
 

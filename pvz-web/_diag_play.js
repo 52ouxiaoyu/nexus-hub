@@ -48,7 +48,8 @@ const LIST = LEVELS.length ? LEVELS : [1, 2, 4, 7, 10];
       // v4.0.160：按「血量权重」而不是「只数数」分配 —— 1 只铁桶(1300) ≠ 1 只小鬼(100)，
       // 只数数会让三只锥帽挤在一条线上却只得 1 株（旧机器人就是这样误判 L4 不可解）
       const ZHP = { normal: 200, flag: 200, conehead: 560, buckethead: 1300, newspaper: 300,
-                    polevaulting: 340, imp: 100, screendoor: 500 };
+                    polevaulting: 500, imp: 100, screendoor: 5200,
+                    football: 2240, ironcone: 1500, dancing: 500, hammerzombie: 560 };
       const zhp = t => ZHP[t] || 300;
       const rowZ = {}, rowN = {};
       liveRows.forEach(r => {

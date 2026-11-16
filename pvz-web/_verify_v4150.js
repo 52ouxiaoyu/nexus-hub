@@ -9,7 +9,8 @@ const ok = (cond, label, extra) => {
 };
 
 // 僵尸基础血量（与 Zombie.js EVOLVE_BASE_HP 对齐，只用于核对倍率）
-const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, screendoor: 5200, football: 2240, gargantuar: 4000, polevaulting: 500, newspaper: 300, imp: 100, zomboni: 1300 };
+// v4.0.164：补 ironcone(双盔 1500) / dancing(舞王 500) —— 缺表会把 1500 血的关卡算成 200
+const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, screendoor: 5200, football: 2240, gargantuar: 4000, polevaulting: 500, newspaper: 300, imp: 100, zomboni: 1300, ironcone: 1500, dancing: 500, hammerzombie: 560, flag: 200, backup: 200 };
 
 (async () => {
     const b = await puppeteer.launch({
@@ -31,6 +32,7 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, screendoor: 5200
     const table = await p.evaluate(() => VASE_LEVELS.map(l => ({
         n: l.n, name: l.name, lvl: l.lvl, total: l.total, p: l.p, q: l.q, z: l.z,
         hp: l.hp, pl: l.plants.length, qs: l.qs.length, zl: l.zombies.length,
+        qsList: l.qs.slice(), plantsList: l.plants.slice(),
         hasActs: 'acts' in l, zb: l.zombies.slice()
     })));
     ok(table.length === 10, '共 10 关', 'n=' + table.length);
@@ -44,16 +46,20 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, screendoor: 5200
         table.map(l => l.hp.toFixed(2)).join('>'));
     ok(table.every(l => l.hp <= 1.10), '血量倍率封顶 1.10（4.0.158 起后段关提到 1.08）',
         'max=' + Math.max(...table.map(l => l.hp)));
+    // v4.0.164：植物砍到 4~8 株后，问号罐里的僵尸占比上升（28/125 只），
+    // 只统计紫罐会漏掉一整段难度，这里把 qs 里的 'z:xxx' 一起算进去
     const hpTotal = table.map(l => ({
         n: l.n,
-        sum: l.zb.reduce((a, t) => a + (BASE_HP[t] || 200), 0) * l.hp
+        sum: (l.zb.reduce((a, t) => a + (BASE_HP[t] || 200), 0)
+            + l.qsList.filter(t => t.indexOf('z:') === 0)
+                .reduce((a, t) => a + (BASE_HP[t.slice(2)] || 200), 0)) * l.hp
     }));
     ok(hpTotal.every((x, i) => i === 0 || x.sum >= hpTotal[i - 1].sum * 0.95),
         '单关僵尸总血量基本单调递增（允许 ±5% 抖动）',
         hpTotal.map(x => x.n + ':' + Math.round(x.sum)).join(' '));
-    // v4.0.158 用户：植物不要这么多、以问号罐为主 —— 绿罐压到 4~5，问号罐必须是最大的一类
-    // v4.0.160：末两关绿罐 6 个（全出植物），把植物砍到 4 个会让铁桶行必崩
-    ok(table.every(l => l.p >= 3 && l.p <= 6), '每关绿罐只剩 3~6 个',
+    // v4.0.158 用户：植物不要这么多、以问号罐为主
+    // v4.0.164：植物总量改成「绿罐 + 问号罐 + 金罐，严格 4~8 株」，绿罐本身压到 2~4 个
+    ok(table.every(l => l.p >= 2 && l.p <= 4), '每关绿罐只剩 2~4 个',
         table.map(l => l.n + ':' + l.p).join(' '));
     ok(table.every(l => l.q > l.z && l.q > l.p), '每关问号罐都是最多的一类',
         table.map(l => l.n + ':' + l.q + '/' + l.p + '/' + l.z).join(' '));
@@ -102,9 +108,9 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, screendoor: 5200
             state: g.state
         };
     });
-    ok(l1.level === 1 && l1.vases === 16, '第 1 关 16 个罐子', 'n=' + l1.vases);
-    ok(l1.types.plant === 3 && l1.types.question === 10 && l1.types.zombie === 3,
-        '类型配额 3/10/3 精确落地（问号罐为主）', JSON.stringify(l1.types));
+    ok(l1.level === 1 && l1.vases === 14, '第 1 关 14 个罐子', 'n=' + l1.vases);
+    ok(l1.types.plant === 2 && l1.types.question === 9 && l1.types.zombie === 3,
+        '类型配额 2/9/3 精确落地（问号罐为主）', JSON.stringify(l1.types));
     ok(l1.zombies === 3, '剩余僵尸罐角标 = 3');
     ok(!l1.hudAct, 'HUD 上没有行动点芯片');
     ok(l1.hudZ, 'HUD 保留剩余僵尸罐芯片');
@@ -140,7 +146,8 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, screendoor: 5200
         const z = g.entities.filter(e => e instanceof Zombie).pop();
         return z ? { type: z.type, hp: z.hp, maxHp: z.maxHp } : null;
     });
-    ok(hp1 && hp1.hp === Math.round(200 * 0.90), '第 1 关普通僵尸 = 200 × 0.90 = 180',
+    const hp1Mul = await p.evaluate(() => VASE_LEVELS[0].hp);
+    ok(hp1 && hp1.hp === Math.round(200 * hp1Mul), `第 1 关普通僵尸 = 200 × ${hp1Mul} = ${Math.round(200 * hp1Mul)}`,
         hp1 && `${hp1.type} ${hp1.hp}`);
 
     const hp10 = await p.evaluate(async () => {
@@ -280,7 +287,7 @@ const BASE_HP = { normal: 200, conehead: 560, buckethead: 1300, screendoor: 5200
     });
     ok(clean.before > 0, '先塞了残留实体', 'n=' + clean.before);
     ok(clean.zombies === 0 && clean.plants === 0 && clean.onGrid === 0, '切关后场上干净', JSON.stringify(clean));
-    ok(clean.vases === 16 && clean.lost === 0, '按新关卡重建（16 罐）且损失计数归零', 'vases=' + clean.vases);
+    ok(clean.vases === 14 && clean.lost === 0, '按新关卡重建（14 罐）且损失计数归零', 'vases=' + clean.vases);
 
     // ---------- ⑩ 自由模式兼容 ----------
     console.log('\n⑩ 自由挑战不回归');
