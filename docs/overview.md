@@ -12,7 +12,7 @@
 2. **wiki.gg `Animated Melon-pult.gif`** → 188×144 82 帧，**但角像素不透明（带草地背景）**，舍弃
 3. **Spriters-Resource `162766.png`** → 拿到后发现是**抛石机部件分解图**（连通分量 10+ 块），不是完整精灵
 4. **GitHub 原版克隆**（jiangnangame/New-Plants-vs-Zombies-JavaScript、studyzy/pvzjs）→ **根本不存在 MelonPult**，因为它是后期补的素材
-5. **最终方案**：用 wiki.gg 的**官方透明静态版** `Melon-pulthd.png` (260×197) + `HD Winter Melon.png` (456×417)，α 轮廓相关 0.878 / 0.824 vs 当前版，姿势一致，色板正确（冬西瓜全蓝带霜，纠正原 make_wm_blue.py 滤镜伪全蓝）
+5. **最终方案**：用 wiki.gg 的**官方透明静态版** `Melon-pulthd.png` (260×197) + `HD Winter Melon.png` (456×417)，α 轮廓相关 0.878 / 0.824 vs 当前版，姿势一致，色板正确（冬西瓜全蓝带霜，纠正原 ../archive/tools/make_wm_blue.py 滤镜伪全蓝）
 
 ## 实施
 
@@ -29,7 +29,7 @@
 
 ## 验证（puppeteer headless，截图肉眼比对）
 
-- `_verify_v3310.js` 三场景全 PASS：选卡 modal（西瓜投手卡右下角是新图）→ 草坪 5 株植物并排（peashooter 参考 + melonpult + wintermelon × 2 行）→ 配方图鉴滚到底（西瓜猫尾草 + 冰西瓜猫尾草 叠层清晰）
+- `../archive/tools/_verify_v3310.js` 三场景全 PASS：选卡 modal（西瓜投手卡右下角是新图）→ 草坪 5 株植物并排（peashooter 参考 + melonpult + wintermelon × 2 行）→ 配方图鉴滚到底（西瓜猫尾草 + 冰西瓜猫尾草 叠层清晰）
 - `g.update()` 必须显式调用，否则 Plant.element.style.top/left 没写，截图里看不到植物
 - 配方图鉴需要 `recipe-list.scrollTop = list.scrollHeight`（不是 parent）才能滚到底
 - 缓存置换 54 处 `?v=1788689333 → ?v=1788695989`，版本徽标显示 `v3.3.10-melon-hd (build 2026-09-06)`

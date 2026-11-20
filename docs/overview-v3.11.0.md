@@ -44,9 +44,9 @@
 ## 三、怎么看预览
 
 - 交互式页面：`pvz-web/_fusion_preview.html`（由本地 8777 静态服务器提供）
-- 整页长图：`pvz-preview-v3.11.0/pvz-fusion-preview-v3.11.0.png`
-- 单个方案卡片：`pvz-preview-v3.11.0/newfusion-1..6-*.png`
-- 修复对照：`pvz-preview-v3.11.0/ba-1..3.png`（部件居中）、`fix-1..3.png`（补眉 / 投掷物 / 调价）
+- 整页长图：`../archive/screenshots/pvz-preview-v3.11.0/pvz-fusion-preview-v3.11.0.png`
+- 单个方案卡片：`../archive/screenshots/pvz-preview-v3.11.0/newfusion-1..6-*.png`
+- 修复对照：`../archive/screenshots/pvz-preview-v3.11.0/ba-1..3.png`（部件居中）、`fix-1..3.png`（补眉 / 投掷物 / 调价）
 
 > 预览页用的是与游戏内**完全相同**的叠加约定（宿主与部件都锚在格心、`translate(-50%,-50%)` 居中），
 > 只是整体放大 1.9 倍方便看。
