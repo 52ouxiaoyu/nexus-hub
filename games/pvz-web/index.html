@@ -1378,16 +1378,16 @@
             });
         })();
 
-        // ===== v3.89.1 返回按钮防白屏：../games.html（hub 门户）只在"整个 hub 为站点根"时存在；
+        // ===== v3.89.1 返回按钮防白屏：../../games.html（hub 门户）只在"整个 hub 为站点根"时存在；
         // pvz-web 单独发布成整站时该路径 404（部分静态服务器 404 响应体为空 = 纯白屏）。
         // http(s) 下先 HEAD 探测：门户存在才跳，不存在就留在主页；file:// 下 fetch 受 CORS 限制，保持原样直接跳。
         (function bindBackGc() {
             const btn = document.getElementById('btn-back-gc');
             if (!btn) return;
-            const goPortal = () => { location.href = '../games.html'; };
+            const goPortal = () => { location.href = '../../games.html'; };
             btn.addEventListener('click', () => {
                 if (location.protocol === 'file:') { goPortal(); return; }
-                fetch('../games.html', { method: 'HEAD' })
+                fetch('../../games.html', { method: 'HEAD' })
                     .then(r => { if (r.ok) goPortal(); else location.reload(); })
                     .catch(goPortal);
             });

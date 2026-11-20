@@ -153,6 +153,30 @@
 
 这是一个充满复古乐趣与现代创新的综合平台！本项目不仅包含了多款由 HTML5 Canvas 和原生 JavaScript 驱动的经典网页游戏，还融合了音视频播放（TVBox）以及学习工具。支持中英文双语界面（Bilingual UI）。无需安装，点开即玩！
 
+## 📁 目录结构
+
+按首页三大板块组织；`functions/` 与 `api/` 是 Cloudflare Pages 约定，必须留在根目录。
+
+```
+.
+├── index.html / games.html / learning.html / media.html   # 四个门户页
+├── games/          # 12 个游戏（games.html 的游戏中心）
+│   ├── pvz-web/  geometry-wars/  tank-battle/  snake/
+│   ├── kingdom-rush/  calabash-brothers/  billiards/
+│   └── tetris-battle/  racing-3d/  thunder-wing/  slime-cannon/  sheep-stack/
+├── learning/       # 学习天地（learning.html）
+│   ├── StoryReader.html  VocabSwipe.html  custom_reader.html  english_game.html
+│   └── chinese-blitz/  little-prince/  grade6_data.js
+├── media/          # 视听专区（media.html）
+│   └── tvbox/  vip_parse.html
+├── huaxiazi/       # 部署特例：留根，线上路径 /huaxiazi/
+├── tvbox-web-player/  # 部署特例：留根，独立 CF Pages 项目
+├── archive/        # 历史脚本与截图（不参与运行）
+├── docs/           # 版本说明与方案
+├── functions/  api/  # CF Pages 函数，留根
+└── .workbuddy/     # 项目笔记
+```
+
 ## 🌟 游戏列表 (Games List)
 
 ### 1. 极速飞车 (Turbo Rush 3D) 🏎️ *全新 3D 竞速 (v1.3.0)*
@@ -319,7 +343,7 @@
 - **⚡ 极致的性能优化**：引入主循环脏值拦截（Dirty Check）与内存原位回收机制（In-place Splice），彻底解决游戏后期的 GC 掉帧与渲染卡顿。
 - **🏷️ 游戏内版本号徽标**：游戏界面右上角实时显示当前版本号（如 `v3.2.0-melon (build 2026-08-30)`），鼠标悬停可查看改动说明。配合 `bump_version.py` 脚本可一键更新版本号与缓存刷新参数。
 
-> **开发者提示**：修改 PVZ 代码或素材后，运行 `python3 bump_version.py "v3.x.y-描述"` 即可自动更新 `pvz-web/version.json` 并刷新所有 `?v=` 缓存参数，然后 `git commit && git push`。玩家只需硬刷新（Cmd+Shift+R）即可加载新版本。
+> **开发者提示**：修改 PVZ 代码或素材后，运行 `python3 bump_version.py "v3.x.y-描述"` 即可自动更新 `games/pvz-web/version.json` 并刷新所有 `?v=` 缓存参数，然后 `git commit && git push`。玩家只需硬刷新（Cmd+Shift+R）即可加载新版本。
 
 ### 8. 雷霆之翼 (Thunder Wing) ✈️ *弹幕射击 · 局内 Build · 永远双人 + AI 代班 · 随机大招 (v1.4.4)*
 竖版卷轴弹幕射击，致敬《雷电》《打击者1945》，美术与音效全部由代码生成（零外部素材）。
@@ -354,7 +378,7 @@
 - **无限关卡**：地狱关每关 +15 块 / +1 种 / 加层（上限 150 块 / 14 种 / 9 层），最高纪录本地保存。
 - **纯前端零素材**：emoji 方块 + CSS 木纹槽位 + WebAudio 音效，无外部资源、无弹窗、手机触屏可玩。
 
-路径：`sheep-stack/`，入口：游戏中心 → 羊羊叠叠消。
+路径：`games/sheep-stack/`，入口：游戏中心 → 羊羊叠叠消。
 
 ## 🚀 如何运行 (How to Run)
 

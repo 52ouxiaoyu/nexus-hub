@@ -37,7 +37,7 @@
 - 类型：竖版卷轴弹幕射击（Vertical Scrolling Shoot'em up）
 - 屏幕：逻辑分辨率 480×800，等比缩放居中，手机竖屏原生适配
 - 技术：纯 Canvas 2D + 原生 JS，**零构建、零外部依赖、零图片素材**（全部程序化绘制 + WebAudio 合成音效）
-- 入口：`thunder-wing/index.html`，接入 `games.html` 门户卡片，push 后 CF Pages 自动部署
+- 入口：`../games/thunder-wing/index.html`，接入 `games.html` 门户卡片，push 后 CF Pages 自动部署
 
 ---
 
@@ -134,7 +134,7 @@ thunder-wing/
 
 ## 八、验收方式（沿用仓库 nexus-game-deploy 规范）
 
-`thunder-wing/_test.js`（不提交）用系统 Chrome headless 跑：
+`../games/thunder-wing/_test.js`（不提交）用系统 Chrome headless 跑：
 - 页面无 `pageerror`；`window.__twGame` 存在且实体数组非空
 - 输入断言：按方向键后自机坐标变化；按射击键后子弹数 +1
 - 玩法断言：拾 P 道具火力 +1、炸弹清屏后敌弹数归零、Boss 血量分段切换阶段
